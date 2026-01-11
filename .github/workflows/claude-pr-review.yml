@@ -48,35 +48,30 @@ jobs:
 
             ### Git & Workflow
             - Never push to main directly - must use feature branches
-            - Run `pnpm build` before committing to catch TypeScript errors
-            - Migration files must pass `supabase db reset` locally before pushing
+            - Run `bun run build` before committing to catch TypeScript errors
+            - All new code must have accompanying tests (90% coverage target)
 
             ### Code Style
             - **No inline comments** - code should be self-documenting
             - Use Supabase Service Role Key in API endpoints (not RLS policies)
-            - pnpm only (flag package-lock.json or yarn.lock)
+            - **bun only** - flag package-lock.json, yarn.lock, or pnpm-lock.yaml
 
-            ### Database/Migrations
-            - Migration files must be self-contained
-            - Use `IF NOT EXISTS` in CREATE statements
-            - Timestamp format: `YYYYMMDDHHMMSS_description.sql`
-            - If schema changes, check if `supabase/seed.sql` needs updates:
-              - New NOT NULL columns need seed data
-              - New FK constraints need referenced rows
-              - Renamed/removed columns must be updated in seed
+            ### Testing
+            - All new code must have tests in `__tests__/` directory
+            - Run tests with `bun test`
 
             ### TypeScript/Next.js
             - Proper typing (no `any` types)
             - Use `@/` path aliases for imports
             - Prefer server components; extract client logic to separate components
+            - Next.js 16: use proxy.ts (not middleware.ts), await async APIs
 
             ## Review Focus
 
             1. **Breaking changes** to existing functionality
-            2. **Migration issues** - will this fail on preview branch?
-            3. **Seed data** - does seed.sql still work with schema changes?
-            4. **Security** - exposed secrets, SQL injection, XSS
-            5. **TypeScript** - proper types, no `any`
+            2. **Missing tests** - new code without accompanying tests
+            3. **Security** - exposed secrets, SQL injection, XSS
+            4. **TypeScript** - proper types, no `any`
 
             ## Response Format
 
