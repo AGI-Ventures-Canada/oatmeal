@@ -40,6 +40,11 @@ See domain-specific CLAUDE.md files for detailed patterns:
 - `lib/workflows/CLAUDE.md` - Workflow DevKit, durable agents, steps
 - `lib/agents/CLAUDE.md` - AI SDK 6, ToolLoopAgent, streaming
 
+### Claude Skills
+
+Skills in `.claude/skills/`:
+- `local-dev-setup.md` - Developer onboarding and local environment setup
+
 ## Next.js 16 Specifics
 
 ### proxy.ts (replaces middleware.ts)
@@ -172,3 +177,13 @@ feat: add user authentication flow
 fix: correct stripe webhook signature validation
 refactor: extract payment logic into service
 ```
+
+## Maintenance
+
+### Keep Skills Updated
+
+**When the stack changes or new services are added, update `.claude/skills/local-dev-setup.md`** to reflect:
+- New environment variables required
+- New prerequisites (tools, CLIs)
+- New setup steps
+- Updated troubleshooting guides
