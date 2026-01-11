@@ -69,6 +69,30 @@ Export `Api` type for end-to-end type safety:
 export type Api = typeof api
 ```
 
+### Unit Testing
+Use `Elysia.handle()` with Web Standard Request/Response:
+```typescript
+import { describe, expect, it } from "bun:test"
+import { api } from "@/lib/api"
+
+describe("API", () => {
+  it("health check returns ok", async () => {
+    const res = await api.handle(
+      new Request("http://localhost/api/public/health")
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.status).toBe("ok")
+  })
+})
+```
+
+**Critical:** Use fully-formed URLs (`http://localhost/api/...`), not relative paths.
+
+Run tests: `bun test`
+
 ## Documentation
 - Elysia + Next.js: https://elysiajs.com/integrations/nextjs
 - Elysia + AI SDK: https://elysiajs.com/integrations/ai-sdk.html
+- Unit Testing: https://elysiajs.com/patterns/unit-test.html

@@ -68,6 +68,24 @@ Check existing components before creating new ones.
 - Do not write comments above code
 - Maintain TypeScript type safety throughout
 
+### Testing
+
+**Target: 90% code coverage**
+
+- All new features and bug fixes must include tests
+- Tests live in `__tests__/` directory mirroring source structure
+- Use `bun:test` for test runner
+- Run tests: `bun test`
+- Run with coverage: `bun test --coverage`
+
+Test organization:
+```
+__tests__/
+├── api/           # API endpoint tests
+├── lib/           # Utility/service tests
+└── workflows/     # Workflow tests
+```
+
 ## Git Workflow
 
 ### Never Push to Main
