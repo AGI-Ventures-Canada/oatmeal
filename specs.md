@@ -1,9 +1,23 @@
+## Current Status
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 0 | Baseline deploy | DONE |
+| 1 | Clerk Org dashboard auth | TODO |
+| 2 | API key provisioning | TODO |
+| 3 | Integration auth + whoami | TODO |
+| 4 | Jobs API (start + poll) | TODO |
+| 5 | Workflow runner | TODO |
+| 6 | Dashboard jobs UI | TODO |
+| 7 | Hardening | TODO |
+| 8 | Webhooks | LATER |
+
+---
+
 ## Problem
 
 - As part of [Masterplan: end-to-end general purpose agents for everyday business processes](https://www.notion.so/Masterplan-end-to-end-general-purpose-agents-for-everyday-business-processes-2e4ffe5c4f74804eae19d3c3e7bbdcea?pvs=21)
 - Need a running server with basic things first, then build features later.
-
-## Specs
 
 ## Goal
 
@@ -177,17 +191,19 @@ function require(principal, allowKinds, scopes=[]):
 
 ---
 
-# Phase 0 — baseline deploy
+# Phase 0 — baseline deploy ✅
 
 **Build**
 
-- Next 16 app
-- Elysia under `/api/*`
-- `GET /api/public/health`
+- [x] Next 16 app
+- [x] Elysia under `/api/*`
+- [x] `GET /api/public/health`
+- [x] Swagger docs at `/api/swagger`
 
 **Done**
 
-- deployed on Vercel, health responds
+- [x] Health endpoint responds
+- [ ] Deploy to Vercel
 
 ---
 
