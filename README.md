@@ -20,7 +20,4 @@ bun dev
 - App: http://localhost:3000
 - API docs: http://localhost:3000/api/swagger
 - Health: http://localhost:3000/api/public/health
-
-## Project Status
-
-See [specs.md](./specs.md) for detailed roadmap.
+- Tests: `bun test`

@@ -72,7 +72,8 @@ Check existing components before creating new ones.
 
 **Target: 90% code coverage**
 
-- All new features and bug fixes must include tests
+**CRITICAL: All new code must have accompanying tests. Do not submit code without tests.**
+
 - Tests live in `__tests__/` directory mirroring source structure
 - Use `bun:test` for test runner
 - Run tests: `bun test`
