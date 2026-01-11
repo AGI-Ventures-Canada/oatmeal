@@ -40,6 +40,46 @@ See domain-specific CLAUDE.md files for detailed patterns:
 - `lib/workflows/CLAUDE.md` - Workflow DevKit, durable agents, steps
 - `lib/agents/CLAUDE.md` - AI SDK 6, ToolLoopAgent, streaming
 
+## Next.js 16 Specifics
+
+### proxy.ts (replaces middleware.ts)
+Use `proxy.ts` at project root for request interception (redirects, rewrites, headers):
+```typescript
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+
+export function proxy(request: NextRequest) {
+  return NextResponse.redirect(new URL("/home", request.url))
+}
+
+export const config = {
+  matcher: "/about/:path*",
+}
+```
+
+**Note:** Use proxy for routing/edge decisions only. Auth + permissions belong in API handlers.
+
+### Async Request APIs
+All request APIs are now async and must be awaited:
+```typescript
+export default async function Page(props: PageProps<"/blog/[slug]">) {
+  const { slug } = await props.params
+  const query = await props.searchParams
+  const cookieStore = await cookies()
+  const headersList = await headers()
+}
+```
+
+### Other Key Changes
+- Turbopack is default (no flag needed)
+- Node.js 20.9+ required
+- `next lint` removed - use ESLint directly
+- Parallel routes require `default.js` files
+
+### Documentation
+- Proxy: https://nextjs.org/docs/app/getting-started/proxy
+- Upgrade Guide: https://nextjs.org/docs/app/guides/upgrading/version-16
+
 ## Development Rules
 
 ### Pages Must Be Server-Side
