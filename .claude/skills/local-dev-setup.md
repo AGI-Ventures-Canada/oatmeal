@@ -133,9 +133,9 @@ git checkout -b feature/your-feature-name
 | App | http://localhost:3000 |
 | API Swagger | http://localhost:3000/api/swagger |
 | Health Check | http://localhost:3000/api/public/health |
-| Supabase Studio | http://localhost:54323 |
-| Supabase API | http://localhost:54321 |
-| Inbucket (email) | http://localhost:54324 |
+| Supabase Studio | http://localhost:54423 |
+| Supabase API | http://localhost:54421 |
+| Inbucket (email) | http://localhost:54424 |
 
 ## Database Development
 

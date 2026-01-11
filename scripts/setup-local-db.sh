@@ -58,8 +58,8 @@ if ! grep -q "^API_KEY_SECRET=" "$ENV_FILE" 2>/dev/null; then
   set_env_var "API_KEY_SECRET" "$API_SECRET"
 fi
 
-echo "Using local Supabase (http://127.0.0.1:54321)"
-echo "   Studio: http://127.0.0.1:54323"
+echo "Using local Supabase (http://127.0.0.1:54421)"
+echo "   Studio: http://127.0.0.1:54423"
 
 echo "Generating Supabase TypeScript types..."
 if supabase gen types typescript --local > "$TYPES_FILE" 2>/dev/null; then
