@@ -11,11 +11,15 @@ This project uses **bun** as the package manager.
 ## Commands
 
 ```bash
-bun dev          # Start development server on http://localhost:3000
+bun dev          # Start dev server (auto-starts local Supabase)
+bun dev:fresh    # Reset database + start dev server (clean slate)
 bun run build    # Production build
 bun start        # Start production server
 bun lint         # Run ESLint
 bun test         # Run tests
+bun db:sync      # Reset DB + regenerate types
+bun db:diff name # Capture Studio changes as migration
+bun update-types # Regenerate TypeScript types from DB
 ```
 
 ## Architecture
@@ -39,6 +43,7 @@ See domain-specific CLAUDE.md files for detailed patterns:
 - `lib/api/CLAUDE.md` - Elysia API patterns, route namespaces, auth
 - `lib/workflows/CLAUDE.md` - Workflow DevKit, durable agents, steps
 - `lib/agents/CLAUDE.md` - AI SDK 6, ToolLoopAgent, streaming
+- `supabase/CLAUDE.md` - Database development, migrations, branching
 
 ### Claude Skills
 

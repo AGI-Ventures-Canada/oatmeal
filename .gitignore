@@ -43,3 +43,10 @@ next-env.d.ts
 # local dev
 specs.md
 examples/
+
+# supabase local
+supabase/.branches
+supabase/.temp
+
+# production env backup
+.env.local.production
