@@ -28,11 +28,9 @@ supabase --version  # Need Supabase CLI
 - Node.js: Install via `brew install node@20` or [nodejs.org](https://nodejs.org) (v20.9+)
 - Supabase CLI: Install via `brew install supabase/tap/supabase`
 
-### Step 2: Clone and Install Dependencies
+### Step 2: Install Dependencies
 
 ```bash
-git clone git@github.com:AGI-Ventures-Canada/agents-server.git
-cd agents-server
 bun install
 ```
 
