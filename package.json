@@ -13,7 +13,8 @@
     "db:sync": "supabase db reset && supabase gen types typescript --local > lib/db/types.ts",
     "db:diff": "supabase db diff -f",
     "update-types": "supabase gen types typescript --local > lib/db/types.ts",
-    "update-types:remote": "supabase gen types typescript --project-id \"$PROJECT_REF\" > lib/db/types.ts"
+    "update-types:remote": "supabase gen types typescript --project-id \"$PROJECT_REF\" > lib/db/types.ts",
+    "gen:secret": "openssl rand -hex 32"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.36.7",
