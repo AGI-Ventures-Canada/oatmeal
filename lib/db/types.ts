@@ -355,9 +355,10 @@ export const Constants = {
   },
 } as const
 
-export type ApiKey = Database["public"]["Tables"]["api_keys"]["Row"]
-export type Job = Database["public"]["Tables"]["jobs"]["Row"]
-export type Tenant = Database["public"]["Tables"]["tenants"]["Row"]
-export type AuditLog = Database["public"]["Tables"]["audit_logs"]["Row"]
-export type JobStatus = Database["public"]["Enums"]["job_status"]
+export type ApiKey = Tables<"api_keys">
+export type Job = Tables<"jobs">
+export type Tenant = Tables<"tenants">
+export type AuditLog = Tables<"audit_logs">
+export type JobStatus = Enums<"job_status">
+export type ActorType = Enums<"actor_type">
 

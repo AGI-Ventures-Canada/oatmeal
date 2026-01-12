@@ -167,3 +167,4 @@ const hash = createHmac("sha256", API_KEY_SECRET).update(bearerToken).digest("he
 - Elysia + Next.js: https://elysiajs.com/integrations/nextjs
 - Elysia + AI SDK: https://elysiajs.com/integrations/ai-sdk.html
 - Unit Testing: https://elysiajs.com/patterns/unit-test.html
+- Clerk + Next.js: https://clerk.com/docs/reference/nextjs/overview
