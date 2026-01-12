@@ -9,30 +9,14 @@ if ! docker info &>/dev/null 2>&1; then
   exit 1
 fi
 
-start_supabase() {
-  echo "Starting local Supabase..."
-  if supabase start --ignore-health-check 2>&1; then
-    return 0
-  fi
-  echo "Supabase start failed, cleaning up and retrying..."
-  supabase stop --no-backup 2>/dev/null || true
-  sleep 3
-  if supabase start --ignore-health-check 2>&1; then
-    return 0
-  fi
-  return 1
-}
-
 if ! supabase status &>/dev/null 2>&1; then
-  if ! start_supabase; then
-    echo "Failed to start Supabase."
-    echo "Try running: supabase stop --no-backup && docker system prune -f"
-    exit 1
-  fi
+  echo "Starting local Supabase..."
+  supabase start --ignore-health-check
 else
   echo "Local Supabase is already running"
 fi
 
+echo "Getting Supabase credentials..."
 STATUS_JSON=$(supabase status --output json 2>/dev/null)
 API_URL=$(echo "$STATUS_JSON" | grep '"API_URL"' | cut -d'"' -f4)
 ANON_KEY=$(echo "$STATUS_JSON" | grep '"ANON_KEY"' | cut -d'"' -f4)
@@ -40,7 +24,6 @@ SERVICE_KEY=$(echo "$STATUS_JSON" | grep '"SERVICE_ROLE_KEY"' | cut -d'"' -f4)
 
 if [ -z "$API_URL" ] || [ -z "$ANON_KEY" ] || [ -z "$SERVICE_KEY" ]; then
   echo "Failed to get local Supabase credentials"
-  echo "Try running: supabase status"
   exit 1
 fi
 
@@ -72,34 +55,15 @@ set_env_var "SUPABASE_SERVICE_ROLE_KEY" "$SERVICE_KEY"
 
 if ! grep -q "^API_KEY_SECRET=" "$ENV_FILE" 2>/dev/null; then
   echo "Generating API_KEY_SECRET..."
-  API_SECRET=$(openssl rand -hex 32)
-  set_env_var "API_KEY_SECRET" "$API_SECRET"
+  set_env_var "API_KEY_SECRET" "$(openssl rand -hex 32)"
 fi
 
 echo "Using local Supabase ($API_URL)"
 echo "   Studio: http://127.0.0.1:54423"
 
-echo "Generating Supabase TypeScript types (this may take a moment)..."
-# Run type generation in background with timeout
-(supabase gen types typescript --local > "$TYPES_FILE" 2>/dev/null) &
-TYPE_PID=$!
-
-# Wait up to 30 seconds
-for i in {1..30}; do
-  if ! kill -0 $TYPE_PID 2>/dev/null; then
-    wait $TYPE_PID
-    if [ $? -eq 0 ] && [ -s "$TYPES_FILE" ]; then
-      echo "Types generated at $TYPES_FILE"
-    else
-      echo "Type generation failed (run 'bun run update-types' manually)"
-    fi
-    break
-  fi
-  sleep 1
-done
-
-# Kill if still running
-if kill -0 $TYPE_PID 2>/dev/null; then
-  kill $TYPE_PID 2>/dev/null
-  echo "Type generation timed out (run 'bun run update-types' manually)"
+echo "Generating Supabase TypeScript types..."
+if supabase gen types typescript --local > "$TYPES_FILE" 2>/dev/null; then
+  echo "Types generated at $TYPES_FILE"
+else
+  echo "Type generation skipped (run 'bun run update-types' manually if needed)"
 fi
