@@ -1,0 +1,19 @@
+import type { Json } from "@/lib/db/types"
+
+export type JobHandler = (input: Json) => Promise<Json>
+
+export const jobHandlers: Record<string, JobHandler> = {
+  echo: async (input) => {
+    return { echo: input }
+  },
+
+  delay: async (input) => {
+    const { ms = 1000 } = (input as { ms?: number }) || {}
+    await new Promise((resolve) => setTimeout(resolve, ms))
+    return { delayed: true, ms }
+  },
+}
+
+export function registerJobHandler(type: string, handler: JobHandler): void {
+  jobHandlers[type] = handler
+}

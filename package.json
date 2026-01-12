@@ -3,17 +3,29 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "./scripts/setup-local-db.sh",
     "dev": "next dev",
+    "dev:fresh": "./scripts/setup-local-db.sh && supabase db reset && bun run dev:skip-setup",
+    "dev:skip-setup": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:sync": "supabase db reset && supabase gen types typescript --local > lib/db/types.ts",
+    "db:diff": "supabase db diff -f",
+    "update-types": "supabase gen types typescript --local > lib/db/types.ts",
+    "update-types:remote": "supabase gen types typescript --project-id \"$PROJECT_REF\" > lib/db/types.ts",
+    "gen:secret": "openssl rand -hex 32"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.36.7",
     "@elysiajs/swagger": "^1.3.1",
+    "@supabase/supabase-js": "^2.90.1",
+    "@workflow/ai": "^4.0.1-beta.44",
     "elysia": "^1.4.21",
     "next": "16.1.1",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "workflow": "^4.0.1-beta.44"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
