@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "bun:test"
+import { describe, expect, it } from "bun:test"
 import { checkRateLimit, getRateLimitHeaders, defaultRateLimits } from "@/lib/services/rate-limit"
 
 describe("Rate Limiting", () => {

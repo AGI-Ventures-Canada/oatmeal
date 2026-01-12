@@ -1,4 +1,3 @@
-import { mock } from "bun:test"
 import type { Principal, UserPrincipal, ApiKeyPrincipal } from "@/lib/auth/types"
 
 export const mockUserPrincipal: UserPrincipal = {
@@ -30,16 +29,12 @@ export function createMockSupabaseClient() {
   }
 
   const createQuery = (table: string) => {
-    let filters: Record<string, unknown> = {}
-    let selectColumns = "*"
+    const filters: Record<string, unknown> = {}
     let insertData: unknown = null
     let updateData: unknown = null
-    let orderBy: { column: string; ascending: boolean } | null = null
-    let limitCount: number | null = null
 
     const query = {
-      select: (cols: string = "*") => {
-        selectColumns = cols
+      select: (_cols: string = "*") => {
         return query
       },
       insert: (data: unknown) => {
@@ -58,12 +53,10 @@ export function createMockSupabaseClient() {
         filters[`${col}_is`] = val
         return query
       },
-      order: (col: string, opts: { ascending: boolean }) => {
-        orderBy = { column: col, ascending: opts.ascending }
+      order: (_col: string, _opts: { ascending: boolean }) => {
         return query
       },
-      limit: (count: number) => {
-        limitCount = count
+      limit: (_count: number) => {
         return query
       },
       range: (_start: number, _end: number) => {

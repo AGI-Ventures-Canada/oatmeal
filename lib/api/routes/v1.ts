@@ -15,7 +15,7 @@ class RateLimitError extends Error {
   }
 }
 
-export const v1Routes = new Elysia({ prefix: "/v1" })
+export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
   .onError(({ error }) => {
     if (error instanceof AuthError) {
       return new Response(JSON.stringify({ error: error.message }), {
@@ -54,6 +54,15 @@ export const v1Routes = new Elysia({ prefix: "/v1" })
       keyId: principal.keyId,
       scopes: principal.scopes,
     }
+  }, {
+    detail: {
+      summary: "Get current API key info",
+      description: "Returns information about the authenticated API key including tenant, key ID, and scopes.",
+      externalDocs: {
+        description: "Code samples",
+        url: "#whoami-samples",
+      },
+    },
   })
   .post(
     "/jobs",
@@ -101,10 +110,14 @@ export const v1Routes = new Elysia({ prefix: "/v1" })
     },
     {
       body: t.Object({
-        type: t.String({ minLength: 1 }),
-        input: t.Optional(t.Any()),
-        idempotencyKey: t.Optional(t.String()),
+        type: t.String({ minLength: 1, description: "Job type identifier" }),
+        input: t.Optional(t.Any({ description: "Job input payload (JSON)" })),
+        idempotencyKey: t.Optional(t.String({ description: "Unique key for idempotent requests" })),
       }),
+      detail: {
+        summary: "Create a new job",
+        description: "Creates a new job and starts its workflow execution. Supports idempotency via header or body.",
+      },
     }
   )
   .get("/jobs/:id", async ({ principal, params }) => {
@@ -131,6 +144,11 @@ export const v1Routes = new Elysia({ prefix: "/v1" })
       updatedAt: job.updated_at,
       completedAt: job.completed_at,
     }
+  }, {
+    detail: {
+      summary: "Get job status",
+      description: "Returns the current status and metadata of a job.",
+    },
   })
   .get("/jobs/:id/result", async ({ principal, params }) => {
     requirePrincipal(principal, ["api_key"], ["jobs:read"])
@@ -168,6 +186,11 @@ export const v1Routes = new Elysia({ prefix: "/v1" })
       error: job.error,
       completedAt: job.completed_at,
     }
+  }, {
+    detail: {
+      summary: "Get job result",
+      description: "Returns the result of a completed job. Returns 202 if job is still running.",
+    },
   })
   .post("/jobs/:id/cancel", async ({ principal, params }) => {
     requirePrincipal(principal, ["api_key"], ["jobs:cancel"])
@@ -196,4 +219,9 @@ export const v1Routes = new Elysia({ prefix: "/v1" })
     })
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Cancel a job",
+      description: "Cancels a queued or running job. Cannot cancel completed jobs.",
+    },
   })

@@ -106,6 +106,23 @@ bunx shadcn@latest add <component-name>
 
 Check existing components before creating new ones.
 
+### shadcn/ui Styling
+
+**CRITICAL: Use shadcn components as-is. Do not add custom styling.**
+
+- Styling is pre-configured in shadcn config and globals.css
+- Use component variants (e.g., `variant="outline"`) instead of custom classes
+- Never override component styles with inline Tailwind classes
+- If you need different styling, use the component's built-in variants
+
+```typescript
+// GOOD - use variant
+<Button variant="destructive">Delete</Button>
+
+// BAD - custom styling
+<Button className="bg-red-500 hover:bg-red-600">Delete</Button>
+```
+
 ### Supabase
 
 - Use Service Key in API endpoints to bypass RLS policies

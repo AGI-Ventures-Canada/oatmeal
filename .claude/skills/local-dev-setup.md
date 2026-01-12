@@ -137,6 +137,59 @@ git checkout -b feature/your-feature-name
 | Supabase API | http://localhost:54421 |
 | Inbucket (email) | http://localhost:54424 |
 
+## TypeScript SDK
+
+The project includes a TypeScript SDK in `packages/sdk/` for integrating with the v1 API.
+
+### SDK Commands
+
+```bash
+cd packages/sdk
+bun run build    # Compile TypeScript
+bun run dev      # Watch mode
+bun test         # Run SDK tests
+```
+
+### SDK Structure
+
+```
+packages/sdk/
+├── src/index.ts          # Client implementation and types
+├── __tests__/            # SDK tests
+├── dist/                 # Compiled output (gitignored)
+├── README.md             # User documentation
+└── CLAUDE.md             # Development guidelines
+```
+
+### Using the SDK
+
+```typescript
+import { createClient } from "@agents-server/sdk"
+
+const client = createClient("sk_live_your_api_key", {
+  baseUrl: "http://localhost:3000"  // Use local for dev
+})
+
+// Check API key
+const { data } = await client.whoami()
+
+// Create and wait for job
+const { data: job } = await client.jobs.create({ type: "test", input: {} })
+const result = await client.jobs.waitForResult(job.id)
+```
+
+### When Modifying v1 API
+
+If you add or modify v1 API endpoints, you **must** update the SDK:
+
+1. Update types in `packages/sdk/src/index.ts`
+2. Add/update client methods
+3. Add tests in `packages/sdk/__tests__/client.test.ts`
+4. Update `packages/sdk/README.md`
+5. Run `cd packages/sdk && bun run build && bun test`
+
+See `lib/api/CLAUDE.md` for detailed SDK maintenance guidelines.
+
 ## Database Development
 
 ### Fresh Start (Clean Database)
@@ -237,4 +290,5 @@ cp .env.local.production .env.local
 1. Read `CLAUDE.md` for project conventions
 2. Read `supabase/CLAUDE.md` for database workflow
 3. Read domain docs in `lib/*/CLAUDE.md` for specific patterns
-4. Explore the codebase: `app/` (routes), `lib/` (services)
+4. Read `packages/sdk/CLAUDE.md` for SDK development
+5. Explore the codebase: `app/` (routes), `lib/` (services), `packages/sdk/` (TypeScript SDK)
