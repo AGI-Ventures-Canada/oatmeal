@@ -142,4 +142,5 @@ When you push a feature branch to GitHub, Supabase creates a preview database.
 
 - [Supabase CLI](https://supabase.com/docs/reference/cli/supabase-init)
 - [Branching](https://supabase.com/docs/guides/deployment/branching)
+- [GitHub Integration](https://supabase.com/docs/guides/deployment/branching/github-integration)
 - [Type Generation](https://supabase.com/docs/guides/api/rest/generating-types)
