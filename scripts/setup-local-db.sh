@@ -9,9 +9,26 @@ if ! docker info &>/dev/null 2>&1; then
   exit 1
 fi
 
-if ! supabase status &>/dev/null 2>&1; then
+start_supabase() {
   echo "Starting local Supabase..."
-  supabase start
+  if supabase start --ignore-health-check 2>&1; then
+    return 0
+  fi
+  echo "Supabase start failed, cleaning up and retrying..."
+  supabase stop --no-backup 2>/dev/null || true
+  sleep 3
+  if supabase start --ignore-health-check 2>&1; then
+    return 0
+  fi
+  return 1
+}
+
+if ! supabase status &>/dev/null 2>&1; then
+  if ! start_supabase; then
+    echo "Failed to start Supabase."
+    echo "Try running: supabase stop --no-backup && docker system prune -f"
+    exit 1
+  fi
 else
   echo "Local Supabase is already running"
 fi
@@ -23,6 +40,7 @@ SERVICE_KEY=$(echo "$STATUS_JSON" | grep '"SERVICE_ROLE_KEY"' | cut -d'"' -f4)
 
 if [ -z "$API_URL" ] || [ -z "$ANON_KEY" ] || [ -z "$SERVICE_KEY" ]; then
   echo "Failed to get local Supabase credentials"
+  echo "Try running: supabase status"
   exit 1
 fi
 
@@ -58,7 +76,7 @@ if ! grep -q "^API_KEY_SECRET=" "$ENV_FILE" 2>/dev/null; then
   set_env_var "API_KEY_SECRET" "$API_SECRET"
 fi
 
-echo "Using local Supabase (http://127.0.0.1:54421)"
+echo "Using local Supabase ($API_URL)"
 echo "   Studio: http://127.0.0.1:54423"
 
 echo "Generating Supabase TypeScript types..."
