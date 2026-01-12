@@ -5,7 +5,7 @@
   "scripts": {
     "predev": "./scripts/setup-local-db.sh",
     "dev": "next dev",
-    "dev:fresh": "supabase db reset && bun run dev:skip-setup",
+    "dev:fresh": "./scripts/setup-local-db.sh && supabase db reset && bun run dev:skip-setup",
     "dev:skip-setup": "next dev",
     "build": "next build",
     "start": "next start",
