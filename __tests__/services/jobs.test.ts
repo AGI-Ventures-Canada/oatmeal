@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import type { Job, JobStatus } from "@/lib/db/types"
+import type { JobStatus } from "@/lib/db/types"
 
 describe("Jobs Service", () => {
   describe("Job Status Transitions", () => {

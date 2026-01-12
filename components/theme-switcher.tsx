@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 
 export function ThemeSwitcher() {
-  const { setTheme, theme } = useTheme()
+  const { setTheme } = useTheme()
 
   return (
     <DropdownMenu>

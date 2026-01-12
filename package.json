@@ -2,6 +2,7 @@
   "name": "agents-server",
   "version": "0.1.0",
   "private": true,
+  "workspaces": ["packages/*"],
   "scripts": {
     "predev": "./scripts/setup-local-db.sh",
     "dev": "next dev",
@@ -20,6 +21,7 @@
     "@base-ui/react": "^1.0.0",
     "@clerk/nextjs": "^6.36.7",
     "@clerk/themes": "^2.4.47",
+    "@elysiajs/eden": "^1.4.6",
     "@elysiajs/swagger": "^1.3.1",
     "@supabase/supabase-js": "^2.90.1",
     "@workflow/ai": "^4.0.1-beta.44",
