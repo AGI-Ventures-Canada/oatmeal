@@ -90,3 +90,4 @@ VALUES
     now() - interval '1 hour'
   )
 ON CONFLICT DO NOTHING;
+
