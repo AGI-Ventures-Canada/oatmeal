@@ -9,6 +9,10 @@ if ! docker info &>/dev/null 2>&1; then
   exit 1
 fi
 
+# Stop any other Supabase projects to free up resources
+echo "Stopping other Supabase projects..."
+docker ps --filter "name=supabase_" --format "{{.Names}}" | grep -v "agents-server" | xargs -r docker stop 2>/dev/null || true
+
 if ! supabase status &>/dev/null 2>&1; then
   echo "Starting local Supabase..."
   supabase start --ignore-health-check
