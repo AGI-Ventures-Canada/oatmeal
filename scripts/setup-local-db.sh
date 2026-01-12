@@ -79,9 +79,27 @@ fi
 echo "Using local Supabase ($API_URL)"
 echo "   Studio: http://127.0.0.1:54423"
 
-echo "Generating Supabase TypeScript types..."
-if supabase gen types typescript --local > "$TYPES_FILE" 2>/dev/null; then
-  echo "Types generated at $TYPES_FILE"
-else
-  echo "Type generation skipped (run 'bun run update-types' manually if needed)"
+echo "Generating Supabase TypeScript types (this may take a moment)..."
+# Run type generation in background with timeout
+(supabase gen types typescript --local > "$TYPES_FILE" 2>/dev/null) &
+TYPE_PID=$!
+
+# Wait up to 30 seconds
+for i in {1..30}; do
+  if ! kill -0 $TYPE_PID 2>/dev/null; then
+    wait $TYPE_PID
+    if [ $? -eq 0 ] && [ -s "$TYPES_FILE" ]; then
+      echo "Types generated at $TYPES_FILE"
+    else
+      echo "Type generation failed (run 'bun run update-types' manually)"
+    fi
+    break
+  fi
+  sleep 1
+done
+
+# Kill if still running
+if kill -0 $TYPE_PID 2>/dev/null; then
+  kill $TYPE_PID 2>/dev/null
+  echo "Type generation timed out (run 'bun run update-types' manually)"
 fi
