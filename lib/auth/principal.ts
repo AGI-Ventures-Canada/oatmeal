@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { Principal, Scope } from "./types"
+import type { Principal, PrincipalKindMap, Scope } from "./types"
 import { scopesForRole } from "./types"
 import { verifyApiKey } from "@/lib/services/api-keys"
 import { getOrCreateTenant } from "@/lib/services/tenants"
@@ -57,12 +57,12 @@ export class AuthError extends Error {
   }
 }
 
-export function requirePrincipal(
+export function requirePrincipal<K extends Exclude<Principal["kind"], "anon">>(
   principal: Principal,
-  allowedKinds: Principal["kind"][],
+  allowedKinds: K[],
   requiredScopes: Scope[] = []
-): asserts principal is Exclude<Principal, { kind: "anon" }> {
-  if (!allowedKinds.includes(principal.kind)) {
+): asserts principal is PrincipalKindMap[K] {
+  if (!allowedKinds.includes(principal.kind as K)) {
     throw new AuthError("Unauthorized", 401)
   }
 

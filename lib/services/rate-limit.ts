@@ -1,3 +1,6 @@
+// TODO: Replace with Redis/Upstash for production. In-memory Map doesn't persist
+// across serverless cold starts and isn't shared across instances.
+
 type RateLimitEntry = {
   count: number
   resetAt: number

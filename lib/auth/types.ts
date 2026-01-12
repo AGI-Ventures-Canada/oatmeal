@@ -37,6 +37,12 @@ export type AnonPrincipal = {
 
 export type Principal = UserPrincipal | ApiKeyPrincipal | AnonPrincipal
 
+export type PrincipalKindMap = {
+  user: UserPrincipal
+  api_key: ApiKeyPrincipal
+  anon: AnonPrincipal
+}
+
 export function scopesForRole(role: string): Scope[] {
   if (role === "org:admin") {
     return ALL_SCOPES

@@ -43,7 +43,6 @@ export const v1Routes = new Elysia({ prefix: "/v1" })
   })
   .get("/whoami", async ({ principal }) => {
     requirePrincipal(principal, ["api_key"])
-    if (principal.kind !== "api_key") throw new AuthError("Unauthorized")
 
     const rateLimit = checkRateLimit(`api_key:${principal.keyId}:default`)
     if (!rateLimit.allowed) {
@@ -60,7 +59,6 @@ export const v1Routes = new Elysia({ prefix: "/v1" })
     "/jobs",
     async ({ principal, body, request }) => {
       requirePrincipal(principal, ["api_key"], ["jobs:create"])
-      if (principal.kind !== "api_key") throw new AuthError("Unauthorized")
 
       const rateLimit = checkRateLimit(
         `api_key:${principal.keyId}:jobs:create`,
@@ -111,7 +109,6 @@ export const v1Routes = new Elysia({ prefix: "/v1" })
   )
   .get("/jobs/:id", async ({ principal, params }) => {
     requirePrincipal(principal, ["api_key"], ["jobs:read"])
-    if (principal.kind !== "api_key") throw new AuthError("Unauthorized")
 
     const rateLimit = checkRateLimit(`api_key:${principal.keyId}:default`)
     if (!rateLimit.allowed) {
@@ -137,7 +134,6 @@ export const v1Routes = new Elysia({ prefix: "/v1" })
   })
   .get("/jobs/:id/result", async ({ principal, params }) => {
     requirePrincipal(principal, ["api_key"], ["jobs:read"])
-    if (principal.kind !== "api_key") throw new AuthError("Unauthorized")
 
     const rateLimit = checkRateLimit(`api_key:${principal.keyId}:default`)
     if (!rateLimit.allowed) {
@@ -175,7 +171,6 @@ export const v1Routes = new Elysia({ prefix: "/v1" })
   })
   .post("/jobs/:id/cancel", async ({ principal, params }) => {
     requirePrincipal(principal, ["api_key"], ["jobs:cancel"])
-    if (principal.kind !== "api_key") throw new AuthError("Unauthorized")
 
     const rateLimit = checkRateLimit(`api_key:${principal.keyId}:default`)
     if (!rateLimit.allowed) {

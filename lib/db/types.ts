@@ -355,3 +355,9 @@ export const Constants = {
   },
 } as const
 
+export type ApiKey = Database["public"]["Tables"]["api_keys"]["Row"]
+export type Job = Database["public"]["Tables"]["jobs"]["Row"]
+export type Tenant = Database["public"]["Tables"]["tenants"]["Row"]
+export type AuditLog = Database["public"]["Tables"]["audit_logs"]["Row"]
+export type JobStatus = Database["public"]["Enums"]["job_status"]
+

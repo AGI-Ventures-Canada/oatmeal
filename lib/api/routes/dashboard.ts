@@ -24,7 +24,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   })
   .get("/me", async ({ principal }) => {
     requirePrincipal(principal, ["user"])
-    if (principal.kind !== "user") throw new AuthError("Unauthorized")
 
     return {
       tenantId: principal.tenantId,
@@ -36,7 +35,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   })
   .get("/keys", async ({ principal }) => {
     requirePrincipal(principal, ["user"], ["keys:read"])
-    if (principal.kind !== "user") throw new AuthError("Unauthorized")
 
     const keys = await listApiKeys(principal.tenantId)
     return {
@@ -55,7 +53,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     "/keys",
     async ({ principal, body }) => {
       requirePrincipal(principal, ["user"], ["keys:write"])
-      if (principal.kind !== "user") throw new AuthError("Unauthorized")
 
       const result = await createApiKey({
         tenantId: principal.tenantId,
@@ -93,7 +90,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   )
   .post("/keys/:id/revoke", async ({ principal, params }) => {
     requirePrincipal(principal, ["user"], ["keys:write"])
-    if (principal.kind !== "user") throw new AuthError("Unauthorized")
 
     const key = await getApiKeyById(params.id, principal.tenantId)
     if (!key) {
@@ -119,7 +115,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   })
   .get("/jobs", async ({ principal, query }) => {
     requirePrincipal(principal, ["user"], ["jobs:read"])
-    if (principal.kind !== "user") throw new AuthError("Unauthorized")
 
     const jobs = await listJobs(principal.tenantId, {
       limit: query.limit ? parseInt(query.limit) : undefined,
@@ -139,7 +134,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   })
   .get("/jobs/:id", async ({ principal, params }) => {
     requirePrincipal(principal, ["user"], ["jobs:read"])
-    if (principal.kind !== "user") throw new AuthError("Unauthorized")
 
     const job = await getJobById(params.id, principal.tenantId)
     if (!job) {
