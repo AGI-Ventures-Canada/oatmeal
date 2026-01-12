@@ -163,6 +163,32 @@ const hash = createHmac("sha256", API_KEY_SECRET).update(bearerToken).digest("he
 // Lookup by prefix + hash
 ```
 
+## API Documentation Maintenance
+
+**CRITICAL: When adding or modifying API endpoints, you MUST update the documentation:**
+
+1. **Swagger details** - Add `detail` property with `summary` and `description`:
+```typescript
+.get("/endpoint", handler, {
+  detail: {
+    summary: "Short description",
+    description: "Detailed explanation of what the endpoint does.",
+  },
+})
+```
+
+2. **Code samples** - Update `lib/api/API_SAMPLES.md` with examples for:
+   - curl
+   - TypeScript
+   - Python
+
+3. **Request/response types** - Document body parameters with descriptions:
+```typescript
+body: t.Object({
+  field: t.String({ description: "What this field is for" }),
+})
+```
+
 ## Documentation
 - Elysia + Next.js: https://elysiajs.com/integrations/nextjs
 - Elysia + AI SDK: https://elysiajs.com/integrations/ai-sdk.html
