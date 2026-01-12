@@ -46,7 +46,7 @@ bun add @agents-server/sdk
 import { createClient } from "@agents-server/sdk"
 
 const client = createClient("sk_live_your_api_key", {
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://your-api-domain.com"  // Required
 })
 
 // Create a job

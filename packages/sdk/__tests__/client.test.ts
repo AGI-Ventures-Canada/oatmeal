@@ -10,18 +10,20 @@ describe("SDK Client", () => {
   })
 
   describe("createClient", () => {
-    it("creates a client with default baseUrl", () => {
-      const client = createClient("sk_live_test123")
+    it("creates a client with baseUrl", () => {
+      const client = createClient("sk_live_test123", {
+        baseUrl: "https://api.example.com",
+      })
       expect(client).toBeDefined()
       expect(client.whoami).toBeDefined()
       expect(client.jobs).toBeDefined()
     })
 
-    it("creates a client with custom baseUrl", () => {
-      const client = createClient("sk_live_test123", {
-        baseUrl: "https://custom.example.com",
-      })
-      expect(client).toBeDefined()
+    it("throws error when baseUrl is missing", () => {
+      expect(() => {
+        // @ts-expect-error - testing runtime validation
+        createClient("sk_live_test123", {})
+      }).toThrow("baseUrl is required")
     })
 
     it("strips trailing slash from baseUrl", async () => {
@@ -77,7 +79,7 @@ describe("SDK Client", () => {
         )
       )
 
-      const client = createClient("sk_live_test")
+      const client = createClient("sk_live_test", { baseUrl: "https://api.test.com" })
       const result = await client.whoami()
 
       expect(result.data).toEqual({ tenantId: "t1", keyId: "k1", scopes: ["jobs:read"] })
@@ -92,7 +94,7 @@ describe("SDK Client", () => {
         )
       )
 
-      const client = createClient("invalid_key")
+      const client = createClient("invalid_key", { baseUrl: "https://api.test.com" })
       const result = await client.whoami()
 
       expect(result.data).toBeNull()
@@ -128,7 +130,7 @@ describe("SDK Client", () => {
         Promise.resolve(new Response(JSON.stringify(mockJob), { status: 200 }))
       )
 
-      const client = createClient("sk_live_test")
+      const client = createClient("sk_live_test", { baseUrl: "https://api.test.com" })
       const result = await client.jobs.create({ type: "analyze" })
 
       expect(result.data).toEqual(mockJob)
@@ -140,7 +142,7 @@ describe("SDK Client", () => {
         Promise.resolve(new Response(JSON.stringify({ id: "job-1" }), { status: 200 }))
       )
 
-      const client = createClient("sk_live_test")
+      const client = createClient("sk_live_test", { baseUrl: "https://api.test.com" })
       await client.jobs.create({ type: "test", idempotencyKey: "unique-key-123" })
 
       const [, options] = mockFetch.mock.calls[0]
@@ -166,7 +168,7 @@ describe("SDK Client", () => {
         Promise.resolve(new Response(JSON.stringify({ error: "Job not found" }), { status: 404 }))
       )
 
-      const client = createClient("sk_live_test")
+      const client = createClient("sk_live_test", { baseUrl: "https://api.test.com" })
       const result = await client.jobs.get("non-existent")
 
       expect(result.data).toBeNull()
@@ -197,7 +199,7 @@ describe("SDK Client", () => {
         )
       )
 
-      const client = createClient("sk_live_test")
+      const client = createClient("sk_live_test", { baseUrl: "https://api.test.com" })
       const result = await client.jobs.getResult("running-job")
 
       expect(result.status).toBe(202)
@@ -225,7 +227,7 @@ describe("SDK Client", () => {
         )
       )
 
-      const client = createClient("sk_live_test")
+      const client = createClient("sk_live_test", { baseUrl: "https://api.test.com" })
       const result = await client.jobs.cancel("completed-job")
 
       expect(result.data).toBeNull()
@@ -245,7 +247,7 @@ describe("SDK Client", () => {
         )
       )
 
-      const client = createClient("sk_live_test")
+      const client = createClient("sk_live_test", { baseUrl: "https://api.test.com" })
       const result = await client.jobs.waitForResult("job-1")
 
       expect(mockFetch).toHaveBeenCalledTimes(1)
@@ -270,7 +272,7 @@ describe("SDK Client", () => {
         )
       })
 
-      const client = createClient("sk_live_test")
+      const client = createClient("sk_live_test", { baseUrl: "https://api.test.com" })
       const result = await client.jobs.waitForResult("job-1", { intervalMs: 10 })
 
       expect(mockFetch).toHaveBeenCalledTimes(3)
@@ -284,7 +286,7 @@ describe("SDK Client", () => {
         )
       )
 
-      const client = createClient("sk_live_test")
+      const client = createClient("sk_live_test", { baseUrl: "https://api.test.com" })
 
       await expect(
         client.jobs.waitForResult("slow-job", { maxAttempts: 3, intervalMs: 10 })
@@ -296,7 +298,7 @@ describe("SDK Client", () => {
         Promise.resolve(new Response(JSON.stringify({ error: "Job failed" }), { status: 500 }))
       )
 
-      const client = createClient("sk_live_test")
+      const client = createClient("sk_live_test", { baseUrl: "https://api.test.com" })
 
       await expect(client.jobs.waitForResult("failed-job")).rejects.toThrow("Job failed")
     })

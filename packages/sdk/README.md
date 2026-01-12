@@ -51,13 +51,13 @@ try {
 
 ## API
 
-### `createClient(apiKey, options?)`
+### `createClient(apiKey, options)`
 
 Creates a new client instance.
 
 **Parameters:**
 - `apiKey` - Your API key (starts with `sk_live_`)
-- `options.baseUrl` - Base URL for the API (default: `https://your-domain.com`)
+- `options.baseUrl` - Base URL for the API (required)
 
 **Returns:** Client instance with typed methods
 
