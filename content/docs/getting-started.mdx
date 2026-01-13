@@ -33,14 +33,12 @@ The official TypeScript SDK provides a type-safe client for interacting with the
 
 ## Create a Client
 
-Initialize the client with your API key and server URL:
+Initialize the client with your API key:
 
 ```typescript title="lib/agents.ts"
 import { createClient } from "@agents-server/sdk"
 
-const client = createClient("sk_live_your_api_key", {
-  baseUrl: "https://api.your-server.com"
-})
+const client = createClient(process.env.AGENTS_API_KEY!)
 ```
 
 <Callout type="warn">
@@ -66,18 +64,10 @@ console.log("Scopes:", data.scopes)
 
 ## Environment Variables
 
-Store your configuration in environment variables:
+Store your API key in an environment variable:
 
 ```bash title=".env.local"
-AGENTS_SERVER_URL=https://api.your-server.com
-AGENTS_SERVER_API_KEY=sk_live_...
-```
-
-```typescript title="lib/agents.ts"
-const client = createClient(
-  process.env.AGENTS_SERVER_API_KEY!,
-  { baseUrl: process.env.AGENTS_SERVER_URL! }
-)
+AGENTS_API_KEY=sk_live_...
 ```
 
 ## Response Format

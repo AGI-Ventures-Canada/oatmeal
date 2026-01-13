@@ -15,9 +15,7 @@ bun add @agents-server/sdk
 ```typescript
 import { createClient } from "@agents-server/sdk"
 
-const client = createClient("sk_live_your_api_key", {
-  baseUrl: "https://your-domain.com"
-})
+const client = createClient(process.env.AGENTS_API_KEY!)
 
 // Run an agent and wait for results
 const { data: run } = await client.agents.run("agent-id", {
@@ -37,9 +35,7 @@ Process documents through an AI agent and handle results:
 ```typescript
 import { createClient } from "@agents-server/sdk"
 
-const client = createClient(process.env.AGENTS_API_KEY!, {
-  baseUrl: process.env.AGENTS_URL!
-})
+const client = createClient(process.env.AGENTS_API_KEY!)
 
 async function processDocument(documentUrl: string) {
   // Start the agent run
@@ -222,11 +218,14 @@ await client.jobs.cancel(job.id)
 ### Authentication
 
 ```typescript
-const client = createClient("sk_live_...", { baseUrl: "https://api.example.com" })
+const client = createClient("sk_live_...")
 
 // Verify API key
 const { data: whoami } = await client.whoami()
 console.log(whoami.tenantId, whoami.scopes)
+
+// Custom base URL (only for self-hosted deployments)
+const customClient = createClient("sk_live_...", { baseUrl: "https://api.example.com" })
 ```
 
 ### Agents

@@ -269,8 +269,10 @@ export interface UpdateScheduleInput {
   isActive?: boolean
 }
 
+const DEFAULT_BASE_URL = "https://agents.agiventures.ai"
+
 export interface ClientOptions {
-  baseUrl: string
+  baseUrl?: string
 }
 
 export interface ApiResponse<T> {
@@ -283,12 +285,9 @@ class AgentsClientImpl {
   private apiKey: string
   private baseUrl: string
 
-  constructor(apiKey: string, options: ClientOptions) {
-    if (!options.baseUrl) {
-      throw new Error("baseUrl is required. Example: createClient('sk_live_...', { baseUrl: 'https://api.example.com' })")
-    }
+  constructor(apiKey: string, options: ClientOptions = {}) {
     this.apiKey = apiKey
-    this.baseUrl = options.baseUrl.replace(/\/$/, "")
+    this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "")
   }
 
   private async request<T>(
@@ -506,7 +505,7 @@ class AgentsClientImpl {
   }
 }
 
-export function createClient(apiKey: string, options: ClientOptions): AgentsClient {
+export function createClient(apiKey: string, options?: ClientOptions): AgentsClient {
   return new AgentsClientImpl(apiKey, options)
 }
 
