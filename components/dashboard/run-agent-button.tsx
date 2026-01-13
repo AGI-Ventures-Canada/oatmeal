@@ -19,11 +19,12 @@ import { Textarea } from "@/components/ui/textarea"
 interface RunAgentButtonProps {
   agentId: string
   agentName: string
+  autoOpen?: boolean
 }
 
-export function RunAgentButton({ agentId, agentName }: RunAgentButtonProps) {
+export function RunAgentButton({ agentId, agentName, autoOpen = false }: RunAgentButtonProps) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(autoOpen)
   const [loading, setLoading] = useState(false)
   const [prompt, setPrompt] = useState("")
 

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Sparkles, MoreHorizontal, Pencil, Trash2, Lock } from "lucide-react"
-import type { Skill } from "@/lib/db/types"
+import type { Skill } from "@/lib/db/agent-types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

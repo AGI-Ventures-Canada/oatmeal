@@ -1,5 +1,5 @@
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { Tenant } from "@/lib/db/types"
+import type { Tenant } from "@/lib/db/agent-types"
 
 export async function getOrCreateTenant(clerkOrgId: string): Promise<Tenant | null> {
   const { data: existing } = await getSupabase()

@@ -25,28 +25,38 @@ describe("Schedules Service", () => {
     })
 
     describe("daily frequency", () => {
-      it("returns a date 24 hours in the future", () => {
-        const before = Date.now()
+      it("returns a date in the future at the specified time", () => {
+        const now = new Date()
         const result = calculateNextRun("daily")
-        const after = Date.now()
 
         expect(result).not.toBeNull()
-        const diff = result!.getTime() - before
-        expect(diff).toBeGreaterThanOrEqual(24 * 60 * 60 * 1000 - 100)
-        expect(diff).toBeLessThanOrEqual(24 * 60 * 60 * 1000 + (after - before) + 100)
+        expect(result!.getTime()).toBeGreaterThan(now.getTime())
+        expect(result!.getHours()).toBe(9)
+        expect(result!.getMinutes()).toBe(0)
+      })
+
+      it("respects custom runTime", () => {
+        const result = calculateNextRun("daily", undefined, "UTC", "14:30")
+
+        expect(result).not.toBeNull()
+        expect(result!.getHours()).toBe(14)
+        expect(result!.getMinutes()).toBe(30)
       })
     })
 
     describe("weekly frequency", () => {
-      it("returns a date 7 days in the future", () => {
-        const before = Date.now()
+      it("returns a date approximately 7 days in the future at the specified time", () => {
+        const now = new Date()
         const result = calculateNextRun("weekly")
-        const after = Date.now()
 
         expect(result).not.toBeNull()
-        const diff = result!.getTime() - before
-        expect(diff).toBeGreaterThanOrEqual(7 * 24 * 60 * 60 * 1000 - 100)
-        expect(diff).toBeLessThanOrEqual(7 * 24 * 60 * 60 * 1000 + (after - before) + 100)
+        expect(result!.getTime()).toBeGreaterThan(now.getTime())
+        expect(result!.getHours()).toBe(9)
+        expect(result!.getMinutes()).toBe(0)
+
+        const daysDiff = (result!.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)
+        expect(daysDiff).toBeGreaterThanOrEqual(6)
+        expect(daysDiff).toBeLessThanOrEqual(8)
       })
     })
 

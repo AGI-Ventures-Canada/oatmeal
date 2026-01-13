@@ -11,7 +11,7 @@ import {
   Pause,
   Bot,
 } from "lucide-react"
-import type { Schedule } from "@/lib/db/types"
+import type { Schedule } from "@/lib/db/agent-types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

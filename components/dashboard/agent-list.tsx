@@ -105,7 +105,7 @@ export function AgentList({ agents }: AgentListProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link href={`/agents/${agent.id}/run`}>
+                    <Link href={`/agents/${agent.id}?run=true`}>
                       <Play className="size-4 mr-2" />
                       Run Agent
                     </Link>

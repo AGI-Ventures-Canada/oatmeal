@@ -17,10 +17,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface PageProps {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ run?: string }>
 }
 
-export default async function AgentDetailPage({ params }: PageProps) {
+export default async function AgentDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params
+  const { run } = await searchParams
   const { userId, orgId } = await auth()
 
   if (!userId) {
@@ -52,7 +54,7 @@ export default async function AgentDetailPage({ params }: PageProps) {
             <p className="text-muted-foreground">{agent.description}</p>
           )}
         </div>
-        <RunAgentButton agentId={agent.id} agentName={agent.name} />
+        <RunAgentButton agentId={agent.id} agentName={agent.name} autoOpen={run === "true"} />
       </div>
 
       <Tabs defaultValue="runs">
