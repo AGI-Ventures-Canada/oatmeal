@@ -1,16 +1,16 @@
 ---
 name: local-dev-setup
 description: Helps set up local development environment for the Agents Server project. Use when someone asks how to run the project locally, set up local database, start local Supabase, configure .env or environment variables, get env keys, run dev server, install dependencies, or troubleshoot local setup issues.
-allowed-tools: Read, Glob, Bash(bun:*), Bash(bunx:*), Bash(supabase:*), Bash(git:*), Bash(which:*), Bash(brew:*), Bash(node:*), Bash(npx:*), Bash(docker:*)
+allowed-tools: Read, Glob, Bash(bun:*), Bash(bunx:*), Bash(supabase:*), Bash(git:*), Bash(which:*), Bash(brew:*), Bash(node:*), Bash(npx:*), Bash(docker:*), Bash(curl:*), Bash(open:*), Bash(cat:*), Bash(cp:*), Bash(ls:*), Bash(lsof:*), Bash(kill:*), Bash(rm:*)
 ---
 
 # Developer Onboarding
 
 Guide new developers through setting up the Agents Server project interactively. Work through each step, verify completion, and troubleshoot issues as they arise.
 
-## Workflow
+## Automated Setup
 
-Walk through these steps in order. After each step, verify it succeeded before moving on.
+Run all prerequisite checks and guide the developer step-by-step:
 
 ### Step 1: Check Prerequisites
 
@@ -23,12 +23,14 @@ supabase --version  # Need Supabase CLI
 docker info         # Need Docker running (for local Supabase)
 ```
 
-**If missing tools:**
+**If missing tools, install them:**
 
-- Bun: Install via `curl -fsSL https://bun.sh/install | bash` or `brew install oven-sh/bun/bun`
-- Node.js: Install via `brew install node@20` or [nodejs.org](https://nodejs.org) (v20.9+)
-- Supabase CLI: Install via `brew install supabase/tap/supabase`
-- Docker: Install via [Docker Desktop](https://www.docker.com/products/docker-desktop)
+| Tool | Install Command |
+|------|-----------------|
+| Bun | `curl -fsSL https://bun.sh/install \| bash` or `brew install oven-sh/bun/bun` |
+| Node.js | `brew install node@20` or [nodejs.org](https://nodejs.org) (v20.9+) |
+| Supabase CLI | `brew install supabase/tap/supabase` |
+| Docker | [Docker Desktop](https://www.docker.com/products/docker-desktop) |
 
 ### Step 2: Install Dependencies
 
@@ -53,7 +55,7 @@ Required environment variables:
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 
-# API Key hashing
+# API Key hashing (auto-generated on first bun dev if missing)
 API_KEY_SECRET=<random-32-char-string>
 
 # Supabase (auto-filled by bun dev for local)
@@ -80,9 +82,17 @@ This will automatically:
 
 First run may take a few minutes to download Supabase containers.
 
-Verify: Open http://localhost:3000 in browser. The app should load.
+### Step 5: Verify Everything Works
 
-### Step 5: Verify API
+Open these URLs to verify the setup:
+
+| URL | Expected Result |
+|-----|-----------------|
+| http://localhost:3000 | App loads (may redirect to sign-in) |
+| http://localhost:3000/docs | SDK documentation site |
+| http://localhost:3000/api/swagger | API reference (Swagger UI) |
+| http://localhost:3000/api/public/health | `{"status":"ok","timestamp":"..."}` |
+| http://localhost:54423 | Supabase Studio |
 
 Test the health endpoint:
 
@@ -90,24 +100,21 @@ Test the health endpoint:
 curl http://localhost:3000/api/public/health
 ```
 
-Should return: `{"status":"ok","timestamp":"..."}`
-
-API documentation available at: http://localhost:3000/api/swagger
-
 ### Step 6: Run Tests
 
 ```bash
 bun test
 ```
 
-All tests should pass before making changes.
+All tests should pass before making changes. Target: 90% code coverage.
 
 ### Step 7: Git Workflow Introduction
 
 Read the project's git workflow from CLAUDE.md:
 
 - **Never push directly to main** - always use feature branches
-- Branch hierarchy: `feature branch` → `main` (production)
+- Create PRs as drafts first
+- Follow conventional commit format
 
 Create your first feature branch:
 
@@ -116,6 +123,8 @@ git checkout -b feature/your-feature-name
 ```
 
 ## Quick Reference
+
+### Commands
 
 | Command | Description |
 |---------|-------------|
@@ -128,14 +137,43 @@ git checkout -b feature/your-feature-name
 | `bun db:diff name` | Capture Studio changes as migration |
 | `bun update-types` | Regenerate TypeScript types |
 
-| Service | Local URL |
-|---------|-----------|
+### Local URLs
+
+| Service | URL |
+|---------|-----|
 | App | http://localhost:3000 |
+| SDK Documentation | http://localhost:3000/docs |
 | API Swagger | http://localhost:3000/api/swagger |
 | Health Check | http://localhost:3000/api/public/health |
+| LLMs.txt | http://localhost:3000/llms.txt |
 | Supabase Studio | http://localhost:54423 |
 | Supabase API | http://localhost:54421 |
 | Inbucket (email) | http://localhost:54424 |
+
+## Project Structure
+
+```
+app/                    # Next.js App Router pages
+├── (auth)/             # Auth pages (sign-in, sign-up)
+├── (dashboard)/        # Dashboard pages (agents, jobs, keys)
+├── docs/               # SDK documentation (Fumadocs)
+└── api/                # API routes (Elysia)
+
+lib/                    # Core libraries
+├── api/                # Elysia API routes
+├── agents/             # AI agent utilities
+├── ai/                 # AI SDK configuration
+├── db/                 # Database client and types
+├── email/              # Email handling (Resend)
+├── integrations/       # OAuth integrations
+├── sandbox/            # Daytona sandbox management
+├── services/           # Business logic services
+└── workflows/          # Workflow DevKit agents
+
+packages/sdk/           # TypeScript SDK
+content/docs/           # Documentation MDX files
+supabase/               # Database migrations and config
+```
 
 ## TypeScript SDK
 
@@ -150,17 +188,6 @@ bun run dev      # Watch mode
 bun test         # Run SDK tests
 ```
 
-### SDK Structure
-
-```
-packages/sdk/
-├── src/index.ts          # Client implementation and types
-├── __tests__/            # SDK tests
-├── dist/                 # Compiled output (gitignored)
-├── README.md             # User documentation
-└── CLAUDE.md             # Development guidelines
-```
-
 ### Using the SDK
 
 ```typescript
@@ -173,9 +200,13 @@ const client = createClient("sk_live_your_api_key", {
 // Check API key
 const { data } = await client.whoami()
 
-// Create and wait for job
+// Jobs API
 const { data: job } = await client.jobs.create({ type: "test", input: {} })
 const result = await client.jobs.waitForResult(job.id)
+
+// Agents API
+const { data: run } = await client.agents.run("agent_id", { prompt: "Hello" })
+const agentResult = await client.agents.waitForResult(run.runId)
 ```
 
 ### When Modifying v1 API
@@ -189,6 +220,38 @@ If you add or modify v1 API endpoints, you **must** update the SDK:
 5. Run `cd packages/sdk && bun run build && bun test`
 
 See `lib/api/CLAUDE.md` for detailed SDK maintenance guidelines.
+
+## Documentation Development
+
+Documentation lives in `content/docs/` as MDX files.
+
+### Adding a New Doc Page
+
+1. Create `content/docs/your-page.mdx`:
+```mdx
+---
+title: Your Page Title
+description: Brief description
+---
+
+Your content here with **markdown** support.
+```
+
+2. Update `content/docs/meta.json` to add to navigation
+
+### Using Components
+
+```mdx
+<Tabs items={['npm', 'pnpm', 'bun']} persist groupId="package-manager">
+  <Tab value="npm">npm install package</Tab>
+  <Tab value="pnpm">pnpm add package</Tab>
+  <Tab value="bun">bun add package</Tab>
+</Tabs>
+
+<Callout type="warn">
+Warning message here
+</Callout>
+```
 
 ## Database Development
 
@@ -217,14 +280,6 @@ bun db:diff descriptive_migration_name
 ```
 
 This creates a migration file in `supabase/migrations/`.
-
-### Test Data
-
-Seed data is in `supabase/seed.sql`. It includes:
-- Test tenants (org_test_local, org_test_demo)
-- Test API keys (with dummy hashes)
-- Sample jobs with various statuses
-- Sample audit logs
 
 ### Creating New Tables
 
@@ -279,16 +334,16 @@ bun update-types  # Regenerate types from local DB
 bun dev:fresh  # Nuclear option: reset everything
 ```
 
-### Switching back to production database
+### Build fails with type errors
 ```bash
-# Restore production credentials
-cp .env.local.production .env.local
+bun run build  # Check exact error
+bunx tsc --noEmit  # TypeScript check only
 ```
 
 ## Next Steps After Setup
 
 1. Read `CLAUDE.md` for project conventions
-2. Read `supabase/CLAUDE.md` for database workflow
-3. Read domain docs in `lib/*/CLAUDE.md` for specific patterns
-4. Read `packages/sdk/CLAUDE.md` for SDK development
-5. Explore the codebase: `app/` (routes), `lib/` (services), `packages/sdk/` (TypeScript SDK)
+2. Browse `/docs` for SDK documentation
+3. Explore `/api/swagger` for API reference
+4. Read domain docs in `lib/*/CLAUDE.md` for specific patterns
+5. Create a feature branch and start coding!

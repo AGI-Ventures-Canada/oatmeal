@@ -23,10 +23,28 @@ bun install
 bun dev
 ```
 
-- App: http://localhost:3000
-- API docs: http://localhost:3000/api/swagger
-- Health: http://localhost:3000/api/public/health
-- Tests: `bun test`
+| URL | Description |
+|-----|-------------|
+| http://localhost:3000 | App |
+| http://localhost:3000/docs | SDK Documentation |
+| http://localhost:3000/api/swagger | API Reference |
+| http://localhost:3000/api/public/health | Health Check |
+
+Run tests: `bun test`
+
+## Documentation
+
+Interactive SDK documentation is available at `/docs` with:
+- Getting started guide
+- Jobs API reference
+- Agents API reference
+- Code examples with package manager tabs
+
+### AI-Friendly Docs
+
+For LLM/AI consumption:
+- `/llms.txt` - Documentation index with links
+- `/llms-full.txt` - Complete documentation in single file
 
 ## TypeScript SDK
 
@@ -46,20 +64,24 @@ bun add @agents-server/sdk
 import { createClient } from "@agents-server/sdk"
 
 const client = createClient("sk_live_your_api_key", {
-  baseUrl: "https://your-api-domain.com"  // Required
+  baseUrl: "https://your-api-domain.com"
 })
 
-// Create a job
+// Jobs API
 const { data: job } = await client.jobs.create({
   type: "analyze-document",
   input: { url: "https://example.com/doc.pdf" }
 })
-
-// Wait for result
 const result = await client.jobs.waitForResult(job.id)
+
+// Agents API
+const { data: run } = await client.agents.run("agent_id", {
+  prompt: "Analyze quarterly sales data"
+})
+const agentResult = await client.agents.waitForResult(run.runId)
 ```
 
-See [packages/sdk/README.md](packages/sdk/README.md) for full documentation.
+See [/docs](/docs) or [packages/sdk/README.md](packages/sdk/README.md) for full documentation.
 
 ### SDK Development
 
@@ -68,3 +90,22 @@ cd packages/sdk
 bun run build    # Compile TypeScript
 bun test         # Run SDK tests
 ```
+
+## New Developer Setup
+
+Use Claude Code for interactive onboarding:
+
+```bash
+claude
+# Then type: /local-dev-setup
+```
+
+Or manually:
+
+1. Install prerequisites: Bun, Node.js 20.9+, Supabase CLI, Docker
+2. `bun install`
+3. Copy `.env.example` to `.env.local` and add Clerk keys
+4. `bun dev` (auto-starts local Supabase)
+5. Open http://localhost:3000
+
+See `.claude/skills/local-dev-setup.md` for detailed steps.
