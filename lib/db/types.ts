@@ -534,6 +534,53 @@ export type Database = {
           },
         ]
       }
+      org_api_credentials: {
+        Row: {
+          account_identifier: string | null
+          api_key_encrypted: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string | null
+          last_used_at: string | null
+          provider: Database["public"]["Enums"]["api_credential_provider"]
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_identifier?: string | null
+          api_key_encrypted: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          last_used_at?: string | null
+          provider: Database["public"]["Enums"]["api_credential_provider"]
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_identifier?: string | null
+          api_key_encrypted?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          last_used_at?: string | null
+          provider?: Database["public"]["Enums"]["api_credential_provider"]
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_api_credentials_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_integrations: {
         Row: {
           access_token_encrypted: string
@@ -890,6 +937,7 @@ export type Database = {
     }
     Enums: {
       actor_type: "user" | "api_key"
+      api_credential_provider: "luma"
       agent_run_status:
         | "queued"
         | "initializing"
@@ -1052,6 +1100,7 @@ export const Constants = {
   public: {
     Enums: {
       actor_type: ["user", "api_key"],
+      api_credential_provider: ["luma"],
       agent_run_status: [
         "queued",
         "initializing",
@@ -1107,4 +1156,12 @@ export type JobStatus = Database["public"]["Enums"]["job_status"]
 export type AgentRunStatus = Database["public"]["Enums"]["agent_run_status"]
 export type TriggerType = Database["public"]["Enums"]["trigger_type"]
 export type ActorType = Database["public"]["Enums"]["actor_type"]
+export type ScheduleFrequency = Database["public"]["Enums"]["schedule_frequency"]
+export type WebhookEvent = Database["public"]["Enums"]["webhook_event"]
+export type LumaEventType = Database["public"]["Enums"]["luma_event_type"]
+export type IntegrationProvider = Database["public"]["Enums"]["integration_provider"]
+export type ApiCredentialProvider = Database["public"]["Enums"]["api_credential_provider"]
+
+// Table row types
+export type OrgApiCredential = Database["public"]["Tables"]["org_api_credentials"]["Row"]
 

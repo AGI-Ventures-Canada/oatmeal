@@ -1164,3 +1164,138 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       })),
     }
   })
+  // ============================================================================
+  // Org API Credentials (e.g., Luma API keys)
+  // ============================================================================
+  .get("/credentials", async ({ principal }) => {
+    requirePrincipal(principal, ["user"])
+
+    const { listCredentials } = await import("@/lib/services/org-credentials")
+    const credentials = await listCredentials(principal.tenantId)
+
+    return {
+      credentials: credentials.map((c) => ({
+        id: c.id,
+        provider: c.provider,
+        label: c.label,
+        accountIdentifier: c.account_identifier,
+        isActive: c.is_active,
+        lastUsedAt: c.last_used_at,
+        createdAt: c.created_at,
+      })),
+    }
+  })
+  .post(
+    "/credentials",
+    async ({ principal, body }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { saveCredential } = await import("@/lib/services/org-credentials")
+      const credential = await saveCredential({
+        tenantId: principal.tenantId,
+        provider: body.provider as "luma",
+        apiKey: body.apiKey,
+        label: body.label,
+        accountIdentifier: body.accountIdentifier,
+      })
+
+      if (!credential) {
+        return new Response(JSON.stringify({ error: "Failed to save credential" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      await logAudit({
+        principal,
+        action: "credential.saved",
+        resourceType: "credential",
+        resourceId: credential.id,
+        metadata: { provider: body.provider },
+      })
+
+      return {
+        id: credential.id,
+        provider: credential.provider,
+        label: credential.label,
+        createdAt: credential.created_at,
+      }
+    },
+    {
+      body: t.Object({
+        provider: t.String(),
+        apiKey: t.String({ minLength: 1 }),
+        label: t.Optional(t.String()),
+        accountIdentifier: t.Optional(t.String()),
+      }),
+    }
+  )
+  .patch(
+    "/credentials/:provider",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { updateCredential } = await import("@/lib/services/org-credentials")
+      const credential = await updateCredential(
+        principal.tenantId,
+        params.provider as "luma",
+        {
+          apiKey: body.apiKey,
+          label: body.label,
+          accountIdentifier: body.accountIdentifier,
+          isActive: body.isActive,
+        }
+      )
+
+      if (!credential) {
+        return new Response(JSON.stringify({ error: "Credential not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      await logAudit({
+        principal,
+        action: "credential.updated",
+        resourceType: "credential",
+        resourceId: credential.id,
+        metadata: { provider: params.provider },
+      })
+
+      return {
+        id: credential.id,
+        provider: credential.provider,
+        updatedAt: credential.updated_at,
+      }
+    },
+    {
+      body: t.Object({
+        apiKey: t.Optional(t.String({ minLength: 1 })),
+        label: t.Optional(t.String()),
+        accountIdentifier: t.Optional(t.String()),
+        isActive: t.Optional(t.Boolean()),
+      }),
+    }
+  )
+  .delete("/credentials/:provider", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user"])
+
+    const { deleteCredential } = await import("@/lib/services/org-credentials")
+    const success = await deleteCredential(principal.tenantId, params.provider as "luma")
+
+    if (!success) {
+      return new Response(JSON.stringify({ error: "Credential not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    await logAudit({
+      principal,
+      action: "credential.deleted",
+      resourceType: "credential",
+      metadata: { provider: params.provider },
+    })
+
+    return { success: true }
+  })

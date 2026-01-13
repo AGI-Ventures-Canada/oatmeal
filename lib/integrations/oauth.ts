@@ -57,20 +57,11 @@ export const OAUTH_PROVIDERS: Record<IntegrationProvider, () => OAuthProviderCon
     }
   },
 
-  luma: () => {
-    const clientId = process.env.LUMA_CLIENT_ID
-    const clientSecret = process.env.LUMA_CLIENT_SECRET
-    if (!clientId || !clientSecret) return null
-
-    return {
-      name: "luma",
-      authUrl: "https://api.lu.ma/oauth/authorize",
-      tokenUrl: "https://api.lu.ma/oauth/token",
-      scopes: ["read", "write"],
-      clientId,
-      clientSecret,
-    }
-  },
+  // NOTE: Luma now uses per-org API keys instead of OAuth.
+  // See lib/services/org-credentials.ts for Luma API key management.
+  // The 'luma' entry in IntegrationProvider enum is kept for backwards compatibility
+  // but should not be used for new integrations.
+  luma: () => null,
 }
 
 export function getProviderConfig(provider: IntegrationProvider): OAuthProviderConfig | null {

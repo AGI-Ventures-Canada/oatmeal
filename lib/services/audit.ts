@@ -27,6 +27,9 @@ export type AuditAction =
   | "luma_webhook.created"
   | "luma_webhook.deleted"
   | "luma_webhook.token_regenerated"
+  | "credential.saved"
+  | "credential.updated"
+  | "credential.deleted"
 
 export type LogAuditInput = {
   principal: Exclude<Principal, { kind: "anon" }>
