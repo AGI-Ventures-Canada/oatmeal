@@ -47,7 +47,8 @@ export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunne
     const systemPrompt = buildSystemPrompt(agent, skills, context)
     const tools = buildToolsFromSkills(skills, integrationTokens)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    // DurableAgent types are complex and require any casts for compatibility
     const durableAgent = new DurableAgent({
       model: model as any,
       system: systemPrompt,
@@ -56,9 +57,9 @@ export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunne
         maxSteps: (agent.config as { maxSteps?: number })?.maxSteps ?? 50,
       },
     } as any)
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const onStepStart = (stepInfo: any) => {
+    const onStepStart = (stepInfo: { toolName?: string; toolInput?: unknown }) => {
       if (stepInfo.toolName) {
         steps.push({
           type: "tool_call",
@@ -68,8 +69,7 @@ export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunne
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const onStepFinish = (stepInfo: any) => {
+    const onStepFinish = (stepInfo: { toolName?: string; toolResult?: unknown; durationMs?: number }) => {
       if (stepInfo.toolName && steps.length > 0) {
         const lastStep = steps[steps.length - 1]
         if (lastStep.type === "tool_call" && lastStep.name === stepInfo.toolName) {
@@ -83,7 +83,7 @@ export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunne
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const result = await durableAgent.stream({
       messages: [{ role: "user", content: prompt }],
       writable,
@@ -91,8 +91,8 @@ export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunne
       onStepFinish,
     } as any)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const finalText = await collectStreamText(result as any)
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     steps.push({
       type: "text",

@@ -17,6 +17,8 @@ const eslintConfig = defineConfig([
     // Generated files
     "lib/**/*.d.ts",
     "lib/**/*.js",
+    // Fumadocs generated source
+    ".source/**",
   ]),
 ]);
 
