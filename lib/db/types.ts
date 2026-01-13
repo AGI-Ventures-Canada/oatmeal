@@ -1091,3 +1091,20 @@ export const Constants = {
   },
 } as const
 
+// Helper type aliases for common table rows
+export type ApiKey = Database["public"]["Tables"]["api_keys"]["Row"]
+export type AuditLog = Database["public"]["Tables"]["audit_logs"]["Row"]
+export type Tenant = Database["public"]["Tables"]["tenants"]["Row"]
+export type Job = Database["public"]["Tables"]["jobs"]["Row"]
+export type Agent = Database["public"]["Tables"]["agents"]["Row"]
+export type AgentRun = Database["public"]["Tables"]["agent_runs"]["Row"]
+export type Schedule = Database["public"]["Tables"]["schedules"]["Row"]
+export type Webhook = Database["public"]["Tables"]["webhooks"]["Row"]
+export type Skill = Database["public"]["Tables"]["skills"]["Row"]
+
+// Helper type aliases for enums
+export type JobStatus = Database["public"]["Enums"]["job_status"]
+export type AgentRunStatus = Database["public"]["Enums"]["agent_run_status"]
+export type TriggerType = Database["public"]["Enums"]["trigger_type"]
+export type ActorType = Database["public"]["Enums"]["actor_type"]
+

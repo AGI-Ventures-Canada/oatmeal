@@ -14,4 +14,4 @@ const nextConfig: NextConfig = {
 
 const withMDX = createMDX()
 
-export default withMDX(withWorkflow(nextConfig))
+export default withWorkflow(withMDX(nextConfig))
