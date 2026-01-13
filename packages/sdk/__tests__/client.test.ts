@@ -32,20 +32,36 @@ describe("SDK Client", () => {
       expect(client.agents).toBeDefined()
     })
 
-    it("throws error when baseUrl is missing", () => {
-      expect(() => {
-        // @ts-expect-error - testing runtime validation
-        createClient("sk_live_test123", {})
-      }).toThrow("baseUrl is required")
+    it("creates a client with default baseUrl when no options provided", () => {
+      const client = createClient("sk_live_test123")
+      expect(client).toBeDefined()
+      expect(client.whoami).toBeDefined()
+      expect(client.jobs).toBeDefined()
+      expect(client.agents).toBeDefined()
     })
 
-    it("throws descriptive error for missing baseUrl", () => {
-      try {
-        // @ts-expect-error - testing runtime validation
-        createClient("sk_live_test123", {})
-      } catch (e) {
-        expect((e as Error).message).toContain("Example:")
-      }
+    it("creates a client with default baseUrl when empty options provided", () => {
+      const client = createClient("sk_live_test123", {})
+      expect(client).toBeDefined()
+      expect(client.whoami).toBeDefined()
+    })
+
+    it("uses default base URL when none provided", async () => {
+      mockFetch.mockImplementation(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ tenantId: "t1", keyId: "k1", scopes: [] }), {
+            status: 200,
+          })
+        )
+      )
+
+      const client = createClient("sk_live_test123")
+      await client.whoami()
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://agents.agiventures.ai/api/v1/whoami",
+        expect.any(Object)
+      )
     })
 
     it("strips trailing slash from baseUrl", async () => {
