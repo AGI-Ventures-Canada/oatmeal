@@ -9,13 +9,13 @@ if ! docker info &>/dev/null 2>&1; then
   exit 1
 fi
 
-# Stop all Supabase projects and start fresh for this one
-echo "Stopping all Supabase projects..."
-docker ps -a --filter "name=supabase_" --format "{{.Names}}" | xargs -r docker stop 2>/dev/null || true
-docker ps -a --filter "name=supabase_" --format "{{.Names}}" | xargs -r docker rm 2>/dev/null || true
-
-echo "Starting local Supabase..."
-supabase start --ignore-health-check
+# Check if this project's Supabase is already running
+if supabase status &>/dev/null; then
+  echo "Supabase already running for this project, skipping startup..."
+else
+  echo "Starting local Supabase..."
+  supabase start --ignore-health-check
+fi
 
 echo "Getting Supabase credentials..."
 STATUS_JSON=$(supabase status --output json 2>/dev/null)
