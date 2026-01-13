@@ -3,6 +3,14 @@ title: Getting Started
 description: Install the SDK and make your first API call.
 ---
 
+The official TypeScript SDK provides a type-safe client for interacting with the Agents Server API.
+
+**Features:**
+- Full TypeScript support with exported types
+- Promise-based API with error handling
+- Built-in polling helpers (`waitForResult`)
+- Zero external dependencies (uses native `fetch`)
+
 ## Installation
 
 <Tabs items={['npm', 'pnpm', 'bun']} persist groupId="package-manager">
@@ -70,6 +78,30 @@ const client = createClient(
   process.env.AGENTS_SERVER_API_KEY!,
   { baseUrl: process.env.AGENTS_SERVER_URL! }
 )
+```
+
+## Response Format
+
+All SDK methods return an `ApiResponse<T>` object:
+
+```typescript
+interface ApiResponse<T> {
+  data: T | null       // Response data on success
+  error: { error: string } | null  // Error message on failure
+  status: number       // HTTP status code
+}
+```
+
+This allows consistent error handling:
+
+```typescript
+const { data, error, status } = await client.agents.get("agent_123")
+
+if (error) {
+  console.error(`Error ${status}: ${error.error}`)
+} else {
+  console.log(data)
+}
 ```
 
 ## Next Steps
