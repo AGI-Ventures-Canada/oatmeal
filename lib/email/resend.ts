@@ -1,0 +1,191 @@
+import { Resend } from "resend"
+
+let resendClient: Resend | null = null
+
+export function getResendClient(): Resend {
+  if (!resendClient) {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      throw new Error("RESEND_API_KEY environment variable is required")
+    }
+    resendClient = new Resend(apiKey)
+  }
+  return resendClient
+}
+
+export type SendEmailInput = {
+  to: string | string[]
+  subject: string
+  html?: string
+  text?: string
+  from?: string
+  replyTo?: string
+  tags?: Array<{ name: string; value: string }>
+}
+
+export interface SendEmailResult {
+  id: string
+}
+
+export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult | null> {
+  const client = getResendClient()
+  const fromEmail =
+    input.from ?? process.env.RESEND_FROM_EMAIL ?? "noreply@agents.example.com"
+
+  try {
+    // Build email options - Resend SDK has complex union types requiring html, text, or template
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const emailOptions: any = {
+      from: fromEmail,
+      to: input.to,
+      subject: input.subject,
+    }
+
+    if (input.html) emailOptions.html = input.html
+    if (input.text) emailOptions.text = input.text
+    if (input.replyTo) emailOptions.replyTo = input.replyTo
+    if (input.tags) emailOptions.tags = input.tags
+
+    const { data, error } = await client.emails.send(emailOptions)
+
+    if (error) {
+      console.error("Failed to send email:", error)
+      return null
+    }
+
+    return { id: data?.id ?? "" }
+  } catch (err) {
+    console.error("Failed to send email:", err)
+    return null
+  }
+}
+
+export async function getReceivedEmail(
+  emailId: string
+): Promise<ReceivedEmailContent | null> {
+  const client = getResendClient()
+
+  try {
+    const { data, error } = await client.emails.get(emailId)
+
+    if (error || !data) {
+      console.error("Failed to get email:", error)
+      return null
+    }
+
+    return {
+      id: data.id,
+      from: data.from,
+      to: data.to,
+      subject: data.subject,
+      html: data.html ?? undefined,
+      text: data.text ?? undefined,
+      createdAt: data.created_at,
+    }
+  } catch (err) {
+    console.error("Failed to get email:", err)
+    return null
+  }
+}
+
+export interface ReceivedEmailContent {
+  id: string
+  from: string
+  to: string[]
+  subject: string
+  html?: string
+  text?: string
+  createdAt: string
+}
+
+export interface ResendWebhookEvent {
+  type: string
+  created_at: string
+  data: {
+    email_id: string
+    from: string
+    to: string[]
+    subject: string
+    cc?: string[]
+    bcc?: string[]
+    message_id?: string
+    attachments?: Array<{
+      id: string
+      filename: string
+      content_type: string
+    }>
+  }
+}
+
+export function verifyResendWebhook(
+  payload: string,
+  headers: {
+    svixId: string
+    svixTimestamp: string
+    svixSignature: string
+  }
+): boolean {
+  const client = getResendClient()
+  const secret = process.env.RESEND_WEBHOOK_SECRET
+
+  if (!secret) {
+    console.error("RESEND_WEBHOOK_SECRET not configured")
+    return false
+  }
+
+  try {
+    client.webhooks.verify({
+      payload,
+      headers: {
+        id: headers.svixId,
+        timestamp: headers.svixTimestamp,
+        signature: headers.svixSignature,
+      },
+      webhookSecret: secret,
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export type AgentNotificationType = "started" | "completed" | "failed"
+
+export async function sendAgentNotification(
+  email: string,
+  agentName: string,
+  runId: string,
+  type: AgentNotificationType,
+  details?: { output?: string; error?: string }
+): Promise<SendEmailResult | null> {
+  const subjects: Record<AgentNotificationType, string> = {
+    started: `Agent "${agentName}" has started`,
+    completed: `Agent "${agentName}" completed successfully`,
+    failed: `Agent "${agentName}" failed`,
+  }
+
+  const getHtmlContent = () => {
+    const base = `
+      <h2>Agent Run Notification</h2>
+      <p><strong>Agent:</strong> ${agentName}</p>
+      <p><strong>Run ID:</strong> ${runId}</p>
+      <p><strong>Status:</strong> ${type}</p>
+    `
+
+    if (type === "completed" && details?.output) {
+      return `${base}<h3>Output</h3><pre>${details.output}</pre>`
+    }
+
+    if (type === "failed" && details?.error) {
+      return `${base}<h3>Error</h3><pre>${details.error}</pre>`
+    }
+
+    return base
+  }
+
+  return sendEmail({
+    to: email,
+    subject: subjects[type],
+    html: getHtmlContent(),
+  })
+}

@@ -1,0 +1,144 @@
+---
+title: Jobs API
+description: Create and manage async jobs.
+---
+
+The Jobs API allows you to queue async tasks and poll for their results.
+
+## Types
+
+```typescript
+type JobStatus = "queued" | "running" | "succeeded" | "failed" | "canceled"
+
+interface Job {
+  id: string
+  type: string
+  status: JobStatus
+  createdAt: string
+  updatedAt?: string
+  completedAt?: string | null
+}
+
+interface JobResult {
+  id: string
+  status: JobStatus
+  result: unknown
+  error: unknown
+  completedAt: string
+}
+
+interface CreateJobInput {
+  type: string
+  input?: unknown
+  idempotencyKey?: string
+}
+```
+
+## Create a Job
+
+Queue a new job for async processing:
+
+```typescript
+const { data, error } = await client.jobs.create({
+  type: "process-document",
+  input: {
+    url: "https://example.com/document.pdf",
+    options: { extractTables: true }
+  },
+  idempotencyKey: "doc-abc-123" // Optional: prevent duplicate jobs
+})
+
+if (data) {
+  console.log("Job created:", data.id)
+  console.log("Status:", data.status) // "queued"
+}
+```
+
+## Get Job Status
+
+Check the current status of a job:
+
+```typescript
+const { data } = await client.jobs.get("job_abc123")
+
+console.log("Status:", data?.status)
+console.log("Created:", data?.createdAt)
+```
+
+## Get Job Result
+
+Retrieve the result of a completed job:
+
+```typescript
+const { data, status } = await client.jobs.getResult("job_abc123")
+
+if (status === 202) {
+  console.log("Job still processing...")
+} else if (data) {
+  console.log("Result:", data.result)
+}
+```
+
+## Wait for Result
+
+Poll until the job completes (recommended for most use cases):
+
+```typescript
+try {
+  const result = await client.jobs.waitForResult("job_abc123", {
+    maxAttempts: 60,  // Default: 60
+    intervalMs: 1000  // Default: 1000ms
+  })
+
+  if (result.status === "succeeded") {
+    console.log("Success:", result.result)
+  } else {
+    console.error("Failed:", result.error)
+  }
+} catch (err) {
+  console.error("Timeout or error:", err)
+}
+```
+
+## Cancel a Job
+
+Cancel a queued or running job:
+
+```typescript
+const { data } = await client.jobs.cancel("job_abc123")
+
+if (data?.success) {
+  console.log("Job canceled")
+}
+```
+
+## Full Example
+
+```typescript
+import { createClient } from "@agents-server/sdk"
+
+const client = createClient(process.env.API_KEY!, {
+  baseUrl: process.env.API_URL!
+})
+
+async function processDocument(url: string) {
+  // Create job
+  const { data: job, error } = await client.jobs.create({
+    type: "process-document",
+    input: { url }
+  })
+
+  if (error) {
+    throw new Error(error.error)
+  }
+
+  // Wait for completion
+  const result = await client.jobs.waitForResult(job.id)
+
+  if (result.status === "failed") {
+    throw new Error(String(result.error))
+  }
+
+  return result.result
+}
+```

@@ -1,6 +1,6 @@
 "use client"
 
-import { Key, Briefcase, ChevronsUpDown, LogOut, Building2, Settings, UserCog } from "lucide-react"
+import { Key, Briefcase, ChevronsUpDown, LogOut, Building2, Settings, UserCog, Bot, BookOpen } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -32,6 +32,7 @@ import {
 import { ThemeSwitcher } from "@/components/theme-switcher"
 
 const navItems = [
+  { title: "Agents", href: "/agents", icon: Bot },
   { title: "Jobs", href: "/jobs", icon: Briefcase },
   { title: "API Keys", href: "/keys", icon: Key },
 ]
@@ -111,6 +112,21 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Resources</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/docs">
+                    <BookOpen />
+                    <span>Documentation</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

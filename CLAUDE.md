@@ -42,8 +42,25 @@ Use `@/*` to import from the project root.
 See domain-specific CLAUDE.md files for detailed patterns:
 - `lib/api/CLAUDE.md` - Elysia API patterns, route namespaces, auth
 - `lib/workflows/CLAUDE.md` - Workflow DevKit, durable agents, steps
-- `lib/agents/CLAUDE.md` - AI SDK 6, ToolLoopAgent, streaming
+- `lib/agents/CLAUDE.md` - AI SDK 6, ToolLoopAgent, streaming, Anthropic models
+- `lib/sandbox/CLAUDE.md` - Daytona sandbox lifecycle, file operations
+- `lib/integrations/CLAUDE.md` - OAuth flows, token management
+- `lib/email/CLAUDE.md` - Resend email sending and receiving
 - `supabase/CLAUDE.md` - Database development, migrations, branching
+
+### External Documentation Links
+
+When developers include external documentation links in requests, save them to the appropriate CLAUDE.md file:
+
+| Domain | Target File |
+|--------|-------------|
+| ai-sdk.dev | lib/agents/CLAUDE.md |
+| useworkflow.dev | lib/workflows/CLAUDE.md |
+| daytona.io | lib/sandbox/CLAUDE.md |
+| supabase.com | supabase/CLAUDE.md |
+| resend.com | lib/email/CLAUDE.md |
+| anthropic.com | lib/agents/CLAUDE.md |
+| luma.com, docs.luma.com | lib/integrations/CLAUDE.md |
 
 ### Claude Skills
 

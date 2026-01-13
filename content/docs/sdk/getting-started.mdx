@@ -1,0 +1,78 @@
+---
+title: Getting Started
+description: Install the SDK and make your first API call.
+---
+
+## Installation
+
+<Tabs items={['npm', 'pnpm', 'bun']} persist groupId="package-manager">
+  <Tab value="npm">
+  ```bash
+  npm install @agents-server/sdk
+  ```
+  </Tab>
+  <Tab value="pnpm">
+  ```bash
+  pnpm add @agents-server/sdk
+  ```
+  </Tab>
+  <Tab value="bun">
+  ```bash
+  bun add @agents-server/sdk
+  ```
+  </Tab>
+</Tabs>
+
+## Create a Client
+
+Initialize the client with your API key and server URL:
+
+```typescript title="lib/agents.ts"
+import { createClient } from "@agents-server/sdk"
+
+const client = createClient("sk_live_your_api_key", {
+  baseUrl: "https://api.your-server.com"
+})
+```
+
+<Callout type="warn">
+Never expose your API key in client-side code. Use environment variables and server-side API routes.
+</Callout>
+
+## Verify Connection
+
+Test your connection with the `whoami` endpoint:
+
+```typescript title="verify.ts"
+const { data, error } = await client.whoami()
+
+if (error) {
+  console.error("Authentication failed:", error.error)
+  process.exit(1)
+}
+
+console.log("Connected as tenant:", data.tenantId)
+console.log("Key ID:", data.keyId)
+console.log("Scopes:", data.scopes)
+```
+
+## Environment Variables
+
+Store your configuration in environment variables:
+
+```bash title=".env.local"
+AGENTS_SERVER_URL=https://api.your-server.com
+AGENTS_SERVER_API_KEY=sk_live_...
+```
+
+```typescript title="lib/agents.ts"
+const client = createClient(
+  process.env.AGENTS_SERVER_API_KEY!,
+  { baseUrl: process.env.AGENTS_SERVER_URL! }
+)
+```
+
+## Next Steps
+
+- [Jobs API](/docs/sdk/jobs) - Create and manage async jobs
+- [Agents API](/docs/sdk/agents) - Run AI agents with streaming support
