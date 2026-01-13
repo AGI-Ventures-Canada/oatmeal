@@ -12,6 +12,15 @@ export const jobHandlers: Record<string, JobHandler> = {
     await new Promise((resolve) => setTimeout(resolve, ms))
     return { delayed: true, ms }
   },
+
+  // Generic test handler - just echoes input with metadata
+  "sdk-test": async (input) => {
+    return {
+      success: true,
+      receivedInput: input,
+      processedAt: new Date().toISOString(),
+    }
+  },
 }
 
 export function registerJobHandler(type: string, handler: JobHandler): void {

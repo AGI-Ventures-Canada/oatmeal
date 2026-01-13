@@ -55,8 +55,9 @@ export function CreateScheduleButton() {
   const [frequency, setFrequency] = useState<string>("daily")
   const [cronExpression, setCronExpression] = useState("")
   const [timezone, setTimezone] = useState("UTC")
+  const [runTime, setRunTime] = useState("09:00")
   const [agentId, setAgentId] = useState<string | undefined>()
-  const [input, setInput] = useState("")
+  const [prompt, setPrompt] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -64,15 +65,6 @@ export function CreateScheduleButton() {
 
     setLoading(true)
     try {
-      let parsedInput = undefined
-      if (input.trim()) {
-        try {
-          parsedInput = JSON.parse(input.trim())
-        } catch {
-          return
-        }
-      }
-
       const response = await fetch("/api/dashboard/schedules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,8 +73,9 @@ export function CreateScheduleButton() {
           frequency,
           cronExpression: frequency === "cron" ? cronExpression.trim() : undefined,
           timezone,
+          runTime: frequency !== "cron" ? runTime : undefined,
           agentId,
-          input: parsedInput,
+          input: prompt.trim() ? { prompt: prompt.trim() } : undefined,
         }),
       })
 
@@ -92,8 +85,9 @@ export function CreateScheduleButton() {
         setFrequency("daily")
         setCronExpression("")
         setTimezone("UTC")
+        setRunTime("09:00")
         setAgentId(undefined)
-        setInput("")
+        setPrompt("")
         router.refresh()
       }
     } finally {
@@ -175,6 +169,21 @@ export function CreateScheduleButton() {
               </div>
             </div>
 
+            {frequency !== "cron" && frequency !== "once" && (
+              <div className="grid gap-2">
+                <Label htmlFor="time">Run Time</Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={runTime}
+                  onChange={(e) => setRunTime(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Time of day to run (in selected timezone)
+                </p>
+              </div>
+            )}
+
             {frequency === "cron" && (
               <div className="grid gap-2">
                 <Label htmlFor="cron">Cron Expression</Label>
@@ -194,17 +203,16 @@ export function CreateScheduleButton() {
             )}
 
             <div className="grid gap-2">
-              <Label htmlFor="input">Input (JSON, optional)</Label>
+              <Label htmlFor="prompt">Prompt (optional)</Label>
               <Textarea
-                id="input"
-                placeholder='{"prompt": "Check for updates"}'
-                rows={3}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                className="font-mono text-sm"
+                id="prompt"
+                placeholder="Check for updates and send a summary"
+                rows={2}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Optional JSON input to pass to the agent when triggered
+                Optional prompt to pass to the agent when triggered
               </p>
             </div>
           </div>

@@ -140,6 +140,30 @@ Check existing components before creating new ones.
 <Button className="bg-red-500 hover:bg-red-600">Delete</Button>
 ```
 
+### Colors
+
+**CRITICAL: Never use custom Tailwind colors (e.g., `text-green-500`, `bg-blue-600`). Always use semantic CSS variables.**
+
+Use only these semantic color classes:
+- `text-primary`, `bg-primary` - brand/accent color
+- `text-secondary`, `bg-secondary` - secondary elements
+- `text-muted-foreground`, `bg-muted` - subtle/disabled
+- `text-destructive`, `bg-destructive` - errors/danger
+- `text-foreground`, `bg-background` - default text/background
+- `border`, `ring` - borders and focus rings
+
+```typescript
+// GOOD - semantic colors
+<span className="text-destructive">Error</span>
+<div className="bg-muted text-muted-foreground">Subtle</div>
+
+// BAD - custom colors
+<span className="text-red-500">Error</span>
+<div className="bg-gray-100 text-gray-500">Subtle</div>
+```
+
+This ensures consistent theming and proper dark mode support.
+
 ### Supabase
 
 - Use Service Key in API endpoints to bypass RLS policies

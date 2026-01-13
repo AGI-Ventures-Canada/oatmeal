@@ -42,6 +42,7 @@ export type Database = {
           created_by_key_id: string | null
           error: Json | null
           id: string
+          idempotency_key: string | null
           input: Json | null
           job_id: string | null
           output: Json | null
@@ -61,6 +62,7 @@ export type Database = {
           created_by_key_id?: string | null
           error?: Json | null
           id?: string
+          idempotency_key?: string | null
           input?: Json | null
           job_id?: string | null
           output?: Json | null
@@ -80,6 +82,7 @@ export type Database = {
           created_by_key_id?: string | null
           error?: Json | null
           id?: string
+          idempotency_key?: string | null
           input?: Json | null
           job_id?: string | null
           output?: Json | null
@@ -534,53 +537,6 @@ export type Database = {
           },
         ]
       }
-      org_api_credentials: {
-        Row: {
-          account_identifier: string | null
-          api_key_encrypted: string
-          created_at: string
-          id: string
-          is_active: boolean
-          label: string | null
-          last_used_at: string | null
-          provider: Database["public"]["Enums"]["api_credential_provider"]
-          tenant_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          account_identifier?: string | null
-          api_key_encrypted: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          label?: string | null
-          last_used_at?: string | null
-          provider: Database["public"]["Enums"]["api_credential_provider"]
-          tenant_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          account_identifier?: string | null
-          api_key_encrypted?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          label?: string | null
-          last_used_at?: string | null
-          provider?: Database["public"]["Enums"]["api_credential_provider"]
-          tenant_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "org_api_credentials_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       org_integrations: {
         Row: {
           access_token_encrypted: string
@@ -937,7 +893,6 @@ export type Database = {
     }
     Enums: {
       actor_type: "user" | "api_key"
-      api_credential_provider: "luma"
       agent_run_status:
         | "queued"
         | "initializing"
@@ -1100,7 +1055,6 @@ export const Constants = {
   public: {
     Enums: {
       actor_type: ["user", "api_key"],
-      api_credential_provider: ["luma"],
       agent_run_status: [
         "queued",
         "initializing",
@@ -1139,29 +1093,4 @@ export const Constants = {
     },
   },
 } as const
-
-// Helper type aliases for common table rows
-export type ApiKey = Database["public"]["Tables"]["api_keys"]["Row"]
-export type AuditLog = Database["public"]["Tables"]["audit_logs"]["Row"]
-export type Tenant = Database["public"]["Tables"]["tenants"]["Row"]
-export type Job = Database["public"]["Tables"]["jobs"]["Row"]
-export type Agent = Database["public"]["Tables"]["agents"]["Row"]
-export type AgentRun = Database["public"]["Tables"]["agent_runs"]["Row"]
-export type Schedule = Database["public"]["Tables"]["schedules"]["Row"]
-export type Webhook = Database["public"]["Tables"]["webhooks"]["Row"]
-export type Skill = Database["public"]["Tables"]["skills"]["Row"]
-
-// Helper type aliases for enums
-export type JobStatus = Database["public"]["Enums"]["job_status"]
-export type AgentRunStatus = Database["public"]["Enums"]["agent_run_status"]
-export type TriggerType = Database["public"]["Enums"]["trigger_type"]
-export type ActorType = Database["public"]["Enums"]["actor_type"]
-export type ScheduleFrequency = Database["public"]["Enums"]["schedule_frequency"]
-export type WebhookEvent = Database["public"]["Enums"]["webhook_event"]
-export type LumaEventType = Database["public"]["Enums"]["luma_event_type"]
-export type IntegrationProvider = Database["public"]["Enums"]["integration_provider"]
-export type ApiCredentialProvider = Database["public"]["Enums"]["api_credential_provider"]
-
-// Table row types
-export type OrgApiCredential = Database["public"]["Tables"]["org_api_credentials"]["Row"]
 

@@ -55,7 +55,7 @@ export default async function AgentDetailPage({ params }: PageProps) {
         <RunAgentButton agentId={agent.id} agentName={agent.name} />
       </div>
 
-      <Tabs defaultValue="settings">
+      <Tabs defaultValue="runs">
         <TabsList>
           <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="runs">Run History</TabsTrigger>

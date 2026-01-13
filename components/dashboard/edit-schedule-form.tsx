@@ -42,15 +42,32 @@ interface EditScheduleFormProps {
   onSuccess: () => void
 }
 
+function extractPrompt(input: unknown): string {
+  if (input && typeof input === "object" && "prompt" in input) {
+    return String((input as { prompt: unknown }).prompt)
+  }
+  return ""
+}
+
+function extractTimeFromSchedule(schedule: Schedule): string {
+  if (schedule.next_run_at) {
+    const date = new Date(schedule.next_run_at)
+    // Use local time from the date since we display in the schedule's timezone
+    const hours = date.getHours().toString().padStart(2, "0")
+    const minutes = date.getMinutes().toString().padStart(2, "0")
+    return `${hours}:${minutes}`
+  }
+  return "09:00"
+}
+
 export function EditScheduleForm({ schedule, onSuccess }: EditScheduleFormProps) {
   const [loading, setLoading] = useState(false)
   const [name, setName] = useState(schedule.name)
   const [frequency, setFrequency] = useState<ScheduleFrequency>(schedule.frequency)
   const [cronExpression, setCronExpression] = useState(schedule.cron_expression ?? "")
   const [timezone, setTimezone] = useState(schedule.timezone ?? "UTC")
-  const [input, setInput] = useState(
-    schedule.input ? JSON.stringify(schedule.input, null, 2) : ""
-  )
+  const [runTime, setRunTime] = useState(extractTimeFromSchedule(schedule))
+  const [prompt, setPrompt] = useState(extractPrompt(schedule.input))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,15 +75,6 @@ export function EditScheduleForm({ schedule, onSuccess }: EditScheduleFormProps)
 
     setLoading(true)
     try {
-      let parsedInput = undefined
-      if (input.trim()) {
-        try {
-          parsedInput = JSON.parse(input.trim())
-        } catch {
-          return
-        }
-      }
-
       const response = await fetch(`/api/dashboard/schedules/${schedule.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -75,7 +83,8 @@ export function EditScheduleForm({ schedule, onSuccess }: EditScheduleFormProps)
           frequency,
           cronExpression: frequency === "cron" ? cronExpression.trim() : undefined,
           timezone,
-          input: parsedInput,
+          runTime: frequency !== "cron" ? runTime : undefined,
+          input: prompt.trim() ? { prompt: prompt.trim() } : undefined,
         }),
       })
 
@@ -90,7 +99,7 @@ export function EditScheduleForm({ schedule, onSuccess }: EditScheduleFormProps)
   const isValid = name.trim() && (frequency !== "cron" || cronExpression.trim())
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+    <form onSubmit={handleSubmit} className="space-y-4 p-4 pt-2">
       <div className="grid gap-2">
         <Label htmlFor="edit-name">Name</Label>
         <Input
@@ -137,6 +146,21 @@ export function EditScheduleForm({ schedule, onSuccess }: EditScheduleFormProps)
         </div>
       </div>
 
+      {frequency !== "cron" && frequency !== "once" && (
+        <div className="grid gap-2">
+          <Label htmlFor="edit-time">Run Time</Label>
+          <Input
+            id="edit-time"
+            type="time"
+            value={runTime}
+            onChange={(e) => setRunTime(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Time of day to run (in selected timezone)
+          </p>
+        </div>
+      )}
+
       {frequency === "cron" && (
         <div className="grid gap-2">
           <Label htmlFor="edit-cron">Cron Expression</Label>
@@ -156,15 +180,17 @@ export function EditScheduleForm({ schedule, onSuccess }: EditScheduleFormProps)
       )}
 
       <div className="grid gap-2">
-        <Label htmlFor="edit-input">Input (JSON, optional)</Label>
+        <Label htmlFor="edit-prompt">Prompt (optional)</Label>
         <Textarea
-          id="edit-input"
-          placeholder='{"prompt": "Check for updates"}'
-          rows={4}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          className="font-mono text-sm"
+          id="edit-prompt"
+          placeholder="Check for updates and send a summary"
+          rows={2}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
         />
+        <p className="text-xs text-muted-foreground">
+          Optional prompt to pass to the agent when triggered
+        </p>
       </div>
 
       <div className="flex justify-end gap-2 pt-4">

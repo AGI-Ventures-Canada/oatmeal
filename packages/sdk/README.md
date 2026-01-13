@@ -10,7 +10,7 @@ npm install @agents-server/sdk
 bun add @agents-server/sdk
 ```
 
-## Usage
+## Quick Start
 
 ```typescript
 import { createClient } from "@agents-server/sdk"
@@ -19,159 +19,338 @@ const client = createClient("sk_live_your_api_key", {
   baseUrl: "https://your-domain.com"
 })
 
-// Check API key info
-const { data: whoami, error } = await client.whoami()
-if (error) {
-  console.error("Auth failed:", error.error)
-} else {
-  console.log(whoami)
-  // { tenantId: "...", keyId: "...", scopes: ["jobs:create", ...] }
-}
-
-// Create a job
-const { data: job, error: createError } = await client.jobs.create({
-  type: "analyze-document",
-  input: { url: "https://example.com/doc.pdf" }
+// Run an agent and wait for results
+const { data: run } = await client.agents.run("agent-id", {
+  prompt: "Analyze this quarter's sales data"
 })
 
-if (createError) {
-  console.error("Failed to create job:", createError.error)
-} else {
-  console.log(`Job created: ${job.id}`)
-}
+const result = await client.agents.waitForResult(run.runId)
+console.log(result.status, result.result)
+```
 
-// Wait for result (with polling)
-try {
-  const result = await client.jobs.waitForResult(job.id)
-  console.log(result)
-} catch (err) {
-  console.error("Job failed:", err)
+## Use Cases
+
+### 1. Document Processing Pipeline
+
+Process documents through an AI agent and handle results:
+
+```typescript
+import { createClient } from "@agents-server/sdk"
+
+const client = createClient(process.env.AGENTS_API_KEY!, {
+  baseUrl: process.env.AGENTS_URL!
+})
+
+async function processDocument(documentUrl: string) {
+  // Start the agent run
+  const { data: run, error } = await client.agents.run("doc-processor-agent", {
+    prompt: `Analyze and summarize the document at: ${documentUrl}`,
+    context: { documentUrl }
+  })
+
+  if (error) {
+    throw new Error(`Failed to start agent: ${error.error}`)
+  }
+
+  // Wait for completion (polls every 2 seconds, max 5 minutes)
+  const result = await client.agents.waitForResult(run.runId, {
+    intervalMs: 2000,
+    maxAttempts: 150
+  })
+
+  if (result.status === "succeeded") {
+    return result.result
+  } else {
+    throw new Error(`Agent failed: ${JSON.stringify(result.error)}`)
+  }
 }
 ```
 
-## API
+### 2. Scheduled Reports
 
-### `createClient(apiKey, options)`
+Create a schedule to run an agent daily at 9 AM:
 
-Creates a new client instance.
+```typescript
+// Create a daily report schedule
+const { data: schedule } = await client.schedules.create({
+  name: "Daily Sales Report",
+  frequency: "daily",
+  timezone: "America/New_York",
+  agentId: "sales-report-agent",
+  input: { reportType: "daily-summary" }
+})
 
-**Parameters:**
-- `apiKey` - Your API key (starts with `sk_live_`)
-- `options.baseUrl` - Base URL for the API (required)
+console.log(`Schedule created: ${schedule.id}`)
+console.log(`Next run: ${schedule.nextRunAt}`)
 
-**Returns:** Client instance with typed methods
+// List all active schedules
+const { data: schedules } = await client.schedules.list({ activeOnly: true })
+console.log(`Active schedules: ${schedules.schedules.length}`)
 
-### `client.whoami()`
+// Pause a schedule
+await client.schedules.update(schedule.id, { isActive: false })
 
-Get info about the authenticated API key.
+// Delete a schedule
+await client.schedules.delete(schedule.id)
+```
 
-**Returns:** `ApiResponse<{ tenantId, keyId, scopes }>`
+### 3. Webhook Integration
 
-### `client.jobs.create(input)`
+Receive notifications when agent runs complete:
 
-Create and start a new job.
+```typescript
+// Create a webhook to receive notifications
+const { data: webhook } = await client.webhooks.create({
+  url: "https://your-app.com/webhooks/agents",
+  events: ["agent_run.completed", "agent_run.failed"]
+})
 
-**Parameters:**
-- `input.type` - Job type identifier
-- `input.input` - Job input payload (optional)
-- `input.idempotencyKey` - Unique key for idempotent requests (optional)
+// Save the secret for verifying webhook signatures
+console.log(`Webhook secret: ${webhook.secret}`)
 
-**Returns:** `ApiResponse<{ id, type, status, createdAt }>`
+// Your webhook handler (Express example)
+app.post("/webhooks/agents", (req, res) => {
+  const signature = req.headers["x-webhook-signature"]
+  // Verify signature using webhook.secret
 
-### `client.jobs.get(id)`
+  const { event, data } = req.body
 
-Get job status.
+  if (event === "agent_run.completed") {
+    console.log(`Agent run ${data.runId} completed`)
+    // Process the result...
+  }
 
-**Parameters:**
-- `id` - Job ID
+  res.status(200).send("OK")
+})
+```
 
-**Returns:** `ApiResponse<{ id, type, status, createdAt, updatedAt, completedAt }>`
+### 4. Agent Management
 
-### `client.jobs.getResult(id)`
+Create and manage AI agents programmatically:
 
-Get job result. Returns 202 status if job is still running.
+```typescript
+// Create a new agent
+const { data: agent } = await client.agents.create({
+  name: "Customer Support Agent",
+  description: "Handles customer inquiries",
+  instructions: `You are a helpful customer support assistant.
+    Answer questions about our products and services.
+    Be polite and professional.`,
+  model: "claude-sonnet-4-5-20250929"
+})
 
-**Parameters:**
-- `id` - Job ID
+// Update agent instructions
+await client.agents.update(agent.id, {
+  instructions: "Updated instructions..."
+})
 
-**Returns:** `ApiResponse<{ id, status, result, error, completedAt }>`
+// List all agents
+const { data: agents } = await client.agents.list()
+console.log(`Total agents: ${agents.agents.length}`)
 
-### `client.jobs.cancel(id)`
+// Deactivate an agent
+await client.agents.update(agent.id, { isActive: false })
 
-Cancel a running job.
+// Delete an agent
+await client.agents.delete(agent.id)
+```
 
-**Parameters:**
-- `id` - Job ID
+### 5. Skill Management
 
-**Returns:** `ApiResponse<{ success: true }>`
+Create reusable skills that agents can use:
 
-### `client.jobs.waitForResult(id, opts?)`
+```typescript
+// Create a skill with custom instructions
+const { data: skill } = await client.skills.create({
+  name: "SQL Query Generator",
+  slug: "sql-generator",
+  description: "Generates SQL queries from natural language",
+  content: `# SQL Query Generator
 
-Poll for job completion with automatic retry.
+When asked to generate SQL queries:
+1. Understand the user's intent
+2. Identify the relevant tables and columns
+3. Generate optimized SQL
+4. Explain the query structure`
+})
 
-**Parameters:**
-- `id` - Job ID
-- `opts.maxAttempts` - Max polling attempts (default: 60)
-- `opts.intervalMs` - Polling interval in ms (default: 1000)
+// Assign skill to an agent
+await client.agents.update("agent-id", {
+  skillIds: [skill.id]
+})
 
-**Returns:** Job result when completed
+// Update skill content
+await client.skills.update(skill.id, {
+  content: "Updated skill instructions..."
+})
+```
 
-**Throws:** Error if job doesn't complete within max attempts
+### 6. Background Jobs
+
+Queue and monitor background jobs:
+
+```typescript
+// Create a background job
+const { data: job } = await client.jobs.create({
+  type: "data-export",
+  input: { format: "csv", dateRange: "last-30-days" },
+  idempotencyKey: `export-${Date.now()}` // Prevent duplicates
+})
+
+// Check job status
+const { data: status } = await client.jobs.get(job.id)
+console.log(`Job status: ${status.status}`)
+
+// Wait for job completion
+const result = await client.jobs.waitForResult(job.id, {
+  intervalMs: 1000,
+  maxAttempts: 300 // 5 minutes max
+})
+
+if (result.status === "succeeded") {
+  console.log("Job completed:", result.result)
+} else {
+  console.error("Job failed:", result.error)
+}
+
+// Cancel a running job
+await client.jobs.cancel(job.id)
+```
+
+## API Reference
+
+### Authentication
+
+```typescript
+const client = createClient("sk_live_...", { baseUrl: "https://api.example.com" })
+
+// Verify API key
+const { data: whoami } = await client.whoami()
+console.log(whoami.tenantId, whoami.scopes)
+```
+
+### Agents
+
+| Method | Description |
+|--------|-------------|
+| `agents.list()` | List all agents |
+| `agents.create(input)` | Create a new agent |
+| `agents.get(id)` | Get agent details |
+| `agents.update(id, input)` | Update an agent |
+| `agents.delete(id)` | Delete an agent |
+| `agents.run(id, input)` | Start an agent run |
+| `agents.getRun(runId)` | Get run status |
+| `agents.getRunResult(runId)` | Get run result |
+| `agents.waitForResult(runId, opts?)` | Poll until complete |
+| `agents.cancelRun(runId)` | Cancel a running agent |
+| `agents.provideInput(runId, input)` | Provide human input |
+
+### Jobs
+
+| Method | Description |
+|--------|-------------|
+| `jobs.create(input)` | Create a background job |
+| `jobs.get(id)` | Get job status |
+| `jobs.getResult(id)` | Get job result |
+| `jobs.cancel(id)` | Cancel a job |
+| `jobs.waitForResult(id, opts?)` | Poll until complete |
+
+### Webhooks
+
+| Method | Description |
+|--------|-------------|
+| `webhooks.list()` | List all webhooks |
+| `webhooks.create(input)` | Create a webhook |
+| `webhooks.delete(id)` | Delete a webhook |
+
+### Skills
+
+| Method | Description |
+|--------|-------------|
+| `skills.list()` | List all skills |
+| `skills.create(input)` | Create a skill |
+| `skills.get(id)` | Get skill details |
+| `skills.update(id, input)` | Update a skill |
+| `skills.delete(id)` | Delete a skill |
+
+### Schedules
+
+| Method | Description |
+|--------|-------------|
+| `schedules.list(opts?)` | List schedules |
+| `schedules.create(input)` | Create a schedule |
+| `schedules.get(id)` | Get schedule details |
+| `schedules.update(id, input)` | Update a schedule |
+| `schedules.delete(id)` | Delete a schedule |
 
 ## Response Format
 
-All methods return an `ApiResponse<T>` object:
+All methods return an `ApiResponse<T>`:
 
 ```typescript
 interface ApiResponse<T> {
-  data: T | null      // The response data (null if error)
+  data: T | null           // Response data (null if error)
   error: { error: string } | null  // Error message (null if success)
-  status: number      // HTTP status code
+  status: number           // HTTP status code
 }
 ```
 
-Check for errors before using data:
+Always check for errors:
 
 ```typescript
-const { data, error, status } = await client.jobs.create({
-  type: "my-job",
-  input: {}
-})
+const { data, error, status } = await client.agents.run(agentId, { prompt })
 
 if (error) {
-  console.error(`Request failed with status ${status}:`, error.error)
+  console.error(`Failed (${status}):`, error.error)
   return
 }
 
-console.log("Job created:", data)
+console.log("Run started:", data.runId)
 ```
 
-## TypeScript
+## TypeScript Support
 
-The SDK is fully typed. You get autocomplete for all methods and response types:
+The SDK is fully typed with exported interfaces:
 
 ```typescript
-import type { Job, JobResult, JobStatus, CreateJobInput, ApiResponse } from "@agents-server/sdk"
+import type {
+  Agent,
+  AgentRun,
+  AgentRunResult,
+  Job,
+  JobResult,
+  Webhook,
+  Skill,
+  Schedule,
+  CreateAgentInput,
+  ApiResponse
+} from "@agents-server/sdk"
+```
 
-const input: CreateJobInput = {
-  type: "analyze",
-  input: { foo: "bar" }
-}
+## Error Handling
 
-const response: ApiResponse<Job> = await client.jobs.create(input)
-if (response.data) {
-  const job: Job = response.data
-  console.log(job.id, job.status)
+```typescript
+try {
+  const result = await client.agents.waitForResult(runId, {
+    maxAttempts: 60,
+    intervalMs: 1000
+  })
+
+  if (result.status === "failed") {
+    console.error("Agent run failed:", result.error)
+  }
+} catch (err) {
+  // Timeout or network error
+  console.error("Error waiting for result:", err.message)
 }
 ```
 
 ## Rate Limiting
 
-The API uses rate limiting. When rate limited, you'll get a 429 status. The response includes rate limit headers:
+The API uses rate limiting. When rate limited, you'll receive a 429 status with headers:
+
 - `X-RateLimit-Remaining`: Requests remaining in window
 - `X-RateLimit-Reset`: Unix timestamp when limit resets
-
-Implement your own retry logic if needed.
 
 ## License
 

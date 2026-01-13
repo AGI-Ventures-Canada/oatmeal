@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "bun test",
+    "test:sdk": "bun scripts/test-sdk.ts",
     "db:sync": "supabase db reset && supabase gen types typescript --local > lib/db/types.ts",
     "db:diff": "supabase db diff -f",
     "update-types": "supabase gen types typescript --local > lib/db/types.ts",

@@ -45,7 +45,7 @@ export default async function RunDetailPage({ params }: PageProps) {
   const steps = await listAgentRunSteps(id, tenant.id)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0 w-full max-w-full overflow-hidden">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href={agent ? `/agents/${agent.id}` : "/agents"}>
@@ -60,7 +60,7 @@ export default async function RunDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      <Card>
+      <Card className="overflow-hidden w-full min-w-0">
         <CardHeader>
           <CardTitle>
             {agent?.name || "Unknown Agent"}
@@ -69,7 +69,7 @@ export default async function RunDetailPage({ params }: PageProps) {
             Started {new Date(run.created_at).toLocaleString()}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-hidden min-w-0">
           <RunDetail run={run} steps={steps} />
         </CardContent>
       </Card>

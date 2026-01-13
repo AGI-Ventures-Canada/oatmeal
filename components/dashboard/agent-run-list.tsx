@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { PlayCircle, Clock, CheckCircle2, XCircle, Loader2 } from "lucide-react"
+import { PlayCircle } from "lucide-react"
 import type { AgentRun } from "@/lib/db/agent-types"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -15,17 +15,6 @@ import {
 
 interface AgentRunListProps {
   runs: AgentRun[]
-}
-
-const statusIcons: Record<string, React.ReactNode> = {
-  queued: <Clock className="size-4 text-muted-foreground" />,
-  initializing: <Loader2 className="size-4 text-blue-500 animate-spin" />,
-  running: <Loader2 className="size-4 text-blue-500 animate-spin" />,
-  awaiting_input: <Clock className="size-4 text-yellow-500" />,
-  succeeded: <CheckCircle2 className="size-4 text-green-500" />,
-  failed: <XCircle className="size-4 text-red-500" />,
-  canceled: <XCircle className="size-4 text-muted-foreground" />,
-  timed_out: <XCircle className="size-4 text-orange-500" />,
 }
 
 const statusLabels: Record<string, string> = {
@@ -97,10 +86,7 @@ export function AgentRunList({ runs }: AgentRunListProps) {
             </TableCell>
             <TableCell>
               <Badge variant={statusVariants[run.status] || "outline"}>
-                <span className="flex items-center gap-1.5">
-                  {statusIcons[run.status]}
-                  {statusLabels[run.status] || run.status}
-                </span>
+                {statusLabels[run.status] || run.status}
               </Badge>
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">

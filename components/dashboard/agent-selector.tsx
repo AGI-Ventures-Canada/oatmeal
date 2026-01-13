@@ -47,7 +47,7 @@ export function AgentSelector({
         const response = await fetch("/api/dashboard/agents")
         if (response.ok) {
           const data = await response.json()
-          setAgents(data)
+          setAgents(data.agents || [])
         }
       } finally {
         setLoading(false)
