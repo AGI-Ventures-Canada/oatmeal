@@ -115,7 +115,10 @@ export function SkillList({ skills }: SkillListProps) {
                 )}
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {new Date(skill.updated_at).toLocaleDateString()}
+                {(() => {
+                  const d = new Date(skill.updated_at)
+                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+                })()}
               </TableCell>
               <TableCell>
                 <DropdownMenu>

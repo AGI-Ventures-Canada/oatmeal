@@ -139,7 +139,10 @@ export function EmailAddressList({ emailAddresses, agentMap }: EmailAddressListP
                 )}
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {new Date(address.created_at).toLocaleDateString()}
+                {(() => {
+                  const d = new Date(address.created_at)
+                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+                })()}
               </TableCell>
               <TableCell>
                 <DropdownMenu>

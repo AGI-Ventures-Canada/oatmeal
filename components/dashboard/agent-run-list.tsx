@@ -49,6 +49,16 @@ function formatDuration(start: string, end?: string | null): string {
   return `${Math.floor(durationMs / 60000)}m ${Math.floor((durationMs % 60000) / 1000)}s`
 }
 
+function formatDate(date: string): string {
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  const hours = String(d.getHours()).padStart(2, "0")
+  const minutes = String(d.getMinutes()).padStart(2, "0")
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
 export function AgentRunList({ runs }: AgentRunListProps) {
   if (runs.length === 0) {
     return (
@@ -96,9 +106,7 @@ export function AgentRunList({ runs }: AgentRunListProps) {
               {run.started_at && formatDuration(run.started_at, run.completed_at)}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {run.started_at
-                ? new Date(run.started_at).toLocaleString()
-                : new Date(run.created_at).toLocaleString()}
+              {formatDate(run.started_at ?? run.created_at)}
             </TableCell>
           </TableRow>
         ))}
