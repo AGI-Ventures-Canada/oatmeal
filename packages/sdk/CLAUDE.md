@@ -35,6 +35,13 @@ The SDK uses plain `fetch` for HTTP requests (no external dependencies). This ke
 2. **AgentsClientImpl** - Private class implementing the client
 3. **createClient()** - Factory function that returns the client instance
 
+### Base URL Resolution
+
+The SDK resolves the API base URL in this order:
+1. `baseUrl` option passed to `createClient()`
+2. `NEXT_PUBLIC_APP_URL` environment variable (for local development)
+3. Default: `https://agentsapi.io`
+
 ### Response Format
 
 All methods return `ApiResponse<T>`:

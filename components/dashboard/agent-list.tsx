@@ -91,7 +91,10 @@ export function AgentList({ agents }: AgentListProps) {
               </Badge>
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {new Date(agent.created_at).toLocaleDateString()}
+              {(() => {
+                const d = new Date(agent.created_at)
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+              })()}
             </TableCell>
             <TableCell>
               <DropdownMenu>
@@ -102,7 +105,7 @@ export function AgentList({ agents }: AgentListProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link href={`/agents/${agent.id}/run`}>
+                    <Link href={`/agents/${agent.id}?run=true`}>
                       <Play className="size-4 mr-2" />
                       Run Agent
                     </Link>

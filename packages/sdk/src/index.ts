@@ -95,8 +95,192 @@ export interface HumanInputInput {
   input: unknown
 }
 
+// Agent CRUD types
+export interface Agent {
+  id: string
+  name: string
+  description?: string
+  instructions?: string
+  type: string
+  model: string
+  isActive: boolean
+  skillIds?: string[]
+  config?: unknown
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface AgentListItem {
+  id: string
+  name: string
+  description?: string
+  type: string
+  model: string
+  isActive: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateAgentInput {
+  name: string
+  description?: string
+  instructions: string
+  type?: string
+  model?: string
+  skillIds?: string[]
+  config?: unknown
+}
+
+export interface UpdateAgentInput {
+  name?: string
+  description?: string
+  instructions?: string
+  model?: string
+  skillIds?: string[]
+  config?: unknown
+  isActive?: boolean
+}
+
+// Webhook types
+export type WebhookEvent =
+  | "agent_run.started"
+  | "agent_run.completed"
+  | "agent_run.failed"
+  | "agent_run.step_completed"
+
+export interface Webhook {
+  id: string
+  url: string
+  events: string[]
+  isActive: boolean
+  failureCount: number
+  lastTriggeredAt?: string | null
+  createdAt: string
+}
+
+export interface CreateWebhookInput {
+  url: string
+  events: WebhookEvent[]
+}
+
+export interface CreateWebhookResponse {
+  id: string
+  url: string
+  events: string[]
+  secret: string
+  createdAt: string
+}
+
+// Skill types
+export interface Skill {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  content?: string
+  referencesContent?: unknown
+  scriptsContent?: unknown
+  version: number
+  isBuiltin: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface SkillListItem {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  version: number
+  isBuiltin: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateSkillInput {
+  name: string
+  slug: string
+  description?: string
+  content: string
+  referencesContent?: unknown
+  scriptsContent?: unknown
+}
+
+export interface UpdateSkillInput {
+  name?: string
+  slug?: string
+  description?: string
+  content?: string
+  referencesContent?: unknown
+  scriptsContent?: unknown
+}
+
+// Schedule types
+export type ScheduleFrequency = "once" | "hourly" | "daily" | "weekly" | "monthly" | "cron"
+
+export interface Schedule {
+  id: string
+  name: string
+  frequency: ScheduleFrequency
+  cronExpression?: string | null
+  timezone: string
+  agentId?: string | null
+  jobType?: string | null
+  input?: unknown
+  isActive: boolean
+  nextRunAt?: string | null
+  lastRunAt?: string | null
+  runCount: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface ScheduleListItem {
+  id: string
+  name: string
+  frequency: ScheduleFrequency
+  cronExpression?: string | null
+  timezone: string
+  agentId?: string | null
+  jobType?: string | null
+  isActive: boolean
+  nextRunAt?: string | null
+  lastRunAt?: string | null
+  runCount: number
+  createdAt: string
+}
+
+export interface CreateScheduleInput {
+  name: string
+  frequency: ScheduleFrequency
+  cronExpression?: string
+  timezone?: string
+  agentId?: string
+  jobType?: string
+  input?: unknown
+}
+
+export interface UpdateScheduleInput {
+  name?: string
+  frequency?: ScheduleFrequency
+  cronExpression?: string
+  timezone?: string
+  input?: unknown
+  isActive?: boolean
+}
+
+const DEFAULT_BASE_URL = "https://agentsapi.io"
+
+function getBaseUrl(): string {
+  // Check for NEXT_PUBLIC_APP_URL first (for local development)
+  if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL
+  }
+  return DEFAULT_BASE_URL
+}
+
 export interface ClientOptions {
-  baseUrl: string
+  baseUrl?: string
 }
 
 export interface ApiResponse<T> {
@@ -109,16 +293,13 @@ class AgentsClientImpl {
   private apiKey: string
   private baseUrl: string
 
-  constructor(apiKey: string, options: ClientOptions) {
-    if (!options.baseUrl) {
-      throw new Error("baseUrl is required. Example: createClient('sk_live_...', { baseUrl: 'https://api.example.com' })")
-    }
+  constructor(apiKey: string, options: ClientOptions = {}) {
     this.apiKey = apiKey
-    this.baseUrl = options.baseUrl.replace(/\/$/, "")
+    this.baseUrl = (options.baseUrl ?? getBaseUrl()).replace(/\/$/, "")
   }
 
   private async request<T>(
-    method: "GET" | "POST",
+    method: "GET" | "POST" | "PATCH" | "DELETE",
     path: string,
     body?: unknown
   ): Promise<ApiResponse<T>> {
@@ -195,6 +376,26 @@ class AgentsClientImpl {
   }
 
   readonly agents = {
+    list: async (): Promise<ApiResponse<{ agents: AgentListItem[] }>> => {
+      return this.request<{ agents: AgentListItem[] }>("GET", "/api/v1/agents")
+    },
+
+    create: async (input: CreateAgentInput): Promise<ApiResponse<Agent>> => {
+      return this.request<Agent>("POST", "/api/v1/agents", input)
+    },
+
+    get: async (agentId: string): Promise<ApiResponse<Agent>> => {
+      return this.request<Agent>("GET", `/api/v1/agents/${agentId}`)
+    },
+
+    update: async (agentId: string, input: UpdateAgentInput): Promise<ApiResponse<Agent>> => {
+      return this.request<Agent>("PATCH", `/api/v1/agents/${agentId}`, input)
+    },
+
+    delete: async (agentId: string): Promise<ApiResponse<{ success: boolean }>> => {
+      return this.request<{ success: boolean }>("DELETE", `/api/v1/agents/${agentId}`)
+    },
+
     run: async (agentId: string, input: AgentRunInput): Promise<ApiResponse<AgentRun>> => {
       return this.request<AgentRun>("POST", `/api/v1/agents/${agentId}/run`, input)
     },
@@ -251,9 +452,68 @@ class AgentsClientImpl {
       throw new Error(`Agent run ${runId} did not complete within ${maxAttempts} attempts`)
     },
   }
+
+  readonly webhooks = {
+    list: async (): Promise<ApiResponse<{ webhooks: Webhook[] }>> => {
+      return this.request<{ webhooks: Webhook[] }>("GET", "/api/v1/webhooks")
+    },
+
+    create: async (input: CreateWebhookInput): Promise<ApiResponse<CreateWebhookResponse>> => {
+      return this.request<CreateWebhookResponse>("POST", "/api/v1/webhooks", input)
+    },
+
+    delete: async (id: string): Promise<ApiResponse<{ success: boolean }>> => {
+      return this.request<{ success: boolean }>("DELETE", `/api/v1/webhooks/${id}`)
+    },
+  }
+
+  readonly skills = {
+    list: async (): Promise<ApiResponse<{ skills: SkillListItem[] }>> => {
+      return this.request<{ skills: SkillListItem[] }>("GET", "/api/v1/skills")
+    },
+
+    create: async (input: CreateSkillInput): Promise<ApiResponse<{ id: string; name: string; slug: string; createdAt: string }>> => {
+      return this.request<{ id: string; name: string; slug: string; createdAt: string }>("POST", "/api/v1/skills", input)
+    },
+
+    get: async (id: string): Promise<ApiResponse<Skill>> => {
+      return this.request<Skill>("GET", `/api/v1/skills/${id}`)
+    },
+
+    update: async (id: string, input: UpdateSkillInput): Promise<ApiResponse<{ id: string; version: number; updatedAt: string }>> => {
+      return this.request<{ id: string; version: number; updatedAt: string }>("PATCH", `/api/v1/skills/${id}`, input)
+    },
+
+    delete: async (id: string): Promise<ApiResponse<{ success: boolean }>> => {
+      return this.request<{ success: boolean }>("DELETE", `/api/v1/skills/${id}`)
+    },
+  }
+
+  readonly schedules = {
+    list: async (opts?: { activeOnly?: boolean }): Promise<ApiResponse<{ schedules: ScheduleListItem[] }>> => {
+      const query = opts?.activeOnly ? "?activeOnly=true" : ""
+      return this.request<{ schedules: ScheduleListItem[] }>("GET", `/api/v1/schedules${query}`)
+    },
+
+    create: async (input: CreateScheduleInput): Promise<ApiResponse<{ id: string; name: string; nextRunAt?: string | null; createdAt: string }>> => {
+      return this.request<{ id: string; name: string; nextRunAt?: string | null; createdAt: string }>("POST", "/api/v1/schedules", input)
+    },
+
+    get: async (id: string): Promise<ApiResponse<Schedule>> => {
+      return this.request<Schedule>("GET", `/api/v1/schedules/${id}`)
+    },
+
+    update: async (id: string, input: UpdateScheduleInput): Promise<ApiResponse<{ id: string; nextRunAt?: string | null; updatedAt: string }>> => {
+      return this.request<{ id: string; nextRunAt?: string | null; updatedAt: string }>("PATCH", `/api/v1/schedules/${id}`, input)
+    },
+
+    delete: async (id: string): Promise<ApiResponse<{ success: boolean }>> => {
+      return this.request<{ success: boolean }>("DELETE", `/api/v1/schedules/${id}`)
+    },
+  }
 }
 
-export function createClient(apiKey: string, options: ClientOptions): AgentsClient {
+export function createClient(apiKey: string, options?: ClientOptions): AgentsClient {
   return new AgentsClientImpl(apiKey, options)
 }
 

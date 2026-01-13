@@ -1,6 +1,6 @@
 import { createHmac, randomBytes } from "crypto"
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { ApiKey } from "@/lib/db/types"
+import type { ApiKey } from "@/lib/db/agent-types"
 import type { Scope } from "@/lib/auth/types"
 import { DEFAULT_API_KEY_SCOPES } from "@/lib/auth/types"
 

@@ -1,0 +1,100 @@
+---
+title: Document Processing
+description: Build a document processing pipeline with AI agents.
+---
+
+Process documents through an AI agent and handle results asynchronously.
+
+## Overview
+
+This guide shows how to:
+- Start an agent run with document context
+- Poll for completion with configurable timeouts
+- Handle success and failure cases
+
+## Implementation
+
+```typescript
+import { createClient } from "@agents-server/sdk"
+
+const client = createClient(process.env.AGENTS_API_KEY!)
+
+async function processDocument(documentUrl: string) {
+  // Start the agent run
+  const { data: run, error } = await client.agents.run("doc-processor-agent", {
+    prompt: `Analyze and summarize the document at: ${documentUrl}`,
+    context: { documentUrl }
+  })
+
+  if (error) {
+    throw new Error(`Failed to start agent: ${error.error}`)
+  }
+
+  // Wait for completion (polls every 2 seconds, max 5 minutes)
+  const result = await client.agents.waitForResult(run.runId, {
+    intervalMs: 2000,
+    maxAttempts: 150
+  })
+
+  if (result.status === "succeeded") {
+    return result.result
+  } else {
+    throw new Error(`Agent failed: ${JSON.stringify(result.error)}`)
+  }
+}
+```
+
+## Usage
+
+```typescript
+const summary = await processDocument("https://example.com/report.pdf")
+console.log(summary)
+```
+
+## Customizing Polling
+
+The `waitForResult` method accepts options to control polling behavior:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `intervalMs` | 1000 | Time between polls in milliseconds |
+| `maxAttempts` | 120 | Maximum number of poll attempts |
+
+For long-running documents, increase `maxAttempts`:
+
+```typescript
+const result = await client.agents.waitForResult(run.runId, {
+  intervalMs: 5000,    // Poll every 5 seconds
+  maxAttempts: 360     // Wait up to 30 minutes
+})
+```
+
+## Error Handling
+
+Always handle both API errors and agent failures:
+
+```typescript
+try {
+  const { data: run, error } = await client.agents.run(agentId, { prompt })
+
+  if (error) {
+    // API error (auth, rate limit, etc.)
+    console.error("API error:", error.error)
+    return
+  }
+
+  const result = await client.agents.waitForResult(run.runId)
+
+  if (result.status === "failed") {
+    // Agent execution failed
+    console.error("Agent error:", result.error)
+    return
+  }
+
+  // Success
+  console.log(result.result)
+} catch (err) {
+  // Network error or timeout
+  console.error("Unexpected error:", err)
+}
+```

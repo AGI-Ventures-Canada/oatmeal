@@ -4,6 +4,8 @@ import { CheckCircle2, XCircle, Clock, Loader2, Terminal, MessageSquare, AlertTr
 import type { AgentRun, AgentStep } from "@/lib/db/agent-types"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { JsonViewer } from "@/components/ui/json-viewer"
+import { formatDateTime } from "@/lib/utils/format"
 
 interface RunDetailProps {
   run: AgentRun
@@ -12,13 +14,13 @@ interface RunDetailProps {
 
 const statusIcons: Record<string, React.ReactNode> = {
   queued: <Clock className="size-5 text-muted-foreground" />,
-  initializing: <Loader2 className="size-5 text-blue-500 animate-spin" />,
-  running: <Loader2 className="size-5 text-blue-500 animate-spin" />,
-  awaiting_input: <Clock className="size-5 text-yellow-500" />,
-  succeeded: <CheckCircle2 className="size-5 text-green-500" />,
-  failed: <XCircle className="size-5 text-red-500" />,
+  initializing: <Loader2 className="size-5 text-primary animate-spin" />,
+  running: <Loader2 className="size-5 text-primary animate-spin" />,
+  awaiting_input: <Clock className="size-5 text-muted-foreground" />,
+  succeeded: <CheckCircle2 className="size-5 text-primary" />,
+  failed: <XCircle className="size-5 text-destructive" />,
   canceled: <XCircle className="size-5 text-muted-foreground" />,
-  timed_out: <XCircle className="size-5 text-orange-500" />,
+  timed_out: <XCircle className="size-5 text-destructive" />,
 }
 
 const statusLabels: Record<string, string> = {
@@ -36,25 +38,46 @@ function StepIcon({ type }: { type: string }) {
   switch (type) {
     case "tool_call":
     case "tool_result":
-      return <Terminal className="size-4 text-blue-500" />
+      return <Terminal className="size-4 text-primary" />
     case "text":
-      return <MessageSquare className="size-4 text-green-500" />
+      return <MessageSquare className="size-4 text-primary" />
     case "error":
-      return <AlertTriangle className="size-4 text-red-500" />
+      return <AlertTriangle className="size-4 text-destructive" />
     default:
       return <Clock className="size-4 text-muted-foreground" />
   }
 }
 
-function formatOutput(output: unknown): string {
-  if (output === null || output === undefined) return ""
-  if (typeof output === "string") return output
-  return JSON.stringify(output, null, 2)
+function tryParseJson(value: unknown): unknown {
+  if (typeof value !== "string") return value
+  const trimmed = value.trim()
+  if ((trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+    try {
+      return JSON.parse(trimmed)
+    } catch {
+      return value
+    }
+  }
+  return value
+}
+
+function StepData({ data }: { data: unknown }) {
+  const parsed = tryParseJson(data)
+  const isObject = parsed !== null && typeof parsed === "object"
+
+  if (isObject) {
+    return <JsonViewer data={parsed} defaultExpanded className="text-xs" />
+  }
+
+  return (
+    <pre className="whitespace-pre-wrap break-words font-mono text-xs">{String(data)}</pre>
+  )
 }
 
 export function RunDetail({ run, steps }: RunDetailProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0 overflow-hidden">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {statusIcons[run.status]}
@@ -66,31 +89,35 @@ export function RunDetail({ run, steps }: RunDetailProps) {
           </div>
         </div>
         <div className="text-right text-sm text-muted-foreground">
-          <div>Created: {new Date(run.created_at).toLocaleString()}</div>
+          <div>Created: {formatDateTime(run.created_at)}</div>
           {run.completed_at && (
-            <div>Completed: {new Date(run.completed_at).toLocaleString()}</div>
+            <div>Completed: {formatDateTime(run.completed_at)}</div>
           )}
         </div>
       </div>
 
       {run.error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950 p-4">
-          <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 overflow-hidden">
+          <div className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="size-4" />
             <span className="font-medium">Error</span>
           </div>
-          <pre className="mt-2 text-sm text-red-600 dark:text-red-300 whitespace-pre-wrap">
+          <pre className="mt-2 text-sm text-destructive whitespace-pre-wrap break-words overflow-x-auto max-h-64 overflow-y-auto font-mono">
             {typeof run.error === "string" ? run.error : JSON.stringify(run.error, null, 2)}
           </pre>
         </div>
       )}
 
       {run.output && (
-        <div className="rounded-lg border bg-muted/50 p-4">
+        <div className="rounded-lg border bg-muted/50 p-4 w-full max-w-full overflow-hidden">
           <div className="font-medium mb-2">Output</div>
-          <pre className="text-sm whitespace-pre-wrap">
-            {typeof run.output === "string" ? run.output : JSON.stringify(run.output, null, 2)}
-          </pre>
+          <div className="max-h-96 overflow-y-auto bg-background/50 rounded p-3">
+            {typeof run.output === "string" ? (
+              <pre className="text-sm whitespace-pre-wrap break-all font-mono">{run.output}</pre>
+            ) : (
+              <JsonViewer data={run.output} />
+            )}
+          </div>
         </div>
       )}
 
@@ -128,27 +155,27 @@ export function RunDetail({ run, steps }: RunDetailProps) {
                 </div>
 
                 {step.input && (
-                  <div className="mt-2">
+                  <div className="mt-2 overflow-hidden">
                     <div className="text-xs font-medium text-muted-foreground mb-1">Input</div>
-                    <pre className="text-xs bg-muted rounded p-2 overflow-x-auto max-h-40 overflow-y-auto">
-                      {formatOutput(step.input)}
-                    </pre>
+                    <div className="text-xs bg-muted rounded p-2 overflow-auto">
+                      <StepData data={step.input} />
+                    </div>
                   </div>
                 )}
 
                 {step.output && (
-                  <div className="mt-2">
+                  <div className="mt-2 overflow-hidden">
                     <div className="text-xs font-medium text-muted-foreground mb-1">Output</div>
-                    <pre className="text-xs bg-muted rounded p-2 overflow-x-auto max-h-40 overflow-y-auto">
-                      {formatOutput(step.output)}
-                    </pre>
+                    <div className="text-xs bg-muted rounded p-2 overflow-auto">
+                      <StepData data={step.output} />
+                    </div>
                   </div>
                 )}
 
                 {step.error && (
-                  <div className="mt-2">
-                    <div className="text-xs font-medium text-red-500 mb-1">Error</div>
-                    <pre className="text-xs bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 rounded p-2">
+                  <div className="mt-2 overflow-hidden">
+                    <div className="text-xs font-medium text-destructive mb-1">Error</div>
+                    <pre className="text-xs bg-destructive/10 text-destructive rounded p-2 whitespace-pre-wrap break-words font-mono">
                       {step.error}
                     </pre>
                   </div>

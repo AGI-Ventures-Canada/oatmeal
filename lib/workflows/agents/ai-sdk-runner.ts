@@ -2,7 +2,6 @@ import { DurableAgent } from "@workflow/ai/agent"
 import { getWritable } from "workflow"
 import type { Agent, Skill } from "@/lib/db/agent-types"
 import type { Json } from "@/lib/db/types"
-import type { SupportedModel } from "@/lib/ai/anthropic"
 
 export interface AISDKRunnerInput {
   runId: string
@@ -33,24 +32,29 @@ export interface UIMessageChunk {
 }
 
 export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunnerResult> {
+  "use step"
+
   const { agent, skills, prompt, context, integrationTokens } = input
   const steps: AISDKRunnerResult["steps"] = []
 
   try {
     const writable = getWritable<UIMessageChunk>()
-
-    const { anthropic } = await import("@/lib/ai/anthropic")
     const { buildToolsFromSkills } = await import("@/lib/agents/skill-tools")
+    const { createAnthropic } = await import("@ai-sdk/anthropic")
 
-    const model = anthropic(agent.model as SupportedModel)
-
+    const modelFactory = () => {
+      const anthropicProvider = createAnthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      })
+      return anthropicProvider(agent.model)
+    }
     const systemPrompt = buildSystemPrompt(agent, skills, context)
     const tools = buildToolsFromSkills(skills, integrationTokens)
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     // DurableAgent types are complex and require any casts for compatibility
     const durableAgent = new DurableAgent({
-      model: model as any,
+      model: modelFactory as any,
       system: systemPrompt,
       tools: tools as any,
       stopWhen: {
@@ -91,7 +95,21 @@ export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunne
       onStepFinish,
     } as any)
 
-    const finalText = await collectStreamText(result as any)
+    // DurableAgent.stream() returns the final response which contains the text
+    // The response structure may vary, so we handle multiple cases
+    let finalText = ""
+    if (result) {
+      if (typeof result === "string") {
+        finalText = result
+      } else if (typeof result === "object") {
+        // Try common result properties
+        finalText = (result as any).text ??
+                    (result as any).content ??
+                    (result as any).output ??
+                    (result as any).response ??
+                    JSON.stringify(result)
+      }
+    }
     /* eslint-enable @typescript-eslint/no-explicit-any */
 
     steps.push({
@@ -130,10 +148,3 @@ function buildSystemPrompt(agent: Agent, skills: Skill[], context?: Json): strin
   return systemPrompt
 }
 
-async function collectStreamText(result: { textStream: AsyncIterable<string> }): Promise<string> {
-  let text = ""
-  for await (const chunk of result.textStream) {
-    text += chunk
-  }
-  return text
-}

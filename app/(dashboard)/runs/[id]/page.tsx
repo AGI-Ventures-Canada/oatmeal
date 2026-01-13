@@ -1,12 +1,18 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
-import { ChevronLeft } from "lucide-react"
 import { getAgentRunById, listAgentRunSteps } from "@/lib/services/agent-runs"
 import { getAgentById } from "@/lib/services/agents"
 import { getOrCreateTenant } from "@/lib/services/tenants"
 import { RunDetail } from "@/components/dashboard/run-detail"
-import { Button } from "@/components/ui/button"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import {
   Card,
   CardContent,
@@ -44,32 +50,59 @@ export default async function RunDetailPage({ params }: PageProps) {
   const agent = await getAgentById(run.agent_id, tenant.id)
   const steps = await listAgentRunSteps(id, tenant.id)
 
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, "0")
+    const day = String(d.getDate()).padStart(2, "0")
+    const hours = String(d.getHours()).padStart(2, "0")
+    const minutes = String(d.getMinutes()).padStart(2, "0")
+    return `${year}-${month}-${day} ${hours}:${minutes}`
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href={agent ? `/agents/${agent.id}` : "/agents"}>
-            <ChevronLeft className="size-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Run Details</h1>
-          <p className="text-muted-foreground font-mono text-sm">
-            {run.id}
-          </p>
-        </div>
+    <div className="space-y-6 min-w-0 w-full max-w-full overflow-hidden">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/agents">Agents</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          {agent && (
+            <>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href={`/agents/${agent.id}`}>{agent.name}</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+            </>
+          )}
+          <BreadcrumbItem>
+            <BreadcrumbPage>Run {run.id.slice(0, 8)}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div>
+        <h1 className="text-3xl font-bold">Run Details</h1>
+        <p className="text-muted-foreground font-mono text-sm">
+          {run.id}
+        </p>
       </div>
 
-      <Card>
+      <Card className="overflow-hidden w-full min-w-0">
         <CardHeader>
           <CardTitle>
             {agent?.name || "Unknown Agent"}
           </CardTitle>
           <CardDescription>
-            Started {new Date(run.created_at).toLocaleString()}
+            Started {formatDate(run.created_at)}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-hidden min-w-0">
           <RunDetail run={run} steps={steps} />
         </CardContent>
       </Card>

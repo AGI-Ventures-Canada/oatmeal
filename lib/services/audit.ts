@@ -1,5 +1,6 @@
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { AuditLog, Json } from "@/lib/db/types"
+import type { AuditLog } from "@/lib/db/agent-types"
+import type { Json } from "@/lib/db/types"
 import type { Principal } from "@/lib/auth/types"
 
 export type AuditAction =
@@ -27,6 +28,9 @@ export type AuditAction =
   | "luma_webhook.created"
   | "luma_webhook.deleted"
   | "luma_webhook.token_regenerated"
+  | "credential.saved"
+  | "credential.updated"
+  | "credential.deleted"
 
 export type LogAuditInput = {
   principal: Exclude<Principal, { kind: "anon" }>

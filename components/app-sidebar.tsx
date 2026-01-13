@@ -1,6 +1,22 @@
 "use client"
 
-import { Key, Briefcase, ChevronsUpDown, LogOut, Building2, Settings, UserCog, Bot, BookOpen } from "lucide-react"
+import {
+  Key,
+  Briefcase,
+  ChevronsUpDown,
+  LogOut,
+  Building2,
+  Settings,
+  UserCog,
+  Bot,
+  BookOpen,
+  Sparkles,
+  Clock,
+  Mail,
+  Calendar,
+  Webhook,
+  Plug,
+} from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -33,8 +49,20 @@ import { ThemeSwitcher } from "@/components/theme-switcher"
 
 const navItems = [
   { title: "Agents", href: "/agents", icon: Bot },
+  { title: "Skills", href: "/skills", icon: Sparkles },
+  { title: "Schedules", href: "/schedules", icon: Clock },
   { title: "Jobs", href: "/jobs", icon: Briefcase },
   { title: "API Keys", href: "/keys", icon: Key },
+]
+
+const triggerItems = [
+  { title: "Email", href: "/triggers/email", icon: Mail },
+  { title: "Luma", href: "/triggers/luma", icon: Calendar },
+]
+
+const settingsItems = [
+  { title: "Webhooks", href: "/webhooks", icon: Webhook },
+  { title: "Integrations", href: "/integrations", icon: Plug },
 ]
 
 export function AppSidebar() {
@@ -103,6 +131,40 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Triggers</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {triggerItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {settingsItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
                     <Link href={item.href}>

@@ -26,6 +26,8 @@ export type ScheduleFrequency =
   | "monthly"
   | "cron"
 
+export type ApiCredentialProvider = "luma"
+
 export type IntegrationProvider =
   | "gmail"
   | "google_calendar"
@@ -44,6 +46,69 @@ export type LumaEventType =
   | "guest.registered"
   | "guest.updated"
   | "ticket.registered"
+
+export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "canceled"
+
+export interface Job {
+  id: string
+  tenant_id: string
+  type: string
+  input: Json
+  result: Json
+  error: Json
+  status_cache: JobStatus
+  workflow_run_id: string | null
+  created_by_key_id: string | null
+  idempotency_key: string | null
+  created_at: string
+  updated_at: string
+  completed_at: string | null
+}
+
+export interface Tenant {
+  id: string
+  clerk_org_id: string
+  name: string
+  created_at: string
+  updated_at: string
+}
+
+export interface AuditLog {
+  id: string
+  tenant_id: string
+  action: string
+  actor_type: "user" | "api_key"
+  actor_id: string
+  resource_type: string
+  resource_id: string | null
+  metadata: Json
+  created_at: string
+}
+
+export interface ApiKey {
+  id: string
+  tenant_id: string
+  name: string
+  prefix: string
+  hash: string
+  scopes: string[]
+  revoked_at: string | null
+  last_used_at: string | null
+  created_at: string
+}
+
+export interface OrgApiCredential {
+  id: string
+  tenant_id: string
+  provider: ApiCredentialProvider
+  api_key_encrypted: string
+  label: string | null
+  account_identifier: string | null
+  is_active: boolean
+  last_used_at: string | null
+  created_at: string
+  updated_at: string
+}
 
 export interface Agent {
   id: string

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { PlayCircle, Clock, CheckCircle2, XCircle, Loader2 } from "lucide-react"
+import { PlayCircle } from "lucide-react"
 import type { AgentRun } from "@/lib/db/agent-types"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -15,17 +15,6 @@ import {
 
 interface AgentRunListProps {
   runs: AgentRun[]
-}
-
-const statusIcons: Record<string, React.ReactNode> = {
-  queued: <Clock className="size-4 text-muted-foreground" />,
-  initializing: <Loader2 className="size-4 text-blue-500 animate-spin" />,
-  running: <Loader2 className="size-4 text-blue-500 animate-spin" />,
-  awaiting_input: <Clock className="size-4 text-yellow-500" />,
-  succeeded: <CheckCircle2 className="size-4 text-green-500" />,
-  failed: <XCircle className="size-4 text-red-500" />,
-  canceled: <XCircle className="size-4 text-muted-foreground" />,
-  timed_out: <XCircle className="size-4 text-orange-500" />,
 }
 
 const statusLabels: Record<string, string> = {
@@ -58,6 +47,16 @@ function formatDuration(start: string, end?: string | null): string {
   if (durationMs < 1000) return `${durationMs}ms`
   if (durationMs < 60000) return `${(durationMs / 1000).toFixed(1)}s`
   return `${Math.floor(durationMs / 60000)}m ${Math.floor((durationMs % 60000) / 1000)}s`
+}
+
+function formatDate(date: string): string {
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  const hours = String(d.getHours()).padStart(2, "0")
+  const minutes = String(d.getMinutes()).padStart(2, "0")
+  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 export function AgentRunList({ runs }: AgentRunListProps) {
@@ -97,10 +96,7 @@ export function AgentRunList({ runs }: AgentRunListProps) {
             </TableCell>
             <TableCell>
               <Badge variant={statusVariants[run.status] || "outline"}>
-                <span className="flex items-center gap-1.5">
-                  {statusIcons[run.status]}
-                  {statusLabels[run.status] || run.status}
-                </span>
+                {statusLabels[run.status] || run.status}
               </Badge>
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
@@ -110,9 +106,7 @@ export function AgentRunList({ runs }: AgentRunListProps) {
               {run.started_at && formatDuration(run.started_at, run.completed_at)}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {run.started_at
-                ? new Date(run.started_at).toLocaleString()
-                : new Date(run.created_at).toLocaleString()}
+              {formatDate(run.started_at ?? run.created_at)}
             </TableCell>
           </TableRow>
         ))}

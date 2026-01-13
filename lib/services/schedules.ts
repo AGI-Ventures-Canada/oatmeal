@@ -8,6 +8,7 @@ export type CreateScheduleInput = {
   frequency: ScheduleFrequency
   cronExpression?: string
   timezone?: string
+  runTime?: string // HH:MM format
   agentId?: string
   jobType?: string
   input?: Json
@@ -18,6 +19,7 @@ export type UpdateScheduleInput = {
   frequency?: ScheduleFrequency
   cronExpression?: string
   timezone?: string
+  runTime?: string // HH:MM format
   input?: Json
   isActive?: boolean
 }
@@ -33,7 +35,8 @@ export async function createSchedule(
   const nextRunAt = calculateNextRun(
     input.frequency,
     input.cronExpression,
-    input.timezone ?? "UTC"
+    input.timezone ?? "UTC",
+    input.runTime
   )
 
   const { data, error } = await getSupabase()
@@ -112,13 +115,14 @@ export async function updateSchedule(
   if (updates.input !== undefined) updateData.input = updates.input
   if (updates.isActive !== undefined) updateData.is_active = updates.isActive
 
-  if (updates.frequency || updates.cronExpression || updates.timezone) {
+  if (updates.frequency || updates.cronExpression || updates.timezone || updates.runTime) {
     const schedule = await getScheduleById(scheduleId, tenantId)
     if (schedule) {
       const nextRunAt = calculateNextRun(
         updates.frequency ?? schedule.frequency,
         updates.cronExpression ?? schedule.cron_expression ?? undefined,
-        updates.timezone ?? schedule.timezone
+        updates.timezone ?? schedule.timezone,
+        updates.runTime
       )
       updateData.next_run_at = nextRunAt?.toISOString() ?? null
     }
@@ -204,9 +208,21 @@ export function calculateNextRun(
   frequency: ScheduleFrequency,
   cronExpression?: string,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _timezone: string = "UTC"
+  _timezone: string = "UTC",
+  runTime?: string // HH:MM format
 ): Date | null {
   const now = new Date()
+
+  // Parse runTime if provided (default to 09:00)
+  let hours = 9
+  let minutes = 0
+  if (runTime) {
+    const [h, m] = runTime.split(":").map(Number)
+    if (!isNaN(h) && !isNaN(m)) {
+      hours = h
+      minutes = m
+    }
+  }
 
   switch (frequency) {
     case "once":
@@ -215,16 +231,28 @@ export function calculateNextRun(
     case "hourly":
       return new Date(now.getTime() + 60 * 60 * 1000)
 
-    case "daily":
-      return new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    case "daily": {
+      const next = new Date(now)
+      next.setHours(hours, minutes, 0, 0)
+      if (next <= now) {
+        next.setDate(next.getDate() + 1)
+      }
+      return next
+    }
 
-    case "weekly":
-      return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    case "weekly": {
+      const next = new Date(now)
+      next.setHours(hours, minutes, 0, 0)
+      next.setDate(next.getDate() + 7)
+      return next
+    }
 
-    case "monthly":
-      const nextMonth = new Date(now)
-      nextMonth.setMonth(nextMonth.getMonth() + 1)
-      return nextMonth
+    case "monthly": {
+      const next = new Date(now)
+      next.setHours(hours, minutes, 0, 0)
+      next.setMonth(next.getMonth() + 1)
+      return next
+    }
 
     case "cron":
       if (!cronExpression) return null

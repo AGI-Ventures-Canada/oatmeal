@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { auth } from "@clerk/nextjs/server"
 import { redirect, notFound } from "next/navigation"
 import { getAgentById } from "@/lib/services/agents"
@@ -6,6 +7,14 @@ import { getOrCreateTenant } from "@/lib/services/tenants"
 import { AgentDetail } from "@/components/dashboard/agent-detail"
 import { AgentRunList } from "@/components/dashboard/agent-run-list"
 import { RunAgentButton } from "@/components/dashboard/run-agent-button"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import {
   Card,
   CardContent,
@@ -17,10 +26,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface PageProps {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ run?: string }>
 }
 
-export default async function AgentDetailPage({ params }: PageProps) {
+export default async function AgentDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params
+  const { run } = await searchParams
   const { userId, orgId } = await auth()
 
   if (!userId) {
@@ -45,6 +56,20 @@ export default async function AgentDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/agents">Agents</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{agent.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{agent.name}</h1>
@@ -52,10 +77,10 @@ export default async function AgentDetailPage({ params }: PageProps) {
             <p className="text-muted-foreground">{agent.description}</p>
           )}
         </div>
-        <RunAgentButton agentId={agent.id} agentName={agent.name} />
+        <RunAgentButton agentId={agent.id} agentName={agent.name} autoOpen={run === "true"} />
       </div>
 
-      <Tabs defaultValue="settings">
+      <Tabs defaultValue="runs">
         <TabsList>
           <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="runs">Run History</TabsTrigger>

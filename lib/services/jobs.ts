@@ -1,5 +1,6 @@
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { Job, JobStatus, Json } from "@/lib/db/types"
+import type { Job, JobStatus } from "@/lib/db/agent-types"
+import type { Json } from "@/lib/db/types"
 
 export type CreateJobInput = {
   tenantId: string
