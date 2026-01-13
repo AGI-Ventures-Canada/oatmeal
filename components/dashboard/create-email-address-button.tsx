@@ -16,11 +16,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { AgentSelector } from "@/components/dashboard/agent-selector"
 
-interface CreateEmailAddressButtonProps {
-  tenantId: string
-}
-
-export function CreateEmailAddressButton({ tenantId }: CreateEmailAddressButtonProps) {
+export function CreateEmailAddressButton() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)

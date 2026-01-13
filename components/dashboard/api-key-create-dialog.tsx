@@ -238,7 +238,7 @@ export function ApiKeyCreateDialog() {
                 <div className="border rounded-md p-3 space-y-3 max-h-48 overflow-y-auto">
                   {filteredGroups.length === 0 ? (
                     <div className="text-sm text-muted-foreground text-center py-2">
-                      No permissions match "{scopeSearch}"
+                      No permissions match &ldquo;{scopeSearch}&rdquo;
                     </div>
                   ) : (
                     filteredGroups.map((group) => (

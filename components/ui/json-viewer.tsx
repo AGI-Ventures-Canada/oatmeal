@@ -44,7 +44,7 @@ function JsonNode({ name, value, defaultExpanded = false, depth = 0 }: JsonNodeP
       <div className="flex items-start gap-1 py-0.5">
         {name !== undefined && (
           <>
-            <span className="text-muted-foreground shrink-0">"{name}"</span>
+            <span className="text-muted-foreground shrink-0">&quot;{name}&quot;</span>
             <span className="text-muted-foreground shrink-0">:</span>
           </>
         )}
@@ -78,7 +78,7 @@ function JsonNode({ name, value, defaultExpanded = false, depth = 0 }: JsonNodeP
         )}
         {name !== undefined && (
           <>
-            <span className="text-muted-foreground shrink-0">"{name}"</span>
+            <span className="text-muted-foreground shrink-0">&quot;{name}&quot;</span>
             <span className="text-muted-foreground shrink-0">:</span>
           </>
         )}
@@ -95,7 +95,7 @@ function JsonNode({ name, value, defaultExpanded = false, depth = 0 }: JsonNodeP
       {expanded && !isEmpty && (
         <>
           <div className="pl-4 border-l border-muted ml-1">
-            {entries.map(([key, val], index) => (
+            {entries.map(([key, val]) => (
               <JsonNode
                 key={key}
                 name={isArray ? undefined : key}

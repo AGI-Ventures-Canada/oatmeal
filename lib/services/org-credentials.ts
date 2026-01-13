@@ -22,6 +22,7 @@ export async function saveCredential(
 ): Promise<OrgApiCredential | null> {
   const encryptedKey = encryptToken(input.apiKey)
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table not in generated types yet
   const { data, error } = await (getSupabase() as any)
     .from("org_api_credentials")
     .upsert(
@@ -51,6 +52,7 @@ export async function getCredential(
   tenantId: string,
   provider: ApiCredentialProvider
 ): Promise<OrgApiCredential | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table not in generated types yet
   const { data } = await (getSupabase() as any)
     .from("org_api_credentials")
     .select("*")
@@ -64,6 +66,7 @@ export async function getCredential(
 export async function listCredentials(
   tenantId: string
 ): Promise<OrgApiCredential[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table not in generated types yet
   const { data } = await (getSupabase() as any)
     .from("org_api_credentials")
     .select("*")
@@ -95,6 +98,7 @@ export async function updateCredential(
     updateData.is_active = updates.isActive
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table not in generated types yet
   const { data, error } = await (getSupabase() as any)
     .from("org_api_credentials")
     .update(updateData)
@@ -115,6 +119,7 @@ export async function deleteCredential(
   tenantId: string,
   provider: ApiCredentialProvider
 ): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table not in generated types yet
   const { error } = await (getSupabase() as any)
     .from("org_api_credentials")
     .delete()
@@ -141,6 +146,7 @@ export async function getDecryptedApiKeyForProvider(
   const apiKey = await getDecryptedApiKey(credential)
 
   if (apiKey) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table not in generated types yet
     await (getSupabase() as any)
       .from("org_api_credentials")
       .update({ last_used_at: new Date().toISOString() })

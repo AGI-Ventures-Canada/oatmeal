@@ -45,7 +45,7 @@ export default async function EmailTriggersPage() {
             Create inbound email addresses that trigger agents
           </p>
         </div>
-        <CreateEmailAddressButton tenantId={tenant.id} />
+        <CreateEmailAddressButton />
       </div>
 
       <Card>
