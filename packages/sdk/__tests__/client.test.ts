@@ -59,7 +59,7 @@ describe("SDK Client", () => {
       await client.whoami()
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "https://agents.agiventures.ai/api/v1/whoami",
+        "https://app.agentsapi.io/api/v1/whoami",
         expect.any(Object)
       )
     })

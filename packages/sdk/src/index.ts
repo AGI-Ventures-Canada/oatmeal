@@ -269,7 +269,7 @@ export interface UpdateScheduleInput {
   isActive?: boolean
 }
 
-const DEFAULT_BASE_URL = "https://agents.agiventures.ai"
+const DEFAULT_BASE_URL = "https://app.agentsapi.io"
 
 export interface ClientOptions {
   baseUrl?: string
