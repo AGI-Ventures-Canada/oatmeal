@@ -123,14 +123,68 @@ CREATE POLICY "Deny all access to new_table" ON new_table FOR ALL USING (false);
 
 ## Supabase Branching
 
-When you push a feature branch to GitHub, Supabase creates a preview database.
+**Docs:** https://supabase.com/docs/guides/deployment/branching
+
+When you push a feature branch to GitHub, Supabase creates a preview database branch.
 
 **Key Points:**
 
 - Preview branches start EMPTY - no production data
 - Migrations in `supabase/migrations/` run automatically
 - `supabase/seed.sql` seeds test data (preview only)
-- Each branch has its own API credentials
+- Each branch has its own API credentials (project ref, anon key, service key)
+
+### Branch Types
+
+**Ephemeral Branches (Default):**
+- Created automatically when PR is opened
+- Deleted when PR is merged or closed
+- Used for feature development and testing
+
+**Persistent Branches:**
+- Long-lived branches that survive PR merges
+- Ideal for staging/QA environments
+- Data persists between deployments
+- Configure in Supabase Dashboard → Branches → Create persistent branch
+
+### Persistent Staging Branch
+
+To set up a persistent staging environment:
+
+1. Go to Supabase Dashboard → Your Project → Branches
+2. Click "Create branch" → Select "Persistent"
+3. Name it `staging` (or match your git branch name)
+4. The branch will have its own:
+   - Database with persistent data
+   - Unique project ref and API keys
+   - Independent from production
+
+**Staging workflow:**
+```
+feature branch → PR to staging → test on staging branch
+staging → PR to main → deploy to production
+```
+
+**Environment variables for staging:**
+- `SUPABASE_URL` - staging branch URL
+- `SUPABASE_ANON_KEY` - staging anon key
+- `SUPABASE_SERVICE_ROLE_KEY` - staging service key
+
+### Branch Commands
+
+```bash
+# List all branches
+supabase branches list
+
+# Create a branch locally (linked to git branch)
+supabase branches create <branch-name>
+
+# Delete a branch
+supabase branches delete <branch-name>
+
+# Get branch credentials
+supabase branches get <branch-name>
+```
 
 ## Project Info
 
