@@ -89,7 +89,52 @@ Key benefits:
 - Resumable across restarts
 - Tools as durable steps
 
+## Anthropic Models
+
+The system uses Claude models via the `@ai-sdk/anthropic` provider:
+
+| Model ID | Label | Notes |
+|----------|-------|-------|
+| `claude-sonnet-4-5-20250929` | Claude Sonnet 4.5 | Default, best balance |
+| `claude-haiku-4-5-20251001` | Claude Haiku 4.5 | Fast, cost-effective |
+| `claude-opus-4-5-20251101` | Claude Opus 4.5 | Most capable |
+
+### Provider Setup
+
+```typescript
+import { anthropic, SUPPORTED_MODELS } from "@/lib/ai/anthropic"
+
+// Get provider for a model
+const model = anthropic("claude-sonnet-4-5-20250929")
+
+// Use in DurableAgent
+const agent = new DurableAgent({
+  model,
+  system: "...",
+  tools: {...},
+})
+```
+
+## Skill Tools
+
+Skills can expose tools that agents use. Tools are built from skill frontmatter:
+
+```yaml
+---
+name: gmail-assistant
+allowed-tools: gmail_list, gmail_read, gmail_send
+required-integrations: gmail
+---
+```
+
+Available integration tools:
+- `gmail_list`, `gmail_read`, `gmail_send`
+- `calendar_list`, `calendar_create`
+- `notion_search`, `notion_create_page`
+- `luma_list_events`, `luma_get_guests`
+
 ## Documentation
 - AI SDK Intro: https://ai-sdk.dev/docs/introduction
 - Agent Interface: https://ai-sdk.dev/docs/reference/ai-sdk-core/agent
 - ToolLoopAgent: https://ai-sdk.dev/docs/reference/ai-sdk-core/tool-loop-agent
+- Anthropic Provider: https://ai-sdk.dev/providers/ai-sdk-providers/anthropic

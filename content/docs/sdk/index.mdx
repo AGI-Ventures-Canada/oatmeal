@@ -1,0 +1,72 @@
+---
+title: SDK Overview
+description: TypeScript SDK for the Agents Server API.
+---
+
+The official TypeScript SDK provides a type-safe client for interacting with the Agents Server API.
+
+## Features
+
+- Full TypeScript support with exported types
+- Promise-based API with error handling
+- Built-in polling helpers (`waitForResult`)
+- Streaming support via EventSource
+- Zero external dependencies (uses native `fetch`)
+
+## Installation
+
+<Tabs items={['npm', 'pnpm', 'bun']} persist groupId="package-manager">
+  <Tab value="npm">
+  ```bash
+  npm install @agents-server/sdk
+  ```
+  </Tab>
+  <Tab value="pnpm">
+  ```bash
+  pnpm add @agents-server/sdk
+  ```
+  </Tab>
+  <Tab value="bun">
+  ```bash
+  bun add @agents-server/sdk
+  ```
+  </Tab>
+</Tabs>
+
+## Quick Start
+
+```typescript title="example.ts"
+import { createClient } from "@agents-server/sdk"
+
+const client = createClient("sk_live_your_api_key", {
+  baseUrl: "https://your-server.com"
+})
+
+// Verify authentication
+const { data } = await client.whoami()
+console.log(data?.tenantId)
+```
+
+## Response Format
+
+All methods return an `ApiResponse<T>` object:
+
+```typescript
+interface ApiResponse<T> {
+  data: T | null       // Response data on success
+  error: { error: string } | null  // Error message on failure
+  status: number       // HTTP status code
+}
+```
+
+This allows you to handle both success and error cases:
+
+```typescript title="error-handling.ts"
+const { data, error, status } = await client.jobs.get("job_123")
+
+if (error) {
+  console.error(`Error ${status}: ${error.error}`)
+} else {
+  console.log(data)
+}
+```

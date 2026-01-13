@@ -4,6 +4,15 @@ export type Scope =
   | "jobs:cancel"
   | "keys:read"
   | "keys:write"
+  | "agents:read"
+  | "agents:run"
+  | "agents:manage"
+  | "skills:read"
+  | "skills:write"
+  | "webhooks:read"
+  | "webhooks:write"
+  | "schedules:read"
+  | "schedules:write"
 
 export const ALL_SCOPES: Scope[] = [
   "jobs:create",
@@ -11,9 +20,18 @@ export const ALL_SCOPES: Scope[] = [
   "jobs:cancel",
   "keys:read",
   "keys:write",
+  "agents:read",
+  "agents:run",
+  "agents:manage",
+  "skills:read",
+  "skills:write",
+  "webhooks:read",
+  "webhooks:write",
+  "schedules:read",
+  "schedules:write",
 ]
 
-export const DEFAULT_API_KEY_SCOPES: Scope[] = ["jobs:create", "jobs:read"]
+export const DEFAULT_API_KEY_SCOPES: Scope[] = ["jobs:create", "jobs:read", "agents:read", "agents:run"]
 
 export type UserPrincipal = {
   kind: "user"

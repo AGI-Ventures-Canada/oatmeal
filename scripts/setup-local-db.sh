@@ -9,12 +9,94 @@ if ! docker info &>/dev/null 2>&1; then
   exit 1
 fi
 
-# Check if this project's Supabase is already running
-if supabase status &>/dev/null; then
+cleanup_corrupted_state() {
+  echo "Cleaning up corrupted Docker state..."
+  supabase stop --no-backup 2>/dev/null || true
+  docker ps -a --filter "name=supabase_.*_agents-server" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+  docker network ls --filter "name=supabase_network_agents-server" --format "{{.ID}}" | xargs -r docker network rm 2>/dev/null || true
+  sleep 2
+}
+
+verify_containers_healthy() {
+  local db_container="supabase_db_agents-server"
+  if ! docker ps --format "{{.Names}}" | grep -q "^${db_container}$"; then
+    return 1
+  fi
+  if ! docker exec "$db_container" pg_isready -U postgres &>/dev/null; then
+    return 1
+  fi
+  return 0
+}
+
+start_supabase_with_recovery() {
+  local max_attempts=2
+  local attempt=1
+  local timeout_seconds=120
+
+  while [ $attempt -le $max_attempts ]; do
+    echo "Starting local Supabase (attempt $attempt/$max_attempts)..."
+
+    # Run supabase start in background with timeout
+    supabase start --ignore-health-check 2>&1 &
+    local pid=$!
+
+    # Wait for completion or timeout
+    local elapsed=0
+    while kill -0 $pid 2>/dev/null && [ $elapsed -lt $timeout_seconds ]; do
+      # Check if DB is healthy while waiting
+      if [ $elapsed -gt 30 ] && verify_containers_healthy; then
+        echo "DB container healthy - terminating health check wait"
+        kill $pid 2>/dev/null || true
+        wait $pid 2>/dev/null || true
+        echo "Supabase started successfully"
+        return 0
+      fi
+      sleep 5
+      elapsed=$((elapsed + 5))
+    done
+
+    # Check if process completed
+    if ! kill -0 $pid 2>/dev/null; then
+      wait $pid
+      local exit_code=$?
+      if [ $exit_code -eq 0 ]; then
+        sleep 3
+        if verify_containers_healthy; then
+          echo "Supabase started successfully"
+          return 0
+        fi
+      fi
+    else
+      # Process still running after timeout
+      echo "Supabase start timed out after ${timeout_seconds}s"
+      kill $pid 2>/dev/null || true
+      wait $pid 2>/dev/null || true
+      # Check if DB is actually running despite timeout
+      if verify_containers_healthy; then
+        echo "DB container is healthy despite timeout - proceeding"
+        return 0
+      fi
+    fi
+
+    if [ $attempt -lt $max_attempts ]; then
+      cleanup_corrupted_state
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  echo "Failed to start Supabase after $max_attempts attempts"
+  return 1
+}
+
+# Check if this project's Supabase is already running and healthy
+if supabase status &>/dev/null && verify_containers_healthy; then
   echo "Supabase already running for this project, skipping startup..."
 else
-  echo "Starting local Supabase..."
-  supabase start --ignore-health-check
+  if supabase status &>/dev/null; then
+    echo "Supabase state exists but containers are unhealthy"
+    cleanup_corrupted_state
+  fi
+  start_supabase_with_recovery
 fi
 
 echo "Getting Supabase credentials..."

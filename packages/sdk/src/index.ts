@@ -29,6 +29,72 @@ export interface WhoamiResponse {
   scopes: string[]
 }
 
+// Agent types
+export type AgentRunStatus =
+  | "queued"
+  | "initializing"
+  | "running"
+  | "awaiting_input"
+  | "succeeded"
+  | "failed"
+  | "canceled"
+  | "timed_out"
+
+export type TriggerType = "manual" | "scheduled" | "email" | "luma_webhook"
+
+export interface AgentRunInput {
+  prompt: string
+  context?: unknown
+  idempotencyKey?: string
+}
+
+export interface AgentRun {
+  runId: string
+  agentId: string
+  status: AgentRunStatus
+  createdAt: string
+}
+
+export interface AgentRunDetails {
+  id: string
+  agentId: string
+  status: AgentRunStatus
+  triggerType: TriggerType
+  startedAt?: string | null
+  completedAt?: string | null
+  totalTokens?: number | null
+  totalCostCents?: number | null
+}
+
+export interface AgentRunStep {
+  stepNumber: number
+  type: string
+  name?: string
+  output?: unknown
+  durationMs?: number
+}
+
+export interface AgentRunResult {
+  id: string
+  agentId: string
+  status: AgentRunStatus
+  result?: unknown
+  error?: unknown
+  completedAt?: string | null
+  totalTokens?: number | null
+  totalCostCents?: number | null
+  steps: AgentRunStep[]
+}
+
+export interface AgentRunStreamEvent {
+  event: "status" | "step" | "done"
+  data: unknown
+}
+
+export interface HumanInputInput {
+  input: unknown
+}
+
 export interface ClientOptions {
   baseUrl: string
 }
@@ -125,6 +191,64 @@ class AgentsClientImpl {
       }
 
       throw new Error(`Job ${id} did not complete within ${maxAttempts} attempts`)
+    },
+  }
+
+  readonly agents = {
+    run: async (agentId: string, input: AgentRunInput): Promise<ApiResponse<AgentRun>> => {
+      return this.request<AgentRun>("POST", `/api/v1/agents/${agentId}/run`, input)
+    },
+
+    getRun: async (runId: string): Promise<ApiResponse<AgentRunDetails>> => {
+      return this.request<AgentRunDetails>("GET", `/api/v1/runs/${runId}`)
+    },
+
+    getRunResult: async (runId: string): Promise<ApiResponse<AgentRunResult>> => {
+      return this.request<AgentRunResult>("GET", `/api/v1/runs/${runId}/result`)
+    },
+
+    streamRun: (runId: string): EventSource => {
+      const url = `${this.baseUrl}/api/v1/runs/${runId}/stream`
+      const eventSource = new EventSource(url)
+      return eventSource
+    },
+
+    provideInput: async (
+      runId: string,
+      input: HumanInputInput
+    ): Promise<ApiResponse<{ success: boolean }>> => {
+      return this.request<{ success: boolean }>("POST", `/api/v1/runs/${runId}/input`, input)
+    },
+
+    cancelRun: async (runId: string): Promise<ApiResponse<{ success: boolean }>> => {
+      return this.request<{ success: boolean }>("POST", `/api/v1/runs/${runId}/cancel`)
+    },
+
+    waitForResult: async (
+      runId: string,
+      opts?: { maxAttempts?: number; intervalMs?: number }
+    ): Promise<AgentRunResult> => {
+      const maxAttempts = opts?.maxAttempts ?? 120
+      const intervalMs = opts?.intervalMs ?? 1000
+
+      for (let i = 0; i < maxAttempts; i++) {
+        const { data, error, status } = await this.agents.getRunResult(runId)
+
+        if (status === 202) {
+          await new Promise((r) => setTimeout(r, intervalMs))
+          continue
+        }
+
+        if (error) {
+          throw new Error(error.error || "Failed to get agent run result")
+        }
+
+        if (data) {
+          return data
+        }
+      }
+
+      throw new Error(`Agent run ${runId} did not complete within ${maxAttempts} attempts`)
     },
   }
 }
