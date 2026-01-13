@@ -269,7 +269,7 @@ export interface UpdateScheduleInput {
   isActive?: boolean
 }
 
-const DEFAULT_BASE_URL = "https://app.agentsapi.io"
+const DEFAULT_BASE_URL = "https://agentsapi.io"
 
 function getBaseUrl(): string {
   // Check for NEXT_PUBLIC_APP_URL first (for local development)

@@ -228,7 +228,7 @@ console.log(whoami.tenantId, whoami.scopes)
 The SDK automatically uses:
 1. `baseUrl` option if provided
 2. `NEXT_PUBLIC_APP_URL` env var if set (for local development)
-3. `https://app.agentsapi.io` as default
+3. `https://agentsapi.io` as default
 
 ### Agents
 
