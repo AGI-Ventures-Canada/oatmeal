@@ -7,6 +7,8 @@ Type-safe TypeScript SDK for Agents Server API.
 ```bash
 npm install @agents-server/sdk
 # or
+pnpm add @agents-server/sdk
+# or
 bun add @agents-server/sdk
 ```
 
@@ -132,7 +134,7 @@ const { data: agent } = await client.agents.create({
   instructions: `You are a helpful customer support assistant.
     Answer questions about our products and services.
     Be polite and professional.`,
-  model: "claude-sonnet-4-5-20250929"
+  model: "claude-sonnet-4-20250514"
 })
 
 // Update agent instructions
