@@ -271,6 +271,14 @@ export interface UpdateScheduleInput {
 
 const DEFAULT_BASE_URL = "https://app.agentsapi.io"
 
+function getBaseUrl(): string {
+  // Check for NEXT_PUBLIC_APP_URL first (for local development)
+  if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL
+  }
+  return DEFAULT_BASE_URL
+}
+
 export interface ClientOptions {
   baseUrl?: string
 }
@@ -287,7 +295,7 @@ class AgentsClientImpl {
 
   constructor(apiKey: string, options: ClientOptions = {}) {
     this.apiKey = apiKey
-    this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "")
+    this.baseUrl = (options.baseUrl ?? getBaseUrl()).replace(/\/$/, "")
   }
 
   private async request<T>(

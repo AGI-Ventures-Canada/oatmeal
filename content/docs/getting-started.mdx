@@ -39,12 +39,9 @@ Initialize the client with your API key:
 import { createClient } from "@agents-server/sdk"
 
 const client = createClient(process.env.AGENTS_API_KEY!)
-
-// For local development, specify the base URL
-const localClient = createClient(process.env.AGENTS_API_KEY!, {
-  baseUrl: "http://localhost:3000"
-})
 ```
+
+The SDK automatically detects `NEXT_PUBLIC_APP_URL` for local development, or defaults to the production API.
 
 <Callout type="warn">
 Never expose your API key in client-side code. Use environment variables and server-side API routes.

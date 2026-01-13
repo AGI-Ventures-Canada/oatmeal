@@ -46,7 +46,10 @@ describe("SDK Client", () => {
       expect(client.whoami).toBeDefined()
     })
 
-    it("uses default base URL when none provided", async () => {
+    it("uses default base URL when none provided and NEXT_PUBLIC_APP_URL not set", async () => {
+      const originalEnv = process.env.NEXT_PUBLIC_APP_URL
+      delete process.env.NEXT_PUBLIC_APP_URL
+
       mockFetch.mockImplementation(() =>
         Promise.resolve(
           new Response(JSON.stringify({ tenantId: "t1", keyId: "k1", scopes: [] }), {
@@ -62,6 +65,35 @@ describe("SDK Client", () => {
         "https://app.agentsapi.io/api/v1/whoami",
         expect.any(Object)
       )
+
+      if (originalEnv) process.env.NEXT_PUBLIC_APP_URL = originalEnv
+    })
+
+    it("uses NEXT_PUBLIC_APP_URL when set", async () => {
+      const originalEnv = process.env.NEXT_PUBLIC_APP_URL
+      process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000"
+
+      mockFetch.mockImplementation(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ tenantId: "t1", keyId: "k1", scopes: [] }), {
+            status: 200,
+          })
+        )
+      )
+
+      const client = createClient("sk_live_test123")
+      await client.whoami()
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://localhost:3000/api/v1/whoami",
+        expect.any(Object)
+      )
+
+      if (originalEnv) {
+        process.env.NEXT_PUBLIC_APP_URL = originalEnv
+      } else {
+        delete process.env.NEXT_PUBLIC_APP_URL
+      }
     })
 
     it("strips trailing slash from baseUrl", async () => {

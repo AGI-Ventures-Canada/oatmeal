@@ -223,10 +223,12 @@ const client = createClient("sk_live_...")
 // Verify API key
 const { data: whoami } = await client.whoami()
 console.log(whoami.tenantId, whoami.scopes)
-
-// Local development
-const localClient = createClient("sk_live_...", { baseUrl: "http://localhost:3000" })
 ```
+
+The SDK automatically uses:
+1. `baseUrl` option if provided
+2. `NEXT_PUBLIC_APP_URL` env var if set (for local development)
+3. `https://app.agentsapi.io` as default
 
 ### Agents
 
