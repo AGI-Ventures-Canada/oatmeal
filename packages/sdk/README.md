@@ -134,7 +134,7 @@ const { data: agent } = await client.agents.create({
   instructions: `You are a helpful customer support assistant.
     Answer questions about our products and services.
     Be polite and professional.`,
-  model: "claude-sonnet-4-20250514"
+  model: "claude-sonnet-4-5-20250929"
 })
 
 // Update agent instructions

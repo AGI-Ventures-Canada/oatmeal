@@ -1,0 +1,4 @@
+{
+  "title": "Guides",
+  "pages": ["document-processing", "scheduled-reports", "webhooks", "agent-management"]
+}
