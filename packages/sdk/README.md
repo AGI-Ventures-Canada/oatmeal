@@ -224,8 +224,8 @@ const client = createClient("sk_live_...")
 const { data: whoami } = await client.whoami()
 console.log(whoami.tenantId, whoami.scopes)
 
-// Custom base URL (only for self-hosted deployments)
-const customClient = createClient("sk_live_...", { baseUrl: "https://api.example.com" })
+// Local development
+const localClient = createClient("sk_live_...", { baseUrl: "http://localhost:3000" })
 ```
 
 ### Agents

@@ -39,6 +39,11 @@ Initialize the client with your API key:
 import { createClient } from "@agents-server/sdk"
 
 const client = createClient(process.env.AGENTS_API_KEY!)
+
+// For local development, specify the base URL
+const localClient = createClient(process.env.AGENTS_API_KEY!, {
+  baseUrl: "http://localhost:3000"
+})
 ```
 
 <Callout type="warn">
