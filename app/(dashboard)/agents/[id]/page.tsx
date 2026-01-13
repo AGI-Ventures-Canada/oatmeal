@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { auth } from "@clerk/nextjs/server"
 import { redirect, notFound } from "next/navigation"
 import { getAgentById } from "@/lib/services/agents"
@@ -6,6 +7,14 @@ import { getOrCreateTenant } from "@/lib/services/tenants"
 import { AgentDetail } from "@/components/dashboard/agent-detail"
 import { AgentRunList } from "@/components/dashboard/agent-run-list"
 import { RunAgentButton } from "@/components/dashboard/run-agent-button"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import {
   Card,
   CardContent,
@@ -47,6 +56,20 @@ export default async function AgentDetailPage({ params, searchParams }: PageProp
 
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/agents">Agents</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{agent.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{agent.name}</h1>

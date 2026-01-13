@@ -1,11 +1,17 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
-import { ChevronLeft } from "lucide-react"
 import { getSkillById } from "@/lib/services/skills"
 import { getOrCreateTenant } from "@/lib/services/tenants"
 import { SkillDetail } from "@/components/dashboard/skill-detail"
-import { Button } from "@/components/ui/button"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import {
   Card,
   CardContent,
@@ -42,18 +48,25 @@ export default async function SkillDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/skills">
-            <ChevronLeft className="size-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">{skill.name}</h1>
-          {skill.description && (
-            <p className="text-muted-foreground">{skill.description}</p>
-          )}
-        </div>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/skills">Skills</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{skill.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div>
+        <h1 className="text-3xl font-bold">{skill.name}</h1>
+        {skill.description && (
+          <p className="text-muted-foreground">{skill.description}</p>
+        )}
       </div>
 
       <Card>
