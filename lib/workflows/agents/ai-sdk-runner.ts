@@ -40,8 +40,10 @@ export interface AISDKRunnerResult {
     input?: Json
     output?: Json
     durationMs?: number
+    error?: string
   }>
   error?: string
+  fullResult?: unknown
 }
 
 export interface UIMessageChunk {
@@ -152,7 +154,7 @@ export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunne
       if (typeof result === "string") {
         finalText = result
       } else if (typeof result === "object") {
-        const r = result as Record<string, unknown>
+        const r = result as unknown as Record<string, unknown>
 
         // Check for steps array with text content
         if (Array.isArray(r.steps)) {
@@ -190,6 +192,40 @@ export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunne
     }
     /* eslint-enable @typescript-eslint/no-explicit-any */
 
+    // Extract tool calls from messages array since callbacks may not fire correctly
+    if (result && typeof result === "object") {
+      const r = result as unknown as Record<string, unknown>
+      if (Array.isArray(r.messages)) {
+        type MessageContent = { type?: string; toolName?: string; toolCallId?: string; args?: unknown; output?: unknown; text?: string }
+        type Message = { role?: string; content?: unknown }
+
+        for (const msg of r.messages as Message[]) {
+          if (msg.role === "assistant" && Array.isArray(msg.content)) {
+            for (const part of msg.content as MessageContent[]) {
+              if (part.type === "tool-call") {
+                steps.push({
+                  type: "tool_call",
+                  name: part.toolName,
+                  input: part.args as Json,
+                })
+              }
+            }
+          }
+          if (msg.role === "tool" && Array.isArray(msg.content)) {
+            for (const part of msg.content as MessageContent[]) {
+              if (part.type === "tool-result") {
+                steps.push({
+                  type: "tool_result",
+                  name: part.toolName,
+                  output: part.output as Json,
+                })
+              }
+            }
+          }
+        }
+      }
+    }
+
     steps.push({
       type: "text",
       output: finalText as Json,
@@ -199,12 +235,14 @@ export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunne
       success: true,
       output: finalText,
       steps,
+      fullResult: result,
     }
   } catch (err) {
     return {
       success: false,
       steps,
       error: err instanceof Error ? err.message : "Unknown error",
+      fullResult: undefined,
     }
   } finally {
     if (sandboxId) {

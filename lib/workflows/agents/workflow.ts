@@ -56,7 +56,7 @@ export async function runAgentWorkflow(
     const prompt = buildPromptFromTrigger(triggerInput)
     const context = buildContextFromTrigger(triggerInput)
 
-    let result: { success: boolean; output?: string; error?: string; steps?: Array<unknown> }
+    let result: { success: boolean; output?: string; error?: string; steps?: Array<unknown>; fullResult?: unknown }
 
     if (agent.type === "ai_sdk") {
       const { runAISDKAgent } = await import("./ai-sdk-runner")
@@ -108,7 +108,11 @@ export async function runAgentWorkflow(
       throw new Error(result.error ?? "Agent execution failed")
     }
 
-    await completeRun(runId, { output: result.output } as Json)
+    await completeRun(runId, {
+      output: result.output,
+      messages: (result.fullResult as Record<string, unknown>)?.messages,
+      steps: result.steps,
+    } as Json)
     await triggerRunWebhooks(tenantId, "agent_run.completed", {
       runId,
       agentId,
