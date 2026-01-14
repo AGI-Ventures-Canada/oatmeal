@@ -1,4 +1,4 @@
 {
   "title": "Guides",
-  "pages": ["agent-management", "sandbox-execution", "document-processing", "scheduled-reports", "webhooks"]
+  "pages": ["agent-management", "sandbox-execution", "hackathon-judging", "document-processing", "scheduled-reports", "webhooks"]
 }
