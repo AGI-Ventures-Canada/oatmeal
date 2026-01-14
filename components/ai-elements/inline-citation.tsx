@@ -163,7 +163,10 @@ export const InlineCitationCarouselIndex = ({
       return;
     }
 
+    // Initialize carousel state from API - intentional sync setState
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCount(api.scrollSnapList().length);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrent(api.selectedScrollSnap() + 1);
 
     api.on("select", () => {

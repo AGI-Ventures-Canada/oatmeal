@@ -69,10 +69,14 @@ export const Reasoning = memo(
     useEffect(() => {
       if (isStreaming) {
         if (startTime === null) {
+          // Initialize start time when streaming begins - intentional sync setState
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setStartTime(Date.now());
         }
       } else if (startTime !== null) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDuration(Math.ceil((Date.now() - startTime) / MS_IN_S));
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setStartTime(null);
       }
     }, [isStreaming, startTime, setDuration]);
