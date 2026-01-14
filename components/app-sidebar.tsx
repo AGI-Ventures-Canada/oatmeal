@@ -2,7 +2,7 @@
 
 import {
   Key,
-  Briefcase,
+  Play,
   ChevronsUpDown,
   LogOut,
   Building2,
@@ -51,7 +51,7 @@ const navItems = [
   { title: "Agents", href: "/agents", icon: Bot },
   { title: "Skills", href: "/skills", icon: Sparkles },
   { title: "Schedules", href: "/schedules", icon: Clock },
-  { title: "Jobs", href: "/jobs", icon: Briefcase },
+  { title: "Runs", href: "/runs", icon: Play },
   { title: "API Keys", href: "/keys", icon: Key },
 ]
 

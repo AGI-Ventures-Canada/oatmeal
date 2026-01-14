@@ -20,12 +20,13 @@ lib/sandbox/
 ```typescript
 import { createSandbox, terminateSandbox } from "@/lib/sandbox/daytona"
 
-// Create sandbox for an agent run
+// Create sandbox for an agent run (defaults to 5 minute timeout)
 const sandbox = await createSandbox({
   tenantId: "...",
   agentRunId: "...",
   envVars: { ANTHROPIC_API_KEY: "..." },
   skills: [...],
+  autoStopMinutes: 5, // Optional: defaults to 5 minutes
 })
 
 // Terminate when done
@@ -68,10 +69,22 @@ const result = await executeInSandbox(sandboxId, "python script.py")
 
 ### Base Snapshot
 
-The base snapshot should include:
-- Python 3.11 with Claude Agent SDK (`anthropic`)
-- Node.js 20 with Claude Code CLI
-- Common dependencies for automation tasks
+The base snapshot includes:
+- Node.js 20 with npm
+- Common dev tools: git, curl, wget, jq
+- ca-certificates for HTTPS
+
+To create or update the snapshot, use the script:
+
+```bash
+# Create new snapshot (tiny: 1 CPU, 1GB RAM)
+DAYTONA_API_KEY=... bun scripts/create-daytona-snapshot.ts
+
+# Create large snapshot (2 CPU, 4GB RAM)
+DAYTONA_API_KEY=... bun scripts/create-daytona-snapshot.ts --large
+```
+
+When adding new tools to the snapshot, increment the VERSION constant in the script and create a new snapshot. Update `DAYTONA_BASE_SNAPSHOT_ID` in `.env.local` to use the new snapshot name.
 
 ## Sandbox Session Tracking
 
@@ -84,7 +97,140 @@ All sandbox sessions are stored in the `sandbox_sessions` table:
 
 - Environment variables are AES-256-GCM encrypted at rest
 - OAuth tokens are passed via env vars, never in commands
-- Sandboxes auto-terminate after configurable timeout
+- Sandboxes auto-terminate after 5 minutes by default (or when workflow ends)
+- Use `autoStopMinutes` to customize timeout if longer execution is needed
+
+## Daytona SDK API Reference
+
+### Core Client
+
+```typescript
+import { Daytona, Image } from "@daytonaio/sdk"
+
+const daytona = new Daytona({
+  apiKey: process.env.DAYTONA_API_KEY,
+  apiUrl: process.env.DAYTONA_API_URL,  // Optional
+  target: "us",  // Optional: "us" or "eu"
+})
+```
+
+### Sandbox Operations
+
+```typescript
+// Create sandbox from snapshot
+const sandbox = await daytona.create({
+  snapshot: "claude-agent-sdk-tiny",
+  envVars: { ANTHROPIC_API_KEY: "..." },
+  autoStopInterval: 30,
+  autoArchiveInterval: 60,
+})
+
+// Find existing sandbox
+const sandbox = await daytona.findOne(sandboxId)
+
+// File operations
+await sandbox.fs.createFolder(dirPath, "755")
+await sandbox.fs.uploadFile(Buffer.from(content), filePath)
+const content = await sandbox.fs.downloadFile(path)
+
+// Command execution
+const session = await sandbox.process.createSession()
+const result = await sandbox.process.executeCommand(session.sessionId, command)
+// result: { result?: string, exitCode?: number }
+
+// Cleanup
+await sandbox.delete()
+```
+
+### Snapshot Operations
+
+```typescript
+// Get existing snapshot
+const snapshot = await daytona.snapshot.get("snapshot-name")
+
+// List snapshots
+const snapshots = await daytona.snapshot.list(page, limit)
+
+// Create snapshot with Image helper
+const nodeImage = Image.base("node:20-slim")
+const pythonImage = Image.debianSlim("3.12")
+
+const snapshot = await daytona.snapshot.create(
+  {
+    name: "my-snapshot",
+    image: nodeImage,  // Must use Image helper, not string
+    resources: { cpu: 2, memory: 4, disk: 10 },
+    entrypoint: ["sleep", "infinity"],  // Must be string array
+  },
+  { onLogs: console.log }
+)
+
+// Delete snapshot
+await daytona.snapshot.delete("snapshot-name")
+```
+
+### Image Helpers
+
+```typescript
+import { Image } from "@daytonaio/sdk"
+
+// Base image from Docker Hub
+Image.base("node:20-slim")
+Image.base("python:3.12-slim-bookworm")
+Image.base("ubuntu:22.04")
+
+// Python-specific (uses Debian slim with Python)
+Image.debianSlim("3.12")
+
+// From Dockerfile
+Image.fromDockerfile("Dockerfile")
+
+// Chainable methods
+Image.base("node:20-slim")
+  .runCommands("npm install -g typescript")
+  .env({ NODE_ENV: "production" })
+  .workdir("/workspace")
+  .entrypoint(["node"])
+```
+
+## Next.js Configuration
+
+When using Daytona SDK in a Next.js project, configure node polyfills to ensure compatibility with Webpack and Turbopack bundlers.
+
+Add the following configuration to your `next.config.ts` file:
+
+```typescript
+import type { NextConfig } from 'next'
+import NodePolyfillPlugin from 'node-polyfill-webpack-plugin'
+import { env, nodeless } from 'unenv'
+
+const { alias: turbopackAlias } = env(nodeless, {})
+
+const nextConfig: NextConfig = {
+  // Turbopack
+  experimental: {
+    turbo: {
+      resolveAlias: {
+        ...turbopackAlias,
+      },
+    },
+  },
+  // Webpack
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.plugins.push(new NodePolyfillPlugin())
+    }
+    return config
+  },
+}
+
+export default nextConfig
+```
+
+Required dependencies:
+```bash
+bun add -D node-polyfill-webpack-plugin unenv
+```
 
 ## Documentation Links
 

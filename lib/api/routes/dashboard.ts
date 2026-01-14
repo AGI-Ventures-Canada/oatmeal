@@ -223,7 +223,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         type: t.Optional(t.Union([t.Literal("ai_sdk"), t.Literal("claude_sdk")])),
         model: t.Optional(t.String()),
         skillIds: t.Optional(t.Array(t.String())),
-        config: t.Optional(t.Object({})),
+        config: t.Optional(t.Record(t.String(), t.Unknown())),
       }),
     }
   )
@@ -264,7 +264,9 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         name: body.name,
         description: body.description,
         instructions: body.instructions,
+        type: body.type,
         model: body.model,
+        maxSteps: body.maxSteps,
         skillIds: body.skillIds,
         config: body.config,
         isActive: body.isActive,
@@ -289,11 +291,13 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     {
       body: t.Object({
         name: t.Optional(t.String()),
-        description: t.Optional(t.String()),
-        instructions: t.Optional(t.String()),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+        instructions: t.Optional(t.Union([t.String(), t.Null()])),
+        type: t.Optional(t.Union([t.Literal("ai_sdk"), t.Literal("claude_sdk")])),
         model: t.Optional(t.String()),
+        maxSteps: t.Optional(t.Number()),
         skillIds: t.Optional(t.Array(t.String())),
-        config: t.Optional(t.Object({})),
+        config: t.Optional(t.Record(t.String(), t.Unknown())),
         isActive: t.Optional(t.Boolean()),
       }),
     }
@@ -371,6 +375,20 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         throw new Error("Failed to create agent run")
       }
 
+      const { start } = await import("workflow/api")
+      const { runAgentWorkflow } = await import("@/lib/workflows/agents")
+
+      await start(runAgentWorkflow, [{
+        runId: run.id,
+        agentId: params.id,
+        tenantId: principal.tenantId,
+        triggerInput: {
+          trigger: "manual",
+          prompt: body.prompt,
+          context: body.context,
+        },
+      }])
+
       await logAudit({
         principal,
         action: "agent_run.created",
@@ -384,10 +402,86 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     {
       body: t.Object({
         prompt: t.String({ minLength: 1 }),
-        context: t.Optional(t.Object({})),
+        context: t.Optional(t.Record(t.String(), t.Unknown())),
       }),
     }
   )
+  // ============================================================================
+  // Runs
+  // ============================================================================
+  .get("/runs", async ({ principal, query }) => {
+    requirePrincipal(principal, ["user"], ["agents:read"])
+
+    const { listAgentRunsWithAgents } = await import("@/lib/services/agent-runs")
+    const runs = await listAgentRunsWithAgents(principal.tenantId, {
+      limit: query.limit ? parseInt(query.limit) : undefined,
+    })
+
+    return {
+      runs: runs.map((r) => ({
+        id: r.id,
+        status: r.status,
+        triggerType: r.trigger_type,
+        startedAt: r.started_at,
+        completedAt: r.completed_at,
+        error: r.error,
+        agent: r.agent ? { id: r.agent.id, name: r.agent.name } : null,
+      })),
+    }
+  })
+  .get("/runs/:id", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user"], ["agents:read"])
+
+    const { getAgentRunById } = await import("@/lib/services/agent-runs")
+    const run = await getAgentRunById(params.id, principal.tenantId)
+
+    if (!run) {
+      return new Response(JSON.stringify({ error: "Run not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    return {
+      id: run.id,
+      agentId: run.agent_id,
+      status: run.status,
+      triggerType: run.trigger_type,
+      input: run.input,
+      output: run.output,
+      result: run.result,
+      error: run.error,
+      tokenUsage: run.token_usage,
+      startedAt: run.started_at,
+      completedAt: run.completed_at,
+      createdAt: run.created_at,
+    }
+  })
+  .post("/runs/:id/cancel", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user"], ["agents:run"])
+
+    const { cancelAgentRun } = await import("@/lib/services/agent-runs")
+    const success = await cancelAgentRun(params.id, principal.tenantId)
+
+    if (!success) {
+      return new Response(
+        JSON.stringify({ error: "Cannot cancel run (not found or already completed)" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    await logAudit({
+      principal,
+      action: "agent_run.canceled",
+      resourceType: "agent_run",
+      resourceId: params.id,
+    })
+
+    return { success: true }
+  })
   // ============================================================================
   // Skills
   // ============================================================================
@@ -448,8 +542,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         slug: t.String({ minLength: 1 }),
         description: t.Optional(t.String()),
         content: t.String({ minLength: 1 }),
-        referencesContent: t.Optional(t.Object({})),
-        scriptsContent: t.Optional(t.Object({})),
+        referencesContent: t.Optional(t.Record(t.String(), t.Unknown())),
+        scriptsContent: t.Optional(t.Record(t.String(), t.Unknown())),
       }),
     }
   )
@@ -517,8 +611,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         slug: t.Optional(t.String()),
         description: t.Optional(t.String()),
         content: t.Optional(t.String()),
-        referencesContent: t.Optional(t.Object({})),
-        scriptsContent: t.Optional(t.Object({})),
+        referencesContent: t.Optional(t.Record(t.String(), t.Unknown())),
+        scriptsContent: t.Optional(t.Record(t.String(), t.Unknown())),
       }),
     }
   )
@@ -705,7 +799,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         runTime: t.Optional(t.String()),
         agentId: t.Optional(t.String()),
         jobType: t.Optional(t.String()),
-        input: t.Optional(t.Object({})),
+        input: t.Optional(t.Record(t.String(), t.Unknown())),
       }),
     }
   )
@@ -787,7 +881,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         cronExpression: t.Optional(t.String()),
         timezone: t.Optional(t.String()),
         runTime: t.Optional(t.String()),
-        input: t.Optional(t.Object({})),
+        input: t.Optional(t.Record(t.String(), t.Unknown())),
         isActive: t.Optional(t.Boolean()),
       }),
     }

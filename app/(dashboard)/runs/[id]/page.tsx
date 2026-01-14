@@ -5,6 +5,7 @@ import { getAgentRunById, listAgentRunSteps } from "@/lib/services/agent-runs"
 import { getAgentById } from "@/lib/services/agents"
 import { getOrCreateTenant } from "@/lib/services/tenants"
 import { RunDetail } from "@/components/dashboard/run-detail"
+import { CopyableId } from "@/components/ui/copyable-id"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -20,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { AutoRefresh } from "@/components/ui/auto-refresh"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -62,6 +64,7 @@ export default async function RunDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6 min-w-0 w-full max-w-full overflow-hidden">
+      <AutoRefresh />
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -88,9 +91,7 @@ export default async function RunDetailPage({ params }: PageProps) {
 
       <div>
         <h1 className="text-3xl font-bold">Run Details</h1>
-        <p className="text-muted-foreground font-mono text-sm">
-          {run.id}
-        </p>
+        <CopyableId id={run.id} className="text-sm" />
       </div>
 
       <Card className="overflow-hidden w-full min-w-0">

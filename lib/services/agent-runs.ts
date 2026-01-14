@@ -16,6 +16,7 @@ export type UpdateAgentRunInput = {
   workflowRunId?: string
   sandboxId?: string
   output?: Json
+  result?: Json
   error?: Json
   tokenUsage?: Json
 }
@@ -97,6 +98,41 @@ export async function listAgentRuns(
   return (data as AgentRun[] | null) ?? []
 }
 
+export type AgentRunWithAgent = AgentRun & {
+  agent: { id: string; name: string } | null
+}
+
+export async function listAgentRunsWithAgents(
+  tenantId: string,
+  options: ListAgentRunsOptions = {}
+): Promise<AgentRunWithAgent[]> {
+  let query = getSupabase()
+    .from("agent_runs")
+    .select("*, agent:agents(id, name)")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+
+  if (options.status) {
+    query = query.eq("status", options.status)
+  }
+  if (options.agentId) {
+    query = query.eq("agent_id", options.agentId)
+  }
+  if (options.limit) {
+    query = query.limit(options.limit)
+  }
+  if (options.offset) {
+    query = query.range(
+      options.offset,
+      options.offset + (options.limit ?? 50) - 1
+    )
+  }
+
+  const { data } = await query
+
+  return (data as AgentRunWithAgent[] | null) ?? []
+}
+
 export async function updateAgentRunStatus(
   runId: string,
   status: AgentRunStatus,
@@ -114,6 +150,9 @@ export async function updateAgentRunStatus(
   }
   if (updates.output !== undefined) {
     updateData.output = updates.output
+  }
+  if (updates.result !== undefined) {
+    updateData.result = updates.result
   }
   if (updates.error !== undefined) {
     updateData.error = updates.error
@@ -200,7 +239,7 @@ export async function markRunCompleted(
   output: Json,
   tokenUsage?: Json
 ): Promise<AgentRun | null> {
-  return updateAgentRunStatus(runId, "succeeded", { output, tokenUsage })
+  return updateAgentRunStatus(runId, "succeeded", { output, result: output, tokenUsage })
 }
 
 export async function markRunFailed(

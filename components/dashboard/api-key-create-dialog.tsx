@@ -185,6 +185,14 @@ export function ApiKeyCreateDialog() {
                 handleCreate()
               }
             }}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault()
+                if (name && scopes.length > 0 && !loading) {
+                  handleCreate()
+                }
+              }
+            }}
           >
             <div className="space-y-4">
               <div className="space-y-2">

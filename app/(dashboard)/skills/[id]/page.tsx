@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { CopyableId } from "@/components/ui/copyable-id"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -64,8 +65,9 @@ export default async function SkillDetailPage({ params }: PageProps) {
 
       <div>
         <h1 className="text-3xl font-bold">{skill.name}</h1>
+        <CopyableId id={skill.id} className="text-sm" />
         {skill.description && (
-          <p className="text-muted-foreground">{skill.description}</p>
+          <p className="text-muted-foreground mt-1">{skill.description}</p>
         )}
       </div>
 

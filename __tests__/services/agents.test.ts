@@ -71,7 +71,7 @@ describe("Agents Service", () => {
   describe("Default Values", () => {
     const defaults = {
       type: "ai_sdk",
-      maxSteps: 50,
+      maxSteps: 5,
       timeoutMs: 300000,
       skillIds: [],
       config: {},
@@ -81,8 +81,8 @@ describe("Agents Service", () => {
       expect(defaults.type).toBe("ai_sdk")
     })
 
-    it("default maxSteps is 50", () => {
-      expect(defaults.maxSteps).toBe(50)
+    it("default maxSteps is 5", () => {
+      expect(defaults.maxSteps).toBe(5)
     })
 
     it("default timeoutMs is 300000 (5 minutes)", () => {

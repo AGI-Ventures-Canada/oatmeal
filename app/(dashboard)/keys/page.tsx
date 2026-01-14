@@ -12,6 +12,7 @@ import {
 import { listApiKeys } from "@/lib/services/api-keys"
 import { getOrCreateTenant } from "@/lib/services/tenants"
 import type { ApiKeyDisplay } from "@/lib/types/dashboard"
+import { AutoRefresh } from "@/components/ui/auto-refresh"
 
 export default async function KeysPage() {
   const { userId, orgId } = await auth()
@@ -43,6 +44,7 @@ export default async function KeysPage() {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">API Keys</h1>

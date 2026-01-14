@@ -34,9 +34,9 @@ export function CreateWebhookButton() {
   const [secret, setSecret] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!url.trim() || selectedEvents.length === 0) return
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!url.trim() || selectedEvents.length === 0 || loading) return
 
     setLoading(true)
     try {
@@ -140,7 +140,16 @@ export function CreateWebhookButton() {
             </DialogFooter>
           </>
         ) : (
-          <form onSubmit={handleSubmit} autoComplete="off">
+          <form
+            onSubmit={handleSubmit}
+            autoComplete="off"
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault()
+                handleSubmit()
+              }
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Create New Webhook</DialogTitle>
               <DialogDescription>

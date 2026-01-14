@@ -1,0 +1,226 @@
+---
+title: Hackathon Judging
+description: Automate hackathon project evaluation with AI agents.
+---
+
+Use AI agents to evaluate hackathon submissions consistently and at scale.
+
+## Overview
+
+Hackathon judging agents can:
+
+- Evaluate projects against defined criteria
+- Provide detailed feedback to participants
+- Score submissions consistently
+- Process many submissions in parallel
+
+## Creating a Judging Agent
+
+```typescript
+import { createClient } from "@agents-server/sdk"
+
+const client = createClient(process.env.AGENTS_API_KEY!)
+
+const { data: agent } = await client.agents.create({
+  name: "Hackathon Judge",
+  description: "Evaluates hackathon project submissions",
+  model: "claude-sonnet-4-5-20250929",
+  instructions: `You are an experienced hackathon judge evaluating project submissions.
+
+## Evaluation Criteria
+
+Score each project from 1-10 on these dimensions:
+
+1. **Innovation** (25%) - How novel and creative is the solution?
+2. **Technical Execution** (25%) - How well is it built? Code quality, architecture.
+3. **Impact** (20%) - What problem does it solve? How significant is the impact?
+4. **Presentation** (15%) - How well is the project documented and presented?
+5. **Completeness** (15%) - Is it a working prototype or just an idea?
+
+## Output Format
+
+Provide your evaluation as structured JSON:
+
+\`\`\`json
+{
+  "projectName": "...",
+  "scores": {
+    "innovation": 8,
+    "technicalExecution": 7,
+    "impact": 9,
+    "presentation": 6,
+    "completeness": 7
+  },
+  "weightedScore": 7.45,
+  "strengths": ["...", "..."],
+  "improvements": ["...", "..."],
+  "summary": "One paragraph overall assessment"
+}
+\`\`\`
+
+## Guidelines
+
+- Be constructive and encouraging in feedback
+- Cite specific examples from the submission
+- Consider the hackathon's time constraints
+- Flag any concerns about originality or rule violations`
+})
+```
+
+## Judging a Submission
+
+Pass the project details as context:
+
+```typescript
+const { data: run } = await client.agents.run(agent.id, {
+  prompt: "Evaluate this hackathon submission",
+  context: {
+    projectName: "EcoTrack",
+    teamName: "Green Coders",
+    description: "An app that tracks personal carbon footprint using AI",
+    repoUrl: "https://github.com/example/ecotrack",
+    demoUrl: "https://ecotrack-demo.vercel.app",
+    techStack: ["Next.js", "OpenAI API", "Supabase"],
+    submissionTime: "2024-01-15T23:45:00Z"
+  }
+})
+
+const result = await client.agents.waitForResult(run.runId)
+console.log(result.result)
+```
+
+## Batch Judging
+
+Process multiple submissions in parallel:
+
+```typescript
+const submissions = [
+  { projectName: "EcoTrack", /* ... */ },
+  { projectName: "CodeBuddy", /* ... */ },
+  { projectName: "HealthPal", /* ... */ }
+]
+
+// Start all evaluations in parallel
+const runs = await Promise.all(
+  submissions.map(submission =>
+    client.agents.run(agent.id, {
+      prompt: "Evaluate this hackathon submission",
+      context: submission,
+      idempotencyKey: `judge-${submission.projectName}`
+    })
+  )
+)
+
+// Wait for all results
+const results = await Promise.all(
+  runs.map(({ data }) => client.agents.waitForResult(data.runId))
+)
+
+// Rank by weighted score
+const ranked = results
+  .map(r => JSON.parse(r.result))
+  .sort((a, b) => b.weightedScore - a.weightedScore)
+
+console.log("Rankings:")
+ranked.forEach((project, i) => {
+  console.log(`${i + 1}. ${project.projectName}: ${project.weightedScore}`)
+})
+```
+
+## Adding Code Review
+
+Attach a skill for deeper technical evaluation:
+
+```typescript
+const { data: skill } = await client.skills.create({
+  name: "Code Reviewer",
+  slug: "code-reviewer",
+  description: "Reviews code quality and architecture",
+  content: `# Code Review Guidelines
+
+When reviewing hackathon code:
+
+1. **Check the README** - Is setup documented? Are dependencies listed?
+2. **Review architecture** - Is the code organized logically?
+3. **Assess code quality** - Naming, comments, error handling
+4. **Look for security issues** - API keys exposed, SQL injection, XSS
+5. **Evaluate tests** - Are there any? Do they pass?
+
+Be lenient on polish but strict on functionality and security.`
+})
+
+await client.agents.update(agent.id, {
+  skillIds: [skill.id]
+})
+```
+
+## Handling Edge Cases
+
+### Incomplete Submissions
+
+```typescript
+const instructions = `...
+
+## Incomplete Submissions
+
+If a submission is missing critical components:
+- No working demo: Cap technical execution at 5
+- No source code: Cannot evaluate, return error
+- Missing documentation: Cap presentation at 4
+
+Always explain what was missing in the feedback.`
+```
+
+### Conflict of Interest
+
+```typescript
+const { data: run } = await client.agents.run(agent.id, {
+  prompt: "Evaluate this submission",
+  context: {
+    ...submission,
+    judges: ["alice@example.com", "bob@example.com"],
+    currentJudge: "alice@example.com"
+  }
+})
+```
+
+Add to instructions:
+```
+If the current judge appears to be affiliated with the team
+(same organization, listed as contributor), flag for reassignment.
+```
+
+## Exporting Results
+
+Generate a judging report:
+
+```typescript
+const { data: reportAgent } = await client.agents.create({
+  name: "Judging Report Generator",
+  instructions: `Generate a markdown report summarizing hackathon judging results.
+
+Include:
+- Overall statistics (submissions, average scores)
+- Top 3 winners with detailed feedback
+- Honorable mentions
+- Common themes in submissions
+- Recommendations for next hackathon`
+})
+
+const { data: run } = await client.agents.run(reportAgent.id, {
+  prompt: "Generate the final judging report",
+  context: {
+    hackathonName: "AI Innovation 2024",
+    results: ranked,
+    totalSubmissions: submissions.length
+  }
+})
+```
+
+## Best Practices
+
+1. **Calibrate first** - Have judges evaluate 2-3 submissions together to align
+2. **Use idempotency keys** - Prevent duplicate evaluations
+3. **Review outliers** - Manually check scores that deviate significantly
+4. **Provide feedback** - Every participant should get constructive comments
+5. **Keep records** - Store all evaluations for transparency

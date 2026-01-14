@@ -33,6 +33,7 @@ export type CreateSandboxInput = {
   snapshotId?: string
   envVars: Record<string, string>
   skills: Skill[]
+  autoStopMinutes?: number
 }
 
 export interface SandboxInfo {
@@ -53,11 +54,12 @@ export async function createSandbox(
   }
 
   try {
+    const autoStopMinutes = input.autoStopMinutes ?? 5
     const sandbox = await client.create({
       snapshot: snapshotId,
       envVars: input.envVars,
-      autoStopInterval: 30,
-      autoArchiveInterval: 60,
+      autoStopInterval: autoStopMinutes,
+      autoArchiveInterval: autoStopMinutes + 5,
     })
 
     const encryptedEnvVars = encryptJson(input.envVars)
@@ -147,15 +149,23 @@ export async function executeInSandbox(
       throw new Error("Sandbox not found")
     }
 
-    const session = await sandbox.process.createSession()
-    const result = await sandbox.process.executeCommand(session.sessionId, command)
+    console.log(`[Daytona] Executing command: ${command.substring(0, 100)}...`)
+
+    // Try direct execution first (simpler API)
+    const result = await sandbox.process.executeCommand(command)
+    console.log(`[Daytona] Command result:`, JSON.stringify(result, null, 2))
+
+    // Handle different result formats
+    const stdout = result.result ?? result.output ?? result.stdout ?? ""
+    const exitCode = result.exitCode ?? result.exit_code ?? result.code ?? 0
 
     return {
-      stdout: result.result ?? "",
+      stdout,
       stderr: "",
-      exitCode: result.exitCode ?? 0,
+      exitCode,
     }
   } catch (err) {
+    console.error(`[Daytona] Command execution error:`, err)
     return {
       stdout: "",
       stderr: err instanceof Error ? err.message : "Unknown error",

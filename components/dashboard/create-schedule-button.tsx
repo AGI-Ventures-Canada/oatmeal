@@ -59,9 +59,9 @@ export function CreateScheduleButton() {
   const [agentId, setAgentId] = useState<string | undefined>()
   const [prompt, setPrompt] = useState("")
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim() || !agentId) return
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!name.trim() || !agentId || loading) return
 
     setLoading(true)
     try {
@@ -106,7 +106,16 @@ export function CreateScheduleButton() {
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
-        <form onSubmit={handleSubmit} autoComplete="off">
+        <form
+          onSubmit={handleSubmit}
+          autoComplete="off"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault()
+              handleSubmit()
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Create New Schedule</DialogTitle>
             <DialogDescription>
