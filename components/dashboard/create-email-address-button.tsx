@@ -24,8 +24,9 @@ export function CreateEmailAddressButton() {
   const [createdAddress, setCreatedAddress] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (loading) return
 
     setLoading(true)
     try {
@@ -106,7 +107,15 @@ export function CreateEmailAddressButton() {
             </DialogFooter>
           </>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={handleSubmit}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault()
+                handleSubmit()
+              }
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Create Email Address</DialogTitle>
               <DialogDescription>

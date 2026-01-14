@@ -46,9 +46,9 @@ export function CreateSkillButton() {
     setAutoSlug(false)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim() || !slug.trim() || !content.trim()) return
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!name.trim() || !slug.trim() || !content.trim() || loading) return
 
     setLoading(true)
     try {
@@ -88,7 +88,16 @@ export function CreateSkillButton() {
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
-        <form onSubmit={handleSubmit} autoComplete="off">
+        <form
+          onSubmit={handleSubmit}
+          autoComplete="off"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault()
+              handleSubmit()
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Create New Skill</DialogTitle>
             <DialogDescription>

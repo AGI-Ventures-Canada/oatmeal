@@ -407,6 +407,82 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
   )
   // ============================================================================
+  // Runs
+  // ============================================================================
+  .get("/runs", async ({ principal, query }) => {
+    requirePrincipal(principal, ["user"], ["agents:read"])
+
+    const { listAgentRunsWithAgents } = await import("@/lib/services/agent-runs")
+    const runs = await listAgentRunsWithAgents(principal.tenantId, {
+      limit: query.limit ? parseInt(query.limit) : undefined,
+    })
+
+    return {
+      runs: runs.map((r) => ({
+        id: r.id,
+        status: r.status,
+        triggerType: r.trigger_type,
+        startedAt: r.started_at,
+        completedAt: r.completed_at,
+        error: r.error,
+        agent: r.agent ? { id: r.agent.id, name: r.agent.name } : null,
+      })),
+    }
+  })
+  .get("/runs/:id", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user"], ["agents:read"])
+
+    const { getAgentRunById } = await import("@/lib/services/agent-runs")
+    const run = await getAgentRunById(params.id, principal.tenantId)
+
+    if (!run) {
+      return new Response(JSON.stringify({ error: "Run not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    return {
+      id: run.id,
+      agentId: run.agent_id,
+      status: run.status,
+      triggerType: run.trigger_type,
+      input: run.input,
+      output: run.output,
+      result: run.result,
+      error: run.error,
+      tokenUsage: run.token_usage,
+      startedAt: run.started_at,
+      completedAt: run.completed_at,
+      createdAt: run.created_at,
+    }
+  })
+  .post("/runs/:id/cancel", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user"], ["agents:run"])
+
+    const { cancelAgentRun } = await import("@/lib/services/agent-runs")
+    const success = await cancelAgentRun(params.id, principal.tenantId)
+
+    if (!success) {
+      return new Response(
+        JSON.stringify({ error: "Cannot cancel run (not found or already completed)" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    await logAudit({
+      principal,
+      action: "agent_run.canceled",
+      resourceType: "agent_run",
+      resourceId: params.id,
+    })
+
+    return { success: true }
+  })
+  // ============================================================================
   // Skills
   // ============================================================================
   .get("/skills", async ({ principal, query }) => {

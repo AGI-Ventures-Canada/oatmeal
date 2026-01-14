@@ -21,7 +21,7 @@ interface Agent {
 Multi-step reasoning agent that iteratively invokes tools until completion.
 
 ```typescript
-import { ToolLoopAgent } from "ai"
+import { ToolLoopAgent, stepCountIs } from "ai"
 
 const agent = new ToolLoopAgent({
   model: openai("gpt-4o"),
@@ -30,7 +30,7 @@ const agent = new ToolLoopAgent({
     search: searchTool,
     calculate: calculateTool,
   },
-  stopWhen: { maxSteps: 20 },
+  stopWhen: stepCountIs(20),
 })
 
 // Generate (blocking)
@@ -38,6 +38,32 @@ const result = await agent.generate({ prompt: "..." })
 
 // Stream (real-time)
 const stream = await agent.stream({ prompt: "..." })
+```
+
+### stopWhen Patterns (AI SDK 5.0+)
+
+The `stopWhen` parameter controls when multi-step execution stops. It only triggers when the last step contains tool results.
+
+```typescript
+import { stepCountIs, hasToolCall } from "ai"
+
+// Stop after N steps (equivalent to old maxSteps)
+stopWhen: stepCountIs(5)
+
+// Stop when specific tool is called
+stopWhen: hasToolCall("finalizeTask")
+
+// Multiple conditions (stops if ANY is met)
+stopWhen: [
+  stepCountIs(10),
+  hasToolCall("submitOrder"),
+]
+
+// Custom condition based on step content
+stopWhen: ({ steps }) => {
+  const lastStep = steps[steps.length - 1]
+  return lastStep?.text?.includes("COMPLETE")
+}
 ```
 
 ### Tool Definition

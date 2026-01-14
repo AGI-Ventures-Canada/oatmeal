@@ -49,13 +49,37 @@ run.readable     // stream for real-time updates
 ```
 
 ### Control Flow
-```typescript
-// Sequential
-const a = await stepA()
-const b = await stepB(a)
 
-// Parallel
-const [x, y] = await Promise.all([stepX(), stepY()])
+**Sequential Execution**
+```typescript
+const validated = await validateData(data)
+const processed = await processData(validated)
+const stored = await storeData(processed)
+return stored
+```
+
+**Parallel Execution**
+```typescript
+const [user, orders, preferences] = await Promise.all([
+  fetchUser(userId),
+  fetchOrders(userId),
+  fetchPreferences(userId)
+])
+return { user, orders, preferences }
+```
+
+**Race (First to Complete)**
+```typescript
+import { sleep, createWebhook } from "workflow"
+
+const webhook = createWebhook()
+await executeExternalTask(webhook.url)
+
+// Wait for webhook or timeout, whichever first
+await Promise.race([
+  webhook,
+  sleep("1 day"),
+])
 ```
 
 ## Durable Agents
@@ -267,6 +291,48 @@ const webhook = createWebhook()
 const response = await webhook  // Pauses until POST to URL
 ```
 
+## Fetch in Workflows
+
+**CRITICAL**: Global `fetch` is unavailable in workflow/step functions. Libraries that use fetch internally will fail.
+
+### Using DurableAgent (Recommended)
+
+DurableAgent from `@workflow/ai/agent` handles fetch internally - no special setup needed:
+
+```typescript
+import { DurableAgent } from "@workflow/ai/agent"
+
+export async function myStep(input: string) {
+  "use step"
+  const agent = new DurableAgent({ model: modelFactory, tools })
+  await agent.stream({ messages, writable })  // Works automatically
+}
+```
+
+### Direct API Calls
+
+Use the workflow fetch directly for HTTP requests:
+
+```typescript
+import { fetch } from "workflow"
+
+export async function dataWorkflow() {
+  "use workflow"
+  const response = await fetch("https://api.example.com/data")
+  const data = await response.json()
+  return data
+}
+```
+
+### Common Error
+
+```
+Global "fetch" is unavailable in workflow functions.
+Use the "fetch" step function from "workflow" to make HTTP requests.
+```
+
+This occurs when libraries try to call `fetch()` directly. Use DurableAgent for AI tasks or import fetch from workflow for direct HTTP calls.
+
 ## Monitoring
 
 ```bash
@@ -291,3 +357,6 @@ npx workflow inspect runs  # CLI
 - Resumable Streams: https://useworkflow.dev/docs/ai/resumable-streams
 - Sleep and Delays: https://useworkflow.dev/docs/ai/sleep-and-delays
 - Human-in-the-Loop: https://useworkflow.dev/docs/ai/human-in-the-loop
+
+### Errors
+- Fetch in Workflow: https://useworkflow.dev/docs/errors/fetch-in-workflow

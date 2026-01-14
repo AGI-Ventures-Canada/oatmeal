@@ -1,5 +1,6 @@
 import { DurableAgent } from "@workflow/ai/agent"
 import { getWritable } from "workflow"
+import { stepCountIs } from "ai"
 import type { Agent, Skill } from "@/lib/db/agent-types"
 import type { Json } from "@/lib/db/types"
 import {
@@ -109,9 +110,7 @@ export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunne
       model: modelFactory as any,
       system: systemPrompt,
       tools: tools as any,
-      stopWhen: {
-        maxSteps: (agent.config as { maxSteps?: number })?.maxSteps ?? 50,
-      },
+      stopWhen: stepCountIs(agent.max_steps ?? 10),
     } as any)
     /* eslint-enable @typescript-eslint/no-explicit-any */
 

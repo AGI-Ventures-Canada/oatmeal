@@ -51,7 +51,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent | null
       type: input.type ?? "ai_sdk",
       model,
       instructions: input.instructions ?? "",
-      max_steps: input.maxSteps ?? 50,
+      max_steps: input.maxSteps ?? 10,
       timeout_ms: input.timeoutMs ?? 300000,
       skill_ids: input.skillIds ?? [],
       config: input.config ?? {},
@@ -131,8 +131,14 @@ export async function updateAgent(
   if (updates.maxSteps !== undefined) updateData.max_steps = updates.maxSteps
   if (updates.timeoutMs !== undefined) updateData.timeout_ms = updates.timeoutMs
   if (updates.skillIds !== undefined) updateData.skill_ids = updates.skillIds
-  if (updates.config !== undefined) updateData.config = updates.config
   if (updates.isActive !== undefined) updateData.is_active = updates.isActive
+
+  if (updates.config !== undefined) {
+    const existingAgent = await getAgentById(agentId, tenantId)
+    const existingConfig = (existingAgent?.config as Record<string, unknown>) ?? {}
+    const newConfig = updates.config as Record<string, unknown>
+    updateData.config = { ...existingConfig, ...newConfig }
+  }
 
   const { data, error } = await getSupabase()
     .from("agents")

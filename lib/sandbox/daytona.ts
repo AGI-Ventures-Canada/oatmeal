@@ -33,6 +33,7 @@ export type CreateSandboxInput = {
   snapshotId?: string
   envVars: Record<string, string>
   skills: Skill[]
+  autoStopMinutes?: number
 }
 
 export interface SandboxInfo {
@@ -53,11 +54,12 @@ export async function createSandbox(
   }
 
   try {
+    const autoStopMinutes = input.autoStopMinutes ?? 5
     const sandbox = await client.create({
       snapshot: snapshotId,
       envVars: input.envVars,
-      autoStopInterval: 30,
-      autoArchiveInterval: 60,
+      autoStopInterval: autoStopMinutes,
+      autoArchiveInterval: autoStopMinutes + 5,
     })
 
     const encryptedEnvVars = encryptJson(input.envVars)

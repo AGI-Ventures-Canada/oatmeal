@@ -28,9 +28,9 @@ export function RunAgentButton({ agentId, agentName, autoOpen = false }: RunAgen
   const [loading, setLoading] = useState(false)
   const [prompt, setPrompt] = useState("")
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!prompt.trim()) return
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!prompt.trim() || loading) return
 
     setLoading(true)
     try {
@@ -78,6 +78,12 @@ export function RunAgentButton({ agentId, agentName, autoOpen = false }: RunAgen
                 rows={6}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                    e.preventDefault()
+                    handleSubmit()
+                  }
+                }}
                 required
               />
             </div>

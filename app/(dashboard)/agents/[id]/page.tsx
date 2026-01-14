@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AutoRefresh } from "@/components/ui/auto-refresh"
+import { CopyableId } from "@/components/ui/copyable-id"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -75,8 +76,9 @@ export default async function AgentDetailPage({ params, searchParams }: PageProp
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{agent.name}</h1>
+          <CopyableId id={agent.id} className="text-sm" />
           {agent.description && (
-            <p className="text-muted-foreground">{agent.description}</p>
+            <p className="text-muted-foreground mt-1">{agent.description}</p>
           )}
         </div>
         <RunAgentButton agentId={agent.id} agentName={agent.name} autoOpen={run === "true"} />
@@ -84,22 +86,9 @@ export default async function AgentDetailPage({ params, searchParams }: PageProp
 
       <Tabs defaultValue="runs">
         <TabsList>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="runs">Run History</TabsTrigger>
+          <TabsTrigger value="configuration">Configuration</TabsTrigger>
         </TabsList>
-        <TabsContent value="settings" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Agent Configuration</CardTitle>
-              <CardDescription>
-                Configure your agent&apos;s behavior and capabilities
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AgentDetail agent={agent} />
-            </CardContent>
-          </Card>
-        </TabsContent>
         <TabsContent value="runs" className="mt-4">
           <Card>
             <CardHeader>
@@ -110,6 +99,19 @@ export default async function AgentDetailPage({ params, searchParams }: PageProp
             </CardHeader>
             <CardContent>
               <AgentRunList runs={runs} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="configuration" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Agent Configuration</CardTitle>
+              <CardDescription>
+                Configure your agent&apos;s behavior and capabilities
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AgentDetail agent={agent} />
             </CardContent>
           </Card>
         </TabsContent>

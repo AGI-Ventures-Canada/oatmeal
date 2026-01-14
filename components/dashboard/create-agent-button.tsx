@@ -45,9 +45,9 @@ export function CreateAgentButton() {
   const [type, setType] = useState("ai_sdk")
   const [instructions, setInstructions] = useState("")
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim()) return
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!name.trim() || loading) return
 
     setLoading(true)
     try {
@@ -86,7 +86,16 @@ export function CreateAgentButton() {
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
-        <form onSubmit={handleSubmit} autoComplete="off">
+        <form
+          onSubmit={handleSubmit}
+          autoComplete="off"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault()
+              handleSubmit()
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Create New Agent</DialogTitle>
             <DialogDescription>

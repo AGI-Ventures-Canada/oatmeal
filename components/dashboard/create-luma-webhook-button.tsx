@@ -37,9 +37,9 @@ export function CreateLumaWebhookButton() {
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (selectedEvents.length === 0) return
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (selectedEvents.length === 0 || loading) return
 
     setLoading(true)
     try {
@@ -138,7 +138,16 @@ export function CreateLumaWebhookButton() {
             </DialogFooter>
           </>
         ) : (
-          <form onSubmit={handleSubmit} autoComplete="off">
+          <form
+            onSubmit={handleSubmit}
+            autoComplete="off"
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault()
+                handleSubmit()
+              }
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Create Luma Webhook</DialogTitle>
               <DialogDescription>

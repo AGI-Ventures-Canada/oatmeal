@@ -20,12 +20,13 @@ lib/sandbox/
 ```typescript
 import { createSandbox, terminateSandbox } from "@/lib/sandbox/daytona"
 
-// Create sandbox for an agent run
+// Create sandbox for an agent run (defaults to 5 minute timeout)
 const sandbox = await createSandbox({
   tenantId: "...",
   agentRunId: "...",
   envVars: { ANTHROPIC_API_KEY: "..." },
   skills: [...],
+  autoStopMinutes: 5, // Optional: defaults to 5 minutes
 })
 
 // Terminate when done
@@ -84,7 +85,8 @@ All sandbox sessions are stored in the `sandbox_sessions` table:
 
 - Environment variables are AES-256-GCM encrypted at rest
 - OAuth tokens are passed via env vars, never in commands
-- Sandboxes auto-terminate after configurable timeout
+- Sandboxes auto-terminate after 5 minutes by default (or when workflow ends)
+- Use `autoStopMinutes` to customize timeout if longer execution is needed
 
 ## Daytona SDK API Reference
 

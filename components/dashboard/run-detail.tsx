@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle2, XCircle, Clock, Loader2, MessageSquare, AlertTriangle, ChevronDown, ChevronRight, FileJson2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { CheckCircle2, XCircle, Clock, Loader2, MessageSquare, AlertTriangle, ChevronDown, ChevronRight, FileJson2, StopCircle } from "lucide-react"
 import type { AgentRun, AgentStep } from "@/lib/db/agent-types"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { JsonViewer } from "@/components/ui/json-viewer"
 import { CopyButton } from "@/components/ui/copy-button"
@@ -226,6 +228,26 @@ function FullTrace({ result, className }: FullTraceProps) {
 }
 
 export function RunDetail({ run, steps }: RunDetailProps) {
+  const router = useRouter()
+  const [canceling, setCanceling] = useState(false)
+
+  const canCancel = ["queued", "initializing", "running", "awaiting_input"].includes(run.status)
+
+  const handleCancel = async () => {
+    if (!canCancel || canceling) return
+    setCanceling(true)
+    try {
+      const response = await fetch(`/api/dashboard/runs/${run.id}/cancel`, {
+        method: "POST",
+      })
+      if (response.ok) {
+        router.refresh()
+      }
+    } finally {
+      setCanceling(false)
+    }
+  }
+
   return (
     <div className="space-y-6 min-w-0 overflow-hidden">
       <div className="flex items-center justify-between">
@@ -238,11 +260,28 @@ export function RunDetail({ run, steps }: RunDetailProps) {
             </div>
           </div>
         </div>
-        <div className="text-right text-sm text-muted-foreground">
-          <div>Created: {formatDateTime(run.created_at)}</div>
-          {run.completed_at && (
-            <div>Completed: {formatDateTime(run.completed_at)}</div>
+        <div className="flex items-center gap-4">
+          {canCancel && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+              disabled={canceling}
+            >
+              {canceling ? (
+                <Loader2 className="size-4 mr-2 animate-spin" />
+              ) : (
+                <StopCircle className="size-4 mr-2" />
+              )}
+              Stop Run
+            </Button>
           )}
+          <div className="text-right text-sm text-muted-foreground">
+            <div>Created: {formatDateTime(run.created_at)}</div>
+            {run.completed_at && (
+              <div>Completed: {formatDateTime(run.completed_at)}</div>
+            )}
+          </div>
         </div>
       </div>
 

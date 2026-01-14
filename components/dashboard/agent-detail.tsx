@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { cn } from "@/lib/utils"
 import {
   Select,
   SelectContent,
@@ -46,8 +45,11 @@ export function AgentDetail({ agent }: AgentDetailProps) {
   const [model, setModel] = useState(agent.model)
   const [type, setType] = useState(agent.type)
   const [instructions, setInstructions] = useState(agent.instructions ?? "")
-  const [maxSteps, setMaxSteps] = useState(agent.max_steps ?? 50)
+  const [maxSteps, setMaxSteps] = useState(agent.max_steps ?? 10)
   const [isActive, setIsActive] = useState(agent.is_active ?? true)
+  const [enableSandboxTools, setEnableSandboxTools] = useState(
+    (agent.config as Record<string, unknown>)?.enableSandboxTools !== false
+  )
 
   const originalValues = useMemo(() => ({
     name: agent.name,
@@ -55,8 +57,9 @@ export function AgentDetail({ agent }: AgentDetailProps) {
     model: agent.model,
     type: agent.type,
     instructions: agent.instructions ?? "",
-    maxSteps: agent.max_steps ?? 50,
+    maxSteps: agent.max_steps ?? 10,
     isActive: agent.is_active ?? true,
+    enableSandboxTools: (agent.config as Record<string, unknown>)?.enableSandboxTools !== false,
   }), [agent])
 
   const hasChanges = useMemo(() => {
@@ -67,9 +70,10 @@ export function AgentDetail({ agent }: AgentDetailProps) {
       type !== originalValues.type ||
       instructions !== originalValues.instructions ||
       maxSteps !== originalValues.maxSteps ||
-      isActive !== originalValues.isActive
+      isActive !== originalValues.isActive ||
+      enableSandboxTools !== originalValues.enableSandboxTools
     )
-  }, [name, description, model, type, instructions, maxSteps, isActive, originalValues])
+  }, [name, description, model, type, instructions, maxSteps, isActive, enableSandboxTools, originalValues])
 
   const changedFields = useMemo(() => {
     const fields: string[] = []
@@ -80,8 +84,9 @@ export function AgentDetail({ agent }: AgentDetailProps) {
     if (instructions !== originalValues.instructions) fields.push("instructions")
     if (maxSteps !== originalValues.maxSteps) fields.push("maxSteps")
     if (isActive !== originalValues.isActive) fields.push("isActive")
+    if (enableSandboxTools !== originalValues.enableSandboxTools) fields.push("enableSandboxTools")
     return fields
-  }, [name, description, model, type, instructions, maxSteps, isActive, originalValues])
+  }, [name, description, model, type, instructions, maxSteps, isActive, enableSandboxTools, originalValues])
 
   useEffect(() => {
     if (saveStatus === "success") {
@@ -98,6 +103,7 @@ export function AgentDetail({ agent }: AgentDetailProps) {
     setInstructions(originalValues.instructions)
     setMaxSteps(originalValues.maxSteps)
     setIsActive(originalValues.isActive)
+    setEnableSandboxTools(originalValues.enableSandboxTools)
     setSaveStatus("idle")
     setErrorMessage(null)
   }
@@ -118,6 +124,7 @@ export function AgentDetail({ agent }: AgentDetailProps) {
         instructions: instructions.trim() || null,
         maxSteps,
         isActive,
+        config: { enableSandboxTools },
       }
       const response = await fetch(`/api/dashboard/agents/${agent.id}`, {
         method: "PATCH",
@@ -139,44 +146,34 @@ export function AgentDetail({ agent }: AgentDetailProps) {
     }
   }
 
-  const isFieldChanged = (field: string) => changedFields.includes(field)
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
         <div className="grid gap-2">
-          <Label htmlFor="name" className={cn(isFieldChanged("name") && "text-primary")}>
-            Name {isFieldChanged("name") && <span className="text-xs">(modified)</span>}
-          </Label>
+          <Label htmlFor="name">Name</Label>
           <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className={cn(isFieldChanged("name") && "border-primary")}
             required
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="description" className={cn(isFieldChanged("description") && "text-primary")}>
-            Description {isFieldChanged("description") && <span className="text-xs">(modified)</span>}
-          </Label>
+          <Label htmlFor="description">Description</Label>
           <Input
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional description"
-            className={cn(isFieldChanged("description") && "border-primary")}
           />
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="grid gap-2">
-          <Label htmlFor="type" className={cn(isFieldChanged("type") && "text-primary")}>
-            Agent Type {isFieldChanged("type") && <span className="text-xs">(modified)</span>}
-          </Label>
+          <Label htmlFor="type">Agent Type</Label>
           <Select value={type} onValueChange={(v) => setType(v as Agent["type"])}>
-            <SelectTrigger id="type" className={cn(isFieldChanged("type") && "border-primary")}>
+            <SelectTrigger id="type">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -189,11 +186,9 @@ export function AgentDetail({ agent }: AgentDetailProps) {
           </Select>
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="model" className={cn(isFieldChanged("model") && "text-primary")}>
-            Model {isFieldChanged("model") && <span className="text-xs">(modified)</span>}
-          </Label>
+          <Label htmlFor="model">Model</Label>
           <Select value={model} onValueChange={setModel}>
-            <SelectTrigger id="model" className={cn(isFieldChanged("model") && "border-primary")}>
+            <SelectTrigger id="model">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -206,9 +201,7 @@ export function AgentDetail({ agent }: AgentDetailProps) {
           </Select>
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="maxSteps" className={cn(isFieldChanged("maxSteps") && "text-primary")}>
-            Max Steps {isFieldChanged("maxSteps") && <span className="text-xs">(modified)</span>}
-          </Label>
+          <Label htmlFor="maxSteps">Max Steps</Label>
           <Input
             id="maxSteps"
             type="number"
@@ -216,22 +209,19 @@ export function AgentDetail({ agent }: AgentDetailProps) {
             max={200}
             value={maxSteps}
             onChange={(e) => setMaxSteps(parseInt(e.target.value) || 50)}
-            className={cn(isFieldChanged("maxSteps") && "border-primary")}
           />
         </div>
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="instructions" className={cn(isFieldChanged("instructions") && "text-primary")}>
-          Instructions {isFieldChanged("instructions") && <span className="text-xs">(modified)</span>}
-        </Label>
+        <Label htmlFor="instructions">Instructions</Label>
         <Textarea
           id="instructions"
           rows={8}
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
           placeholder="You are a helpful assistant..."
-          className={cn("font-mono text-sm", isFieldChanged("instructions") && "border-primary")}
+          className="font-mono text-sm"
         />
       </div>
 
@@ -250,9 +240,15 @@ export function AgentDetail({ agent }: AgentDetailProps) {
               checked={isActive}
               onCheckedChange={setIsActive}
             />
-            <Label htmlFor="active" className={cn(isFieldChanged("isActive") && "text-primary")}>
-              Agent Active {isFieldChanged("isActive") && <span className="text-xs">(modified)</span>}
-            </Label>
+            <Label htmlFor="active">Agent Active</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="sandboxTools"
+              checked={enableSandboxTools}
+              onCheckedChange={setEnableSandboxTools}
+            />
+            <Label htmlFor="sandboxTools">Sandbox Tools</Label>
           </div>
           {hasChanges && (
             <Button
@@ -270,8 +266,8 @@ export function AgentDetail({ agent }: AgentDetailProps) {
 
         <div className="flex items-center gap-3">
           {hasChanges && saveStatus === "idle" && (
-            <span className="text-sm text-muted-foreground">
-              {changedFields.length} field{changedFields.length > 1 ? "s" : ""} modified
+            <span className="text-xs text-muted-foreground">
+              {changedFields.length} unsaved
             </span>
           )}
           <Button
