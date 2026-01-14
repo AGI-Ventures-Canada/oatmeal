@@ -45,7 +45,8 @@ export function AgentDetail({ agent }: AgentDetailProps) {
   const [model, setModel] = useState(agent.model)
   const [type, setType] = useState(agent.type)
   const [instructions, setInstructions] = useState(agent.instructions ?? "")
-  const [maxSteps, setMaxSteps] = useState(agent.max_steps ?? 10)
+  const [maxSteps, setMaxSteps] = useState(agent.max_steps ?? 5)
+  const [maxStepsInput, setMaxStepsInput] = useState(String(agent.max_steps ?? 5))
   const [isActive, setIsActive] = useState(agent.is_active ?? true)
   const [enableSandboxTools, setEnableSandboxTools] = useState(
     (agent.config as Record<string, unknown>)?.enableSandboxTools !== false
@@ -57,7 +58,7 @@ export function AgentDetail({ agent }: AgentDetailProps) {
     model: agent.model,
     type: agent.type,
     instructions: agent.instructions ?? "",
-    maxSteps: agent.max_steps ?? 10,
+    maxSteps: agent.max_steps ?? 5,
     isActive: agent.is_active ?? true,
     enableSandboxTools: (agent.config as Record<string, unknown>)?.enableSandboxTools !== false,
   }), [agent])
@@ -102,6 +103,7 @@ export function AgentDetail({ agent }: AgentDetailProps) {
     setType(originalValues.type)
     setInstructions(originalValues.instructions)
     setMaxSteps(originalValues.maxSteps)
+    setMaxStepsInput(String(originalValues.maxSteps))
     setIsActive(originalValues.isActive)
     setEnableSandboxTools(originalValues.enableSandboxTools)
     setSaveStatus("idle")
@@ -207,8 +209,35 @@ export function AgentDetail({ agent }: AgentDetailProps) {
             type="number"
             min={1}
             max={200}
-            value={maxSteps}
-            onChange={(e) => setMaxSteps(parseInt(e.target.value) || 50)}
+            value={maxStepsInput}
+            onChange={(e) => {
+              const value = e.target.value
+              setMaxStepsInput(value)
+              if (value === "") {
+                return
+              }
+              const numValue = parseInt(value, 10)
+              if (!isNaN(numValue) && numValue >= 1 && numValue <= 200) {
+                setMaxSteps(numValue)
+              }
+            }}
+            onBlur={(e) => {
+              const value = e.target.value.trim()
+              if (value === "") {
+                setMaxStepsInput(String(maxSteps))
+                return
+              }
+              const numValue = parseInt(value, 10)
+              if (isNaN(numValue) || numValue < 1) {
+                setMaxStepsInput(String(maxSteps))
+              } else if (numValue > 200) {
+                setMaxSteps(200)
+                setMaxStepsInput("200")
+              } else {
+                setMaxSteps(numValue)
+                setMaxStepsInput(String(numValue))
+              }
+            }}
           />
         </div>
       </div>

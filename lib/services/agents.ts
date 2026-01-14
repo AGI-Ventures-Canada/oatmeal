@@ -51,7 +51,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent | null
       type: input.type ?? "ai_sdk",
       model,
       instructions: input.instructions ?? "",
-      max_steps: input.maxSteps ?? 10,
+      max_steps: input.maxSteps ?? 5,
       timeout_ms: input.timeoutMs ?? 300000,
       skill_ids: input.skillIds ?? [],
       config: input.config ?? {},

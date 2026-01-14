@@ -110,7 +110,7 @@ export async function runAISDKAgent(input: AISDKRunnerInput): Promise<AISDKRunne
       model: modelFactory as any,
       system: systemPrompt,
       tools: tools as any,
-      stopWhen: stepCountIs(agent.max_steps ?? 10),
+      stopWhen: stepCountIs(agent.max_steps ?? 5),
     } as any)
     /* eslint-enable @typescript-eslint/no-explicit-any */
 

@@ -69,10 +69,22 @@ const result = await executeInSandbox(sandboxId, "python script.py")
 
 ### Base Snapshot
 
-The base snapshot should include:
-- Python 3.11 with Claude Agent SDK (`anthropic`)
-- Node.js 20 with Claude Code CLI
-- Common dependencies for automation tasks
+The base snapshot includes:
+- Node.js 20 with npm
+- Common dev tools: git, curl, wget, jq
+- ca-certificates for HTTPS
+
+To create or update the snapshot, use the script:
+
+```bash
+# Create new snapshot (tiny: 1 CPU, 1GB RAM)
+DAYTONA_API_KEY=... bun scripts/create-daytona-snapshot.ts
+
+# Create large snapshot (2 CPU, 4GB RAM)
+DAYTONA_API_KEY=... bun scripts/create-daytona-snapshot.ts --large
+```
+
+When adding new tools to the snapshot, increment the VERSION constant in the script and create a new snapshot. Update `DAYTONA_BASE_SNAPSHOT_ID` in `.env.local` to use the new snapshot name.
 
 ## Sandbox Session Tracking
 
