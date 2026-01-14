@@ -86,6 +86,99 @@ All sandbox sessions are stored in the `sandbox_sessions` table:
 - OAuth tokens are passed via env vars, never in commands
 - Sandboxes auto-terminate after configurable timeout
 
+## Daytona SDK API Reference
+
+### Core Client
+
+```typescript
+import { Daytona, Image } from "@daytonaio/sdk"
+
+const daytona = new Daytona({
+  apiKey: process.env.DAYTONA_API_KEY,
+  apiUrl: process.env.DAYTONA_API_URL,  // Optional
+  target: "us",  // Optional: "us" or "eu"
+})
+```
+
+### Sandbox Operations
+
+```typescript
+// Create sandbox from snapshot
+const sandbox = await daytona.create({
+  snapshot: "claude-agent-sdk-tiny",
+  envVars: { ANTHROPIC_API_KEY: "..." },
+  autoStopInterval: 30,
+  autoArchiveInterval: 60,
+})
+
+// Find existing sandbox
+const sandbox = await daytona.findOne(sandboxId)
+
+// File operations
+await sandbox.fs.createFolder(dirPath, "755")
+await sandbox.fs.uploadFile(Buffer.from(content), filePath)
+const content = await sandbox.fs.downloadFile(path)
+
+// Command execution
+const session = await sandbox.process.createSession()
+const result = await sandbox.process.executeCommand(session.sessionId, command)
+// result: { result?: string, exitCode?: number }
+
+// Cleanup
+await sandbox.delete()
+```
+
+### Snapshot Operations
+
+```typescript
+// Get existing snapshot
+const snapshot = await daytona.snapshot.get("snapshot-name")
+
+// List snapshots
+const snapshots = await daytona.snapshot.list(page, limit)
+
+// Create snapshot with Image helper
+const nodeImage = Image.base("node:20-slim")
+const pythonImage = Image.debianSlim("3.12")
+
+const snapshot = await daytona.snapshot.create(
+  {
+    name: "my-snapshot",
+    image: nodeImage,  // Must use Image helper, not string
+    resources: { cpu: 2, memory: 4, disk: 10 },
+    entrypoint: ["sleep", "infinity"],  // Must be string array
+  },
+  { onLogs: console.log }
+)
+
+// Delete snapshot
+await daytona.snapshot.delete("snapshot-name")
+```
+
+### Image Helpers
+
+```typescript
+import { Image } from "@daytonaio/sdk"
+
+// Base image from Docker Hub
+Image.base("node:20-slim")
+Image.base("python:3.12-slim-bookworm")
+Image.base("ubuntu:22.04")
+
+// Python-specific (uses Debian slim with Python)
+Image.debianSlim("3.12")
+
+// From Dockerfile
+Image.fromDockerfile("Dockerfile")
+
+// Chainable methods
+Image.base("node:20-slim")
+  .runCommands("npm install -g typescript")
+  .env({ NODE_ENV: "production" })
+  .workdir("/workspace")
+  .entrypoint(["node"])
+```
+
 ## Documentation Links
 
 - Getting Started: https://www.daytona.io/docs/en/getting-started/

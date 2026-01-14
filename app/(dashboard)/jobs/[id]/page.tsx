@@ -20,6 +20,7 @@ import { getJobById } from "@/lib/services/jobs"
 import { getOrCreateTenant } from "@/lib/services/tenants"
 import { formatDateTime } from "@/lib/utils/format"
 import type { JobDetail } from "@/lib/types/dashboard"
+import { AutoRefresh } from "@/components/ui/auto-refresh"
 
 export default async function JobDetailPage(props: {
   params: Promise<{ id: string }>
@@ -60,6 +61,7 @@ export default async function JobDetailPage(props: {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh />
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>

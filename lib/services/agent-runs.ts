@@ -16,6 +16,7 @@ export type UpdateAgentRunInput = {
   workflowRunId?: string
   sandboxId?: string
   output?: Json
+  result?: Json
   error?: Json
   tokenUsage?: Json
 }
@@ -115,6 +116,9 @@ export async function updateAgentRunStatus(
   if (updates.output !== undefined) {
     updateData.output = updates.output
   }
+  if (updates.result !== undefined) {
+    updateData.result = updates.result
+  }
   if (updates.error !== undefined) {
     updateData.error = updates.error
   }
@@ -200,7 +204,7 @@ export async function markRunCompleted(
   output: Json,
   tokenUsage?: Json
 ): Promise<AgentRun | null> {
-  return updateAgentRunStatus(runId, "succeeded", { output, tokenUsage })
+  return updateAgentRunStatus(runId, "succeeded", { output, result: output, tokenUsage })
 }
 
 export async function markRunFailed(

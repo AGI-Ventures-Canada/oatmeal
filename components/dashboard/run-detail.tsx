@@ -1,11 +1,14 @@
 "use client"
 
-import { CheckCircle2, XCircle, Clock, Loader2, Terminal, MessageSquare, AlertTriangle } from "lucide-react"
+import { useState } from "react"
+import { CheckCircle2, XCircle, Clock, Loader2, Terminal, MessageSquare, AlertTriangle, ChevronDown, ChevronRight, FileJson2 } from "lucide-react"
 import type { AgentRun, AgentStep } from "@/lib/db/agent-types"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { JsonViewer } from "@/components/ui/json-viewer"
+import { CopyButton } from "@/components/ui/copy-button"
 import { formatDateTime } from "@/lib/utils/format"
+import { cn } from "@/lib/utils"
 
 interface RunDetailProps {
   run: AgentRun
@@ -75,6 +78,59 @@ function StepData({ data }: { data: unknown }) {
   )
 }
 
+interface FullTraceProps {
+  result: unknown
+  className?: string
+}
+
+function FullTrace({ result, className }: FullTraceProps) {
+  const [expanded, setExpanded] = useState(false)
+
+  if (!result) return null
+
+  const parsed = tryParseJson(result)
+  const isObject = parsed !== null && typeof parsed === "object"
+
+  return (
+    <div className={cn("rounded-lg border bg-muted/30", className)}>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {expanded ? (
+            <ChevronDown className="size-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="size-4 text-muted-foreground" />
+          )}
+          <FileJson2 className="size-4 text-primary" />
+          <span className="font-medium">Full Trace</span>
+          <Badge variant="outline" className="ml-2 text-xs">
+            {isObject ? `${Object.keys(parsed as object).length} keys` : "raw"}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <CopyButton value={result as string | object} size="sm" />
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="border-t">
+          <div className="p-4 max-h-[600px] overflow-auto bg-background/50">
+            {isObject ? (
+              <JsonViewer data={parsed} defaultExpanded={false} className="text-xs" />
+            ) : (
+              <pre className="whitespace-pre-wrap break-words font-mono text-xs">
+                {typeof result === "string" ? result : JSON.stringify(result, null, 2)}
+              </pre>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function RunDetail({ run, steps }: RunDetailProps) {
   return (
     <div className="space-y-6 min-w-0 overflow-hidden">
@@ -97,20 +153,28 @@ export function RunDetail({ run, steps }: RunDetailProps) {
       </div>
 
       {run.error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 overflow-hidden">
-          <div className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="size-4" />
-            <span className="font-medium">Error</span>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 w-full max-w-full overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="size-4" />
+              <span className="font-medium">Error</span>
+            </div>
+            <CopyButton value={run.error} />
           </div>
-          <pre className="mt-2 text-sm text-destructive whitespace-pre-wrap break-words overflow-x-auto max-h-64 overflow-y-auto font-mono">
-            {typeof run.error === "string" ? run.error : JSON.stringify(run.error, null, 2)}
-          </pre>
+          <div className="max-h-96 overflow-y-auto bg-destructive/5 rounded p-3">
+            <pre className="text-sm text-destructive whitespace-pre-wrap break-all font-mono">
+              {typeof run.error === "string" ? run.error : JSON.stringify(run.error, null, 2)}
+            </pre>
+          </div>
         </div>
       )}
 
       {run.output && (
         <div className="rounded-lg border bg-muted/50 p-4 w-full max-w-full overflow-hidden">
-          <div className="font-medium mb-2">Output</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="font-medium">Output</div>
+            <CopyButton value={run.output} />
+          </div>
           <div className="max-h-96 overflow-y-auto bg-background/50 rounded p-3">
             {typeof run.output === "string" ? (
               <pre className="text-sm whitespace-pre-wrap break-all font-mono">{run.output}</pre>
@@ -185,6 +249,13 @@ export function RunDetail({ run, steps }: RunDetailProps) {
           </div>
         )}
       </div>
+
+      {run.result && (
+        <>
+          <Separator />
+          <FullTrace result={run.result} />
+        </>
+      )}
     </div>
   )
 }

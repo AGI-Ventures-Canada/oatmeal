@@ -371,6 +371,20 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         throw new Error("Failed to create agent run")
       }
 
+      const { start } = await import("workflow/api")
+      const { runAgentWorkflow } = await import("@/lib/workflows/agents")
+
+      await start(runAgentWorkflow, [{
+        runId: run.id,
+        agentId: params.id,
+        tenantId: principal.tenantId,
+        triggerInput: {
+          trigger: "manual",
+          prompt: body.prompt,
+          context: body.context,
+        },
+      }])
+
       await logAudit({
         principal,
         action: "agent_run.created",

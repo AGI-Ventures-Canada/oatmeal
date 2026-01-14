@@ -46,6 +46,7 @@ export type Database = {
           input: Json | null
           job_id: string | null
           output: Json | null
+          result: Json | null
           sandbox_id: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["agent_run_status"]
@@ -66,6 +67,7 @@ export type Database = {
           input?: Json | null
           job_id?: string | null
           output?: Json | null
+          result?: Json | null
           sandbox_id?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["agent_run_status"]
@@ -86,6 +88,7 @@ export type Database = {
           input?: Json | null
           job_id?: string | null
           output?: Json | null
+          result?: Json | null
           sandbox_id?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["agent_run_status"]
@@ -533,6 +536,53 @@ export type Database = {
             columns: ["config_id"]
             isOneToOne: false
             referencedRelation: "luma_webhook_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_api_credentials: {
+        Row: {
+          account_identifier: string | null
+          api_key_encrypted: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string | null
+          last_used_at: string | null
+          provider: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_identifier?: string | null
+          api_key_encrypted: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          last_used_at?: string | null
+          provider: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_identifier?: string | null
+          api_key_encrypted?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          last_used_at?: string | null
+          provider?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_api_credentials_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]

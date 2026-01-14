@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { AutoRefresh } from "@/components/ui/auto-refresh"
 
 export default async function EmailTriggersPage() {
   const { userId, orgId } = await auth()
@@ -38,6 +39,7 @@ export default async function EmailTriggersPage() {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Email Triggers</h1>

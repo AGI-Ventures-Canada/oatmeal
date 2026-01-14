@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AutoRefresh } from "@/components/ui/auto-refresh"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -56,6 +57,7 @@ export default async function AgentDetailPage({ params, searchParams }: PageProp
 
   return (
     <div className="space-y-6">
+      <AutoRefresh />
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>

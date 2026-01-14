@@ -62,6 +62,7 @@ export async function runAgentWorkflow(
       const { runAISDKAgent } = await import("./ai-sdk-runner")
       result = await runAISDKAgent({
         runId,
+        tenantId,
         agent,
         skills,
         prompt,
@@ -69,8 +70,8 @@ export async function runAgentWorkflow(
         integrationTokens,
       })
     } else {
-      const { runClaudeSDKAgent } = await import("./claude-sdk-runner")
-      result = await runClaudeSDKAgent({
+      const { executeClaudeSDKInSandbox } = await import("./steps")
+      result = await executeClaudeSDKInSandbox({
         runId,
         tenantId,
         agent,

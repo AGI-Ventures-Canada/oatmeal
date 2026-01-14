@@ -122,3 +122,27 @@ export async function sendNotificationEmail(
   const { sendAgentNotification } = await import("@/lib/email/resend")
   await sendAgentNotification(email, agentName, runId, type, details)
 }
+
+export async function executeClaudeSDKInSandbox(
+  input: {
+    runId: string
+    tenantId: string
+    agent: { id: string; name: string; model: string; instructions?: string | null; config?: unknown }
+    skills: Array<{ id: string; name: string; description?: string | null; content?: string | null; config?: unknown }>
+    prompt: string
+    context?: unknown
+    integrationTokens: Record<string, string>
+  }
+): Promise<{
+  success: boolean
+  output?: string
+  sandboxId?: string
+  steps: Array<{ type: string; output?: unknown; error?: string; durationMs?: number }>
+  usage?: { inputTokens: number; outputTokens: number; totalCostUsd: number }
+  error?: string
+}> {
+  "use step"
+
+  const { runClaudeSDKAgentImpl } = await import("@/lib/sandbox/claude-sdk-executor")
+  return runClaudeSDKAgentImpl(input)
+}

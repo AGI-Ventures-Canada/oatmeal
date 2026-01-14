@@ -133,6 +133,69 @@ Available integration tools:
 - `notion_search`, `notion_create_page`
 - `luma_list_events`, `luma_get_guests`
 
+## Sandbox Tools (Bash & Text Editor)
+
+Enable sandboxed file and command operations via Anthropic's bash and text editor tools. These tools run in a Daytona sandbox for isolation.
+
+### Enabling Sandbox Tools
+
+Set `enableSandboxTools: true` in agent config:
+
+```typescript
+const agent = {
+  type: "ai_sdk",
+  model: "claude-sonnet-4-5-20250929",
+  config: {
+    enableSandboxTools: true,
+    initialFiles: [
+      { path: "/workspace/data.txt", content: "Initial file content" }
+    ],
+    maxSteps: 30,
+  }
+}
+```
+
+### Available Tools
+
+| Tool | Name in API | Description |
+|------|-------------|-------------|
+| Bash | `bash` | Execute shell commands in sandbox |
+| Text Editor | `str_replace_editor` | View, create, edit files in sandbox |
+
+### Text Editor Commands
+
+| Command | Parameters | Description |
+|---------|-----------|-------------|
+| `view` | `path`, `view_range?` | Read file contents, optionally by line range |
+| `create` | `path`, `file_text` | Create new file (fails if exists) |
+| `str_replace` | `path`, `old_str`, `new_str` | Replace exact string in file |
+| `insert` | `path`, `insert_line`, `new_str` | Insert text at specific line |
+| `undo_edit` | `path` | Revert last edit to a file |
+
+### Skills in Sandbox
+
+When `enableSandboxTools` is true, skills attached to the agent are automatically seeded to `.claude/skills/` in the sandbox. The agent can read them using bash (`cat`) or text editor (`view`).
+
+### Sandbox Lifecycle
+
+1. Sandbox created when agent run starts (if `enableSandboxTools` is true)
+2. Skills seeded to `.claude/skills/`
+3. Initial files seeded from `config.initialFiles`
+4. Agent uses bash/text editor tools to interact with sandbox filesystem
+5. Sandbox automatically terminated when run completes
+
+### Implementation Details
+
+- Tools defined in `lib/agents/sandbox-tools.ts`
+- Sandbox operations via `lib/sandbox/daytona.ts`
+- Undo history stored in-memory per session
+
+### Testing
+
+```bash
+bun scripts/test-sandbox-tools.ts
+```
+
 ## Documentation
 - AI SDK Intro: https://ai-sdk.dev/docs/introduction
 - Agent Interface: https://ai-sdk.dev/docs/reference/ai-sdk-core/agent

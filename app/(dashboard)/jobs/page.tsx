@@ -11,6 +11,7 @@ import {
 import { listJobs } from "@/lib/services/jobs"
 import { getOrCreateTenant } from "@/lib/services/tenants"
 import type { JobListItem } from "@/lib/types/dashboard"
+import { AutoRefresh } from "@/components/ui/auto-refresh"
 
 export default async function JobsPage() {
   const { userId, orgId } = await auth()
@@ -41,6 +42,7 @@ export default async function JobsPage() {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh />
       <div>
         <h1 className="text-3xl font-bold">Jobs</h1>
         <p className="text-muted-foreground">View and monitor your agent jobs</p>

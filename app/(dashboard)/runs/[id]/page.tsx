@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { AutoRefresh } from "@/components/ui/auto-refresh"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -62,6 +63,7 @@ export default async function RunDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6 min-w-0 w-full max-w-full overflow-hidden">
+      <AutoRefresh />
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
