@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Save } from "lucide-react"
 import type { Agent } from "@/lib/db/agent-types"
+import type { UpdateAgentRequest } from "@/lib/types/api-requests"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -49,18 +50,19 @@ export function AgentDetail({ agent }: AgentDetailProps) {
 
     setLoading(true)
     try {
+      const requestBody: UpdateAgentRequest = {
+        name: name.trim(),
+        description: description.trim() || null,
+        model,
+        type,
+        instructions: instructions.trim() || null,
+        maxSteps,
+        isActive,
+      }
       const response = await fetch(`/api/dashboard/agents/${agent.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim() || null,
-          model,
-          type,
-          instructions: instructions.trim() || null,
-          maxSteps,
-          isActive,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       if (response.ok) {
