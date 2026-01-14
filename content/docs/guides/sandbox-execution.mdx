@@ -1,0 +1,86 @@
+---
+title: Sandbox Execution
+description: How agents run in isolated sandbox environments.
+---
+
+Agents execute in isolated Daytona sandbox environments for security and reliability.
+
+## Overview
+
+When you run an agent, it executes in a containerized sandbox with:
+
+- Python 3.11 with Claude Agent SDK
+- Node.js 20 with Claude Code CLI
+- Isolated filesystem and network
+- Encrypted environment variables
+
+## Sandbox Lifecycle
+
+Sandboxes are created on-demand when an agent run starts and automatically terminate after completion.
+
+### Default Timeout
+
+Sandboxes automatically stop after **5 minutes** of inactivity by default. This ensures resources are released promptly when:
+
+- The agent completes its task
+- The agent encounters an error
+- No activity occurs for the timeout period
+
+### Auto-Archive
+
+Sandboxes are archived 5 minutes after stopping, allowing for debugging if needed before full cleanup.
+
+## Configuration
+
+When creating agents programmatically, you can customize the sandbox timeout:
+
+```typescript
+// Internal API - sandbox timeout configuration
+const sandbox = await createSandbox({
+  tenantId: "...",
+  agentRunId: "...",
+  envVars: { ANTHROPIC_API_KEY: "..." },
+  skills: [...],
+  autoStopMinutes: 15 // Override default 5-minute timeout
+})
+```
+
+### When to Extend Timeout
+
+Consider extending the timeout for:
+
+- Long-running data processing tasks
+- Complex multi-step workflows
+- Tasks involving large file operations
+
+### Best Practices
+
+1. **Keep timeouts short** - Default 5 minutes is suitable for most tasks
+2. **Clean up resources** - Sandboxes auto-terminate, but explicit cleanup is faster
+3. **Handle timeouts gracefully** - Check for `timed_out` status in run results
+
+## Security
+
+Sandboxes provide isolation through:
+
+- **Container isolation** - Each run gets a fresh environment
+- **Encrypted secrets** - Environment variables are AES-256-GCM encrypted at rest
+- **Network isolation** - Sandboxes have limited network access
+- **No persistence** - Data is not persisted between runs
+
+## Monitoring
+
+Track sandbox status through agent run steps:
+
+```typescript
+const result = await client.agents.getRunResult(runId)
+
+for (const step of result.steps) {
+  if (step.type === "sandbox_created") {
+    console.log("Sandbox ID:", step.output.sandboxId)
+  }
+  if (step.type === "sandbox_terminated") {
+    console.log("Sandbox cleanup:", step.durationMs, "ms")
+  }
+}
+```
