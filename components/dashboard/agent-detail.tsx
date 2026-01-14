@@ -274,12 +274,6 @@ export function AgentDetail({ agent }: AgentDetailProps) {
               {changedFields.length} field{changedFields.length > 1 ? "s" : ""} modified
             </span>
           )}
-          {saveStatus === "success" && (
-            <span className="flex items-center gap-1 text-sm text-primary">
-              <Check className="size-4" />
-              Saved
-            </span>
-          )}
           <Button
             type="submit"
             disabled={saveStatus === "saving" || !name.trim() || !hasChanges}
