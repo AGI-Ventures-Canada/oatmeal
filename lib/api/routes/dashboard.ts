@@ -223,7 +223,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         type: t.Optional(t.Union([t.Literal("ai_sdk"), t.Literal("claude_sdk")])),
         model: t.Optional(t.String()),
         skillIds: t.Optional(t.Array(t.String())),
-        config: t.Optional(t.Object({})),
+        config: t.Optional(t.Record(t.String(), t.Unknown())),
       }),
     }
   )
@@ -293,7 +293,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         instructions: t.Optional(t.String()),
         model: t.Optional(t.String()),
         skillIds: t.Optional(t.Array(t.String())),
-        config: t.Optional(t.Object({})),
+        config: t.Optional(t.Record(t.String(), t.Unknown())),
         isActive: t.Optional(t.Boolean()),
       }),
     }
@@ -398,7 +398,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     {
       body: t.Object({
         prompt: t.String({ minLength: 1 }),
-        context: t.Optional(t.Object({})),
+        context: t.Optional(t.Record(t.String(), t.Unknown())),
       }),
     }
   )
@@ -462,8 +462,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         slug: t.String({ minLength: 1 }),
         description: t.Optional(t.String()),
         content: t.String({ minLength: 1 }),
-        referencesContent: t.Optional(t.Object({})),
-        scriptsContent: t.Optional(t.Object({})),
+        referencesContent: t.Optional(t.Record(t.String(), t.Unknown())),
+        scriptsContent: t.Optional(t.Record(t.String(), t.Unknown())),
       }),
     }
   )
@@ -531,8 +531,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         slug: t.Optional(t.String()),
         description: t.Optional(t.String()),
         content: t.Optional(t.String()),
-        referencesContent: t.Optional(t.Object({})),
-        scriptsContent: t.Optional(t.Object({})),
+        referencesContent: t.Optional(t.Record(t.String(), t.Unknown())),
+        scriptsContent: t.Optional(t.Record(t.String(), t.Unknown())),
       }),
     }
   )
@@ -719,7 +719,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         runTime: t.Optional(t.String()),
         agentId: t.Optional(t.String()),
         jobType: t.Optional(t.String()),
-        input: t.Optional(t.Object({})),
+        input: t.Optional(t.Record(t.String(), t.Unknown())),
       }),
     }
   )
@@ -801,7 +801,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         cronExpression: t.Optional(t.String()),
         timezone: t.Optional(t.String()),
         runTime: t.Optional(t.String()),
-        input: t.Optional(t.Object({})),
+        input: t.Optional(t.Record(t.String(), t.Unknown())),
         isActive: t.Optional(t.Boolean()),
       }),
     }
