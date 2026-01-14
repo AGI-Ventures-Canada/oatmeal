@@ -193,6 +193,45 @@ Image.base("node:20-slim")
   .entrypoint(["node"])
 ```
 
+## Next.js Configuration
+
+When using Daytona SDK in a Next.js project, configure node polyfills to ensure compatibility with Webpack and Turbopack bundlers.
+
+Add the following configuration to your `next.config.ts` file:
+
+```typescript
+import type { NextConfig } from 'next'
+import NodePolyfillPlugin from 'node-polyfill-webpack-plugin'
+import { env, nodeless } from 'unenv'
+
+const { alias: turbopackAlias } = env(nodeless, {})
+
+const nextConfig: NextConfig = {
+  // Turbopack
+  experimental: {
+    turbo: {
+      resolveAlias: {
+        ...turbopackAlias,
+      },
+    },
+  },
+  // Webpack
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.plugins.push(new NodePolyfillPlugin())
+    }
+    return config
+  },
+}
+
+export default nextConfig
+```
+
+Required dependencies:
+```bash
+bun add -D node-polyfill-webpack-plugin unenv
+```
+
 ## Documentation Links
 
 - Getting Started: https://www.daytona.io/docs/en/getting-started/
