@@ -264,7 +264,9 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         name: body.name,
         description: body.description,
         instructions: body.instructions,
+        type: body.type,
         model: body.model,
+        maxSteps: body.maxSteps,
         skillIds: body.skillIds,
         config: body.config,
         isActive: body.isActive,
@@ -289,9 +291,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     {
       body: t.Object({
         name: t.Optional(t.String()),
-        description: t.Optional(t.String()),
-        instructions: t.Optional(t.String()),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+        instructions: t.Optional(t.Union([t.String(), t.Null()])),
+        type: t.Optional(t.Union([t.Literal("ai_sdk"), t.Literal("claude_sdk")])),
         model: t.Optional(t.String()),
+        maxSteps: t.Optional(t.Number()),
         skillIds: t.Optional(t.Array(t.String())),
         config: t.Optional(t.Record(t.String(), t.Unknown())),
         isActive: t.Optional(t.Boolean()),
