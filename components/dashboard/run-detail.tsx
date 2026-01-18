@@ -208,7 +208,7 @@ function FullTrace({ result, expanded, onExpandedChange }: FullTraceProps) {
 function LiveBadge() {
   return (
     <Badge variant="outline" className="gap-1.5">
-      <span className="size-2 bg-green-500 rounded-full animate-pulse" />
+      <span className="size-2 bg-primary rounded-full animate-pulse" />
       Live
     </Badge>
   )
@@ -238,16 +238,16 @@ interface ExecutionLogTerminalProps {
 
 function ExecutionLogTerminal({ logs, isRunning }: ExecutionLogTerminalProps) {
   return (
-    <StickToBottom className="relative h-[400px] overflow-y-hidden bg-zinc-950 rounded-b-lg">
+    <StickToBottom className="relative h-[400px] overflow-y-hidden bg-background rounded-b-lg">
       <StickToBottom.Content className="flex flex-col p-4 font-mono text-sm">
         {logs.length === 0 && !isRunning && (
-          <div className="text-center py-8 text-zinc-500">
+          <div className="text-center py-8 text-muted-foreground">
             No execution logs available
           </div>
         )}
 
         {logs.length === 0 && isRunning && (
-          <div className="text-center py-8 text-zinc-500">
+          <div className="text-center py-8 text-muted-foreground">
             <Loader2 className="size-5 animate-spin mx-auto mb-2" />
             Waiting for logs...
           </div>

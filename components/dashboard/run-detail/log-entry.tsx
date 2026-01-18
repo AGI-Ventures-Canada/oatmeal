@@ -26,14 +26,14 @@ export function LogEntry({ log }: LogEntryProps) {
             hasExpandableData && "hover:bg-muted/30 cursor-pointer"
           )}
         >
-          <span className="text-zinc-600 shrink-0 w-[70px]">
+          <span className="text-muted-foreground shrink-0 w-[70px]">
             {formatLogTimestamp(log.timestamp)}
           </span>
           <LogContextBadge context={log.context} />
           <span
             className={cn(
               "whitespace-pre-wrap break-words min-w-0 flex-1",
-              log.level === "error" ? "text-red-400" : "text-zinc-300"
+              log.level === "error" ? "text-destructive" : "text-foreground"
             )}
           >
             {log.message}
@@ -61,7 +61,7 @@ export function LogEntry({ log }: LogEntryProps) {
 
 function LogEntryData({ data }: { data: unknown }) {
   return (
-    <div className="bg-zinc-900 rounded border border-zinc-800 p-3 overflow-auto max-h-[300px]">
+    <div className="bg-muted rounded border p-3 overflow-auto max-h-[300px]">
       <JsonViewer data={data} alwaysExpanded className="text-xs" />
     </div>
   )
@@ -69,18 +69,18 @@ function LogEntryData({ data }: { data: unknown }) {
 
 function LogContextBadge({ context }: { context: string }) {
   const colors: Record<string, string> = {
-    tool: "bg-blue-950 text-blue-300",
-    agent: "bg-emerald-950 text-emerald-300",
-    system: "bg-violet-950 text-violet-300",
-    result: "bg-amber-950 text-amber-300",
-    error: "bg-red-950 text-red-300",
+    tool: "bg-primary/20 text-primary",
+    agent: "bg-secondary text-secondary-foreground",
+    system: "bg-muted text-muted-foreground",
+    result: "bg-primary/10 text-primary",
+    error: "bg-destructive/20 text-destructive",
   }
 
   return (
     <span
       className={cn(
         "py-0.5 px-2 rounded text-xs font-medium shrink-0",
-        colors[context] || "bg-zinc-800 text-zinc-300"
+        colors[context] || "bg-muted text-muted-foreground"
       )}
     >
       {context}
