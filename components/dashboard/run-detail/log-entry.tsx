@@ -15,7 +15,7 @@ interface LogEntryProps {
 }
 
 export function LogEntry({ log }: LogEntryProps) {
-  const hasExpandableData = log.data && typeof log.data === "object"
+  const hasExpandableData = Boolean(log.data && typeof log.data === "object")
 
   return (
     <Collapsible>
