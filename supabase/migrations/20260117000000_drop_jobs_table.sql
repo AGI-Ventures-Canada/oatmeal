@@ -1,5 +1,4 @@
--- Drop jobs table (feature removed in favor of agent runs)
-DROP TABLE IF EXISTS jobs;
-
--- Drop job_status enum type (no longer used)
-DROP TYPE IF EXISTS job_status;
+-- No-op: This migration was moved to 20260117200000_fix_drop_jobs_table.sql
+-- because it failed due to foreign key constraints
+-- See: 20260117200000_fix_drop_jobs_table.sql for the actual implementation
+SELECT 1;
