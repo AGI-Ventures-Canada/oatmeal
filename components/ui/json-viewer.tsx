@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 interface JsonViewerProps {
   data: unknown
   defaultExpanded?: boolean
+  alwaysExpanded?: boolean
   className?: string
 }
 
@@ -14,11 +15,12 @@ interface JsonNodeProps {
   name?: string
   value: unknown
   defaultExpanded?: boolean
+  alwaysExpanded?: boolean
   depth?: number
 }
 
-function JsonNode({ name, value, defaultExpanded = false, depth = 0 }: JsonNodeProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded || depth < 2)
+function JsonNode({ name, value, defaultExpanded = false, alwaysExpanded = false, depth = 0 }: JsonNodeProps) {
+  const [expanded, setExpanded] = useState(alwaysExpanded || defaultExpanded || depth < 2)
 
   const isObject = value !== null && typeof value === "object"
   const isArray = Array.isArray(value)
@@ -58,16 +60,18 @@ function JsonNode({ name, value, defaultExpanded = false, depth = 0 }: JsonNodeP
   const bracketClose = isArray ? "]" : "}"
   const preview = isArray ? `Array(${entries.length})` : `Object(${entries.length})`
 
+  const isInteractive = !alwaysExpanded && !isEmpty
+
   return (
     <div className="py-0.5">
       <div
         className={cn(
-          "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded -ml-5 pl-5",
-          isEmpty && "cursor-default"
+          "flex items-center gap-1 rounded -ml-5 pl-5",
+          isInteractive && "cursor-pointer hover:bg-muted/50"
         )}
-        onClick={() => !isEmpty && setExpanded(!expanded)}
+        onClick={() => isInteractive && setExpanded(!expanded)}
       >
-        {!isEmpty && (
+        {!isEmpty && !alwaysExpanded && (
           <span className="shrink-0 -ml-4 w-4">
             {expanded ? (
               <ChevronDown className="size-3 text-muted-foreground" />
@@ -94,13 +98,14 @@ function JsonNode({ name, value, defaultExpanded = false, depth = 0 }: JsonNodeP
       </div>
       {expanded && !isEmpty && (
         <>
-          <div className="pl-4 border-l border-muted ml-1">
+          <div className={cn("pl-4 ml-1", !alwaysExpanded && "border-l border-muted")}>
             {entries.map(([key, val]) => (
               <JsonNode
                 key={key}
                 name={isArray ? undefined : key}
                 value={val}
                 defaultExpanded={defaultExpanded}
+                alwaysExpanded={alwaysExpanded}
                 depth={depth + 1}
               />
             ))}
@@ -112,14 +117,14 @@ function JsonNode({ name, value, defaultExpanded = false, depth = 0 }: JsonNodeP
   )
 }
 
-export function JsonViewer({ data, defaultExpanded = false, className }: JsonViewerProps) {
+export function JsonViewer({ data, defaultExpanded = false, alwaysExpanded = false, className }: JsonViewerProps) {
   if (data === undefined || data === null) {
     return <span className="text-muted-foreground">null</span>
   }
 
   return (
     <div className={cn("font-mono text-sm pl-5 overflow-auto", className)}>
-      <JsonNode value={data} defaultExpanded={defaultExpanded} />
+      <JsonNode value={data} defaultExpanded={defaultExpanded} alwaysExpanded={alwaysExpanded} />
     </div>
   )
 }
