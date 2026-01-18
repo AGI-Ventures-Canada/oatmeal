@@ -99,7 +99,7 @@ bun update-types:remote    # From remote (requires PROJECT_REF)
 ```typescript
 import { Database, Tables } from "@/lib/db/types";
 
-type Job = Tables<"jobs">;
+type Agent = Tables<"agents">;
 type Tenant = Tables<"tenants">;
 ```
 

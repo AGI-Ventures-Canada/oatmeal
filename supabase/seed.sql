@@ -18,7 +18,7 @@ VALUES
     'Local Dev Key',
     'sk_live_test',
     'test_hash_for_local_development_only',
-    ARRAY['jobs:create', 'jobs:read'],
+    ARRAY['agents:run', 'agents:read'],
     now()
   ),
   (
@@ -27,40 +27,8 @@ VALUES
     'Demo API Key',
     'sk_live_demo',
     'demo_hash_for_local_development_only',
-    ARRAY['jobs:create', 'jobs:read', 'jobs:cancel'],
+    ARRAY['agents:run', 'agents:read', 'runs:read'],
     now()
-  )
-ON CONFLICT DO NOTHING;
-
--- Sample jobs for testing UI
-INSERT INTO jobs (id, tenant_id, type, status_cache, input, created_at, updated_at)
-VALUES
-  (
-    '55555555-5555-5555-5555-555555555555',
-    '11111111-1111-1111-1111-111111111111',
-    'agent_task',
-    'succeeded',
-    '{"prompt": "Test task 1"}'::jsonb,
-    now() - interval '1 hour',
-    now() - interval '30 minutes'
-  ),
-  (
-    '66666666-6666-6666-6666-666666666666',
-    '11111111-1111-1111-1111-111111111111',
-    'agent_task',
-    'running',
-    '{"prompt": "Test task 2"}'::jsonb,
-    now() - interval '5 minutes',
-    now()
-  ),
-  (
-    '77777777-7777-7777-7777-777777777777',
-    '11111111-1111-1111-1111-111111111111',
-    'agent_task',
-    'failed',
-    '{"prompt": "Test task 3"}'::jsonb,
-    now() - interval '2 hours',
-    now() - interval '1 hour'
   )
 ON CONFLICT DO NOTHING;
 
@@ -77,17 +45,6 @@ VALUES
     '33333333-3333-3333-3333-333333333333',
     '{"name": "Local Dev Key"}'::jsonb,
     now() - interval '1 day'
-  ),
-  (
-    '99999999-9999-9999-9999-999999999999',
-    '11111111-1111-1111-1111-111111111111',
-    'job.created',
-    'api_key',
-    '33333333-3333-3333-3333-333333333333',
-    'job',
-    '55555555-5555-5555-5555-555555555555',
-    '{"type": "agent_task"}'::jsonb,
-    now() - interval '1 hour'
   )
 ON CONFLICT DO NOTHING;
 
