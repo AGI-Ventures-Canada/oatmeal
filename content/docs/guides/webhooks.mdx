@@ -14,19 +14,14 @@ Webhooks allow you to:
 
 ## Creating a Webhook
 
-```typescript
-import { createClient } from "@agents-server/sdk"
-
-const client = createClient(process.env.AGENTS_API_KEY!)
-
-const { data: webhook } = await client.webhooks.create({
-  url: "https://your-app.com/webhooks/agents",
-  events: ["agent_run.completed", "agent_run.failed"]
-})
-
-// Save the secret for verifying signatures
-console.log(`Webhook secret: ${webhook.secret}`)
-```
+<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@agents-server/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)\n\nconst { data: webhook } = await client.webhooks.create({\n  url: \"https://your-app.com/webhooks/agents\",\n  events: [\"agent_run.completed\", \"agent_run.failed\"]\n})\n\n// Save the secret for verifying signatures\nconsole.log(`Webhook secret: ${webhook.secret}`)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>create-webhook.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 <Callout type="warn">
 The webhook secret is only shown once. Store it securely for signature verification.
@@ -47,107 +42,62 @@ Webhook requests include:
 - `event` - The event type
 - `data` - Event-specific data including `runId`, `agentId`, and results
 
-```json
-{
-  "event": "agent_run.completed",
-  "data": {
-    "runId": "run_abc123",
-    "agentId": "agent_xyz",
-    "status": "succeeded",
-    "result": { ... }
-  }
-}
-```
+<CodeBlock language="json" code={"{\n  \"event\": \"agent_run.completed\",\n  \"data\": {\n    \"runId\": \"run_abc123\",\n    \"agentId\": \"agent_xyz\",\n    \"status\": \"succeeded\",\n    \"result\": { ... }\n  }\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>payload.json</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Handling Webhooks
 
 ### Express Example
 
-```typescript
-import express from "express"
-import crypto from "crypto"
-
-const app = express()
-app.use(express.json())
-
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!
-
-app.post("/webhooks/agents", (req, res) => {
-  // Verify signature
-  const signature = req.headers["x-webhook-signature"] as string
-  const payload = JSON.stringify(req.body)
-  const expected = crypto
-    .createHmac("sha256", WEBHOOK_SECRET)
-    .update(payload)
-    .digest("hex")
-
-  if (signature !== expected) {
-    return res.status(401).send("Invalid signature")
-  }
-
-  // Handle event
-  const { event, data } = req.body
-
-  switch (event) {
-    case "agent_run.completed":
-      console.log(`Run ${data.runId} completed:`, data.result)
-      break
-    case "agent_run.failed":
-      console.error(`Run ${data.runId} failed:`, data.error)
-      break
-  }
-
-  res.status(200).send("OK")
-})
-```
+<CodeBlock language="typescript" showLineNumbers code={"import express from \"express\"\nimport crypto from \"crypto\"\n\nconst app = express()\napp.use(express.json())\n\nconst WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!\n\napp.post(\"/webhooks/agents\", (req, res) => {\n  // Verify signature\n  const signature = req.headers[\"x-webhook-signature\"] as string\n  const payload = JSON.stringify(req.body)\n  const expected = crypto\n    .createHmac(\"sha256\", WEBHOOK_SECRET)\n    .update(payload)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return res.status(401).send(\"Invalid signature\")\n  }\n\n  // Handle event\n  const { event, data } = req.body\n\n  switch (event) {\n    case \"agent_run.completed\":\n      console.log(`Run ${data.runId} completed:`, data.result)\n      break\n    case \"agent_run.failed\":\n      console.error(`Run ${data.runId} failed:`, data.error)\n      break\n  }\n\n  res.status(200).send(\"OK\")\n})"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>express-webhook.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ### Next.js API Route
 
-```typescript
-import { NextRequest, NextResponse } from "next/server"
-import crypto from "crypto"
-
-export async function POST(req: NextRequest) {
-  const signature = req.headers.get("x-webhook-signature")
-  const body = await req.text()
-
-  const expected = crypto
-    .createHmac("sha256", process.env.WEBHOOK_SECRET!)
-    .update(body)
-    .digest("hex")
-
-  if (signature !== expected) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
-  }
-
-  const { event, data } = JSON.parse(body)
-
-  if (event === "agent_run.completed") {
-    // Process completed run
-    await processResult(data.runId, data.result)
-  }
-
-  return NextResponse.json({ received: true })
-}
-```
+<CodeBlock language="typescript" showLineNumbers code={"import { NextRequest, NextResponse } from \"next/server\"\nimport crypto from \"crypto\"\n\nexport async function POST(req: NextRequest) {\n  const signature = req.headers.get(\"x-webhook-signature\")\n  const body = await req.text()\n\n  const expected = crypto\n    .createHmac(\"sha256\", process.env.WEBHOOK_SECRET!)\n    .update(body)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return NextResponse.json({ error: \"Invalid signature\" }, { status: 401 })\n  }\n\n  const { event, data } = JSON.parse(body)\n\n  if (event === \"agent_run.completed\") {\n    // Process completed run\n    await processResult(data.runId, data.result)\n  }\n\n  return NextResponse.json({ received: true })\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>app/api/webhooks/route.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Managing Webhooks
 
 ### List Webhooks
 
-```typescript
-const { data } = await client.webhooks.list()
-
-for (const webhook of data.webhooks) {
-  console.log(`${webhook.url} - ${webhook.events.join(", ")}`)
-}
-```
+<CodeBlock language="typescript" code={"const { data } = await client.webhooks.list()\n\nfor (const webhook of data.webhooks) {\n  console.log(`${webhook.url} - ${webhook.events.join(\", \")}`)\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>list-webhooks.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ### Delete a Webhook
 
-```typescript
-await client.webhooks.delete(webhookId)
-```
+<CodeBlock language="typescript" code={"await client.webhooks.delete(webhookId)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>delete-webhook.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Best Practices
 

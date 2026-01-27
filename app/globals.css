@@ -127,3 +127,35 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Reset fumadocs styling for AI Elements CodeBlock */
+.not-fumadocs-codeblock code {
+  background: transparent !important;
+  border: none !important;
+}
+
+.not-fumadocs-codeblock pre,
+.not-fumadocs-codeblock code,
+.not-fumadocs-codeblock span {
+  white-space: pre !important;
+}
+
+.not-fumadocs-codeblock ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.not-fumadocs-codeblock ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.not-fumadocs-codeblock ::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 3px;
+}
+
+.not-fumadocs-codeblock ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+

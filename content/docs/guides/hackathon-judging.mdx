@@ -8,7 +8,6 @@ Use AI agents to evaluate hackathon submissions consistently and at scale.
 ## Overview
 
 Hackathon judging agents can:
-
 - Evaluate projects against defined criteria
 - Provide detailed feedback to participants
 - Score submissions consistently
@@ -16,206 +15,90 @@ Hackathon judging agents can:
 
 ## Creating a Judging Agent
 
-```typescript
-import { createClient } from "@agents-server/sdk"
-
-const client = createClient(process.env.AGENTS_API_KEY!)
-
-const { data: agent } = await client.agents.create({
-  name: "Hackathon Judge",
-  description: "Evaluates hackathon project submissions",
-  model: "claude-sonnet-4-5-20250929",
-  instructions: `You are an experienced hackathon judge evaluating project submissions.
-
-## Evaluation Criteria
-
-Score each project from 1-10 on these dimensions:
-
-1. **Innovation** (25%) - How novel and creative is the solution?
-2. **Technical Execution** (25%) - How well is it built? Code quality, architecture.
-3. **Impact** (20%) - What problem does it solve? How significant is the impact?
-4. **Presentation** (15%) - How well is the project documented and presented?
-5. **Completeness** (15%) - Is it a working prototype or just an idea?
-
-## Output Format
-
-Provide your evaluation as structured JSON:
-
-\`\`\`json
-{
-  "projectName": "...",
-  "scores": {
-    "innovation": 8,
-    "technicalExecution": 7,
-    "impact": 9,
-    "presentation": 6,
-    "completeness": 7
-  },
-  "weightedScore": 7.45,
-  "strengths": ["...", "..."],
-  "improvements": ["...", "..."],
-  "summary": "One paragraph overall assessment"
-}
-\`\`\`
-
-## Guidelines
-
-- Be constructive and encouraging in feedback
-- Cite specific examples from the submission
-- Consider the hackathon's time constraints
-- Flag any concerns about originality or rule violations`
-})
-```
+<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@agents-server/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)\n\nconst { data: agent } = await client.agents.create({\n  name: \"Hackathon Judge\",\n  description: \"Evaluates hackathon project submissions\",\n  model: \"claude-sonnet-4-5-20250929\",\n  instructions: `You are an experienced hackathon judge evaluating project submissions.\n\n## Evaluation Criteria\n\nScore each project from 1-10 on these dimensions:\n\n1. **Innovation** (25%) - How novel and creative is the solution?\n2. **Technical Execution** (25%) - How well is it built? Code quality, architecture.\n3. **Impact** (20%) - What problem does it solve? How significant is the impact?\n4. **Presentation** (15%) - How well is the project documented and presented?\n5. **Completeness** (15%) - Is it a working prototype or just an idea?\n\n## Output Format\n\nProvide your evaluation as structured JSON:\n\n{\n  \"projectName\": \"...\",\n  \"scores\": {\n    \"innovation\": 8,\n    \"technicalExecution\": 7,\n    \"impact\": 9,\n    \"presentation\": 6,\n    \"completeness\": 7\n  },\n  \"weightedScore\": 7.45,\n  \"strengths\": [\"...\", \"...\"],\n  \"improvements\": [\"...\", \"...\"],\n  \"summary\": \"One paragraph overall assessment\"\n}\n\n## Guidelines\n\n- Be constructive and encouraging in feedback\n- Cite specific examples from the submission\n- Consider the hackathon's time constraints\n- Flag any concerns about originality or rule violations`\n})"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>create-judge.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Judging a Submission
 
 Pass the project details as context:
 
-```typescript
-const { data: run } = await client.agents.run(agent.id, {
-  prompt: "Evaluate this hackathon submission",
-  context: {
-    projectName: "EcoTrack",
-    teamName: "Green Coders",
-    description: "An app that tracks personal carbon footprint using AI",
-    repoUrl: "https://github.com/example/ecotrack",
-    demoUrl: "https://ecotrack-demo.vercel.app",
-    techStack: ["Next.js", "OpenAI API", "Supabase"],
-    submissionTime: "2024-01-15T23:45:00Z"
-  }
-})
-
-const result = await client.agents.waitForResult(run.runId)
-console.log(result.result)
-```
+<CodeBlock language="typescript" showLineNumbers code={"const { data: run } = await client.agents.run(agent.id, {\n  prompt: \"Evaluate this hackathon submission\",\n  context: {\n    projectName: \"EcoTrack\",\n    teamName: \"Green Coders\",\n    description: \"An app that tracks personal carbon footprint using AI\",\n    repoUrl: \"https://github.com/example/ecotrack\",\n    demoUrl: \"https://ecotrack-demo.vercel.app\",\n    techStack: [\"Next.js\", \"OpenAI API\", \"Supabase\"],\n    submissionTime: \"2024-01-15T23:45:00Z\"\n  }\n})\n\nconst result = await client.agents.waitForResult(run.runId)\nconsole.log(result.result)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>judge-submission.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Batch Judging
 
 Process multiple submissions in parallel:
 
-```typescript
-const submissions = [
-  { projectName: "EcoTrack", /* ... */ },
-  { projectName: "CodeBuddy", /* ... */ },
-  { projectName: "HealthPal", /* ... */ }
-]
-
-// Start all evaluations in parallel
-const runs = await Promise.all(
-  submissions.map(submission =>
-    client.agents.run(agent.id, {
-      prompt: "Evaluate this hackathon submission",
-      context: submission,
-      idempotencyKey: `judge-${submission.projectName}`
-    })
-  )
-)
-
-// Wait for all results
-const results = await Promise.all(
-  runs.map(({ data }) => client.agents.waitForResult(data.runId))
-)
-
-// Rank by weighted score
-const ranked = results
-  .map(r => JSON.parse(r.result))
-  .sort((a, b) => b.weightedScore - a.weightedScore)
-
-console.log("Rankings:")
-ranked.forEach((project, i) => {
-  console.log(`${i + 1}. ${project.projectName}: ${project.weightedScore}`)
-})
-```
+<CodeBlock language="typescript" showLineNumbers code={"const submissions = [\n  { projectName: \"EcoTrack\", /* ... */ },\n  { projectName: \"CodeBuddy\", /* ... */ },\n  { projectName: \"HealthPal\", /* ... */ }\n]\n\n// Start all evaluations in parallel\nconst runs = await Promise.all(\n  submissions.map(submission =>\n    client.agents.run(agent.id, {\n      prompt: \"Evaluate this hackathon submission\",\n      context: submission,\n      idempotencyKey: `judge-${submission.projectName}`\n    })\n  )\n)\n\n// Wait for all results\nconst results = await Promise.all(\n  runs.map(({ data }) => client.agents.waitForResult(data.runId))\n)\n\n// Rank by weighted score\nconst ranked = results\n  .map(r => JSON.parse(r.result))\n  .sort((a, b) => b.weightedScore - a.weightedScore)\n\nconsole.log(\"Rankings:\")\nranked.forEach((project, i) => {\n  console.log(`${i + 1}. ${project.projectName}: ${project.weightedScore}`)\n})"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>batch-judge.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Adding Code Review
 
 Attach a skill for deeper technical evaluation:
 
-```typescript
-const { data: skill } = await client.skills.create({
-  name: "Code Reviewer",
-  slug: "code-reviewer",
-  description: "Reviews code quality and architecture",
-  content: `# Code Review Guidelines
-
-When reviewing hackathon code:
-
-1. **Check the README** - Is setup documented? Are dependencies listed?
-2. **Review architecture** - Is the code organized logically?
-3. **Assess code quality** - Naming, comments, error handling
-4. **Look for security issues** - API keys exposed, SQL injection, XSS
-5. **Evaluate tests** - Are there any? Do they pass?
-
-Be lenient on polish but strict on functionality and security.`
-})
-
-await client.agents.update(agent.id, {
-  skillIds: [skill.id]
-})
-```
+<CodeBlock language="typescript" showLineNumbers code={"const { data: skill } = await client.skills.create({\n  name: \"Code Reviewer\",\n  slug: \"code-reviewer\",\n  description: \"Reviews code quality and architecture\",\n  content: `# Code Review Guidelines\n\nWhen reviewing hackathon code:\n\n1. **Check the README** - Is setup documented? Are dependencies listed?\n2. **Review architecture** - Is the code organized logically?\n3. **Assess code quality** - Naming, comments, error handling\n4. **Look for security issues** - API keys exposed, SQL injection, XSS\n5. **Evaluate tests** - Are there any? Do they pass?\n\nBe lenient on polish but strict on functionality and security.`\n})\n\nawait client.agents.update(agent.id, {\n  skillIds: [skill.id]\n})"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>add-code-review.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Handling Edge Cases
 
 ### Incomplete Submissions
 
-```typescript
-const instructions = `...
-
-## Incomplete Submissions
-
-If a submission is missing critical components:
-- No working demo: Cap technical execution at 5
-- No source code: Cannot evaluate, return error
-- Missing documentation: Cap presentation at 4
-
-Always explain what was missing in the feedback.`
-```
+<CodeBlock language="typescript" code={"const instructions = `...\n\n## Incomplete Submissions\n\nIf a submission is missing critical components:\n- No working demo: Cap technical execution at 5\n- No source code: Cannot evaluate, return error\n- Missing documentation: Cap presentation at 4\n\nAlways explain what was missing in the feedback.`"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>incomplete-handling.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ### Conflict of Interest
 
-```typescript
-const { data: run } = await client.agents.run(agent.id, {
-  prompt: "Evaluate this submission",
-  context: {
-    ...submission,
-    judges: ["alice@example.com", "bob@example.com"],
-    currentJudge: "alice@example.com"
-  }
-})
-```
-
-Add to instructions:
-```
-If the current judge appears to be affiliated with the team
-(same organization, listed as contributor), flag for reassignment.
-```
+<CodeBlock language="typescript" code={"const { data: run } = await client.agents.run(agent.id, {\n  prompt: \"Evaluate this submission\",\n  context: {\n    ...submission,\n    judges: [\"alice@example.com\", \"bob@example.com\"],\n    currentJudge: \"alice@example.com\"\n  }\n})"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>conflict-check.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Exporting Results
 
 Generate a judging report:
 
-```typescript
-const { data: reportAgent } = await client.agents.create({
-  name: "Judging Report Generator",
-  instructions: `Generate a markdown report summarizing hackathon judging results.
-
-Include:
-- Overall statistics (submissions, average scores)
-- Top 3 winners with detailed feedback
-- Honorable mentions
-- Common themes in submissions
-- Recommendations for next hackathon`
-})
-
-const { data: run } = await client.agents.run(reportAgent.id, {
-  prompt: "Generate the final judging report",
-  context: {
-    hackathonName: "AI Innovation 2024",
-    results: ranked,
-    totalSubmissions: submissions.length
-  }
-})
-```
+<CodeBlock language="typescript" showLineNumbers code={"const { data: reportAgent } = await client.agents.create({\n  name: \"Judging Report Generator\",\n  instructions: `Generate a markdown report summarizing hackathon judging results.\n\nInclude:\n- Overall statistics (submissions, average scores)\n- Top 3 winners with detailed feedback\n- Honorable mentions\n- Common themes in submissions\n- Recommendations for next hackathon`\n})\n\nconst { data: run } = await client.agents.run(reportAgent.id, {\n  prompt: \"Generate the final judging report\",\n  context: {\n    hackathonName: \"AI Innovation 2024\",\n    results: ranked,\n    totalSubmissions: submissions.length\n  }\n})"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>generate-report.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Best Practices
 

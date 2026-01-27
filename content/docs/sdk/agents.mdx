@@ -7,218 +7,113 @@ The Agents API allows you to run AI agents, stream their progress, and provide h
 
 ## Types
 
-```typescript
-type AgentRunStatus =
-  | "queued"
-  | "initializing"
-  | "running"
-  | "awaiting_input"
-  | "succeeded"
-  | "failed"
-  | "canceled"
-  | "timed_out"
-
-type TriggerType = "manual" | "scheduled" | "email" | "luma_webhook"
-
-interface AgentRunInput {
-  prompt: string
-  context?: unknown
-  idempotencyKey?: string
-}
-
-interface AgentRun {
-  runId: string
-  agentId: string
-  status: AgentRunStatus
-  createdAt: string
-}
-
-interface AgentRunResult {
-  id: string
-  agentId: string
-  status: AgentRunStatus
-  result?: unknown
-  error?: unknown
-  completedAt?: string | null
-  totalTokens?: number | null
-  totalCostCents?: number | null
-  steps: AgentRunStep[]
-}
-
-interface AgentRunStep {
-  stepNumber: number
-  type: string
-  name?: string
-  output?: unknown
-  durationMs?: number
-}
-```
+<CodeBlock language="typescript" showLineNumbers code={"type AgentRunStatus =\n  | \"queued\"\n  | \"initializing\"\n  | \"running\"\n  | \"awaiting_input\"\n  | \"succeeded\"\n  | \"failed\"\n  | \"canceled\"\n  | \"timed_out\"\n\ntype TriggerType = \"manual\" | \"scheduled\" | \"email\" | \"luma_webhook\"\n\ninterface AgentRunInput {\n  prompt: string\n  context?: unknown\n  idempotencyKey?: string\n}\n\ninterface AgentRun {\n  runId: string\n  agentId: string\n  status: AgentRunStatus\n  createdAt: string\n}\n\ninterface AgentRunResult {\n  id: string\n  agentId: string\n  status: AgentRunStatus\n  result?: unknown\n  error?: unknown\n  completedAt?: string | null\n  totalTokens?: number | null\n  totalCostCents?: number | null\n  steps: AgentRunStep[]\n}\n\ninterface AgentRunStep {\n  stepNumber: number\n  type: string\n  name?: string\n  output?: unknown\n  durationMs?: number\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>types.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Run an Agent
 
 Start an agent run with a prompt:
 
-```typescript
-const { data, error } = await client.agents.run("agent_abc123", {
-  prompt: "Analyze the quarterly sales data and create a summary report",
-  context: {
-    quarter: "Q4",
-    year: 2024
-  },
-  idempotencyKey: "q4-report-2024"
-})
-
-if (data) {
-  console.log("Run started:", data.runId)
-}
-```
+<CodeBlock language="typescript" showLineNumbers code={"const { data, error } = await client.agents.run(\"agent_abc123\", {\n  prompt: \"Analyze the quarterly sales data and create a summary report\",\n  context: {\n    quarter: \"Q4\",\n    year: 2024\n  },\n  idempotencyKey: \"q4-report-2024\"\n})\n\nif (data) {\n  console.log(\"Run started:\", data.runId)\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>run-agent.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Get Run Status
 
 Check the current status of a run:
 
-```typescript
-const { data } = await client.agents.getRun("run_xyz789")
-
-console.log("Status:", data?.status)
-console.log("Tokens used:", data?.totalTokens)
-```
+<CodeBlock language="typescript" code={"const { data } = await client.agents.getRun(\"run_xyz789\")\n\nconsole.log(\"Status:\", data?.status)\nconsole.log(\"Tokens used:\", data?.totalTokens)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>get-status.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Get Run Result
 
 Retrieve the full result including steps:
 
-```typescript
-const { data, status } = await client.agents.getRunResult("run_xyz789")
-
-if (status === 202) {
-  console.log("Agent still running...")
-} else if (data) {
-  console.log("Result:", data.result)
-  console.log("Steps:", data.steps.length)
-  console.log("Cost:", data.totalCostCents, "cents")
-}
-```
+<CodeBlock language="typescript" showLineNumbers code={"const { data, status } = await client.agents.getRunResult(\"run_xyz789\")\n\nif (status === 202) {\n  console.log(\"Agent still running...\")\n} else if (data) {\n  console.log(\"Result:\", data.result)\n  console.log(\"Steps:\", data.steps.length)\n  console.log(\"Cost:\", data.totalCostCents, \"cents\")\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>get-result.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Wait for Result
 
 Poll until the agent completes:
 
-```typescript
-const result = await client.agents.waitForResult("run_xyz789", {
-  maxAttempts: 120, // Default: 120
-  intervalMs: 1000  // Default: 1000ms
-})
-
-if (result.status === "succeeded") {
-  console.log("Output:", result.result)
-
-  for (const step of result.steps) {
-    console.log(`Step ${step.stepNumber}: ${step.name} (${step.durationMs}ms)`)
-  }
-}
-```
+<CodeBlock language="typescript" showLineNumbers code={"const result = await client.agents.waitForResult(\"run_xyz789\", {\n  maxAttempts: 120, // Default: 120\n  intervalMs: 1000  // Default: 1000ms\n})\n\nif (result.status === \"succeeded\") {\n  console.log(\"Output:\", result.result)\n\n  for (const step of result.steps) {\n    console.log(`Step ${step.stepNumber}: ${step.name} (${step.durationMs}ms)`)\n  }\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>wait-for-result.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Stream Run Progress
 
 Get real-time updates using Server-Sent Events:
 
-```typescript
-const eventSource = client.agents.streamRun("run_xyz789")
-
-eventSource.onmessage = (event) => {
-  const data = JSON.parse(event.data)
-
-  switch (data.event) {
-    case "status":
-      console.log("Status update:", data.data)
-      break
-    case "step":
-      console.log("Step completed:", data.data)
-      break
-    case "done":
-      console.log("Agent finished")
-      eventSource.close()
-      break
-  }
-}
-
-eventSource.onerror = (error) => {
-  console.error("Stream error:", error)
-  eventSource.close()
-}
-```
+<CodeBlock language="typescript" showLineNumbers code={"const eventSource = client.agents.streamRun(\"run_xyz789\")\n\neventSource.onmessage = (event) => {\n  const data = JSON.parse(event.data)\n\n  switch (data.event) {\n    case \"status\":\n      console.log(\"Status update:\", data.data)\n      break\n    case \"step\":\n      console.log(\"Step completed:\", data.data)\n      break\n    case \"done\":\n      console.log(\"Agent finished\")\n      eventSource.close()\n      break\n  }\n}\n\neventSource.onerror = (error) => {\n  console.error(\"Stream error:\", error)\n  eventSource.close()\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>stream-run.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Human-in-the-Loop
 
 When an agent requires human input, its status becomes `awaiting_input`. Provide the input to continue:
 
-```typescript
-// Check if agent needs input
-const { data: status } = await client.agents.getRun("run_xyz789")
-
-if (status?.status === "awaiting_input") {
-  // Provide the required input
-  const { data } = await client.agents.provideInput("run_xyz789", {
-    input: {
-      approved: true,
-      comments: "Looks good, proceed with the changes"
-    }
-  })
-
-  if (data?.success) {
-    console.log("Input provided, agent will continue")
-  }
-}
-```
+<CodeBlock language="typescript" showLineNumbers code={"// Check if agent needs input\nconst { data: status } = await client.agents.getRun(\"run_xyz789\")\n\nif (status?.status === \"awaiting_input\") {\n  // Provide the required input\n  const { data } = await client.agents.provideInput(\"run_xyz789\", {\n    input: {\n      approved: true,\n      comments: \"Looks good, proceed with the changes\"\n    }\n  })\n\n  if (data?.success) {\n    console.log(\"Input provided, agent will continue\")\n  }\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>human-input.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Cancel a Run
 
 Stop a running agent:
 
-```typescript
-const { data } = await client.agents.cancelRun("run_xyz789")
-
-if (data?.success) {
-  console.log("Run canceled")
-}
-```
+<CodeBlock language="typescript" code={"const { data } = await client.agents.cancelRun(\"run_xyz789\")\n\nif (data?.success) {\n  console.log(\"Run canceled\")\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>cancel-run.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Full Example
 
-```typescript
-import { createClient } from "@agents-server/sdk"
-
-const client = createClient(process.env.API_KEY!, {
-  baseUrl: process.env.API_URL!
-})
-
-async function runAnalysis(agentId: string, prompt: string) {
-  // Start the agent
-  const { data: run, error } = await client.agents.run(agentId, { prompt })
-
-  if (error) {
-    throw new Error(error.error)
-  }
-
-  // Wait for completion
-  const result = await client.agents.waitForResult(run.runId)
-
-  if (result.status === "failed") {
-    throw new Error(String(result.error))
-  }
-
-  return {
-    output: result.result,
-    steps: result.steps,
-    cost: result.totalCostCents
-  }
-}
-
-// Usage
-const analysis = await runAnalysis(
-  "agent_sales_analyzer",
-  "Generate Q4 2024 sales report"
-)
-console.log(analysis)
-```
+<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@agents-server/sdk\"\n\nconst client = createClient(process.env.API_KEY!, {\n  baseUrl: process.env.API_URL!\n})\n\nasync function runAnalysis(agentId: string, prompt: string) {\n  // Start the agent\n  const { data: run, error } = await client.agents.run(agentId, { prompt })\n\n  if (error) {\n    throw new Error(error.error)\n  }\n\n  // Wait for completion\n  const result = await client.agents.waitForResult(run.runId)\n\n  if (result.status === \"failed\") {\n    throw new Error(String(result.error))\n  }\n\n  return {\n    output: result.result,\n    steps: result.steps,\n    cost: result.totalCostCents\n  }\n}\n\n// Usage\nconst analysis = await runAnalysis(\n  \"agent_sales_analyzer\",\n  \"Generate Q4 2024 sales report\"\n)\nconsole.log(analysis)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>full-example.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>

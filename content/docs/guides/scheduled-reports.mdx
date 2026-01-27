@@ -15,23 +15,14 @@ Schedules let you:
 
 ## Creating a Schedule
 
-```typescript
-import { createClient } from "@agents-server/sdk"
-
-const client = createClient(process.env.AGENTS_API_KEY!)
-
-// Create a daily report schedule at 9 AM Eastern
-const { data: schedule } = await client.schedules.create({
-  name: "Daily Sales Report",
-  frequency: "daily",
-  timezone: "America/New_York",
-  agentId: "sales-report-agent",
-  input: { reportType: "daily-summary" }
-})
-
-console.log(`Schedule created: ${schedule.id}`)
-console.log(`Next run: ${schedule.nextRunAt}`)
-```
+<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@agents-server/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)\n\n// Create a daily report schedule at 9 AM Eastern\nconst { data: schedule } = await client.schedules.create({\n  name: \"Daily Sales Report\",\n  frequency: \"daily\",\n  timezone: \"America/New_York\",\n  agentId: \"sales-report-agent\",\n  input: { reportType: \"daily-summary\" }\n})\n\nconsole.log(`Schedule created: ${schedule.id}`)\nconsole.log(`Next run: ${schedule.nextRunAt}`)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>create-schedule.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Frequency Options
 
@@ -48,61 +39,73 @@ console.log(`Next run: ${schedule.nextRunAt}`)
 
 For custom schedules, use a cron expression:
 
-```typescript
-// Every Monday and Friday at 3:30 PM
-const { data: schedule } = await client.schedules.create({
-  name: "Bi-weekly Report",
-  frequency: "cron",
-  cronExpression: "30 15 * * 1,5",
-  timezone: "America/Los_Angeles",
-  agentId: "report-agent",
-  input: { reportType: "bi-weekly" }
-})
-```
+<CodeBlock language="typescript" showLineNumbers code={"// Every Monday and Friday at 3:30 PM\nconst { data: schedule } = await client.schedules.create({\n  name: \"Bi-weekly Report\",\n  frequency: \"cron\",\n  cronExpression: \"30 15 * * 1,5\",\n  timezone: \"America/Los_Angeles\",\n  agentId: \"report-agent\",\n  input: { reportType: \"bi-weekly\" }\n})"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>cron-schedule.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Managing Schedules
 
 ### List Active Schedules
 
-```typescript
-const { data: schedules } = await client.schedules.list({ activeOnly: true })
-console.log(`Active schedules: ${schedules.schedules.length}`)
-
-for (const schedule of schedules.schedules) {
-  console.log(`- ${schedule.name}: next run at ${schedule.nextRunAt}`)
-}
-```
+<CodeBlock language="typescript" code={"const { data: schedules } = await client.schedules.list({ activeOnly: true })\nconsole.log(`Active schedules: ${schedules.schedules.length}`)\n\nfor (const schedule of schedules.schedules) {\n  console.log(`- ${schedule.name}: next run at ${schedule.nextRunAt}`)\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>list-schedules.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ### Pause a Schedule
 
-```typescript
-await client.schedules.update(scheduleId, { isActive: false })
-```
+<CodeBlock language="typescript" code={"await client.schedules.update(scheduleId, { isActive: false })"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>pause-schedule.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ### Resume a Schedule
 
-```typescript
-await client.schedules.update(scheduleId, { isActive: true })
-```
+<CodeBlock language="typescript" code={"await client.schedules.update(scheduleId, { isActive: true })"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>resume-schedule.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ### Delete a Schedule
 
-```typescript
-await client.schedules.delete(scheduleId)
-```
+<CodeBlock language="typescript" code={"await client.schedules.delete(scheduleId)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>delete-schedule.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Timezone Support
 
 Always specify a timezone to ensure runs happen at the expected time:
 
-```typescript
-const { data: schedule } = await client.schedules.create({
-  name: "Morning Digest",
-  frequency: "daily",
-  timezone: "Europe/London",  // Runs at local time in London
-  agentId: "digest-agent"
-})
-```
+<CodeBlock language="typescript" code={"const { data: schedule } = await client.schedules.create({\n  name: \"Morning Digest\",\n  frequency: \"daily\",\n  timezone: \"Europe/London\",  // Runs at local time in London\n  agentId: \"digest-agent\"\n})"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>timezone.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 Common timezones:
 - `America/New_York` - US Eastern

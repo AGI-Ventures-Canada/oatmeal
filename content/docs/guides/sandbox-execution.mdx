@@ -34,16 +34,14 @@ Sandboxes are archived 5 minutes after stopping, allowing for debugging if neede
 
 When creating agents programmatically, you can customize the sandbox timeout:
 
-```typescript
-// Internal API - sandbox timeout configuration
-const sandbox = await createSandbox({
-  tenantId: "...",
-  agentRunId: "...",
-  envVars: { ANTHROPIC_API_KEY: "..." },
-  skills: [...],
-  autoStopMinutes: 15 // Override default 5-minute timeout
-})
-```
+<CodeBlock language="typescript" showLineNumbers code={"// Internal API - sandbox timeout configuration\nconst sandbox = await createSandbox({\n  tenantId: \"...\",\n  agentRunId: \"...\",\n  envVars: { ANTHROPIC_API_KEY: \"...\" },\n  skills: [...],\n  autoStopMinutes: 15 // Override default 5-minute timeout\n})"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>sandbox-config.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ### When to Extend Timeout
 
@@ -72,15 +70,11 @@ Sandboxes provide isolation through:
 
 Track sandbox status through agent run steps:
 
-```typescript
-const result = await client.agents.getRunResult(runId)
-
-for (const step of result.steps) {
-  if (step.type === "sandbox_created") {
-    console.log("Sandbox ID:", step.output.sandboxId)
-  }
-  if (step.type === "sandbox_terminated") {
-    console.log("Sandbox cleanup:", step.durationMs, "ms")
-  }
-}
-```
+<CodeBlock language="typescript" showLineNumbers code={"const result = await client.agents.getRunResult(runId)\n\nfor (const step of result.steps) {\n  if (step.type === \"sandbox_created\") {\n    console.log(\"Sandbox ID:\", step.output.sandboxId)\n  }\n  if (step.type === \"sandbox_terminated\") {\n    console.log(\"Sandbox cleanup:\", step.durationMs, \"ms\")\n  }\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>monitor-sandbox.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>

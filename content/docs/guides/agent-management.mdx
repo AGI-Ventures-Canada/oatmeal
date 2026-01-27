@@ -7,22 +7,14 @@ Build and manage AI agents through the SDK.
 
 ## Creating an Agent
 
-```typescript
-import { createClient } from "@agents-server/sdk"
-
-const client = createClient(process.env.AGENTS_API_KEY!)
-
-const { data: agent } = await client.agents.create({
-  name: "Customer Support Agent",
-  description: "Handles customer inquiries",
-  instructions: `You are a helpful customer support assistant.
-    Answer questions about our products and services.
-    Be polite and professional.`,
-  model: "claude-sonnet-4-5-20250929"
-})
-
-console.log(`Created agent: ${agent.id}`)
-```
+<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@agents-server/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)\n\nconst { data: agent } = await client.agents.create({\n  name: \"Customer Support Agent\",\n  description: \"Handles customer inquiries\",\n  instructions: `You are a helpful customer support assistant.\n    Answer questions about our products and services.\n    Be polite and professional.`,\n  model: \"claude-sonnet-4-5-20250929\"\n})\n\nconsole.log(`Created agent: ${agent.id}`)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>create-agent.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Agent Configuration
 
@@ -36,119 +28,94 @@ console.log(`Created agent: ${agent.id}`)
 
 ## Running an Agent
 
-```typescript
-// Start a run
-const { data: run } = await client.agents.run(agent.id, {
-  prompt: "What are your return policies?"
-})
-
-// Wait for result
-const result = await client.agents.waitForResult(run.runId)
-console.log(result.result)
-```
+<CodeBlock language="typescript" showLineNumbers code={"// Start a run\nconst { data: run } = await client.agents.run(agent.id, {\n  prompt: \"What are your return policies?\"\n})\n\n// Wait for result\nconst result = await client.agents.waitForResult(run.runId)\nconsole.log(result.result)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>run-agent.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Updating an Agent
 
-```typescript
-// Update instructions
-await client.agents.update(agent.id, {
-  instructions: `You are a helpful customer support assistant.
-    Answer questions about our products and services.
-    Be polite, professional, and concise.
-    Always offer to escalate complex issues to a human.`
-})
-
-// Attach skills
-await client.agents.update(agent.id, {
-  skillIds: ["skill_abc", "skill_xyz"]
-})
-```
+<CodeBlock language="typescript" showLineNumbers code={"// Update instructions\nawait client.agents.update(agent.id, {\n  instructions: `You are a helpful customer support assistant.\n    Answer questions about our products and services.\n    Be polite, professional, and concise.\n    Always offer to escalate complex issues to a human.`\n})\n\n// Attach skills\nawait client.agents.update(agent.id, {\n  skillIds: [\"skill_abc\", \"skill_xyz\"]\n})"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>update-agent.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Listing Agents
 
-```typescript
-const { data } = await client.agents.list()
-
-for (const agent of data.agents) {
-  console.log(`${agent.name} (${agent.id}) - ${agent.isActive ? "active" : "inactive"}`)
-}
-```
+<CodeBlock language="typescript" code={"const { data } = await client.agents.list()\n\nfor (const agent of data.agents) {\n  console.log(`${agent.name} (${agent.id}) - ${agent.isActive ? \"active\" : \"inactive\"}`)\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>list-agents.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Deactivating and Deleting
 
-```typescript
-// Deactivate (keeps history, stops new runs)
-await client.agents.update(agent.id, { isActive: false })
-
-// Reactivate
-await client.agents.update(agent.id, { isActive: true })
-
-// Permanently delete
-await client.agents.delete(agent.id)
-```
+<CodeBlock language="typescript" showLineNumbers code={"// Deactivate (keeps history, stops new runs)\nawait client.agents.update(agent.id, { isActive: false })\n\n// Reactivate\nawait client.agents.update(agent.id, { isActive: true })\n\n// Permanently delete\nawait client.agents.delete(agent.id)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>manage-agent.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Adding Skills
 
 Skills are reusable instruction sets that enhance agent capabilities:
 
-```typescript
-// Create a skill
-const { data: skill } = await client.skills.create({
-  name: "SQL Query Generator",
-  slug: "sql-generator",
-  description: "Generates SQL queries from natural language",
-  content: `# SQL Query Generator
-
-When asked to generate SQL queries:
-1. Understand the user's intent
-2. Identify the relevant tables and columns
-3. Generate optimized SQL
-4. Explain the query structure`
-})
-
-// Attach skill to agent
-await client.agents.update(agent.id, {
-  skillIds: [skill.id]
-})
-```
+<CodeBlock language="typescript" showLineNumbers code={"// Create a skill\nconst { data: skill } = await client.skills.create({\n  name: \"SQL Query Generator\",\n  slug: \"sql-generator\",\n  description: \"Generates SQL queries from natural language\",\n  content: `# SQL Query Generator\n\nWhen asked to generate SQL queries:\n1. Understand the user's intent\n2. Identify the relevant tables and columns\n3. Generate optimized SQL\n4. Explain the query structure`\n})\n\n// Attach skill to agent\nawait client.agents.update(agent.id, {\n  skillIds: [skill.id]\n})"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>add-skill.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Run History
 
 Get details about past runs:
 
-```typescript
-// Get run details
-const { data: run } = await client.agents.getRun(runId)
-console.log(`Status: ${run.status}`)
-console.log(`Started: ${run.startedAt}`)
-console.log(`Tokens: ${run.totalTokens}`)
-
-// Get full result with steps
-const { data: result } = await client.agents.getRunResult(runId)
-for (const step of result.steps) {
-  console.log(`Step ${step.stepNumber}: ${step.type}`)
-}
-```
+<CodeBlock language="typescript" showLineNumbers code={"// Get run details\nconst { data: run } = await client.agents.getRun(runId)\nconsole.log(`Status: ${run.status}`)\nconsole.log(`Started: ${run.startedAt}`)\nconsole.log(`Tokens: ${run.totalTokens}`)\n\n// Get full result with steps\nconst { data: result } = await client.agents.getRunResult(runId)\nfor (const step of result.steps) {\n  console.log(`Step ${step.stepNumber}: ${step.type}`)\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>run-history.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Human-in-the-Loop
 
 For agents that require human input:
 
-```typescript
-// Check if agent needs input
-const { data: run } = await client.agents.getRun(runId)
-
-if (run.status === "awaiting_input") {
-  // Provide the requested input
-  await client.agents.provideInput(runId, {
-    input: { approved: true, notes: "Looks good" }
-  })
-}
-```
+<CodeBlock language="typescript" showLineNumbers code={"// Check if agent needs input\nconst { data: run } = await client.agents.getRun(runId)\n\nif (run.status === \"awaiting_input\") {\n  // Provide the requested input\n  await client.agents.provideInput(runId, {\n    input: { approved: true, notes: \"Looks good\" }\n  })\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>human-input.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Canceling Runs
 
-```typescript
-// Cancel a running agent
-await client.agents.cancelRun(runId)
-```
+<CodeBlock language="typescript" code={"// Cancel a running agent\nawait client.agents.cancelRun(runId)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>cancel-run.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>

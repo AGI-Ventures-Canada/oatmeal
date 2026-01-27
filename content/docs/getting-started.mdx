@@ -35,11 +35,14 @@ The official TypeScript SDK provides a type-safe client for interacting with the
 
 Initialize the client with your API key:
 
-```typescript title="lib/agents.ts"
-import { createClient } from "@agents-server/sdk"
-
-const client = createClient(process.env.AGENTS_API_KEY!)
-```
+<CodeBlock language="typescript" code={"import { createClient } from \"@agents-server/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>lib/agents.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 The SDK automatically detects `NEXT_PUBLIC_APP_URL` for local development, or defaults to the production API.
 
@@ -51,50 +54,51 @@ Never expose your API key in client-side code. Use environment variables and ser
 
 Test your connection with the `whoami` endpoint:
 
-```typescript title="verify.ts"
-const { data, error } = await client.whoami()
-
-if (error) {
-  console.error("Authentication failed:", error.error)
-  process.exit(1)
-}
-
-console.log("Connected as tenant:", data.tenantId)
-console.log("Key ID:", data.keyId)
-console.log("Scopes:", data.scopes)
-```
+<CodeBlock language="typescript" showLineNumbers code={"const { data, error } = await client.whoami()\n\nif (error) {\n  console.error(\"Authentication failed:\", error.error)\n  process.exit(1)\n}\n\nconsole.log(\"Connected as tenant:\", data.tenantId)\nconsole.log(\"Key ID:\", data.keyId)\nconsole.log(\"Scopes:\", data.scopes)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>verify.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Environment Variables
 
 Store your API key in an environment variable:
 
-```bash title=".env.local"
-AGENTS_API_KEY=sk_live_...
-```
+<CodeBlock language="bash" code="AGENTS_API_KEY=sk_live_...">
+  <CodeBlockHeader>
+    <CodeBlockFilename>.env.local</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Response Format
 
 All SDK methods return an `ApiResponse<T>` object:
 
-```typescript
-interface ApiResponse<T> {
-  data: T | null       // Response data on success
-  error: { error: string } | null  // Error message on failure
-  status: number       // HTTP status code
-}
-```
+<CodeBlock language="typescript" code={"interface ApiResponse<T> {\n  data: T | null       // Response data on success\n  error: { error: string } | null  // Error message on failure\n  status: number       // HTTP status code\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>types.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 This allows consistent error handling:
 
-```typescript
-const { data, error, status } = await client.agents.get("agent_123")
-
-if (error) {
-  console.error(`Error ${status}: ${error.error}`)
-} else {
-  console.log(data)
-}
-```
+<CodeBlock language="typescript" showLineNumbers code={"const { data, error, status } = await client.agents.get(\"agent_123\")\n\nif (error) {\n  console.error(`Error ${status}: ${error.error}`)\n} else {\n  console.log(data)\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>example.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
 
 ## Next Steps
 
