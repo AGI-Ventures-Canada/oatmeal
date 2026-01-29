@@ -247,8 +247,9 @@ export function calculateNextRun(
 
     case "monthly": {
       const next = new Date(now)
-      next.setHours(hours, minutes, 0, 0)
+      next.setDate(1)
       next.setMonth(next.getMonth() + 1)
+      next.setHours(hours, minutes, 0, 0)
       return next
     }
 

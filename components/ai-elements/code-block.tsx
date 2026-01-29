@@ -245,7 +245,7 @@ const LINE_NUMBER_CLASSES = cn(
 );
 
 const CodeBlockBody = memo(
-  ({
+  function CodeBlockBody({
     tokenized,
     showLineNumbers,
     className,
@@ -253,7 +253,7 @@ const CodeBlockBody = memo(
     tokenized: TokenizedCode;
     showLineNumbers: boolean;
     className?: string;
-  }) => {
+  }) {
     const preStyle = useMemo(
       () => ({
         backgroundColor: tokenized.bg,
@@ -382,24 +382,27 @@ export const CodeBlockContent = ({
   // Always start with raw tokens to ensure server/client render the same
   const [tokenized, setTokenized] = useState<TokenizedCode>(rawTokens);
 
-  // Handle code changes and trigger highlighting after mount
-  useEffect(() => {
-    // Reset to raw tokens first (shows current code immediately)
+  // Reset to raw tokens when code changes
+  const [prevCode, setPrevCode] = useState(code);
+  if (code !== prevCode) {
+    setPrevCode(code);
     setTokenized(rawTokens);
+  }
 
-    // Then check cache or subscribe for highlighted result
-    const cached = highlightCode(code, language);
-    if (cached) {
-      setTokenized(cached);
-    } else {
-      // Subscribe to async highlighting result
+  // Check cache synchronously during render
+  const cached = highlightCode(code, language);
+  const displayTokens = cached ?? tokenized;
+
+  // Subscribe for async highlighting when not cached
+  useEffect(() => {
+    if (!highlightCode(code, language)) {
       highlightCode(code, language, setTokenized);
     }
-  }, [code, language, rawTokens]);
+  }, [code, language]);
 
   return (
     <div className="relative overflow-x-auto overflow-y-hidden scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
-      <CodeBlockBody showLineNumbers={showLineNumbers} tokenized={tokenized} />
+      <CodeBlockBody showLineNumbers={showLineNumbers} tokenized={displayTokens} />
     </div>
   );
 };
