@@ -15,7 +15,7 @@ Schedules let you:
 
 ## Creating a Schedule
 
-<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@agents-server/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)\n\n// Create a daily report schedule at 9 AM Eastern\nconst { data: schedule } = await client.schedules.create({\n  name: \"Daily Sales Report\",\n  frequency: \"daily\",\n  timezone: \"America/New_York\",\n  agentId: \"sales-report-agent\",\n  input: { reportType: \"daily-summary\" }\n})\n\nconsole.log(`Schedule created: ${schedule.id}`)\nconsole.log(`Next run: ${schedule.nextRunAt}`)"}>
+<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@oatmeal/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)\n\n// Create a daily report schedule at 9 AM Eastern\nconst { data: schedule } = await client.schedules.create({\n  name: \"Daily Sales Report\",\n  frequency: \"daily\",\n  timezone: \"America/New_York\",\n  agentId: \"sales-report-agent\",\n  input: { reportType: \"daily-summary\" }\n})\n\nconsole.log(`Schedule created: ${schedule.id}`)\nconsole.log(`Next run: ${schedule.nextRunAt}`)"}>
   <CodeBlockHeader>
     <CodeBlockFilename>create-schedule.ts</CodeBlockFilename>
     <CodeBlockActions>

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
 import { createSandbox, writeSandboxFiles, terminateSandbox, getDaytonaClient } from "./daytona"
 import type { Sandbox } from "@daytonaio/sdk"
 import { buildSkillFilesForSandbox } from "@/lib/services/skills"

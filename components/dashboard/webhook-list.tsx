@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Webhook, MoreHorizontal, Trash2, AlertTriangle } from "lucide-react"
-import type { Webhook as WebhookType } from "@/lib/db/agent-types"
+import type { Webhook as WebhookType } from "@/lib/db/hackathon-types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

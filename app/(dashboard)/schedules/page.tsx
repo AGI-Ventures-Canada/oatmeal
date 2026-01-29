@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { listSchedules } from "@/lib/services/schedules"
-import { listAgents } from "@/lib/services/agents"
 import { getOrCreateTenant } from "@/lib/services/tenants"
 import { ScheduleList } from "@/components/dashboard/schedule-list"
 import { CreateScheduleButton } from "@/components/dashboard/create-schedule-button"
@@ -30,12 +29,7 @@ export default async function SchedulesPage() {
     throw new Error("Failed to get or create tenant")
   }
 
-  const [schedules, agents] = await Promise.all([
-    listSchedules(tenant.id),
-    listAgents(tenant.id, { activeOnly: true }),
-  ])
-
-  const agentMap = new Map(agents.map((a) => [a.id, a.name]))
+  const schedules = await listSchedules(tenant.id)
 
   return (
     <div className="space-y-6">
@@ -44,7 +38,7 @@ export default async function SchedulesPage() {
         <div>
           <h1 className="text-3xl font-bold">Schedules</h1>
           <p className="text-muted-foreground">
-            Schedule agents to run automatically at specific intervals
+            Schedule jobs to run automatically at specific intervals
           </p>
         </div>
         <CreateScheduleButton />
@@ -54,11 +48,11 @@ export default async function SchedulesPage() {
         <CardHeader>
           <CardTitle>Your Schedules</CardTitle>
           <CardDescription>
-            Configure when your agents should run automatically
+            Configure when your jobs should run automatically
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ScheduleList schedules={schedules} agentMap={agentMap} />
+          <ScheduleList schedules={schedules} />
         </CardContent>
       </Card>
     </div>

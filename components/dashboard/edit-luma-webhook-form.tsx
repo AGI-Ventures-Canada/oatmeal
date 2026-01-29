@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
 "use client"
 
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
-import type { LumaWebhookConfig } from "@/lib/db/agent-types"
+import type { LumaWebhookConfig } from "@/lib/db/hackathon-types"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"

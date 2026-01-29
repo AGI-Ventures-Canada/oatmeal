@@ -8,8 +8,8 @@ describe("Dashboard Routes", () => {
       { path: "/dashboard/keys", method: "GET", scopes: ["keys:read"] },
       { path: "/dashboard/keys", method: "POST", scopes: ["keys:write"] },
       { path: "/dashboard/keys/:id/revoke", method: "POST", scopes: ["keys:write"] },
-      { path: "/dashboard/jobs", method: "GET", scopes: ["jobs:read"] },
-      { path: "/dashboard/jobs/:id", method: "GET", scopes: ["jobs:read"] },
+      { path: "/dashboard/jobs", method: "GET", scopes: ["hackathons:read"] },
+      { path: "/dashboard/jobs/:id", method: "GET", scopes: ["hackathons:read"] },
     ]
 
     it("all dashboard routes require user auth", () => {
@@ -28,10 +28,10 @@ describe("Dashboard Routes", () => {
       }
     })
 
-    it("jobs routes require jobs:read scope", () => {
+    it("jobs routes require hackathons:read scope", () => {
       const jobRoutes = userRequiredRoutes.filter((r) => r.path.includes("/jobs"))
       for (const route of jobRoutes) {
-        expect(route.scopes).toContain("jobs:read")
+        expect(route.scopes).toContain("hackathons:read")
       }
     })
   })
@@ -42,7 +42,7 @@ describe("Dashboard Routes", () => {
         id: "key-1",
         name: "Test Key",
         prefix: "sk_live_abc1",
-        scopes: ["jobs:create"],
+        scopes: ["hackathons:write"],
         created_at: "2024-01-01T00:00:00Z",
         last_used_at: null,
         revoked_at: null,
@@ -70,7 +70,7 @@ describe("Dashboard Routes", () => {
           id: "key-new",
           name: "New Key",
           prefix: "sk_live_new1",
-          scopes: ["jobs:create"],
+          scopes: ["hackathons:write"],
           created_at: "2024-01-01T00:00:00Z",
         },
         rawKey: "sk_live_new1234567890abcdef",
@@ -180,7 +180,7 @@ describe("Dashboard Routes", () => {
         userId: "user-456",
         orgId: "org-789",
         orgRole: "org:admin",
-        scopes: ["keys:read", "keys:write", "jobs:read"] as Scope[],
+        scopes: ["keys:read", "keys:write", "hackathons:read"] as Scope[],
       }
 
       const meResponse = {

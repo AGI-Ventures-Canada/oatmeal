@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Agents Server",
-  description: "AI agents at scale",
+  title: "Oatmeal",
+  description: "Hackathon platform",
 }
 
 export default function RootLayout({

@@ -17,15 +17,15 @@ describe("Auth Types", () => {
 
     it("returns read-only scopes for org:member", () => {
       const scopes = scopesForRole("org:member")
-      expect(scopes).toContain("jobs:read")
-      expect(scopes).toContain("keys:read")
-      expect(scopes).not.toContain("jobs:create")
+      expect(scopes).toContain("hackathons:read")
+      expect(scopes).toContain("teams:read")
+      expect(scopes).not.toContain("hackathons:write")
       expect(scopes).not.toContain("keys:write")
     })
 
     it("returns read-only scopes for unknown roles", () => {
       const scopes = scopesForRole("unknown")
-      expect(scopes).toEqual(["jobs:read", "keys:read"])
+      expect(scopes).toEqual(["hackathons:read", "teams:read", "submissions:read"])
     })
   })
 
@@ -36,14 +36,14 @@ describe("Auth Types", () => {
       userId: "user-1",
       orgId: "org-1",
       orgRole: "org:admin",
-      scopes: ["jobs:create", "jobs:read"],
+      scopes: ["hackathons:write", "hackathons:read"],
     }
 
     const apiKeyPrincipal: ApiKeyPrincipal = {
       kind: "api_key",
       tenantId: "tenant-1",
       keyId: "key-1",
-      scopes: ["jobs:create", "jobs:read"],
+      scopes: ["hackathons:write", "hackathons:read"],
     }
 
     const anonPrincipal: AnonPrincipal = {
@@ -51,8 +51,8 @@ describe("Auth Types", () => {
     }
 
     it("returns true if user has scope", () => {
-      expect(hasScope(userPrincipal, "jobs:create")).toBe(true)
-      expect(hasScope(userPrincipal, "jobs:read")).toBe(true)
+      expect(hasScope(userPrincipal, "hackathons:write")).toBe(true)
+      expect(hasScope(userPrincipal, "hackathons:read")).toBe(true)
     })
 
     it("returns false if user lacks scope", () => {
@@ -60,12 +60,12 @@ describe("Auth Types", () => {
     })
 
     it("returns true if api_key has scope", () => {
-      expect(hasScope(apiKeyPrincipal, "jobs:create")).toBe(true)
+      expect(hasScope(apiKeyPrincipal, "hackathons:write")).toBe(true)
     })
 
     it("returns false for anon principal", () => {
-      expect(hasScope(anonPrincipal, "jobs:create")).toBe(false)
-      expect(hasScope(anonPrincipal, "jobs:read")).toBe(false)
+      expect(hasScope(anonPrincipal, "hackathons:write")).toBe(false)
+      expect(hasScope(anonPrincipal, "hackathons:read")).toBe(false)
     })
   })
 
@@ -76,15 +76,15 @@ describe("Auth Types", () => {
       userId: "user-1",
       orgId: "org-1",
       orgRole: "org:admin",
-      scopes: ["jobs:create", "jobs:read", "keys:read"],
+      scopes: ["hackathons:write", "hackathons:read", "keys:read"],
     }
 
     it("returns true if principal has all scopes", () => {
-      expect(hasAllScopes(principal, ["jobs:create", "jobs:read"])).toBe(true)
+      expect(hasAllScopes(principal, ["hackathons:write", "hackathons:read"])).toBe(true)
     })
 
     it("returns false if principal lacks any scope", () => {
-      expect(hasAllScopes(principal, ["jobs:create", "keys:write"])).toBe(false)
+      expect(hasAllScopes(principal, ["hackathons:write", "keys:write"])).toBe(false)
     })
 
     it("returns true for empty scopes array", () => {
@@ -93,9 +93,9 @@ describe("Auth Types", () => {
   })
 
   describe("DEFAULT_API_KEY_SCOPES", () => {
-    it("includes jobs:create and jobs:read", () => {
-      expect(DEFAULT_API_KEY_SCOPES).toContain("jobs:create")
-      expect(DEFAULT_API_KEY_SCOPES).toContain("jobs:read")
+    it("includes hackathons:read and submissions:read", () => {
+      expect(DEFAULT_API_KEY_SCOPES).toContain("hackathons:read")
+      expect(DEFAULT_API_KEY_SCOPES).toContain("submissions:read")
     })
 
     it("does not include admin scopes", () => {

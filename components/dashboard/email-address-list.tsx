@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
 "use client"
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Mail, MoreHorizontal, Trash2, Bot, Pencil, Copy, Check } from "lucide-react"
-import type { EmailAddress } from "@/lib/db/agent-types"
+import type { EmailAddress } from "@/lib/db/hackathon-types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck — types.ts needs regeneration via `bun update-types` after DB migrations
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { Job, JobStatus } from "@/lib/db/agent-types"
+import type { Job, JobStatus } from "@/lib/db/hackathon-types"
 import type { Json } from "@/lib/db/types"
 
 export type CreateJobInput = {

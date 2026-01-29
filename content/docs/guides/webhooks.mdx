@@ -14,7 +14,7 @@ Webhooks allow you to:
 
 ## Creating a Webhook
 
-<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@agents-server/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)\n\nconst { data: webhook } = await client.webhooks.create({\n  url: \"https://your-app.com/webhooks/agents\",\n  events: [\"agent_run.completed\", \"agent_run.failed\"]\n})\n\n// Save the secret for verifying signatures\nconsole.log(`Webhook secret: ${webhook.secret}`)"}>
+<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@oatmeal/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)\n\nconst { data: webhook } = await client.webhooks.create({\n  url: \"https://your-app.com/webhooks/agents\",\n  events: [\"agent_run.completed\", \"agent_run.failed\"]\n})\n\n// Save the secret for verifying signatures\nconsole.log(`Webhook secret: ${webhook.secret}`)"}>
   <CodeBlockHeader>
     <CodeBlockFilename>create-webhook.ts</CodeBlockFilename>
     <CodeBlockActions>

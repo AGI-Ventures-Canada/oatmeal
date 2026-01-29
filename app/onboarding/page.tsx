@@ -17,7 +17,7 @@ export default async function OnboardingPage() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Welcome to Agents Server</h1>
+          <h1 className="text-2xl font-bold">Welcome to Oatmeal</h1>
           <p className="text-muted-foreground">
             Create or select an organization to get started
           </p>

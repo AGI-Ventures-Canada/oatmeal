@@ -16,16 +16,10 @@ describe("V1 API Routes", () => {
   describe("Route Authorization", () => {
     const apiKeyRequiredRoutes = [
       { path: "/v1/whoami", method: "GET", scopes: [] },
-      { path: "/v1/jobs", method: "POST", scopes: ["jobs:create"] },
-      { path: "/v1/jobs/:id", method: "GET", scopes: ["jobs:read"] },
-      { path: "/v1/jobs/:id/result", method: "GET", scopes: ["jobs:read"] },
-      { path: "/v1/jobs/:id/cancel", method: "POST", scopes: ["jobs:cancel"] },
-      { path: "/v1/agents/:id/run", method: "POST", scopes: ["agents:run"] },
-      { path: "/v1/runs/:id", method: "GET", scopes: ["agents:read"] },
-      { path: "/v1/runs/:id/result", method: "GET", scopes: ["agents:read"] },
-      { path: "/v1/runs/:id/stream", method: "GET", scopes: ["agents:read"] },
-      { path: "/v1/runs/:id/input", method: "POST", scopes: ["agents:run"] },
-      { path: "/v1/runs/:id/cancel", method: "POST", scopes: ["agents:run"] },
+      { path: "/v1/jobs", method: "POST", scopes: ["hackathons:write"] },
+      { path: "/v1/jobs/:id", method: "GET", scopes: ["hackathons:read"] },
+      { path: "/v1/jobs/:id/result", method: "GET", scopes: ["hackathons:read"] },
+      { path: "/v1/jobs/:id/cancel", method: "POST", scopes: ["hackathons:write"] },
     ]
 
     it("all v1 routes require API key auth", () => {
@@ -34,55 +28,29 @@ describe("V1 API Routes", () => {
       }
     })
 
-    it("job creation requires jobs:create scope", () => {
+    it("job creation requires hackathons:write scope", () => {
       const createRoute = apiKeyRequiredRoutes.find(
         (r) => r.path === "/v1/jobs" && r.method === "POST"
       )
-      expect(createRoute?.scopes).toContain("jobs:create")
+      expect(createRoute?.scopes).toContain("hackathons:write")
     })
 
-    it("job read routes require jobs:read scope", () => {
+    it("job read routes require hackathons:read scope", () => {
       const readRoutes = apiKeyRequiredRoutes.filter(
         (r) => r.method === "GET" && r.path.includes("/jobs")
       )
       for (const route of readRoutes) {
-        expect(route.scopes).toContain("jobs:read")
+        expect(route.scopes).toContain("hackathons:read")
       }
     })
 
-    it("job cancel requires jobs:cancel scope", () => {
+    it("job cancel requires hackathons:write scope", () => {
       const cancelRoute = apiKeyRequiredRoutes.find(
         (r) => r.path === "/v1/jobs/:id/cancel"
       )
-      expect(cancelRoute?.scopes).toContain("jobs:cancel")
+      expect(cancelRoute?.scopes).toContain("hackathons:write")
     })
 
-    it("agent run requires agents:run scope", () => {
-      const runRoute = apiKeyRequiredRoutes.find(
-        (r) => r.path === "/v1/agents/:id/run"
-      )
-      expect(runRoute?.scopes).toContain("agents:run")
-    })
-
-    it("agent read routes require agents:read scope", () => {
-      const readRoutes = apiKeyRequiredRoutes.filter(
-        (r) => r.method === "GET" && r.path.includes("/runs")
-      )
-      for (const route of readRoutes) {
-        expect(route.scopes).toContain("agents:read")
-      }
-    })
-
-    it("provide input and cancel run require agents:run scope", () => {
-      const inputRoute = apiKeyRequiredRoutes.find(
-        (r) => r.path === "/v1/runs/:id/input"
-      )
-      const cancelRoute = apiKeyRequiredRoutes.find(
-        (r) => r.path === "/v1/runs/:id/cancel"
-      )
-      expect(inputRoute?.scopes).toContain("agents:run")
-      expect(cancelRoute?.scopes).toContain("agents:run")
-    })
   })
 
   describe("API Key Principal Info", () => {
@@ -91,7 +59,7 @@ describe("V1 API Routes", () => {
         kind: "api_key" as const,
         tenantId: "tenant-123",
         keyId: "key-456",
-        scopes: ["jobs:create", "jobs:read"] as Scope[],
+        scopes: ["hackathons:write", "hackathons:read"] as Scope[],
       }
 
       const whoamiResponse = {
@@ -102,16 +70,15 @@ describe("V1 API Routes", () => {
 
       expect(whoamiResponse.tenantId).toBe("tenant-123")
       expect(whoamiResponse.keyId).toBe("key-456")
-      expect(whoamiResponse.scopes).toContain("jobs:create")
+      expect(whoamiResponse.scopes).toContain("hackathons:write")
     })
 
     it("includes all scope types in response", () => {
       const allScopes: Scope[] = [
-        "jobs:create",
-        "jobs:read",
-        "jobs:cancel",
-        "agents:run",
-        "agents:read",
+        "hackathons:read",
+        "hackathons:write",
+        "submissions:read",
+        "submissions:write",
       ]
 
       for (const scope of allScopes) {
@@ -284,282 +251,6 @@ describe("V1 API Routes", () => {
     })
   })
 
-  describe("Agent Run Creation", () => {
-    it("accepts prompt and optional context", () => {
-      const requestBody = {
-        prompt: "Analyze this data",
-        context: { data: [1, 2, 3] },
-      }
-
-      expect(requestBody.prompt).toBeDefined()
-      expect(requestBody.context).toBeDefined()
-    })
-
-    it("supports idempotency key", () => {
-      const requestBody = {
-        prompt: "Test prompt",
-        idempotencyKey: "run-key-123",
-      }
-
-      expect(requestBody.idempotencyKey).toBe("run-key-123")
-    })
-
-    it("returns run with queued status on creation", () => {
-      const createdRun = {
-        runId: "run-new",
-        agentId: "agent-123",
-        status: "queued",
-        createdAt: "2024-01-01T00:00:00Z",
-      }
-
-      expect(createdRun.status).toBe("queued")
-      expect(createdRun.runId).toBeDefined()
-      expect(createdRun.agentId).toBeDefined()
-    })
-
-    it("accepts complex context objects", () => {
-      const requestBody = {
-        prompt: "Process this",
-        context: {
-          nested: { value: 123 },
-          array: ["a", "b", "c"],
-          metadata: { key: "value" },
-        },
-      }
-
-      expect(requestBody.context.nested.value).toBe(123)
-    })
-  })
-
-  describe("Agent Run Status", () => {
-    it("returns run details", () => {
-      const runDetails = {
-        id: "run-1",
-        agentId: "agent-1",
-        status: "running",
-        triggerType: "manual",
-        startedAt: "2024-01-01T00:00:00Z",
-        completedAt: null,
-        totalTokens: 500,
-        totalCostCents: 2,
-      }
-
-      expect(runDetails.id).toBeDefined()
-      expect(runDetails.agentId).toBeDefined()
-      expect(runDetails.status).toBe("running")
-      expect(runDetails.triggerType).toBe("manual")
-    })
-
-    it("handles all run statuses", () => {
-      const statuses = [
-        "queued",
-        "initializing",
-        "running",
-        "awaiting_input",
-        "succeeded",
-        "failed",
-        "canceled",
-        "timed_out",
-      ]
-
-      for (const status of statuses) {
-        expect(typeof status).toBe("string")
-      }
-    })
-
-    it("handles all trigger types", () => {
-      const triggerTypes = ["manual", "scheduled", "email", "luma_webhook"]
-
-      for (const type of triggerTypes) {
-        expect(typeof type).toBe("string")
-      }
-    })
-
-    it("includes cost and token metrics", () => {
-      const runDetails = {
-        id: "run-1",
-        agentId: "agent-1",
-        status: "succeeded",
-        triggerType: "manual",
-        totalTokens: 2500,
-        totalCostCents: 5,
-      }
-
-      expect(runDetails.totalTokens).toBe(2500)
-      expect(runDetails.totalCostCents).toBe(5)
-    })
-  })
-
-  describe("Agent Run Result", () => {
-    it("returns 202 for in-progress runs", () => {
-      const statuses = ["queued", "initializing", "running"]
-
-      for (const status of statuses) {
-        const httpStatus = ["queued", "initializing", "running"].includes(status) ? 202 : 200
-        expect(httpStatus).toBe(202)
-      }
-    })
-
-    it("returns result with steps for completed runs", () => {
-      const runResult = {
-        id: "run-1",
-        agentId: "agent-1",
-        status: "succeeded",
-        result: { output: "Analysis complete" },
-        completedAt: "2024-01-01T00:10:00Z",
-        totalTokens: 2000,
-        totalCostCents: 4,
-        steps: [
-          { stepNumber: 1, type: "thinking", output: "Analyzing..." },
-          { stepNumber: 2, type: "tool_call", name: "search", output: { results: [] }, durationMs: 150 },
-          { stepNumber: 3, type: "response", output: "Done", durationMs: 50 },
-        ],
-      }
-
-      expect(runResult.status).toBe("succeeded")
-      expect(runResult.result).toBeDefined()
-      expect(runResult.steps).toHaveLength(3)
-      expect(runResult.steps[1].durationMs).toBe(150)
-    })
-
-    it("returns error for failed runs", () => {
-      const runResult = {
-        id: "run-failed",
-        agentId: "agent-1",
-        status: "failed",
-        error: { code: "AGENT_ERROR", message: "Execution failed" },
-        completedAt: "2024-01-01T00:05:00Z",
-        steps: [{ stepNumber: 1, type: "error", output: "Fatal error" }],
-      }
-
-      expect(runResult.status).toBe("failed")
-      expect(runResult.error).toBeDefined()
-      expect(runResult.error.code).toBe("AGENT_ERROR")
-    })
-
-    it("handles timed out runs", () => {
-      const runResult = {
-        id: "run-timeout",
-        agentId: "agent-1",
-        status: "timed_out",
-        error: { message: "Execution timed out" },
-        completedAt: "2024-01-01T00:30:00Z",
-        steps: [],
-      }
-
-      expect(runResult.status).toBe("timed_out")
-    })
-  })
-
-  describe("Human Input", () => {
-    it("accepts input when run is awaiting", () => {
-      const requestBody = {
-        input: { choice: "option1", reason: "selected by user" },
-      }
-
-      expect(requestBody.input).toBeDefined()
-    })
-
-    it("returns success on valid input", () => {
-      const response = { success: true }
-      expect(response.success).toBe(true)
-    })
-
-    it("returns error when run is not awaiting input", () => {
-      const errorResponse = {
-        error: "Run is not awaiting input",
-        status: "running",
-      }
-
-      expect(errorResponse.error).toContain("not awaiting input")
-    })
-
-    it("accepts various input types", () => {
-      const stringInput = { input: "user response" }
-      const objectInput = { input: { key: "value" } }
-      const arrayInput = { input: [1, 2, 3] }
-      const numberInput = { input: 42 }
-      const booleanInput = { input: true }
-
-      expect(stringInput.input).toBeDefined()
-      expect(objectInput.input).toBeDefined()
-      expect(arrayInput.input).toBeDefined()
-      expect(numberInput.input).toBeDefined()
-      expect(booleanInput.input).toBeDefined()
-    })
-  })
-
-  describe("Agent Run Cancellation", () => {
-    it("returns success on successful cancel", () => {
-      const response = { success: true }
-      expect(response.success).toBe(true)
-    })
-
-    it("only active runs can be canceled", () => {
-      const cancelableStatuses = ["queued", "initializing", "running", "awaiting_input"]
-      const nonCancelableStatuses = ["succeeded", "failed", "canceled", "timed_out"]
-
-      expect(cancelableStatuses).toContain("running")
-      expect(cancelableStatuses).toContain("awaiting_input")
-      expect(nonCancelableStatuses).not.toContain("running")
-    })
-
-    it("returns error for non-cancelable runs", () => {
-      const errorResponse = {
-        error: "Cannot cancel run (not found or already completed)",
-      }
-
-      expect(errorResponse.error).toContain("Cannot cancel")
-    })
-  })
-
-  describe("SSE Stream", () => {
-    it("stream response format", () => {
-      const events = [
-        { event: "status", data: { status: "running", startedAt: "2024-01-01T00:00:00Z" } },
-        { event: "step", data: { stepNumber: 1, type: "thinking", output: "Processing..." } },
-        { event: "done", data: { status: "succeeded", result: { output: "Complete" } } },
-      ]
-
-      expect(events).toHaveLength(3)
-      expect(events[0].event).toBe("status")
-      expect(events[1].event).toBe("step")
-      expect(events[2].event).toBe("done")
-    })
-
-    it("done event includes final result", () => {
-      const doneEvent = {
-        event: "done",
-        data: {
-          status: "succeeded",
-          result: { answer: "42" },
-          error: null,
-          completedAt: "2024-01-01T00:10:00Z",
-        },
-      }
-
-      expect(doneEvent.data.status).toBe("succeeded")
-      expect(doneEvent.data.result).toBeDefined()
-      expect(doneEvent.data.completedAt).toBeDefined()
-    })
-
-    it("step events include step details", () => {
-      const stepEvent = {
-        event: "step",
-        data: {
-          stepNumber: 2,
-          type: "tool_call",
-          name: "search",
-          output: { results: ["item1", "item2"] },
-        },
-      }
-
-      expect(stepEvent.data.stepNumber).toBe(2)
-      expect(stepEvent.data.type).toBe("tool_call")
-      expect(stepEvent.data.name).toBe("search")
-    })
-  })
-
   describe("Rate Limiting", () => {
     it("rate limit applies per API key", () => {
       const keyId = "key-456"
@@ -586,12 +277,6 @@ describe("V1 API Routes", () => {
       expect(headers["X-RateLimit-Reset"]).toBeDefined()
     })
 
-    it("agent run uses job creation rate limit", () => {
-      const jobCreateLimit = { maxRequests: 10, windowMs: 60000 }
-      const agentRunLimit = jobCreateLimit
-
-      expect(agentRunLimit.maxRequests).toBe(jobCreateLimit.maxRequests)
-    })
   })
 
   describe("Error Responses", () => {
@@ -606,24 +291,14 @@ describe("V1 API Routes", () => {
     })
 
     it("403 for missing scope", () => {
-      const scope = "jobs:cancel"
+      const scope = "hackathons:write"
       const errorResponse = { error: `Missing required scope: ${scope}` }
-      expect(errorResponse.error).toContain("jobs:cancel")
+      expect(errorResponse.error).toContain("hackathons:write")
     })
 
     it("404 for not found job", () => {
       const errorResponse = { error: "Job not found" }
       expect(errorResponse.error).toBe("Job not found")
-    })
-
-    it("404 for not found agent", () => {
-      const errorResponse = { error: "Agent not found" }
-      expect(errorResponse.error).toBe("Agent not found")
-    })
-
-    it("404 for not found run", () => {
-      const errorResponse = { error: "Run not found" }
-      expect(errorResponse.error).toBe("Run not found")
     })
 
     it("429 for rate limit exceeded", () => {
@@ -646,14 +321,6 @@ describe("V1 API Routes", () => {
       expect(invalidBody.type.length).toBe(0)
     })
 
-    it("agent prompt is required and non-empty", () => {
-      const validBody = { prompt: "Analyze this" }
-      const invalidBody = { prompt: "" }
-
-      expect(validBody.prompt.length).toBeGreaterThan(0)
-      expect(invalidBody.prompt.length).toBe(0)
-    })
-
     it("input field accepts any JSON", () => {
       const inputs = [
         { input: "string" },
@@ -669,18 +336,6 @@ describe("V1 API Routes", () => {
       }
     })
 
-    it("context field accepts any JSON", () => {
-      const contexts = [
-        { prompt: "test", context: "string" },
-        { prompt: "test", context: 123 },
-        { prompt: "test", context: [1, 2, 3] },
-        { prompt: "test", context: { key: "value" } },
-      ]
-
-      for (const body of contexts) {
-        expect(body.context !== undefined).toBe(true)
-      }
-    })
   })
 
   describe("Response Format Consistency", () => {
@@ -698,63 +353,11 @@ describe("V1 API Routes", () => {
       expect(job).toHaveProperty("createdAt")
     })
 
-    it("agent run response includes runId, agentId, status, createdAt", () => {
-      const run = {
-        runId: "run-1",
-        agentId: "agent-1",
-        status: "queued",
-        createdAt: "2024-01-01T00:00:00Z",
-      }
-
-      expect(run).toHaveProperty("runId")
-      expect(run).toHaveProperty("agentId")
-      expect(run).toHaveProperty("status")
-      expect(run).toHaveProperty("createdAt")
-    })
-
-    it("run details include triggerType", () => {
-      const runDetails = {
-        id: "run-1",
-        agentId: "agent-1",
-        status: "running",
-        triggerType: "manual",
-      }
-
-      expect(runDetails).toHaveProperty("triggerType")
-    })
-
-    it("run result includes steps array", () => {
-      const runResult = {
-        id: "run-1",
-        agentId: "agent-1",
-        status: "succeeded",
-        result: {},
-        steps: [],
-      }
-
-      expect(runResult).toHaveProperty("steps")
-      expect(Array.isArray(runResult.steps)).toBe(true)
-    })
-
-    it("step includes required fields", () => {
-      const step = {
-        stepNumber: 1,
-        type: "tool_call",
-        name: "search",
-        output: { results: [] },
-        durationMs: 150,
-      }
-
-      expect(step).toHaveProperty("stepNumber")
-      expect(step).toHaveProperty("type")
-      expect(step).toHaveProperty("output")
-    })
-
     it("whoami response includes tenantId, keyId, scopes", () => {
       const whoami = {
         tenantId: "tenant-1",
         keyId: "key-1",
-        scopes: ["jobs:create"],
+        scopes: ["hackathons:write"],
       }
 
       expect(whoami).toHaveProperty("tenantId")
@@ -776,7 +379,7 @@ describe("V1 API Routes", () => {
     })
 
     it("handles special characters in IDs", () => {
-      const ids = ["job_with-special.chars", "run-123_abc", "agent.v1.test"]
+      const ids = ["job_with-special.chars", "hackathon-123_abc", "team.v1.test"]
 
       for (const id of ids) {
         expect(id).toBeDefined()

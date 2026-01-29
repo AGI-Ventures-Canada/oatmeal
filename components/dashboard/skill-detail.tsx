@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
 "use client"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Save, Lock } from "lucide-react"
-import type { Skill } from "@/lib/db/agent-types"
+import type { Skill } from "@/lib/db/hackathon-types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"

@@ -10,13 +10,13 @@ if ! docker info &>/dev/null 2>&1; then
 fi
 
 stop_other_projects() {
-  local other_containers=$(docker ps --filter "name=supabase_" --format "{{.Names}}" | grep -v "agents-server" || true)
+  local other_containers=$(docker ps --filter "name=supabase_" --format "{{.Names}}" | grep -v "oatmeal" || true)
   if [ -n "$other_containers" ]; then
     echo "Stopping other Supabase projects to free resources..."
-    docker ps --filter "name=supabase_" --format "{{.ID}} {{.Names}}" | grep -v "agents-server" | while read id name; do
+    docker ps --filter "name=supabase_" --format "{{.ID}} {{.Names}}" | grep -v "oatmeal" | while read id name; do
       echo "  Stopping $name"
     done
-    docker stop $(docker ps --filter "name=supabase_" --format "{{.ID}} {{.Names}}" | grep -v "agents-server" | awk '{print $1}') 2>/dev/null || true
+    docker stop $(docker ps --filter "name=supabase_" --format "{{.ID}} {{.Names}}" | grep -v "oatmeal" | awk '{print $1}') 2>/dev/null || true
     echo "Other projects stopped"
   fi
 }
@@ -26,13 +26,13 @@ stop_other_projects
 cleanup_corrupted_state() {
   echo "Cleaning up corrupted Docker state..."
   supabase stop --no-backup 2>/dev/null || true
-  docker ps -a --filter "name=supabase_.*_agents-server" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
-  docker network ls --filter "name=supabase_network_agents-server" --format "{{.ID}}" | xargs -r docker network rm 2>/dev/null || true
+  docker ps -a --filter "name=supabase_.*_oatmeal" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+  docker network ls --filter "name=supabase_network_oatmeal" --format "{{.ID}}" | xargs -r docker network rm 2>/dev/null || true
   sleep 2
 }
 
 verify_containers_healthy() {
-  local db_container="supabase_db_agents-server"
+  local db_container="supabase_db_oatmeal"
   if ! docker ps --format "{{.Names}}" | grep -q "^${db_container}$"; then
     return 1
   fi

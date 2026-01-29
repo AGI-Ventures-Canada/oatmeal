@@ -191,7 +191,7 @@ bun test         # Run SDK tests
 ### Using the SDK
 
 ```typescript
-import { createClient } from "@agents-server/sdk"
+import { createClient } from "@oatmeal/sdk"
 
 const client = createClient("sk_live_your_api_key", {
   baseUrl: "http://localhost:3000"  // Use local for dev
