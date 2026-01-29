@@ -4,62 +4,45 @@ import { supabase as getSupabase } from "@/lib/db/client"
 import type { Tenant } from "@/lib/db/hackathon-types"
 
 export async function getOrCreateTenant(clerkOrgId: string): Promise<Tenant | null> {
-  const { data: existing } = await getSupabase()
+  const { data, error } = await getSupabase()
     .from("tenants")
-    .select("*")
-    .eq("clerk_org_id", clerkOrgId)
-    .single()
-
-  if (existing) {
-    return existing as Tenant
-  }
-
-  const { data: created, error } = await getSupabase()
-    .from("tenants")
-    .insert({
-      clerk_org_id: clerkOrgId,
-      name: `Org ${clerkOrgId.slice(0, 8)}`,
-    })
+    .upsert(
+      { clerk_org_id: clerkOrgId, name: `Org ${clerkOrgId.slice(0, 8)}` },
+      { onConflict: "clerk_org_id" }
+    )
     .select()
     .single()
 
-  if (error || !created) {
-    console.error("Failed to create tenant:", error)
+  if (error || !data) {
+    console.error("Failed to get or create tenant:", error)
     return null
   }
 
-  return created as Tenant
+  return data as Tenant
 }
 
 export async function getOrCreatePersonalTenant(
   clerkUserId: string,
   userName?: string
 ): Promise<Tenant | null> {
-  const { data: existing } = await getSupabase()
+  const { data, error } = await getSupabase()
     .from("tenants")
-    .select("*")
-    .eq("clerk_user_id", clerkUserId)
-    .single()
-
-  if (existing) {
-    return existing as Tenant
-  }
-
-  const { data: created, error } = await getSupabase()
-    .from("tenants")
-    .insert({
-      clerk_user_id: clerkUserId,
-      name: userName ?? `Personal ${clerkUserId.slice(0, 8)}`,
-    })
+    .upsert(
+      {
+        clerk_user_id: clerkUserId,
+        name: userName ?? `Personal ${clerkUserId.slice(0, 8)}`,
+      },
+      { onConflict: "clerk_user_id" }
+    )
     .select()
     .single()
 
-  if (error || !created) {
-    console.error("Failed to create personal tenant:", error)
+  if (error || !data) {
+    console.error("Failed to get or create personal tenant:", error)
     return null
   }
 
-  return created as Tenant
+  return data as Tenant
 }
 
 export async function resolvePageTenant(): Promise<Tenant> {
