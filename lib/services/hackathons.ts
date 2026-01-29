@@ -1,4 +1,5 @@
 import { supabase as getSupabase } from "@/lib/db/client"
+import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Hackathon, HackathonParticipant } from "@/lib/db/hackathon-types"
 
 type ParticipantWithHackathon = HackathonParticipant & {
@@ -8,7 +9,7 @@ type ParticipantWithHackathon = HackathonParticipant & {
 export async function listParticipatingHackathons(
   clerkUserId: string
 ): Promise<(Hackathon & { role: string })[]> {
-  const client = getSupabase() as any
+  const client = getSupabase() as unknown as SupabaseClient
   const { data, error } = await client
     .from("hackathon_participants")
     .select("hackathon_id, role, hackathons(*)")
@@ -19,7 +20,7 @@ export async function listParticipatingHackathons(
     return []
   }
 
-  return (data as ParticipantWithHackathon[])
+  return (data as unknown as ParticipantWithHackathon[])
     .filter((r) => r.hackathons)
     .map((r) => ({ ...r.hackathons, role: r.role }))
 }
@@ -27,7 +28,7 @@ export async function listParticipatingHackathons(
 export async function listOrganizedHackathons(
   tenantId: string
 ): Promise<Hackathon[]> {
-  const client = getSupabase() as any
+  const client = getSupabase() as unknown as SupabaseClient
   const { data, error } = await client
     .from("hackathons")
     .select("*")
@@ -39,5 +40,5 @@ export async function listOrganizedHackathons(
     return []
   }
 
-  return data as Hackathon[]
+  return data as unknown as Hackathon[]
 }
