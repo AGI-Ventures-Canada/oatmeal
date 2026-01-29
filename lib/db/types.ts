@@ -742,21 +742,24 @@ export type Database = {
       }
       tenants: {
         Row: {
-          clerk_org_id: string
+          clerk_org_id: string | null
+          clerk_user_id: string | null
           created_at: string
           id: string
           name: string
           updated_at: string
         }
         Insert: {
-          clerk_org_id: string
+          clerk_org_id?: string | null
+          clerk_user_id?: string | null
           created_at?: string
           id?: string
           name: string
           updated_at?: string
         }
         Update: {
-          clerk_org_id?: string
+          clerk_org_id?: string | null
+          clerk_user_id?: string | null
           created_at?: string
           id?: string
           name?: string

@@ -1,7 +1,7 @@
-import { listSchedules } from "@/lib/services/schedules"
+import { listWebhooks } from "@/lib/services/webhooks"
 import { resolvePageTenant } from "@/lib/services/tenants"
-import { ScheduleList } from "@/components/dashboard/schedule-list"
-import { CreateScheduleButton } from "@/components/dashboard/create-schedule-button"
+import { WebhookList } from "@/components/dashboard/webhook-list"
+import { CreateWebhookButton } from "@/components/dashboard/create-webhook-button"
 import {
   Card,
   CardContent,
@@ -11,33 +11,33 @@ import {
 } from "@/components/ui/card"
 import { AutoRefresh } from "@/components/ui/auto-refresh"
 
-export default async function SchedulesPage() {
+export default async function SettingsWebhooksPage() {
   const tenant = await resolvePageTenant()
 
-  const schedules = await listSchedules(tenant.id)
+  const webhooks = await listWebhooks(tenant.id)
 
   return (
     <div className="space-y-6">
       <AutoRefresh />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Schedules</h1>
+          <h1 className="text-3xl font-bold">Webhooks</h1>
           <p className="text-muted-foreground">
-            Schedule jobs to run automatically at specific intervals
+            Receive notifications when agent events occur
           </p>
         </div>
-        <CreateScheduleButton />
+        <CreateWebhookButton />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Your Schedules</CardTitle>
+          <CardTitle>Your Webhooks</CardTitle>
           <CardDescription>
-            Configure when your jobs should run automatically
+            Configure HTTP endpoints to receive event notifications
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ScheduleList schedules={schedules} />
+          <WebhookList webhooks={webhooks} />
         </CardContent>
       </Card>
     </div>

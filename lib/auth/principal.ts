@@ -3,7 +3,7 @@ import { supabase as getSupabase } from "@/lib/db/client"
 import type { Principal, PrincipalKindMap, Scope } from "./types"
 import { scopesForRole } from "./types"
 import { verifyApiKey } from "@/lib/services/api-keys"
-import { getOrCreateTenant } from "@/lib/services/tenants"
+import { getOrCreateTenant, getOrCreatePersonalTenant } from "@/lib/services/tenants"
 
 export async function resolvePrincipal(request: Request): Promise<Principal> {
   const authHeader = request.headers.get("authorization")
@@ -28,11 +28,17 @@ export async function resolvePrincipal(request: Request): Promise<Principal> {
   }
 
   const { userId, orgId, orgRole } = await auth()
-  if (!userId || !orgId) {
+  if (!userId) {
     return { kind: "anon" }
   }
 
-  const tenant = await getOrCreateTenant(orgId)
+  let tenant
+  if (orgId) {
+    tenant = await getOrCreateTenant(orgId)
+  } else {
+    tenant = await getOrCreatePersonalTenant(userId)
+  }
+
   if (!tenant) {
     return { kind: "anon" }
   }
@@ -41,9 +47,9 @@ export async function resolvePrincipal(request: Request): Promise<Principal> {
     kind: "user",
     tenantId: tenant.id,
     userId,
-    orgId,
-    orgRole: orgRole ?? "org:member",
-    scopes: scopesForRole(orgRole ?? "org:member"),
+    orgId: orgId ?? null,
+    orgRole: orgId ? (orgRole ?? "org:member") : null,
+    scopes: scopesForRole(orgId ? (orgRole ?? "org:member") : null),
   }
 }
 

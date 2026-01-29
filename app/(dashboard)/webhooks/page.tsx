@@ -1,7 +1,5 @@
-import { auth } from "@clerk/nextjs/server"
-import { redirect } from "next/navigation"
 import { listWebhooks } from "@/lib/services/webhooks"
-import { getOrCreateTenant } from "@/lib/services/tenants"
+import { resolvePageTenant } from "@/lib/services/tenants"
 import { WebhookList } from "@/components/dashboard/webhook-list"
 import { CreateWebhookButton } from "@/components/dashboard/create-webhook-button"
 import {
@@ -14,20 +12,7 @@ import {
 import { AutoRefresh } from "@/components/ui/auto-refresh"
 
 export default async function WebhooksPage() {
-  const { userId, orgId } = await auth()
-
-  if (!userId) {
-    redirect("/sign-in")
-  }
-
-  if (!orgId) {
-    redirect("/onboarding")
-  }
-
-  const tenant = await getOrCreateTenant(orgId)
-  if (!tenant) {
-    throw new Error("Failed to get or create tenant")
-  }
+  const tenant = await resolvePageTenant()
 
   const webhooks = await listWebhooks(tenant.id)
 

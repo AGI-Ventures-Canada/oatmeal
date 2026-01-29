@@ -1,3 +1,5 @@
+import { auth } from "@clerk/nextjs/server"
+import { redirect } from "next/navigation"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { Tenant } from "@/lib/db/hackathon-types"
 
@@ -27,6 +29,59 @@ export async function getOrCreateTenant(clerkOrgId: string): Promise<Tenant | nu
   }
 
   return created as Tenant
+}
+
+export async function getOrCreatePersonalTenant(
+  clerkUserId: string,
+  userName?: string
+): Promise<Tenant | null> {
+  const { data: existing } = await getSupabase()
+    .from("tenants")
+    .select("*")
+    .eq("clerk_user_id", clerkUserId)
+    .single()
+
+  if (existing) {
+    return existing as Tenant
+  }
+
+  const { data: created, error } = await getSupabase()
+    .from("tenants")
+    .insert({
+      clerk_user_id: clerkUserId,
+      name: userName ?? `Personal ${clerkUserId.slice(0, 8)}`,
+    })
+    .select()
+    .single()
+
+  if (error || !created) {
+    console.error("Failed to create personal tenant:", error)
+    return null
+  }
+
+  return created as Tenant
+}
+
+export async function resolvePageTenant(): Promise<Tenant> {
+  const { userId, orgId } = await auth()
+
+  if (!userId) {
+    redirect("/sign-in")
+  }
+
+  let tenant: Tenant | null
+
+  if (orgId) {
+    tenant = await getOrCreateTenant(orgId)
+  } else {
+    tenant = await getOrCreatePersonalTenant(userId)
+  }
+
+  if (!tenant) {
+    throw new Error("Failed to resolve tenant")
+  }
+
+  return tenant
 }
 
 export async function getTenantById(id: string): Promise<Tenant | null> {

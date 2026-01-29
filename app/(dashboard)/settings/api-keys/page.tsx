@@ -12,7 +12,7 @@ import { resolvePageTenant } from "@/lib/services/tenants"
 import type { ApiKeyDisplay } from "@/lib/types/dashboard"
 import { AutoRefresh } from "@/components/ui/auto-refresh"
 
-export default async function KeysPage() {
+export default async function SettingsApiKeysPage() {
   const tenant = await resolvePageTenant()
 
   const apiKeys = await listApiKeys(tenant.id)

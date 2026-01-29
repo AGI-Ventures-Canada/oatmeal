@@ -27,6 +27,11 @@ describe("Auth Types", () => {
       const scopes = scopesForRole("unknown")
       expect(scopes).toEqual(["hackathons:read", "teams:read", "submissions:read"])
     })
+
+    it("returns read-only scopes for null role (personal account)", () => {
+      const scopes = scopesForRole(null)
+      expect(scopes).toEqual(["hackathons:read", "teams:read", "submissions:read"])
+    })
   })
 
   describe("hasScope", () => {
@@ -37,6 +42,15 @@ describe("Auth Types", () => {
       orgId: "org-1",
       orgRole: "org:admin",
       scopes: ["hackathons:write", "hackathons:read"],
+    }
+
+    const personalPrincipal: UserPrincipal = {
+      kind: "user",
+      tenantId: "tenant-2",
+      userId: "user-2",
+      orgId: null,
+      orgRole: null,
+      scopes: ["hackathons:read", "teams:read", "submissions:read"],
     }
 
     const apiKeyPrincipal: ApiKeyPrincipal = {
@@ -57,6 +71,14 @@ describe("Auth Types", () => {
 
     it("returns false if user lacks scope", () => {
       expect(hasScope(userPrincipal, "keys:write")).toBe(false)
+    })
+
+    it("returns true if personal user has scope", () => {
+      expect(hasScope(personalPrincipal, "hackathons:read")).toBe(true)
+    })
+
+    it("returns false if personal user lacks scope", () => {
+      expect(hasScope(personalPrincipal, "hackathons:write")).toBe(false)
     })
 
     it("returns true if api_key has scope", () => {

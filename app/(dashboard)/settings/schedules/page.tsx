@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card"
 import { AutoRefresh } from "@/components/ui/auto-refresh"
 
-export default async function SchedulesPage() {
+export default async function SettingsSchedulesPage() {
   const tenant = await resolvePageTenant()
 
   const schedules = await listSchedules(tenant.id)

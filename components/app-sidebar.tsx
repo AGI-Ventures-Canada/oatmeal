@@ -1,13 +1,16 @@
 "use client"
 
 import {
-  Key,
+  Trophy,
+  Search,
   ChevronsUpDown,
   LogOut,
   Building2,
   Settings,
   UserCog,
   BookOpen,
+  ChevronLeft,
+  Key,
   Clock,
   Webhook,
   Plug,
@@ -43,13 +46,19 @@ import {
 import { ThemeSwitcher } from "@/components/theme-switcher"
 
 const navItems = [
-  { title: "API Keys", href: "/keys", icon: Key },
-  { title: "Schedules", href: "/schedules", icon: Clock },
+  { title: "Hackathons", href: "/home", icon: Trophy },
+  { title: "Browse", href: "/browse", icon: Search },
+]
+
+const manageItems = [
+  { title: "Settings", href: "/settings", icon: Settings },
 ]
 
 const settingsItems = [
-  { title: "Webhooks", href: "/webhooks", icon: Webhook },
-  { title: "Integrations", href: "/integrations", icon: Plug },
+  { title: "API Keys", href: "/settings/api-keys", icon: Key },
+  { title: "Schedules", href: "/settings/schedules", icon: Clock },
+  { title: "Webhooks", href: "/settings/webhooks", icon: Webhook },
+  { title: "Integrations", href: "/settings/integrations", icon: Plug },
 ]
 
 export function AppSidebar() {
@@ -61,6 +70,8 @@ export function AppSidebar() {
     userMemberships: { infinite: true },
   })
 
+  const isSettingsView = pathname.startsWith("/settings")
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -70,10 +81,10 @@ export function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="h-auto py-2">
                   <div className="flex size-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
-                    {organization?.name?.charAt(0).toUpperCase() || "O"}
+                    {organization?.name?.charAt(0).toUpperCase() || user?.firstName?.charAt(0)?.toUpperCase() || "P"}
                   </div>
                   <div className="flex-1 text-left text-sm leading-tight truncate">
-                    <span className="font-semibold">{organization?.name || "Select Org"}</span>
+                    <span className="font-semibold">{organization?.name || "Personal Workspace"}</span>
                   </div>
                   <ChevronsUpDown className="size-4 opacity-50" />
                 </SidebarMenuButton>
@@ -84,6 +95,15 @@ export function AppSidebar() {
               >
                 <DropdownMenuLabel>Organizations</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setActive?.({ organization: null })}
+                  className="gap-2"
+                >
+                  <div className="flex size-5 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
+                    {user?.firstName?.charAt(0)?.toUpperCase() || "P"}
+                  </div>
+                  <span className="truncate">Personal Workspace</span>
+                </DropdownMenuItem>
                 {userMemberships?.data?.map((mem) => (
                   <DropdownMenuItem
                     key={mem.organization.id}
@@ -97,10 +117,12 @@ export function AppSidebar() {
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => openOrganizationProfile()}>
-                  <Settings className="size-4 mr-2" />
-                  Organization Settings
-                </DropdownMenuItem>
+                {organization && (
+                  <DropdownMenuItem onClick={() => openOrganizationProfile()}>
+                    <Settings className="size-4 mr-2" />
+                    Organization Settings
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link href="/onboarding" className="gap-2">
                     <Building2 className="size-4" />
@@ -113,55 +135,88 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
+        {isSettingsView ? (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href="/home">
+                      <ChevronLeft />
+                      <span className="font-semibold">Settings</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Settings</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {settingsItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Resources</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/docs">
-                    <BookOpen />
-                    <span>Documentation</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+              </SidebarMenu>
+            </SidebarGroupContent>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {settingsItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={pathname === item.href}>
+                      <Link href={item.href}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : (
+          <>
+            <SidebarGroup>
+              <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {navItems.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Manage</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {manageItems.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Resources</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href="/docs">
+                        <BookOpen />
+                        <span>Documentation</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>

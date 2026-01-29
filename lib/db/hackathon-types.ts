@@ -121,7 +121,8 @@ export interface Job {
 
 export interface Tenant {
   id: string
-  clerk_org_id: string
+  clerk_org_id: string | null
+  clerk_user_id: string | null
   name: string
   created_at: string
   updated_at: string

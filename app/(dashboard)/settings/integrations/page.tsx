@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card"
 import { AutoRefresh } from "@/components/ui/auto-refresh"
 
-export default async function IntegrationsPage() {
+export default async function SettingsIntegrationsPage() {
   const tenant = await resolvePageTenant()
 
   const [integrations, credentials] = await Promise.all([
