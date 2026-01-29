@@ -38,8 +38,8 @@ export type UserPrincipal = {
   kind: "user"
   tenantId: string
   userId: string
-  orgId: string
-  orgRole: string
+  orgId: string | null
+  orgRole: string | null
   scopes: Scope[]
 }
 
@@ -62,7 +62,7 @@ export type PrincipalKindMap = {
   anon: AnonPrincipal
 }
 
-export function scopesForRole(role: string): Scope[] {
+export function scopesForRole(role: string | null): Scope[] {
   if (role === "org:admin") {
     return ALL_SCOPES
   }

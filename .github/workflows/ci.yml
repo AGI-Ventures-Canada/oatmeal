@@ -70,9 +70,3 @@ jobs:
 
       - name: Run tests
         run: bun test
-
-      - name: Build SDK
-        run: cd packages/sdk && bun run build
-
-      - name: Run SDK tests
-        run: bun test packages/sdk

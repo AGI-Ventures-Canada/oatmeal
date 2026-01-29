@@ -41,6 +41,10 @@ export function createMockSupabaseClient() {
         insertData = data
         return query
       },
+      upsert: (data: unknown, _opts?: { onConflict: string }) => {
+        insertData = data
+        return query
+      },
       update: (data: unknown) => {
         updateData = data
         return query

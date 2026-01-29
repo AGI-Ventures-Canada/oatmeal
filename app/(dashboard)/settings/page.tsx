@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
 
-export default function KeysPage() {
+export default function SettingsPage() {
   redirect("/settings/api-keys")
 }

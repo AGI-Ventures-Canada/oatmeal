@@ -173,7 +173,7 @@ describe("Dashboard Routes", () => {
   })
 
   describe("User Principal Info", () => {
-    it("returns essential user info from /me endpoint", () => {
+    it("returns essential user info from /me endpoint for org user", () => {
       const principal = {
         kind: "user" as const,
         tenantId: "tenant-123",
@@ -195,6 +195,32 @@ describe("Dashboard Routes", () => {
       expect(meResponse.userId).toBe("user-456")
       expect(meResponse.orgId).toBe("org-789")
       expect(meResponse.scopes).toContain("keys:read")
+    })
+
+    it("returns essential user info from /me endpoint for personal user", () => {
+      const principal = {
+        kind: "user" as const,
+        tenantId: "tenant-personal",
+        userId: "user-456",
+        orgId: null,
+        orgRole: null,
+        scopes: ["hackathons:read", "teams:read", "submissions:read"] as Scope[],
+      }
+
+      const meResponse = {
+        tenantId: principal.tenantId,
+        userId: principal.userId,
+        orgId: principal.orgId,
+        orgRole: principal.orgRole,
+        scopes: principal.scopes,
+      }
+
+      expect(meResponse.tenantId).toBe("tenant-personal")
+      expect(meResponse.userId).toBe("user-456")
+      expect(meResponse.orgId).toBeNull()
+      expect(meResponse.orgRole).toBeNull()
+      expect(meResponse.scopes).toContain("hackathons:read")
+      expect(meResponse.scopes).not.toContain("keys:write")
     })
   })
 })
