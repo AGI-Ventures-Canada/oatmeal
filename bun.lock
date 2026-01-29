@@ -60,21 +60,12 @@
         "typescript": "^5",
       },
     },
-    "packages/sdk": {
-      "name": "@agents-server/sdk",
-      "version": "0.1.0",
-      "peerDependencies": {
-        "typescript": ">=5.0.0",
-      },
-    },
   },
   "trustedDependencies": [
     "sharp",
     "unrs-resolver",
   ],
   "packages": {
-    "@agents-server/sdk": ["@agents-server/sdk@workspace:packages/sdk"],
-
     "@ai-sdk/anthropic": ["@ai-sdk/anthropic@3.0.12", "", { "dependencies": { "@ai-sdk/provider": "3.0.2", "@ai-sdk/provider-utils": "4.0.5" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-1ygMQ2acJ9k+CPRuDiywtkuQwSdsZwAISgbRIayE3PF/Ct2b80c4iGS1CbycYMx+yswPyBMOuPTqebh9vvwMMg=="],
 
     "@ai-sdk/gateway": ["@ai-sdk/gateway@3.0.11", "", { "dependencies": { "@ai-sdk/provider": "3.0.2", "@ai-sdk/provider-utils": "4.0.4", "@vercel/oidc": "3.1.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-gLrgNXA95wdo/zAlA0miX/SJEYKSYCHg+e0Y/uQeABLScZAMjPw3jWaeANta/Db1T4xfi8cBvY3nnV8Pa27z+w=="],
