@@ -1,5 +1,5 @@
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { AuditLog } from "@/lib/db/agent-types"
+import type { AuditLog } from "@/lib/db/hackathon-types"
 import type { Json } from "@/lib/db/types"
 import type { Principal } from "@/lib/auth/types"
 

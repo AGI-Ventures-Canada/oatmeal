@@ -15,7 +15,6 @@ export type RateLimitConfig = {
 
 export const defaultRateLimits: Record<string, RateLimitConfig> = {
   "api_key:default": { maxRequests: 100, windowMs: 60_000 },
-  "api_key:jobs:create": { maxRequests: 10, windowMs: 60_000 },
   "user:default": { maxRequests: 200, windowMs: 60_000 },
 }
 

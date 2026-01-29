@@ -44,7 +44,6 @@ export type Database = {
           id: string
           idempotency_key: string | null
           input: Json | null
-          job_id: string | null
           output: Json | null
           result: Json | null
           sandbox_id: string | null
@@ -65,7 +64,6 @@ export type Database = {
           id?: string
           idempotency_key?: string | null
           input?: Json | null
-          job_id?: string | null
           output?: Json | null
           result?: Json | null
           sandbox_id?: string | null
@@ -86,7 +84,6 @@ export type Database = {
           id?: string
           idempotency_key?: string | null
           input?: Json | null
-          job_id?: string | null
           output?: Json | null
           result?: Json | null
           sandbox_id?: string | null
@@ -111,13 +108,6 @@ export type Database = {
             columns: ["created_by_key_id"]
             isOneToOne: false
             referencedRelation: "api_keys"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_runs_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
           {
@@ -380,69 +370,6 @@ export type Database = {
             columns: ["email_address_id"]
             isOneToOne: false
             referencedRelation: "email_addresses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      jobs: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          created_by_key_id: string | null
-          error: Json | null
-          id: string
-          idempotency_key: string | null
-          input: Json | null
-          result: Json | null
-          status_cache: Database["public"]["Enums"]["job_status"]
-          tenant_id: string
-          type: string
-          updated_at: string
-          workflow_run_id: string | null
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          created_by_key_id?: string | null
-          error?: Json | null
-          id?: string
-          idempotency_key?: string | null
-          input?: Json | null
-          result?: Json | null
-          status_cache?: Database["public"]["Enums"]["job_status"]
-          tenant_id: string
-          type: string
-          updated_at?: string
-          workflow_run_id?: string | null
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          created_by_key_id?: string | null
-          error?: Json | null
-          id?: string
-          idempotency_key?: string | null
-          input?: Json | null
-          result?: Json | null
-          status_cache?: Database["public"]["Enums"]["job_status"]
-          tenant_id?: string
-          type?: string
-          updated_at?: string
-          workflow_run_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "jobs_created_by_key_id_fkey"
-            columns: ["created_by_key_id"]
-            isOneToOne: false
-            referencedRelation: "api_keys"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -954,7 +881,6 @@ export type Database = {
         | "timed_out"
       agent_type: "ai_sdk" | "claude_sdk"
       integration_provider: "gmail" | "google_calendar" | "notion" | "luma"
-      job_status: "queued" | "running" | "succeeded" | "failed" | "canceled"
       luma_event_type:
         | "event.created"
         | "event.updated"
@@ -1117,7 +1043,6 @@ export const Constants = {
       ],
       agent_type: ["ai_sdk", "claude_sdk"],
       integration_provider: ["gmail", "google_calendar", "notion", "luma"],
-      job_status: ["queued", "running", "succeeded", "failed", "canceled"],
       luma_event_type: [
         "event.created",
         "event.updated",

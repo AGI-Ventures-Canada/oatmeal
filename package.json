@@ -1,8 +1,8 @@
 {
-  "name": "agents-server",
+  "name": "oatmeal",
   "version": "0.1.0",
+  "description": "Hackathon platform",
   "private": true,
-  "workspaces": ["packages/*"],
   "scripts": {
     "predev": "./scripts/setup-local-db.sh",
     "dev": "next dev",
@@ -12,7 +12,6 @@
     "start": "next start",
     "lint": "eslint",
     "test": "bun test",
-    "test:sdk": "bun scripts/test-sdk.ts",
     "db:sync": "supabase db reset && supabase gen types typescript --local > lib/db/types.ts",
     "db:diff": "supabase db diff -f",
     "update-types": "supabase gen types typescript --local > lib/db/types.ts",

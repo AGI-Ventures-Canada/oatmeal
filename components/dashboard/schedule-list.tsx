@@ -9,9 +9,8 @@ import {
   Trash2,
   Play,
   Pause,
-  Bot,
 } from "lucide-react"
-import type { Schedule } from "@/lib/db/agent-types"
+import type { Schedule } from "@/lib/db/hackathon-types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -50,7 +49,6 @@ import { EditScheduleForm } from "@/components/dashboard/edit-schedule-form"
 
 interface ScheduleListProps {
   schedules: Schedule[]
-  agentMap: Map<string, string>
 }
 
 const frequencyLabels: Record<string, string> = {
@@ -62,7 +60,7 @@ const frequencyLabels: Record<string, string> = {
   cron: "Custom (Cron)",
 }
 
-export function ScheduleList({ schedules, agentMap }: ScheduleListProps) {
+export function ScheduleList({ schedules }: ScheduleListProps) {
   const router = useRouter()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -131,7 +129,7 @@ export function ScheduleList({ schedules, agentMap }: ScheduleListProps) {
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
-            <TableHead>Agent</TableHead>
+            <TableHead>Job Type</TableHead>
             <TableHead>Frequency</TableHead>
             <TableHead>Next Run</TableHead>
             <TableHead>Last Run</TableHead>
@@ -151,16 +149,9 @@ export function ScheduleList({ schedules, agentMap }: ScheduleListProps) {
                 )}
               </TableCell>
               <TableCell>
-                {schedule.agent_id ? (
-                  <span className="flex items-center gap-1.5">
-                    <Bot className="size-3.5" />
-                    {agentMap.get(schedule.agent_id) ?? "Unknown"}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">
-                    {schedule.job_type ?? "—"}
-                  </span>
-                )}
+                <span className="text-muted-foreground">
+                  {schedule.job_type ?? "—"}
+                </span>
               </TableCell>
               <TableCell>
                 <Badge variant="outline">

@@ -16,17 +16,17 @@ The official TypeScript SDK provides a type-safe client for interacting with the
 <Tabs items={['npm', 'pnpm', 'bun']} persist groupId="package-manager">
   <Tab value="npm">
   ```bash
-  npm install @agents-server/sdk
+  npm install @oatmeal/sdk
   ```
   </Tab>
   <Tab value="pnpm">
   ```bash
-  pnpm add @agents-server/sdk
+  pnpm add @oatmeal/sdk
   ```
   </Tab>
   <Tab value="bun">
   ```bash
-  bun add @agents-server/sdk
+  bun add @oatmeal/sdk
   ```
   </Tab>
 </Tabs>
@@ -35,7 +35,7 @@ The official TypeScript SDK provides a type-safe client for interacting with the
 
 Initialize the client with your API key:
 
-<CodeBlock language="typescript" code={"import { createClient } from \"@agents-server/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)"}>
+<CodeBlock language="typescript" code={"import { createClient } from \"@oatmeal/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)"}>
   <CodeBlockHeader>
     <CodeBlockFilename>lib/agents.ts</CodeBlockFilename>
     <CodeBlockActions>

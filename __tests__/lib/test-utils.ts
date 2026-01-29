@@ -6,14 +6,14 @@ export const mockUserPrincipal: UserPrincipal = {
   userId: "test-user-id",
   orgId: "test-org-id",
   orgRole: "org:admin",
-  scopes: ["jobs:create", "jobs:read", "jobs:cancel", "keys:read", "keys:write"],
+  scopes: ["hackathons:read", "hackathons:write", "keys:read", "keys:write", "webhooks:read", "webhooks:write"],
 }
 
 export const mockApiKeyPrincipal: ApiKeyPrincipal = {
   kind: "api_key",
   tenantId: "test-tenant-id",
   keyId: "test-key-id",
-  scopes: ["jobs:create", "jobs:read"],
+  scopes: ["hackathons:read", "hackathons:write"],
 }
 
 export const mockAnonPrincipal: Principal = {

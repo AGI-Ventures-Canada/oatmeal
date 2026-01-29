@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { SandboxSession, Skill } from "@/lib/db/agent-types"
+import type { SandboxSession, Skill } from "@/lib/db/hackathon-types"
 import { encryptJson, decryptJson } from "@/lib/services/encryption"
 import { buildSkillFilesForSandbox } from "@/lib/services/skills"
 

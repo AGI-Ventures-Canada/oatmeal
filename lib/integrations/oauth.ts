@@ -1,5 +1,5 @@
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { OrgIntegration, IntegrationProvider } from "@/lib/db/agent-types"
+import type { OrgIntegration, IntegrationProvider } from "@/lib/db/hackathon-types"
 import { encryptToken, decryptToken } from "@/lib/services/encryption"
 
 export interface OAuthProviderConfig {

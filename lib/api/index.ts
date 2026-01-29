@@ -10,9 +10,9 @@ export const api = new Elysia({ prefix: "/api" })
       path: "/swagger",
       documentation: {
         info: {
-          title: "Agents Server API",
+          title: "Oatmeal API",
           version: "1.0.0",
-          description: `API for running AI agents at scale.
+          description: `API for the Oatmeal hackathon platform.
 
 ## Authentication
 
@@ -25,10 +25,6 @@ export const api = new Elysia({ prefix: "/api" })
 \`\`\`
 Authorization: Bearer sk_live_your_api_key_here
 \`\`\`
-
-## Code Samples
-
-See [API_SAMPLES.md](https://github.com/AGI-Ventures-Canada/agents-server/blob/main/lib/api/API_SAMPLES.md) for complete code samples in TypeScript, Python, and curl.
 `,
         },
         tags: [

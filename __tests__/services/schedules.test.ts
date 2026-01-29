@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { calculateNextRun } from "@/lib/services/schedules"
-import type { ScheduleFrequency } from "@/lib/db/agent-types"
+import type { ScheduleFrequency } from "@/lib/db/hackathon-types"
 
 describe("Schedules Service", () => {
   describe("calculateNextRun", () => {
@@ -185,7 +185,7 @@ describe("Schedules Service", () => {
           name: "My Schedule",
           frequency: "daily" as ScheduleFrequency,
           timezone: "UTC",
-          agentId: "agent-456",
+          jobType: "cleanup",
           input: { key: "value" },
         }
 

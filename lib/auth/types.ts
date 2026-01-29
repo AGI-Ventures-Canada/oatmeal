@@ -1,49 +1,37 @@
 export type Scope =
-  | "jobs:create"
-  | "jobs:read"
-  | "jobs:cancel"
   | "keys:read"
   | "keys:write"
-  | "agents:read"
-  | "agents:run"
-  | "agents:manage"
-  | "skills:read"
-  | "skills:write"
   | "webhooks:read"
   | "webhooks:write"
-  | "schedules:read"
-  | "schedules:write"
+  | "hackathons:read"
+  | "hackathons:write"
+  | "teams:read"
+  | "teams:write"
+  | "submissions:read"
+  | "submissions:write"
+  | "analytics:read"
 
 export const ALL_SCOPES: Scope[] = [
-  "jobs:create",
-  "jobs:read",
-  "jobs:cancel",
   "keys:read",
   "keys:write",
-  "agents:read",
-  "agents:run",
-  "agents:manage",
-  "skills:read",
-  "skills:write",
   "webhooks:read",
   "webhooks:write",
-  "schedules:read",
-  "schedules:write",
+  "hackathons:read",
+  "hackathons:write",
+  "teams:read",
+  "teams:write",
+  "submissions:read",
+  "submissions:write",
+  "analytics:read",
 ]
 
 export const DEFAULT_API_KEY_SCOPES: Scope[] = [
-  "jobs:create",
-  "jobs:read",
-  "jobs:cancel",
-  "agents:read",
-  "agents:run",
-  "agents:manage",
-  "skills:read",
-  "skills:write",
+  "hackathons:read",
+  "teams:read",
+  "submissions:read",
+  "submissions:write",
   "webhooks:read",
   "webhooks:write",
-  "schedules:read",
-  "schedules:write",
 ]
 
 export type UserPrincipal = {
@@ -78,7 +66,7 @@ export function scopesForRole(role: string): Scope[] {
   if (role === "org:admin") {
     return ALL_SCOPES
   }
-  return ["jobs:read", "keys:read"]
+  return ["hackathons:read", "teams:read", "submissions:read"]
 }
 
 export function hasScope(principal: Principal, scope: Scope): boolean {

@@ -1,7 +1,7 @@
 # Agents Server
 
 [![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?logo=vercel)](https://vercel.com)
-[![CI](https://github.com/AGI-Ventures-Canada/agents-server/actions/workflows/ci.yml/badge.svg)](https://github.com/AGI-Ventures-Canada/agents-server/actions/workflows/ci.yml)
+[![CI](https://github.com/AGI-Ventures-Canada/oatmeal/actions/workflows/ci.yml/badge.svg)](https://github.com/AGI-Ventures-Canada/oatmeal/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Bun](https://img.shields.io/badge/Bun-Runtime-f9f1e1?logo=bun)](https://bun.sh/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
@@ -53,15 +53,15 @@ A type-safe TypeScript SDK is included in `packages/sdk/` for integrating with t
 ### Installation
 
 ```bash
-npm install @agents-server/sdk
+npm install @oatmeal/sdk
 # or
-bun add @agents-server/sdk
+bun add @oatmeal/sdk
 ```
 
 ### Usage
 
 ```typescript
-import { createClient } from "@agents-server/sdk"
+import { createClient } from "@oatmeal/sdk"
 
 const client = createClient("sk_live_your_api_key", {
   baseUrl: "https://your-api-domain.com"

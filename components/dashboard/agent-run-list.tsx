@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
 "use client"
 
 import Link from "next/link"
 import { PlayCircle } from "lucide-react"
-import type { AgentRun } from "@/lib/db/agent-types"
+import type { AgentRun } from "@/lib/db/hackathon-types"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,

@@ -23,24 +23,28 @@ import { ALL_SCOPES, type Scope } from "@/lib/auth/types"
 
 const SCOPE_GROUPS = [
   {
-    name: "Jobs",
-    scopes: ["jobs:create", "jobs:read", "jobs:cancel"] as Scope[],
-  },
-  {
-    name: "Agents",
-    scopes: ["agents:read", "agents:run", "agents:manage"] as Scope[],
-  },
-  {
-    name: "Skills",
-    scopes: ["skills:read", "skills:write"] as Scope[],
+    name: "Keys",
+    scopes: ["keys:read", "keys:write"] as Scope[],
   },
   {
     name: "Webhooks",
     scopes: ["webhooks:read", "webhooks:write"] as Scope[],
   },
   {
-    name: "Schedules",
-    scopes: ["schedules:read", "schedules:write"] as Scope[],
+    name: "Hackathons",
+    scopes: ["hackathons:read", "hackathons:write"] as Scope[],
+  },
+  {
+    name: "Teams",
+    scopes: ["teams:read", "teams:write"] as Scope[],
+  },
+  {
+    name: "Submissions",
+    scopes: ["submissions:read", "submissions:write"] as Scope[],
+  },
+  {
+    name: "Analytics",
+    scopes: ["analytics:read"] as Scope[],
   },
 ]
 

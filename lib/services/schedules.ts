@@ -1,5 +1,5 @@
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { Schedule, ScheduleFrequency } from "@/lib/db/agent-types"
+import type { Schedule, ScheduleFrequency } from "@/lib/db/hackathon-types"
 import type { Json } from "@/lib/db/types"
 
 export type CreateScheduleInput = {
@@ -9,7 +9,6 @@ export type CreateScheduleInput = {
   cronExpression?: string
   timezone?: string
   runTime?: string // HH:MM format
-  agentId?: string
   jobType?: string
   input?: Json
 }
@@ -27,8 +26,8 @@ export type UpdateScheduleInput = {
 export async function createSchedule(
   input: CreateScheduleInput
 ): Promise<Schedule | null> {
-  if (!input.agentId && !input.jobType) {
-    console.error("Either agentId or jobType must be provided")
+  if (!input.jobType) {
+    console.error("jobType must be provided")
     return null
   }
 
@@ -47,7 +46,6 @@ export async function createSchedule(
       frequency: input.frequency,
       cron_expression: input.cronExpression ?? null,
       timezone: input.timezone ?? "UTC",
-      agent_id: input.agentId ?? null,
       job_type: input.jobType ?? null,
       input: input.input ?? null,
       next_run_at: nextRunAt?.toISOString() ?? null,

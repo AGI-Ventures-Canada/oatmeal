@@ -64,13 +64,6 @@ describe("Rate Limiting", () => {
       expect(defaultRateLimits["api_key:default"].maxRequests).toBe(100)
     })
 
-    it("has stricter limit for jobs:create", () => {
-      expect(defaultRateLimits["api_key:jobs:create"]).toBeDefined()
-      expect(defaultRateLimits["api_key:jobs:create"].maxRequests).toBeLessThan(
-        defaultRateLimits["api_key:default"].maxRequests
-      )
-    })
-
     it("has user:default config", () => {
       expect(defaultRateLimits["user:default"]).toBeDefined()
       expect(defaultRateLimits["user:default"].maxRequests).toBe(200)

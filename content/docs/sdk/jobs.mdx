@@ -83,7 +83,7 @@ Cancel a queued or running job:
 
 ## Full Example
 
-<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@agents-server/sdk\"\n\nconst client = createClient(process.env.API_KEY!, {\n  baseUrl: process.env.API_URL!\n})\n\nasync function processDocument(url: string) {\n  // Create job\n  const { data: job, error } = await client.jobs.create({\n    type: \"process-document\",\n    input: { url }\n  })\n\n  if (error) {\n    throw new Error(error.error)\n  }\n\n  // Wait for completion\n  const result = await client.jobs.waitForResult(job.id)\n\n  if (result.status === \"failed\") {\n    throw new Error(String(result.error))\n  }\n\n  return result.result\n}"}>
+<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@oatmeal/sdk\"\n\nconst client = createClient(process.env.API_KEY!, {\n  baseUrl: process.env.API_URL!\n})\n\nasync function processDocument(url: string) {\n  // Create job\n  const { data: job, error } = await client.jobs.create({\n    type: \"process-document\",\n    input: { url }\n  })\n\n  if (error) {\n    throw new Error(error.error)\n  }\n\n  // Wait for completion\n  const result = await client.jobs.waitForResult(job.id)\n\n  if (result.status === \"failed\") {\n    throw new Error(String(result.error))\n  }\n\n  return result.result\n}"}>
   <CodeBlockHeader>
     <CodeBlockFilename>full-example.ts</CodeBlockFilename>
     <CodeBlockActions>
