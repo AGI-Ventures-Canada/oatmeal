@@ -4,45 +4,69 @@ import { supabase as getSupabase } from "@/lib/db/client"
 import type { Tenant } from "@/lib/db/hackathon-types"
 
 export async function getOrCreateTenant(clerkOrgId: string): Promise<Tenant | null> {
-  const { data, error } = await getSupabase()
+  const { data: existing } = await getSupabase()
+    .from("tenants")
+    .select("*")
+    .eq("clerk_org_id", clerkOrgId)
+    .single()
+
+  if (existing) return existing as Tenant
+
+  const { data: created, error } = await getSupabase()
     .from("tenants")
     .upsert(
       { clerk_org_id: clerkOrgId, name: `Org ${clerkOrgId.slice(0, 8)}` },
-      { onConflict: "clerk_org_id" }
+      { onConflict: "clerk_org_id", ignoreDuplicates: true }
     )
     .select()
     .single()
 
-  if (error || !data) {
-    console.error("Failed to get or create tenant:", error)
-    return null
+  if (error || !created) {
+    const { data: retried } = await getSupabase()
+      .from("tenants")
+      .select("*")
+      .eq("clerk_org_id", clerkOrgId)
+      .single()
+    return (retried as Tenant) ?? null
   }
 
-  return data as Tenant
+  return created as Tenant
 }
 
 export async function getOrCreatePersonalTenant(
   clerkUserId: string,
   userName?: string
 ): Promise<Tenant | null> {
-  const { data, error } = await getSupabase()
+  const { data: existing } = await getSupabase()
+    .from("tenants")
+    .select("*")
+    .eq("clerk_user_id", clerkUserId)
+    .single()
+
+  if (existing) return existing as Tenant
+
+  const { data: created, error } = await getSupabase()
     .from("tenants")
     .upsert(
       {
         clerk_user_id: clerkUserId,
         name: userName ?? `Personal ${clerkUserId.slice(0, 8)}`,
       },
-      { onConflict: "clerk_user_id" }
+      { onConflict: "clerk_user_id", ignoreDuplicates: true }
     )
     .select()
     .single()
 
-  if (error || !data) {
-    console.error("Failed to get or create personal tenant:", error)
-    return null
+  if (error || !created) {
+    const { data: retried } = await getSupabase()
+      .from("tenants")
+      .select("*")
+      .eq("clerk_user_id", clerkUserId)
+      .single()
+    return (retried as Tenant) ?? null
   }
 
-  return data as Tenant
+  return created as Tenant
 }
 
 export async function resolvePageTenant(): Promise<Tenant> {
