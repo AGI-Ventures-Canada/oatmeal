@@ -609,3 +609,536 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
     return { success: true }
   })
+  .get("/hackathons", async ({ principal }) => {
+    requirePrincipal(principal, ["user"])
+
+    const { listOrganizedHackathons } = await import("@/lib/services/hackathons")
+    const hackathons = await listOrganizedHackathons(principal.tenantId)
+
+    return {
+      hackathons: hackathons.map((h) => ({
+        id: h.id,
+        name: h.name,
+        slug: h.slug,
+        status: h.status,
+        startsAt: h.starts_at,
+        endsAt: h.ends_at,
+        createdAt: h.created_at,
+      })),
+    }
+  })
+  .post(
+    "/hackathons",
+    async ({ principal, body }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { createHackathon } = await import("@/lib/services/hackathons")
+      const hackathon = await createHackathon(principal.tenantId, {
+        name: body.name,
+        description: body.description,
+      })
+
+      if (!hackathon) {
+        return new Response(JSON.stringify({ error: "Failed to create hackathon" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      await logAudit({
+        principal,
+        action: "hackathon.created",
+        resourceType: "hackathon",
+        resourceId: hackathon.id,
+        metadata: { name: hackathon.name },
+      })
+
+      return {
+        id: hackathon.id,
+        name: hackathon.name,
+        slug: hackathon.slug,
+      }
+    },
+    {
+      body: t.Object({
+        name: t.String({ minLength: 1 }),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+    }
+  )
+  .get("/hackathons/:id", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user"])
+
+    const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
+    const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+
+    if (!hackathon) {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    return {
+      id: hackathon.id,
+      name: hackathon.name,
+      slug: hackathon.slug,
+      description: hackathon.description,
+      rules: hackathon.rules,
+      bannerUrl: hackathon.banner_url,
+      status: hackathon.status,
+      startsAt: hackathon.starts_at,
+      endsAt: hackathon.ends_at,
+      registrationOpensAt: hackathon.registration_opens_at,
+      registrationClosesAt: hackathon.registration_closes_at,
+      maxParticipants: hackathon.max_participants,
+      minTeamSize: hackathon.min_team_size,
+      maxTeamSize: hackathon.max_team_size,
+      allowSolo: hackathon.allow_solo,
+      createdAt: hackathon.created_at,
+      updatedAt: hackathon.updated_at,
+    }
+  })
+  .patch(
+    "/hackathons/:id/settings",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
+      const hackathon = await updateHackathonSettings(params.id, principal.tenantId, {
+        bannerUrl: body.bannerUrl,
+        name: body.name,
+        description: body.description,
+        rules: body.rules,
+        startsAt: body.startsAt,
+        endsAt: body.endsAt,
+        registrationOpensAt: body.registrationOpensAt,
+        registrationClosesAt: body.registrationClosesAt,
+      })
+
+      if (!hackathon) {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      await logAudit({
+        principal,
+        action: "hackathon.updated",
+        resourceType: "hackathon",
+        resourceId: params.id,
+      })
+
+      return {
+        id: hackathon.id,
+        updatedAt: hackathon.updated_at,
+      }
+    },
+    {
+      body: t.Object({
+        bannerUrl: t.Optional(t.Union([t.String(), t.Null()])),
+        name: t.Optional(t.String()),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+        rules: t.Optional(t.Union([t.String(), t.Null()])),
+        startsAt: t.Optional(t.Union([t.String(), t.Null()])),
+        endsAt: t.Optional(t.Union([t.String(), t.Null()])),
+        registrationOpensAt: t.Optional(t.Union([t.String(), t.Null()])),
+        registrationClosesAt: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+    }
+  )
+  .get("/hackathons/:id/sponsors", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user"])
+
+    const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
+    const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+
+    if (!hackathon) {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    const { listHackathonSponsorsWithTenants } = await import("@/lib/services/sponsors")
+    const sponsors = await listHackathonSponsorsWithTenants(params.id)
+
+    return {
+      sponsors: sponsors.map((s) => ({
+        id: s.id,
+        name: s.name,
+        logoUrl: s.logo_url,
+        websiteUrl: s.website_url,
+        tier: s.tier,
+        displayOrder: s.display_order,
+        sponsorTenantId: s.sponsor_tenant_id,
+        tenant: s.tenant
+          ? {
+              slug: s.tenant.slug,
+              name: s.tenant.name,
+              logoUrl: s.tenant.logo_url,
+            }
+          : null,
+        createdAt: s.created_at,
+      })),
+    }
+  })
+  .post(
+    "/hackathons/:id/sponsors",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
+      const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+
+      if (!hackathon) {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { addSponsor } = await import("@/lib/services/sponsors")
+      const sponsor = await addSponsor({
+        hackathonId: params.id,
+        name: body.name,
+        logoUrl: body.logoUrl,
+        websiteUrl: body.websiteUrl,
+        tier: body.tier as "title" | "gold" | "silver" | "bronze" | "partner" | undefined,
+        sponsorTenantId: body.sponsorTenantId,
+        displayOrder: body.displayOrder,
+      })
+
+      if (!sponsor) {
+        return new Response(JSON.stringify({ error: "Failed to add sponsor" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      await logAudit({
+        principal,
+        action: "sponsor.added",
+        resourceType: "hackathon_sponsor",
+        resourceId: sponsor.id,
+        metadata: { hackathonId: params.id, name: body.name },
+      })
+
+      return {
+        id: sponsor.id,
+        name: sponsor.name,
+        tier: sponsor.tier,
+        createdAt: sponsor.created_at,
+      }
+    },
+    {
+      body: t.Object({
+        name: t.String({ minLength: 1 }),
+        logoUrl: t.Optional(t.Union([t.String(), t.Null()])),
+        websiteUrl: t.Optional(t.Union([t.String(), t.Null()])),
+        tier: t.Optional(t.String()),
+        sponsorTenantId: t.Optional(t.Union([t.String(), t.Null()])),
+        displayOrder: t.Optional(t.Number()),
+      }),
+    }
+  )
+  .patch(
+    "/hackathons/:id/sponsors/:sponsorId",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
+      const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+
+      if (!hackathon) {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { updateSponsor } = await import("@/lib/services/sponsors")
+      const sponsor = await updateSponsor(params.sponsorId, {
+        name: body.name,
+        logoUrl: body.logoUrl,
+        websiteUrl: body.websiteUrl,
+        tier: body.tier as "title" | "gold" | "silver" | "bronze" | "partner" | undefined,
+        sponsorTenantId: body.sponsorTenantId,
+        displayOrder: body.displayOrder,
+      })
+
+      if (!sponsor) {
+        return new Response(JSON.stringify({ error: "Sponsor not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      await logAudit({
+        principal,
+        action: "sponsor.updated",
+        resourceType: "hackathon_sponsor",
+        resourceId: params.sponsorId,
+      })
+
+      return {
+        id: sponsor.id,
+        updatedAt: sponsor.created_at,
+      }
+    },
+    {
+      body: t.Object({
+        name: t.Optional(t.String()),
+        logoUrl: t.Optional(t.Union([t.String(), t.Null()])),
+        websiteUrl: t.Optional(t.Union([t.String(), t.Null()])),
+        tier: t.Optional(t.String()),
+        sponsorTenantId: t.Optional(t.Union([t.String(), t.Null()])),
+        displayOrder: t.Optional(t.Number()),
+      }),
+    }
+  )
+  .delete("/hackathons/:id/sponsors/:sponsorId", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user"])
+
+    const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
+    const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+
+    if (!hackathon) {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    const { removeSponsor } = await import("@/lib/services/sponsors")
+    const success = await removeSponsor(params.sponsorId)
+
+    if (!success) {
+      return new Response(JSON.stringify({ error: "Sponsor not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    await logAudit({
+      principal,
+      action: "sponsor.removed",
+      resourceType: "hackathon_sponsor",
+      resourceId: params.sponsorId,
+    })
+
+    return { success: true }
+  })
+  .patch(
+    "/hackathons/:id/sponsors/reorder",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
+      const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+
+      if (!hackathon) {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { reorderSponsors } = await import("@/lib/services/sponsors")
+      const success = await reorderSponsors(params.id, body.sponsorIds)
+
+      if (!success) {
+        return new Response(JSON.stringify({ error: "Failed to reorder sponsors" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      return { success: true }
+    },
+    {
+      body: t.Object({
+        sponsorIds: t.Array(t.String()),
+      }),
+    }
+  )
+  .get("/org-profile", async ({ principal }) => {
+    requirePrincipal(principal, ["user"])
+
+    const { getPublicTenantById } = await import("@/lib/services/tenant-profiles")
+    const tenant = await getPublicTenantById(principal.tenantId)
+
+    if (!tenant) {
+      return new Response(JSON.stringify({ error: "Tenant not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    return {
+      id: tenant.id,
+      name: tenant.name,
+      slug: tenant.slug,
+      logoUrl: tenant.logo_url,
+      description: tenant.description,
+      websiteUrl: tenant.website_url,
+    }
+  })
+  .patch(
+    "/org-profile",
+    async ({ principal, body }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { updateTenantProfile, isSlugAvailable } = await import("@/lib/services/tenant-profiles")
+
+      if (body.slug) {
+        const available = await isSlugAvailable(body.slug, principal.tenantId)
+        if (!available) {
+          return new Response(JSON.stringify({ error: "Slug already taken" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          })
+        }
+      }
+
+      const tenant = await updateTenantProfile(principal.tenantId, {
+        slug: body.slug,
+        logoUrl: body.logoUrl,
+        description: body.description,
+        websiteUrl: body.websiteUrl,
+        name: body.name,
+      })
+
+      if (!tenant) {
+        return new Response(JSON.stringify({ error: "Failed to update profile" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      await logAudit({
+        principal,
+        action: "org_profile.updated",
+        resourceType: "tenant",
+        resourceId: principal.tenantId,
+      })
+
+      return {
+        id: tenant.id,
+        slug: tenant.slug,
+        updatedAt: tenant.updated_at,
+      }
+    },
+    {
+      body: t.Object({
+        name: t.Optional(t.String()),
+        slug: t.Optional(t.Union([t.String(), t.Null()])),
+        logoUrl: t.Optional(t.Union([t.String(), t.Null()])),
+        logoUrlDark: t.Optional(t.Union([t.String(), t.Null()])),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+        websiteUrl: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+    }
+  )
+  .post(
+    "/upload-logo",
+    async ({ principal, request }) => {
+      requirePrincipal(principal, ["user"])
+
+      const formData = await request.formData()
+      const file = formData.get("file") as File | null
+      const variant = formData.get("variant") as "light" | "dark" | null
+
+      if (!file) {
+        return new Response(JSON.stringify({ error: "No file provided" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      if (!variant || (variant !== "light" && variant !== "dark")) {
+        return new Response(JSON.stringify({ error: "Invalid variant" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"]
+      if (!allowedTypes.includes(file.type)) {
+        return new Response(JSON.stringify({ error: "Invalid file type" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      if (file.size > 2 * 1024 * 1024) {
+        return new Response(JSON.stringify({ error: "File too large (max 2MB)" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { uploadLogo } = await import("@/lib/services/storage")
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const result = await uploadLogo(principal.tenantId, buffer, file.type, variant)
+
+      if (!result) {
+        return new Response(JSON.stringify({ error: "Failed to upload logo" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { updateTenantProfile } = await import("@/lib/services/tenant-profiles")
+      const updates = variant === "light"
+        ? { logoUrl: result.url }
+        : { logoUrlDark: result.url }
+
+      await updateTenantProfile(principal.tenantId, updates)
+
+      await logAudit({
+        principal,
+        action: "logo.uploaded",
+        resourceType: "tenant",
+        resourceId: principal.tenantId,
+        metadata: { variant },
+      })
+
+      return { url: result.url, variant }
+    }
+  )
+  .delete(
+    "/logo/:variant",
+    async ({ principal, params }) => {
+      requirePrincipal(principal, ["user"])
+
+      const variant = params.variant as "light" | "dark"
+      if (variant !== "light" && variant !== "dark") {
+        return new Response(JSON.stringify({ error: "Invalid variant" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { deleteLogo } = await import("@/lib/services/storage")
+      await deleteLogo(principal.tenantId, variant)
+
+      const { updateTenantProfile } = await import("@/lib/services/tenant-profiles")
+      const updates = variant === "light"
+        ? { logoUrl: null }
+        : { logoUrlDark: null }
+
+      await updateTenantProfile(principal.tenantId, updates)
+
+      await logAudit({
+        principal,
+        action: "logo.deleted",
+        resourceType: "tenant",
+        resourceId: principal.tenantId,
+        metadata: { variant },
+      })
+
+      return { success: true }
+    }
+  )

@@ -14,6 +14,8 @@ import {
   Clock,
   Webhook,
   Plug,
+  Home,
+  Image,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -46,7 +48,8 @@ import {
 import { ThemeSwitcher } from "@/components/theme-switcher"
 
 const navItems = [
-  { title: "Hackathons", href: "/home", icon: Trophy },
+  { title: "Dashboard", href: "/home", icon: Home },
+  { title: "Hackathons", href: "/hackathons", icon: Trophy },
   { title: "Browse", href: "/browse", icon: Search },
 ]
 
@@ -55,6 +58,7 @@ const manageItems = [
 ]
 
 const settingsItems = [
+  { title: "Organization", href: "/settings/profile", icon: Building2 },
   { title: "API Keys", href: "/settings/api-keys", icon: Key },
   { title: "Schedules", href: "/settings/schedules", icon: Clock },
   { title: "Webhooks", href: "/settings/webhooks", icon: Webhook },
@@ -64,7 +68,7 @@ const settingsItems = [
 export function AppSidebar() {
   const pathname = usePathname()
   const { user } = useUser()
-  const { signOut, openUserProfile, openOrganizationProfile } = useClerk()
+  const { signOut, openUserProfile } = useClerk()
   const { organization } = useOrganization()
   const { userMemberships, setActive } = useOrganizationList({
     userMemberships: { infinite: true },
@@ -80,9 +84,17 @@ export function AppSidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="h-auto py-2">
-                  <div className="flex size-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
-                    {organization?.name?.charAt(0).toUpperCase() || user?.firstName?.charAt(0)?.toUpperCase() || "P"}
-                  </div>
+                  {organization?.imageUrl ? (
+                    <img
+                      src={organization.imageUrl}
+                      alt={organization.name || "Organization"}
+                      className="size-6 rounded object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
+                      {organization?.name?.charAt(0).toUpperCase() || user?.firstName?.charAt(0)?.toUpperCase() || "P"}
+                    </div>
+                  )}
                   <div className="flex-1 text-left text-sm leading-tight truncate">
                     <span className="font-semibold">{organization?.name || "Personal Workspace"}</span>
                   </div>
@@ -110,17 +122,27 @@ export function AppSidebar() {
                     onClick={() => setActive?.({ organization: mem.organization.id })}
                     className="gap-2"
                   >
-                    <div className="flex size-5 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
-                      {mem.organization.name.charAt(0).toUpperCase()}
-                    </div>
+                    {mem.organization.imageUrl ? (
+                      <img
+                        src={mem.organization.imageUrl}
+                        alt={mem.organization.name}
+                        className="size-5 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-5 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
+                        {mem.organization.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <span className="truncate">{mem.organization.name}</span>
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
                 {organization && (
-                  <DropdownMenuItem onClick={() => openOrganizationProfile()}>
-                    <Settings className="size-4 mr-2" />
-                    Organization Settings
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/profile">
+                      <Settings className="size-4 mr-2" />
+                      Organization Settings
+                    </Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem asChild>

@@ -1,27 +1,43 @@
-import { auth } from "@clerk/nextjs/server"
+import { auth, clerkClient } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { Tenant } from "@/lib/db/hackathon-types"
 
-export async function getOrCreateTenant(clerkOrgId: string): Promise<Tenant | null> {
+export async function getOrCreateTenant(
+  clerkOrgId: string,
+  clerkOrgName?: string
+): Promise<Tenant | null> {
   const { data: existing } = await getSupabase()
     .from("tenants")
     .select("*")
     .eq("clerk_org_id", clerkOrgId)
     .single()
 
-  if (existing) return existing as Tenant
+  if (existing) {
+    // Sync name from Clerk if provided and different
+    if (clerkOrgName && existing.name !== clerkOrgName) {
+      const { data: updated } = await getSupabase()
+        .from("tenants")
+        .update({ name: clerkOrgName, updated_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .select()
+        .single()
+      return (updated as Tenant) ?? (existing as Tenant)
+    }
+    return existing as Tenant
+  }
 
   const { data: created, error } = await getSupabase()
     .from("tenants")
-    .upsert(
-      { clerk_org_id: clerkOrgId, name: `Org ${clerkOrgId.slice(0, 8)}` },
-      { onConflict: "clerk_org_id", ignoreDuplicates: true }
-    )
+    .insert({
+      clerk_org_id: clerkOrgId,
+      name: clerkOrgName ?? `Org ${clerkOrgId.slice(0, 8)}`,
+    })
     .select()
     .single()
 
-  if (error || !created) {
+  if (error) {
+    console.error("Failed to create org tenant:", error)
     const { data: retried } = await getSupabase()
       .from("tenants")
       .select("*")
@@ -47,17 +63,15 @@ export async function getOrCreatePersonalTenant(
 
   const { data: created, error } = await getSupabase()
     .from("tenants")
-    .upsert(
-      {
-        clerk_user_id: clerkUserId,
-        name: userName ?? `Personal ${clerkUserId.slice(0, 8)}`,
-      },
-      { onConflict: "clerk_user_id", ignoreDuplicates: true }
-    )
+    .insert({
+      clerk_user_id: clerkUserId,
+      name: userName ?? `Personal ${clerkUserId.slice(0, 8)}`,
+    })
     .select()
     .single()
 
-  if (error || !created) {
+  if (error) {
+    console.error("Failed to create personal tenant:", error)
     const { data: retried } = await getSupabase()
       .from("tenants")
       .select("*")
@@ -79,7 +93,16 @@ export async function resolvePageTenant(): Promise<Tenant> {
   let tenant: Tenant | null
 
   if (orgId) {
-    tenant = await getOrCreateTenant(orgId)
+    // Fetch org name from Clerk to sync
+    let orgName: string | undefined
+    try {
+      const client = await clerkClient()
+      const org = await client.organizations.getOrganization({ organizationId: orgId })
+      orgName = org.name
+    } catch {
+      // Ignore errors fetching org name
+    }
+    tenant = await getOrCreateTenant(orgId, orgName)
   } else {
     tenant = await getOrCreatePersonalTenant(userId)
   }

@@ -2,11 +2,12 @@
 -- This file runs automatically on `supabase db reset` and for preview branches
 
 -- Test tenant (maps to a test Clerk org)
-INSERT INTO tenants (id, clerk_org_id, name, created_at, updated_at)
+INSERT INTO tenants (id, clerk_org_id, name, slug, description, website_url, created_at, updated_at)
 VALUES
-  ('11111111-1111-1111-1111-111111111111', 'org_test_local', 'Local Dev Org', now(), now()),
-  ('22222222-2222-2222-2222-222222222222', 'org_test_demo', 'Demo Organization', now(), now())
-ON CONFLICT (clerk_org_id) DO NOTHING;
+  ('11111111-1111-1111-1111-111111111111', 'org_test_local', 'Local Dev Org', 'local-dev', 'Local development organization', 'https://localhost:3000', now(), now()),
+  ('22222222-2222-2222-2222-222222222222', 'org_test_demo', 'Demo Organization', 'demo', 'Demo organization for testing', 'https://demo.example.com', now(), now()),
+  ('55555555-5555-5555-5555-555555555555', 'org_tavily', 'Tavily', 'tavily', 'AI-powered search API for developers', 'https://tavily.com', now(), now())
+ON CONFLICT (id) DO NOTHING;
 
 -- Test API keys (these are hashed versions, not actual keys)
 -- For local dev, you can create real keys via the dashboard
