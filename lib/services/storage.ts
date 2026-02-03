@@ -186,6 +186,10 @@ export async function optimizeBanner(
     optimized = await pipeline.clone().webp({ quality: 50 }).toBuffer()
   }
 
+  if (optimized.length > MAX_BANNER_SIZE) {
+    throw new ImageTooLargeError(optimized.length)
+  }
+
   return { buffer: optimized, mimeType: outputMimeType }
 }
 

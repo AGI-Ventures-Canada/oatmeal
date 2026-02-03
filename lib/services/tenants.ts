@@ -160,10 +160,13 @@ export async function searchTenants(
   const limit = options?.limit ?? 10
   const excludeIds = options?.excludeIds ?? []
 
+  const sanitized = query.replace(/[%_().,\\]/g, "")
+  if (sanitized.length < 2) return []
+
   let queryBuilder = getSupabase()
     .from("tenants")
     .select("id, name, slug, logo_url, website_url")
-    .or(`name.ilike.%${query}%,slug.ilike.%${query}%`)
+    .or(`name.ilike.%${sanitized}%,slug.ilike.%${sanitized}%`)
     .not("slug", "is", null)
     .limit(limit)
 

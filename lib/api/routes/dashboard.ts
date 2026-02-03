@@ -1026,7 +1026,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         tier: body.tier as "title" | "gold" | "silver" | "bronze" | "partner" | undefined,
         sponsorTenantId: body.sponsorTenantId,
         displayOrder: body.displayOrder,
-      })
+      }, params.id)
 
       if (!sponsor) {
         return new Response(JSON.stringify({ error: "Sponsor not found" }), {
@@ -1072,7 +1072,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
 
     const { removeSponsor } = await import("@/lib/services/sponsors")
-    const success = await removeSponsor(params.sponsorId)
+    const success = await removeSponsor(params.sponsorId, params.id)
 
     if (!success) {
       return new Response(JSON.stringify({ error: "Sponsor not found" }), {
@@ -1165,6 +1165,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       const tenant = await updateTenantProfile(principal.tenantId, {
         slug: body.slug,
         logoUrl: body.logoUrl,
+        logoUrlDark: body.logoUrlDark,
         description: body.description,
         websiteUrl: body.websiteUrl,
         name: body.name,

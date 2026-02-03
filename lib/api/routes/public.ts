@@ -12,8 +12,14 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     const error = query.error as string | undefined
 
     if (error) {
+      const safeError = error
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
       return new Response(
-        `<html><body><h1>Error</h1><p>${error}</p><script>window.close()</script></body></html>`,
+        `<html><body><h1>Error</h1><p>${safeError}</p><script>window.close()</script></body></html>`,
         { headers: { "Content-Type": "text/html" } }
       )
     }

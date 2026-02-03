@@ -36,12 +36,13 @@ export async function addSponsor(input: AddSponsorInput): Promise<HackathonSpons
   return data as unknown as HackathonSponsor
 }
 
-export async function removeSponsor(sponsorId: string): Promise<boolean> {
+export async function removeSponsor(sponsorId: string, hackathonId: string): Promise<boolean> {
   const client = getSupabase() as unknown as SupabaseClient
   const { error } = await client
     .from("hackathon_sponsors")
     .delete()
     .eq("id", sponsorId)
+    .eq("hackathon_id", hackathonId)
 
   if (error) {
     console.error("Failed to remove sponsor:", error)
@@ -72,7 +73,8 @@ export async function listHackathonSponsors(
 
 export async function updateSponsor(
   sponsorId: string,
-  updates: Partial<Omit<AddSponsorInput, "hackathonId">>
+  updates: Partial<Omit<AddSponsorInput, "hackathonId">>,
+  hackathonId: string
 ): Promise<HackathonSponsor | null> {
   const client = getSupabase() as unknown as SupabaseClient
 
@@ -88,6 +90,7 @@ export async function updateSponsor(
     .from("hackathon_sponsors")
     .update(updateData)
     .eq("id", sponsorId)
+    .eq("hackathon_id", hackathonId)
     .select()
     .single()
 

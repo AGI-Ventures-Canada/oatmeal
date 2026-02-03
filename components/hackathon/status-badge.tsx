@@ -43,7 +43,7 @@ export function StatusBadge({ hackathonId, status }: StatusBadgeProps) {
       setCurrentStatus(newStatus)
       router.refresh()
     } catch {
-      // Revert on error
+      setCurrentStatus(currentStatus)
     } finally {
       setUpdating(false)
     }
