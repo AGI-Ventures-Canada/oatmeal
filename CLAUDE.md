@@ -173,13 +173,20 @@ This ensures consistent theming and proper dark mode support.
 
 ### Forms
 
-**Disable password manager autofill on most forms.** Add `autoComplete="off"` to forms that are not login/signup/contact forms.
+**Disable password manager autofill on most forms.** Add these attributes to inputs that should not trigger password managers:
 
 ```typescript
 // GOOD - prevents password manager popups on app forms
+<Input
+  name="hackathon-name"
+  autoComplete="off"
+  data-1p-ignore           // 1Password
+  data-lpignore="true"     // LastPass
+  data-form-type="other"   // Generic hint
+/>
+
+// Also add autoComplete="off" to the form element
 <form onSubmit={handleSubmit} autoComplete="off">
-  <Input name="hackathon-name" ... />
-</form>
 
 // Exceptions (allow autofill):
 // - Login/signup forms

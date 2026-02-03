@@ -89,12 +89,17 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
                 <FieldLabel htmlFor="name">Hackathon Name</FieldLabel>
                 <Input
                   id="name"
+                  name="hackathon-name"
                   type="text"
                   placeholder="My Awesome Hackathon"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
                   autoFocus
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
                 />
               </Field>
 
@@ -102,10 +107,15 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
                 <FieldLabel htmlFor="description">Description</FieldLabel>
                 <Textarea
                   id="description"
+                  name="hackathon-description"
                   placeholder="What's this hackathon about?"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
                 />
                 <FieldDescription>
                   A brief description to help participants understand your hackathon
