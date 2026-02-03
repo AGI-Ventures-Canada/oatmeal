@@ -171,6 +171,22 @@ This ensures consistent theming and proper dark mode support.
 - Never apply migrations directly to production - use PR workflow
 - Test migrations locally with `supabase db reset` before pushing
 
+### Forms
+
+**Disable password manager autofill on most forms.** Add `autoComplete="off"` to forms that are not login/signup/contact forms.
+
+```typescript
+// GOOD - prevents password manager popups on app forms
+<form onSubmit={handleSubmit} autoComplete="off">
+  <Input name="hackathon-name" ... />
+</form>
+
+// Exceptions (allow autofill):
+// - Login/signup forms
+// - Contact forms with name/email fields
+// - Profile forms where users enter personal info
+```
+
 ### Code Style
 
 - Do not write comments above code

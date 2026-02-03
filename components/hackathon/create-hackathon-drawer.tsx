@@ -75,7 +75,7 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
     <Drawer direction="right" open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent>
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full" autoComplete="off">
           <DrawerHeader>
             <DrawerTitle>Create Hackathon</DrawerTitle>
             <DrawerDescription>
