@@ -53,7 +53,7 @@ enabled = true
 
 [storage.buckets.logos]
 public = true
-file_size_limit = "2MiB"
+file_size_limit = "50MiB"
 allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"]
 
 [auth]

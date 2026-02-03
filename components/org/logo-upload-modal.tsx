@@ -49,8 +49,8 @@ export function LogoUploadModal({
       return
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setError("File must be smaller than 2MB")
+    if (file.size > 50 * 1024 * 1024) {
+      setError("File must be smaller than 50MB")
       return
     }
 
@@ -217,7 +217,7 @@ export function LogoUploadModal({
           )}
 
           <p className="text-[11px] text-muted-foreground text-center">
-            PNG, JPEG, WebP, or SVG. Max 2MB.
+            PNG, JPEG, WebP, or SVG. Images are automatically optimized.
           </p>
         </div>
       </DialogContent>
