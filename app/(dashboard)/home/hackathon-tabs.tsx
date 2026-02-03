@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Trophy, Search, Star, Plus } from "lucide-react"
 import { CreateHackathonDrawer } from "@/components/hackathon/create-hackathon-drawer"
 import {
@@ -34,17 +35,29 @@ export function HackathonTabs({
   organizedHackathons,
   sponsoredHackathons,
 }: Props) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  const tabFromUrl = searchParams.get("tab")
+  const validTabs = ["participating", "organized", "sponsored"]
+
   const defaultTab = organizedHackathons.length > 0
     ? "organized"
     : sponsoredHackathons.length > 0
       ? "sponsored"
       : "participating"
 
+  const activeTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : defaultTab
+
+  const handleTabChange = (value: string) => {
+    router.push(`/home?tab=${value}`, { scroll: false })
+  }
+
   return (
-    <Tabs defaultValue={defaultTab} className="space-y-4">
+    <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
       <TabsList>
         <TabsTrigger value="participating">
-          My Hackathons
+          Participating
           {myHackathons.length > 0 && (
             <Badge variant="secondary" className="ml-2">
               {myHackathons.length}
@@ -52,21 +65,21 @@ export function HackathonTabs({
           )}
         </TabsTrigger>
         <TabsTrigger value="organized">
-          Organized
+          Organizing
           {organizedHackathons.length > 0 && (
             <Badge variant="secondary" className="ml-2">
               {organizedHackathons.length}
             </Badge>
           )}
         </TabsTrigger>
-        {sponsoredHackathons.length > 0 && (
-          <TabsTrigger value="sponsored">
-            Sponsored
+        <TabsTrigger value="sponsored">
+          Sponsoring
+          {sponsoredHackathons.length > 0 && (
             <Badge variant="secondary" className="ml-2">
               {sponsoredHackathons.length}
             </Badge>
-          </TabsTrigger>
-        )}
+          )}
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="participating">
@@ -147,27 +160,45 @@ export function HackathonTabs({
       </TabsContent>
 
       <TabsContent value="sponsored">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {sponsoredHackathons.map((h) => (
-            <Link key={h.id} href={`/hackathons/${h.id}`}>
-              <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{h.name}</CardTitle>
-                    <Badge variant="secondary">{h.status}</Badge>
-                  </div>
-                  <CardDescription>{h.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Badge variant="outline">
-                    <Star className="mr-1 size-3" />
-                    Sponsor
-                  </Badge>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        {sponsoredHackathons.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <Star className="size-10 text-muted-foreground mb-4" />
+              <CardTitle className="mb-2">Not sponsoring any hackathons</CardTitle>
+              <CardDescription className="mb-4">
+                Browse hackathons to find sponsorship opportunities
+              </CardDescription>
+              <Button asChild>
+                <Link href="/browse">
+                  <Search className="mr-2 size-4" />
+                  Browse hackathons
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {sponsoredHackathons.map((h) => (
+              <Link key={h.id} href={`/hackathons/${h.id}`}>
+                <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">{h.name}</CardTitle>
+                      <Badge variant="secondary">{h.status}</Badge>
+                    </div>
+                    <CardDescription>{h.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Badge variant="outline">
+                      <Star className="mr-1 size-3" />
+                      Sponsor
+                    </Badge>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </TabsContent>
     </Tabs>
   )

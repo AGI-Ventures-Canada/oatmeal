@@ -41,6 +41,13 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
     setError(null)
   }
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && name.trim() && !creating) {
+      e.preventDefault()
+      handleSubmit(e as unknown as React.FormEvent)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setCreating(true)
@@ -75,7 +82,7 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
     <Drawer direction="right" open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent>
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col h-full" autoComplete="off">
           <DrawerHeader>
             <DrawerTitle>Create Hackathon</DrawerTitle>
             <DrawerDescription>
@@ -89,12 +96,17 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
                 <FieldLabel htmlFor="name">Hackathon Name</FieldLabel>
                 <Input
                   id="name"
+                  name="hackathon-name"
                   type="text"
                   placeholder="My Awesome Hackathon"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
                   autoFocus
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
                 />
               </Field>
 
@@ -102,10 +114,15 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
                 <FieldLabel htmlFor="description">Description</FieldLabel>
                 <Textarea
                   id="description"
+                  name="hackathon-description"
                   placeholder="What's this hackathon about?"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
                 />
                 <FieldDescription>
                   A brief description to help participants understand your hackathon

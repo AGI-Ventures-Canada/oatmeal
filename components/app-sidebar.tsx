@@ -10,15 +10,18 @@ import {
   UserCog,
   BookOpen,
   ChevronLeft,
+  ChevronRight,
   Key,
   Clock,
   Webhook,
   Plug,
   Home,
-  Image,
+  Users,
+  Star,
+  Megaphone,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import {
   useUser,
   useClerk,
@@ -36,7 +39,15 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,8 +60,13 @@ import { ThemeSwitcher } from "@/components/theme-switcher"
 
 const navItems = [
   { title: "Dashboard", href: "/home", icon: Home },
-  { title: "Hackathons", href: "/hackathons", icon: Trophy },
   { title: "Browse", href: "/browse", icon: Search },
+]
+
+const hackathonSubItems = [
+  { title: "Participating", href: "/home?tab=participating", icon: Users },
+  { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
+  { title: "Sponsoring", href: "/home?tab=sponsored", icon: Star },
 ]
 
 const manageItems = [
@@ -67,6 +83,7 @@ const settingsItems = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user } = useUser()
   const { signOut, openUserProfile } = useClerk()
   const { organization } = useOrganization()
@@ -75,6 +92,7 @@ export function AppSidebar() {
   })
 
   const isSettingsView = pathname.startsWith("/settings")
+  const currentTab = searchParams.get("tab")
 
   return (
     <Sidebar>
@@ -202,6 +220,35 @@ export function AppSidebar() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
+                  <Collapsible defaultOpen className="group/collapsible">
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton>
+                          <Trophy />
+                          <span>Hackathons</span>
+                          <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {hackathonSubItems.map((item) => {
+                            const itemTab = new URL(item.href, "http://x").searchParams.get("tab")
+                            const isActive = pathname === "/home" && currentTab === itemTab
+                            return (
+                              <SidebarMenuSubItem key={item.href}>
+                                <SidebarMenuSubButton asChild isActive={isActive}>
+                                  <Link href={item.href}>
+                                    <item.icon />
+                                    <span>{item.title}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            )
+                          })}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

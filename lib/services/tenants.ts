@@ -142,3 +142,44 @@ export async function updateTenantName(
 
   return data as Tenant
 }
+
+export interface TenantSearchResult {
+  id: string
+  name: string
+  slug: string | null
+  logo_url: string | null
+  website_url: string | null
+}
+
+export async function searchTenants(
+  query: string,
+  options?: { excludeIds?: string[]; limit?: number }
+): Promise<TenantSearchResult[]> {
+  if (!query || query.length < 2) return []
+
+  const limit = options?.limit ?? 10
+  const excludeIds = options?.excludeIds ?? []
+
+  const sanitized = query.replace(/[%_().,\\]/g, "")
+  if (sanitized.length < 2) return []
+
+  let queryBuilder = getSupabase()
+    .from("tenants")
+    .select("id, name, slug, logo_url, website_url")
+    .or(`name.ilike.%${sanitized}%,slug.ilike.%${sanitized}%`)
+    .not("slug", "is", null)
+    .limit(limit)
+
+  if (excludeIds.length > 0) {
+    queryBuilder = queryBuilder.not("id", "in", `(${excludeIds.join(",")})`)
+  }
+
+  const { data, error } = await queryBuilder
+
+  if (error) {
+    console.error("Failed to search tenants:", error)
+    return []
+  }
+
+  return (data ?? []) as TenantSearchResult[]
+}

@@ -1,6 +1,6 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Hackathon, TenantProfile, HackathonSponsor } from "@/lib/db/hackathon-types"
+import type { Hackathon, TenantProfile, HackathonSponsor, HackathonStatus } from "@/lib/db/hackathon-types"
 
 export type PublicHackathon = Hackathon & {
   organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark" | "clerk_org_id">
@@ -9,21 +9,31 @@ export type PublicHackathon = Hackathon & {
   })[]
 }
 
-export async function getPublicHackathon(slug: string): Promise<PublicHackathon | null> {
+export async function getPublicHackathon(
+  slug: string,
+  options?: { includeUnpublished?: boolean }
+): Promise<PublicHackathon | null> {
   const client = getSupabase() as unknown as SupabaseClient
 
-  const { data: hackathon, error: hackathonError } = await client
+  let query = client
     .from("hackathons")
     .select(`
       *,
       organizer:tenants!tenant_id(id, name, slug, logo_url, logo_url_dark, clerk_org_id)
     `)
     .eq("slug", slug)
-    .in("status", ["published", "registration_open", "active", "judging", "completed"])
-    .single()
+
+  if (!options?.includeUnpublished) {
+    query = query.in("status", ["published", "registration_open", "active", "judging", "completed"])
+  }
+
+  const { data: hackathon, error: hackathonError } = await query.single()
 
   if (hackathonError || !hackathon) {
-    console.error("Failed to get public hackathon:", hackathonError)
+    // Only log actual errors, not "not found" (PGRST116 = 0 rows)
+    if (hackathonError && hackathonError.code !== "PGRST116") {
+      console.error("Failed to get public hackathon:", hackathonError)
+    }
     return null
   }
 
@@ -92,6 +102,49 @@ export async function getHackathonByIdForOrganizer(
   return data as unknown as Hackathon
 }
 
+export async function getHackathonByIdWithFullData(
+  hackathonId: string,
+  tenantId: string
+): Promise<PublicHackathon | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: hackathon, error: hackathonError } = await client
+    .from("hackathons")
+    .select(`
+      *,
+      organizer:tenants!tenant_id(id, name, slug, logo_url, logo_url_dark, clerk_org_id)
+    `)
+    .eq("id", hackathonId)
+    .eq("tenant_id", tenantId)
+    .single()
+
+  if (hackathonError || !hackathon) {
+    if (hackathonError && hackathonError.code !== "PGRST116") {
+      console.error("Failed to get hackathon with full data:", hackathonError)
+    }
+    return null
+  }
+
+  const { data: sponsors, error: sponsorsError } = await client
+    .from("hackathon_sponsors")
+    .select(`
+      *,
+      tenant:tenants!sponsor_tenant_id(slug, name, logo_url, logo_url_dark)
+    `)
+    .eq("hackathon_id", hackathon.id)
+    .order("tier")
+    .order("display_order")
+
+  if (sponsorsError) {
+    console.error("Failed to get hackathon sponsors:", sponsorsError)
+  }
+
+  return {
+    ...hackathon,
+    sponsors: sponsors || [],
+  } as unknown as PublicHackathon
+}
+
 export async function getHackathonByIdWithAccess(
   hackathonId: string,
   tenantId: string,
@@ -152,6 +205,7 @@ export async function updateHackathonSettings(
     endsAt?: string | null
     registrationOpensAt?: string | null
     registrationClosesAt?: string | null
+    status?: HackathonStatus
   }
 ): Promise<Hackathon | null> {
   const client = getSupabase() as unknown as SupabaseClient
@@ -165,6 +219,7 @@ export async function updateHackathonSettings(
   if (updates.endsAt !== undefined) updateData.ends_at = updates.endsAt
   if (updates.registrationOpensAt !== undefined) updateData.registration_opens_at = updates.registrationOpensAt
   if (updates.registrationClosesAt !== undefined) updateData.registration_closes_at = updates.registrationClosesAt
+  if (updates.status !== undefined) updateData.status = updates.status
 
   const { data, error } = await client
     .from("hackathons")

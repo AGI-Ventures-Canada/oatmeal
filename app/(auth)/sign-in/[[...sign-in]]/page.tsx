@@ -1,5 +1,10 @@
 import { SignIn } from "@clerk/nextjs"
 
-export default function SignInPage() {
-  return <SignIn fallbackRedirectUrl="/onboarding" />
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect_url?: string }>
+}) {
+  const { redirect_url } = await searchParams
+  return <SignIn fallbackRedirectUrl={redirect_url || "/home"} />
 }

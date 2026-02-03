@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { PageHeader } from "@/components/page-header"
 
 export default async function HackathonsPage() {
   const { userId } = await auth()
@@ -60,30 +61,29 @@ export default async function HackathonsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Hackathons</h1>
-          <p className="text-muted-foreground">
-            All hackathons you organize, sponsor, or participate in
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href="/browse">
-              <Search className="mr-2 size-4" />
-              Browse
-            </Link>
-          </Button>
-          <CreateHackathonDrawer
-            trigger={
-              <Button>
-                <Plus className="mr-2 size-4" />
-                Create
-              </Button>
-            }
-          />
-        </div>
-      </div>
+      <PageHeader
+        breadcrumbs={[{ label: "Hackathons" }]}
+        title="Hackathons"
+        description="All hackathons you organize, sponsor, or participate in"
+        actions={
+          <>
+            <Button asChild variant="outline">
+              <Link href="/browse">
+                <Search className="mr-2 size-4" />
+                Browse
+              </Link>
+            </Button>
+            <CreateHackathonDrawer
+              trigger={
+                <Button>
+                  <Plus className="mr-2 size-4" />
+                  Create
+                </Button>
+              }
+            />
+          </>
+        }
+      />
 
       {allHackathons.length === 0 ? (
         <Card>

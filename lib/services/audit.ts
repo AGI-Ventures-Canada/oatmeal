@@ -33,6 +33,8 @@ export type AuditAction =
   | "credential.deleted"
   | "hackathon.created"
   | "hackathon.updated"
+  | "hackathon.banner_uploaded"
+  | "hackathon.banner_deleted"
   | "sponsor.added"
   | "sponsor.updated"
   | "sponsor.removed"

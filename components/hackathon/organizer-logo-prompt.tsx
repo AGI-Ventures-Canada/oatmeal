@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs"
 import Link from "next/link"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Image } from "lucide-react"
+import { ImageIcon } from "lucide-react"
 
 type OrganizerLogoPromptProps = {
   organizerId: string
@@ -33,7 +33,7 @@ export function OrganizerLogoPrompt({
   return (
     <div className="container mx-auto px-4 py-4">
       <Alert>
-        <Image className="size-4" />
+        <ImageIcon className="size-4" />
         <AlertTitle>Add your organization logo</AlertTitle>
         <AlertDescription>
           Make your event stand out by adding an organization logo. It will appear on your event pages and sponsor cards.

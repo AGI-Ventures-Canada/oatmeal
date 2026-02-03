@@ -3,6 +3,7 @@ import { resolvePrincipal, requirePrincipal, AuthError } from "@/lib/auth/princi
 import { createApiKey, listApiKeys, revokeApiKey, getApiKeyById } from "@/lib/services/api-keys"
 import { listJobs, getJobById } from "@/lib/services/jobs"
 import { logAudit } from "@/lib/services/audit"
+import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
 import type { Scope } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
 
@@ -14,6 +15,15 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         headers: { "Content-Type": "application/json" },
       })
     }
+    if (error instanceof RateLimitError) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          ...getRateLimitHeaders({ allowed: false, remaining: error.remaining, resetAt: error.resetAt }),
+        },
+      })
+    }
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
@@ -21,10 +31,26 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   })
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
+
+    if (principal.kind === "api_key") {
+      const result = checkRateLimit(`api_key:${principal.keyId}:dashboard`)
+      if (!result.allowed) {
+        throw new RateLimitError(result.resetAt, result.remaining)
+      }
+    }
+
     return { principal }
   })
   .get("/me", async ({ principal }) => {
-    requirePrincipal(principal, ["user"])
+    requirePrincipal(principal, ["user", "api_key"])
+
+    if (principal.kind === "api_key") {
+      return {
+        tenantId: principal.tenantId,
+        keyId: principal.keyId,
+        scopes: principal.scopes,
+      }
+    }
 
     return {
       tenantId: principal.tenantId,
@@ -34,6 +60,34 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       scopes: principal.scopes,
     }
   })
+  .get(
+    "/organizations/search",
+    async ({ principal, query }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { searchTenants } = await import("@/lib/services/tenants")
+      const results = await searchTenants(query.q, {
+        excludeIds: query.exclude?.split(",").filter(Boolean),
+        limit: 10,
+      })
+
+      return {
+        organizations: results.map((t) => ({
+          id: t.id,
+          name: t.name,
+          slug: t.slug,
+          logoUrl: t.logo_url,
+          websiteUrl: t.website_url,
+        })),
+      }
+    },
+    {
+      query: t.Object({
+        q: t.String({ minLength: 2 }),
+        exclude: t.Optional(t.String()),
+      }),
+    }
+  )
   .get("/keys", async ({ principal }) => {
     requirePrincipal(principal, ["user"], ["keys:read"])
 
@@ -115,7 +169,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     return { success: true }
   })
   .get("/jobs", async ({ principal, query }) => {
-    requirePrincipal(principal, ["user"])
+    requirePrincipal(principal, ["user", "api_key"])
 
     const jobs = await listJobs(principal.tenantId, {
       limit: query.limit ? parseInt(query.limit) : undefined,
@@ -134,7 +188,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
   })
   .get("/jobs/:id", async ({ principal, params }) => {
-    requirePrincipal(principal, ["user"])
+    requirePrincipal(principal, ["user", "api_key"])
 
     const job = await getJobById(params.id, principal.tenantId)
     if (!job) {
@@ -157,7 +211,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
   })
   .get("/webhooks", async ({ principal }) => {
-    requirePrincipal(principal, ["user"], ["webhooks:read"])
+    requirePrincipal(principal, ["user", "api_key"], ["webhooks:read"])
 
     const { listWebhooks } = await import("@/lib/services/webhooks")
     const webhooks = await listWebhooks(principal.tenantId)
@@ -177,7 +231,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .post(
     "/webhooks",
     async ({ principal, body }) => {
-      requirePrincipal(principal, ["user"], ["webhooks:write"])
+      requirePrincipal(principal, ["user", "api_key"], ["webhooks:write"])
 
       const { createWebhook } = await import("@/lib/services/webhooks")
       const result = await createWebhook({
@@ -212,7 +266,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
   )
   .delete("/webhooks/:id", async ({ principal, params }) => {
-    requirePrincipal(principal, ["user"], ["webhooks:write"])
+    requirePrincipal(principal, ["user", "api_key"], ["webhooks:write"])
 
     const { deleteWebhook } = await import("@/lib/services/webhooks")
     const success = await deleteWebhook(params.id, principal.tenantId)
@@ -234,7 +288,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     return { success: true }
   })
   .get("/schedules", async ({ principal, query }) => {
-    requirePrincipal(principal, ["user"])
+    requirePrincipal(principal, ["user", "api_key"], ["schedules:read"])
 
     const { listSchedules } = await import("@/lib/services/schedules")
     const schedules = await listSchedules(principal.tenantId, {
@@ -261,7 +315,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .post(
     "/schedules",
     async ({ principal, body }) => {
-      requirePrincipal(principal, ["user"])
+      requirePrincipal(principal, ["user", "api_key"], ["schedules:write"])
 
       const { createSchedule } = await import("@/lib/services/schedules")
       const schedule = await createSchedule({
@@ -312,7 +366,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
   )
   .get("/schedules/:id", async ({ principal, params }) => {
-    requirePrincipal(principal, ["user"])
+    requirePrincipal(principal, ["user", "api_key"], ["schedules:read"])
 
     const { getScheduleById } = await import("@/lib/services/schedules")
     const schedule = await getScheduleById(params.id, principal.tenantId)
@@ -343,7 +397,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .patch(
     "/schedules/:id",
     async ({ principal, params, body }) => {
-      requirePrincipal(principal, ["user"])
+      requirePrincipal(principal, ["user", "api_key"], ["schedules:write"])
 
       const { updateSchedule } = await import("@/lib/services/schedules")
       const schedule = await updateSchedule(params.id, principal.tenantId, {
@@ -394,7 +448,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
   )
   .delete("/schedules/:id", async ({ principal, params }) => {
-    requirePrincipal(principal, ["user"])
+    requirePrincipal(principal, ["user", "api_key"], ["schedules:write"])
 
     const { deleteSchedule } = await import("@/lib/services/schedules")
     const success = await deleteSchedule(params.id, principal.tenantId)
@@ -610,7 +664,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     return { success: true }
   })
   .get("/hackathons", async ({ principal }) => {
-    requirePrincipal(principal, ["user"])
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 
     const { listOrganizedHackathons } = await import("@/lib/services/hackathons")
     const hackathons = await listOrganizedHackathons(principal.tenantId)
@@ -630,7 +684,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .post(
     "/hackathons",
     async ({ principal, body }) => {
-      requirePrincipal(principal, ["user"])
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
       const { createHackathon } = await import("@/lib/services/hackathons")
       const hackathon = await createHackathon(principal.tenantId, {
@@ -667,7 +721,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
   )
   .get("/hackathons/:id", async ({ principal, params }) => {
-    requirePrincipal(principal, ["user"])
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 
     const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
     const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
@@ -702,7 +756,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .patch(
     "/hackathons/:id/settings",
     async ({ principal, params, body }) => {
-      requirePrincipal(principal, ["user"])
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
       const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
       const hackathon = await updateHackathonSettings(params.id, principal.tenantId, {
@@ -714,6 +768,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         endsAt: body.endsAt,
         registrationOpensAt: body.registrationOpensAt,
         registrationClosesAt: body.registrationClosesAt,
+        status: body.status as "draft" | "published" | "registration_open" | "active" | "judging" | "completed" | "archived" | undefined,
       })
 
       if (!hackathon) {
@@ -745,11 +800,116 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         endsAt: t.Optional(t.Union([t.String(), t.Null()])),
         registrationOpensAt: t.Optional(t.Union([t.String(), t.Null()])),
         registrationClosesAt: t.Optional(t.Union([t.String(), t.Null()])),
+        status: t.Optional(t.Union([
+          t.Literal("draft"),
+          t.Literal("published"),
+          t.Literal("registration_open"),
+          t.Literal("active"),
+          t.Literal("judging"),
+          t.Literal("completed"),
+          t.Literal("archived"),
+        ])),
       }),
     }
   )
+  .post(
+    "/hackathons/:id/banner",
+    async ({ principal, params, request }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
+      const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+
+      if (!hackathon) {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const formData = await request.formData()
+      const file = formData.get("file") as File | null
+
+      if (!file) {
+        return new Response(JSON.stringify({ error: "No file provided" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const allowedTypes = ["image/png", "image/jpeg", "image/webp"]
+      if (!allowedTypes.includes(file.type)) {
+        return new Response(JSON.stringify({ error: "Invalid file type. Use PNG, JPEG, or WebP" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      if (file.size > 50 * 1024 * 1024) {
+        return new Response(JSON.stringify({ error: "File too large (max 50MB)" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { uploadBanner } = await import("@/lib/services/storage")
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const result = await uploadBanner(params.id, buffer, file.type)
+
+      if (!result) {
+        return new Response(JSON.stringify({ error: "Failed to upload banner" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
+      await updateHackathonSettings(params.id, principal.tenantId, {
+        bannerUrl: result.url,
+      })
+
+      await logAudit({
+        principal,
+        action: "hackathon.banner_uploaded",
+        resourceType: "hackathon",
+        resourceId: params.id,
+      })
+
+      return { url: result.url }
+    }
+  )
+  .delete("/hackathons/:id/banner", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+    const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
+    const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+
+    if (!hackathon) {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    const { deleteBanner } = await import("@/lib/services/storage")
+    await deleteBanner(params.id)
+
+    const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
+    await updateHackathonSettings(params.id, principal.tenantId, {
+      bannerUrl: null,
+    })
+
+    await logAudit({
+      principal,
+      action: "hackathon.banner_deleted",
+      resourceType: "hackathon",
+      resourceId: params.id,
+    })
+
+    return { success: true }
+  })
   .get("/hackathons/:id/sponsors", async ({ principal, params }) => {
-    requirePrincipal(principal, ["user"])
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 
     const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
     const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
@@ -787,7 +947,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .post(
     "/hackathons/:id/sponsors",
     async ({ principal, params, body }) => {
-      requirePrincipal(principal, ["user"])
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
       const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
       const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
@@ -846,7 +1006,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .patch(
     "/hackathons/:id/sponsors/:sponsorId",
     async ({ principal, params, body }) => {
-      requirePrincipal(principal, ["user"])
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
       const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
       const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
@@ -866,7 +1026,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         tier: body.tier as "title" | "gold" | "silver" | "bronze" | "partner" | undefined,
         sponsorTenantId: body.sponsorTenantId,
         displayOrder: body.displayOrder,
-      })
+      }, params.id)
 
       if (!sponsor) {
         return new Response(JSON.stringify({ error: "Sponsor not found" }), {
@@ -899,7 +1059,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
   )
   .delete("/hackathons/:id/sponsors/:sponsorId", async ({ principal, params }) => {
-    requirePrincipal(principal, ["user"])
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
     const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
     const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
@@ -912,7 +1072,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
 
     const { removeSponsor } = await import("@/lib/services/sponsors")
-    const success = await removeSponsor(params.sponsorId)
+    const success = await removeSponsor(params.sponsorId, params.id)
 
     if (!success) {
       return new Response(JSON.stringify({ error: "Sponsor not found" }), {
@@ -933,7 +1093,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .patch(
     "/hackathons/:id/sponsors/reorder",
     async ({ principal, params, body }) => {
-      requirePrincipal(principal, ["user"])
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
       const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
       const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
@@ -964,7 +1124,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
   )
   .get("/org-profile", async ({ principal }) => {
-    requirePrincipal(principal, ["user"])
+    requirePrincipal(principal, ["user", "api_key"], ["org:read"])
 
     const { getPublicTenantById } = await import("@/lib/services/tenant-profiles")
     const tenant = await getPublicTenantById(principal.tenantId)
@@ -988,7 +1148,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .patch(
     "/org-profile",
     async ({ principal, body }) => {
-      requirePrincipal(principal, ["user"])
+      requirePrincipal(principal, ["user", "api_key"], ["org:write"])
 
       const { updateTenantProfile, isSlugAvailable } = await import("@/lib/services/tenant-profiles")
 
@@ -1005,6 +1165,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       const tenant = await updateTenantProfile(principal.tenantId, {
         slug: body.slug,
         logoUrl: body.logoUrl,
+        logoUrlDark: body.logoUrlDark,
         description: body.description,
         websiteUrl: body.websiteUrl,
         name: body.name,
@@ -1044,7 +1205,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .post(
     "/upload-logo",
     async ({ principal, request }) => {
-      requirePrincipal(principal, ["user"])
+      requirePrincipal(principal, ["user", "api_key"], ["org:write"])
 
       const formData = await request.formData()
       const file = formData.get("file") as File | null
@@ -1111,7 +1272,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .delete(
     "/logo/:variant",
     async ({ principal, params }) => {
-      requirePrincipal(principal, ["user"])
+      requirePrincipal(principal, ["user", "api_key"], ["org:write"])
 
       const variant = params.variant as "light" | "dark"
       if (variant !== "light" && variant !== "dark") {

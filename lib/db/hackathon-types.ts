@@ -230,7 +230,7 @@ export interface OrgIntegration {
   updated_at: string
 }
 
-export type SponsorTier = "title" | "gold" | "silver" | "bronze" | "partner"
+export type SponsorTier = "none" | "gold" | "silver" | "bronze" | "title" | "partner"
 
 export interface HackathonSponsor {
   id: string

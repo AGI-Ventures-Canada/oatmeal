@@ -5,16 +5,16 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card"
+import { PageHeader } from "@/components/page-header"
 
 export default function BrowsePage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Browse Hackathons</h1>
-        <p className="text-muted-foreground">
-          Discover and join published hackathons
-        </p>
-      </div>
+      <PageHeader
+        breadcrumbs={[{ label: "Browse" }]}
+        title="Browse Hackathons"
+        description="Discover and join published hackathons"
+      />
 
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">

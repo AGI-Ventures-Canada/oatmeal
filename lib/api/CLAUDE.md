@@ -12,9 +12,14 @@ All API routes are handled by a single Elysia instance via a Next.js catch-all r
 
 ```
 /api/public/*     → No auth (anon)
-/api/dashboard/*  → Clerk user only
-/api/v1/*         → API key only
+/api/dashboard/*  → Clerk user OR API key (dual-auth)
+/api/v1/*         → API key only (legacy, for job operations)
 ```
+
+**Note:** Most endpoints in `/api/dashboard/*` support both auth methods with appropriate scope requirements. Exceptions that remain Clerk-only:
+- `/keys`, `/keys/:id/revoke` - API key management (security)
+- `/integrations/*` - OAuth requires user browser flow
+- `/credentials/*` - Contains sensitive secrets
 
 ## Key Patterns
 

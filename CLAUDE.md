@@ -171,6 +171,47 @@ This ensures consistent theming and proper dark mode support.
 - Never apply migrations directly to production - use PR workflow
 - Test migrations locally with `supabase db reset` before pushing
 
+### Forms
+
+**Disable password manager autofill on most forms.** Add these attributes to inputs that should not trigger password managers:
+
+```typescript
+// GOOD - prevents password manager popups on app forms
+<Input
+  name="hackathon-name"
+  autoComplete="off"
+  data-1p-ignore           // 1Password
+  data-lpignore="true"     // LastPass
+  data-form-type="other"   // Generic hint
+/>
+
+// Also add autoComplete="off" to the form element
+<form onSubmit={handleSubmit} autoComplete="off">
+
+// Exceptions (allow autofill):
+// - Login/signup forms
+// - Contact forms with name/email fields
+// - Profile forms where users enter personal info
+```
+
+**Support Cmd/Ctrl+Enter to submit forms.** Most forms should be submittable with Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux):
+
+```typescript
+function handleKeyDown(e: React.KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !isSubmitting) {
+    e.preventDefault()
+    handleSubmit(e as unknown as React.FormEvent)
+  }
+}
+
+<form onSubmit={handleSubmit} onKeyDown={handleKeyDown}>
+```
+
+Exceptions (use Enter instead):
+- Search inputs
+- Single-line forms with one field
+- Chat/message inputs
+
 ### Code Style
 
 - Do not write comments above code

@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { CreateHackathonDrawer } from "@/components/hackathon/create-hackathon-drawer"
 import { HackathonTabs } from "./hackathon-tabs"
+import { PageHeader } from "@/components/page-header"
 
 export default async function DashboardPage() {
   const { userId } = await auth()
@@ -28,22 +29,21 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Your hackathons at a glance
-          </p>
-        </div>
-        <CreateHackathonDrawer
-          trigger={
-            <Button>
-              <Plus className="mr-2 size-4" />
-              Create Hackathon
-            </Button>
-          }
-        />
-      </div>
+      <PageHeader
+        breadcrumbs={[{ label: "Dashboard" }]}
+        title="Dashboard"
+        description="Your hackathons at a glance"
+        actions={
+          <CreateHackathonDrawer
+            trigger={
+              <Button>
+                <Plus className="mr-2 size-4" />
+                Create Hackathon
+              </Button>
+            }
+          />
+        }
+      />
 
       <HackathonTabs
         myHackathons={myHackathons}
