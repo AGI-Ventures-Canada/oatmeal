@@ -55,7 +55,7 @@ export async function optimizeImage(
 
   // Try WebP first (best compression)
   let optimized = await pipeline.clone().webp({ quality: QUALITY }).toBuffer()
-  let outputMimeType = "image/webp"
+  const outputMimeType = "image/webp"
 
   // If still too large, try lower quality
   if (optimized.length > MAX_OPTIMIZED_SIZE) {

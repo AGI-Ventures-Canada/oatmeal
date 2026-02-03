@@ -16,7 +16,6 @@ import {
   Webhook,
   Plug,
   Home,
-  Image,
   Users,
   Star,
   Megaphone,

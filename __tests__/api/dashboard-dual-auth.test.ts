@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
-import type { Principal, UserPrincipal, ApiKeyPrincipal, Scope } from "@/lib/auth/types"
+import type { Principal, UserPrincipal, ApiKeyPrincipal } from "@/lib/auth/types"
+import { DEFAULT_API_KEY_SCOPES, ALL_SCOPES } from "@/lib/auth/types"
 import { requirePrincipal, AuthError } from "@/lib/auth/principal"
 
 const mockUserPrincipal: UserPrincipal = {
@@ -360,8 +361,6 @@ describe("Dashboard Route Scope Requirements", () => {
   })
 
   it("new scopes are in default API key scopes where appropriate", () => {
-    const { DEFAULT_API_KEY_SCOPES } = require("@/lib/auth/types")
-
     expect(DEFAULT_API_KEY_SCOPES).toContain("schedules:read")
     expect(DEFAULT_API_KEY_SCOPES).toContain("org:read")
     expect(DEFAULT_API_KEY_SCOPES).not.toContain("schedules:write")
@@ -369,8 +368,6 @@ describe("Dashboard Route Scope Requirements", () => {
   })
 
   it("all new scopes exist in ALL_SCOPES", () => {
-    const { ALL_SCOPES } = require("@/lib/auth/types")
-
     expect(ALL_SCOPES).toContain("schedules:read")
     expect(ALL_SCOPES).toContain("schedules:write")
     expect(ALL_SCOPES).toContain("org:read")
