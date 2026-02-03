@@ -41,6 +41,13 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
     setError(null)
   }
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && name.trim() && !creating) {
+      e.preventDefault()
+      handleSubmit(e as unknown as React.FormEvent)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setCreating(true)
@@ -75,7 +82,7 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
     <Drawer direction="right" open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent>
-        <form onSubmit={handleSubmit} className="flex flex-col h-full" autoComplete="off">
+        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col h-full" autoComplete="off">
           <DrawerHeader>
             <DrawerTitle>Create Hackathon</DrawerTitle>
             <DrawerDescription>

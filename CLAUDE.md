@@ -194,6 +194,24 @@ This ensures consistent theming and proper dark mode support.
 // - Profile forms where users enter personal info
 ```
 
+**Support Cmd/Ctrl+Enter to submit forms.** Most forms should be submittable with Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux):
+
+```typescript
+function handleKeyDown(e: React.KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !isSubmitting) {
+    e.preventDefault()
+    handleSubmit(e as unknown as React.FormEvent)
+  }
+}
+
+<form onSubmit={handleSubmit} onKeyDown={handleKeyDown}>
+```
+
+Exceptions (use Enter instead):
+- Search inputs
+- Single-line forms with one field
+- Chat/message inputs
+
 ### Code Style
 
 - Do not write comments above code
