@@ -30,7 +30,10 @@ export async function getPublicHackathon(
   const { data: hackathon, error: hackathonError } = await query.single()
 
   if (hackathonError || !hackathon) {
-    console.error("Failed to get public hackathon:", hackathonError)
+    // Only log actual errors, not "not found" (PGRST116 = 0 rows)
+    if (hackathonError && hackathonError.code !== "PGRST116") {
+      console.error("Failed to get public hackathon:", hackathonError)
+    }
     return null
   }
 
