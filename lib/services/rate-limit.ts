@@ -64,6 +64,16 @@ export function getRateLimitHeaders(result: RateLimitResult): Record<string, str
   }
 }
 
+export class RateLimitError extends Error {
+  constructor(
+    public resetAt: number,
+    public remaining: number
+  ) {
+    super("Rate limit exceeded")
+    this.name = "RateLimitError"
+  }
+}
+
 setInterval(() => {
   const now = Date.now()
   for (const [key, entry] of rateLimitStore.entries()) {

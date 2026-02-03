@@ -10,6 +10,10 @@ export type Scope =
   | "submissions:read"
   | "submissions:write"
   | "analytics:read"
+  | "schedules:read"
+  | "schedules:write"
+  | "org:read"
+  | "org:write"
 
 export const ALL_SCOPES: Scope[] = [
   "keys:read",
@@ -23,6 +27,10 @@ export const ALL_SCOPES: Scope[] = [
   "submissions:read",
   "submissions:write",
   "analytics:read",
+  "schedules:read",
+  "schedules:write",
+  "org:read",
+  "org:write",
 ]
 
 export const DEFAULT_API_KEY_SCOPES: Scope[] = [
@@ -32,6 +40,8 @@ export const DEFAULT_API_KEY_SCOPES: Scope[] = [
   "submissions:write",
   "webhooks:read",
   "webhooks:write",
+  "schedules:read",
+  "org:read",
 ]
 
 export type UserPrincipal = {

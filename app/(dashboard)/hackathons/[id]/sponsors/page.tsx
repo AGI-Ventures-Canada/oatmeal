@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect, notFound } from "next/navigation"
-import Link from "next/link"
 import { resolvePageTenant } from "@/lib/services/tenants"
 import { getHackathonByIdForOrganizer } from "@/lib/services/public-hackathons"
 import { listHackathonSponsorsWithTenants } from "@/lib/services/sponsors"
@@ -13,8 +12,9 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Plus, ExternalLink } from "lucide-react"
+import { Plus, ExternalLink } from "lucide-react"
 import { SponsorForm } from "./sponsor-form"
+import { PageHeader } from "@/components/page-header"
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -47,21 +47,15 @@ export default async function SponsorsPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button asChild variant="ghost" size="sm">
-          <Link href={`/hackathons/${hackathon.id}`}>
-            <ArrowLeft className="mr-2 size-4" />
-            Back
-          </Link>
-        </Button>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Sponsors</h1>
-          <p className="text-muted-foreground">{hackathon.name}</p>
-        </div>
-      </div>
+      <PageHeader
+        breadcrumbs={[
+          { label: "Hackathons", href: "/hackathons" },
+          { label: hackathon.name, href: `/hackathons/${hackathon.id}` },
+          { label: "Sponsors" },
+        ]}
+        title="Sponsors"
+        description={hackathon.name}
+      />
 
       <Card>
         <CardHeader>

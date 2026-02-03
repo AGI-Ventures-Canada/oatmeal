@@ -21,7 +21,7 @@ export async function addSponsor(input: AddSponsorInput): Promise<HackathonSpons
       name: input.name,
       logo_url: input.logoUrl ?? null,
       website_url: input.websiteUrl ?? null,
-      tier: input.tier ?? "partner",
+      tier: input.tier ?? "none",
       sponsor_tenant_id: input.sponsorTenantId ?? null,
       display_order: input.displayOrder ?? 0,
     })

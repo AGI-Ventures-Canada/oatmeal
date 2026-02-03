@@ -2,18 +2,8 @@ import { Elysia, t } from "elysia"
 import { resolvePrincipal, requirePrincipal, AuthError } from "@/lib/auth/principal"
 import { createJob, getJobById, cancelJob, startJobWorkflow } from "@/lib/services/jobs"
 import { logAudit } from "@/lib/services/audit"
-import { checkRateLimit, getRateLimitHeaders, defaultRateLimits } from "@/lib/services/rate-limit"
+import { checkRateLimit, getRateLimitHeaders, defaultRateLimits, RateLimitError } from "@/lib/services/rate-limit"
 import type { Json } from "@/lib/db/types"
-
-class RateLimitError extends Error {
-  constructor(
-    public resetAt: number,
-    public remaining: number
-  ) {
-    super("Rate limit exceeded")
-    this.name = "RateLimitError"
-  }
-}
 
 export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
   .onError(({ error }) => {

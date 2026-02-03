@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect, notFound } from "next/navigation"
-import Link from "next/link"
 import { resolvePageTenant } from "@/lib/services/tenants"
 import { getHackathonByIdForOrganizer } from "@/lib/services/public-hackathons"
 import {
@@ -10,9 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
 import { SettingsForm } from "./settings-form"
+import { PageHeader } from "@/components/page-header"
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -35,19 +33,15 @@ export default async function SettingsPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button asChild variant="ghost" size="sm">
-          <Link href={`/hackathons/${hackathon.id}`}>
-            <ArrowLeft className="mr-2 size-4" />
-            Back
-          </Link>
-        </Button>
-      </div>
-
-      <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">{hackathon.name}</p>
-      </div>
+      <PageHeader
+        breadcrumbs={[
+          { label: "Hackathons", href: "/hackathons" },
+          { label: hackathon.name, href: `/hackathons/${hackathon.id}` },
+          { label: "Settings" },
+        ]}
+        title="Settings"
+        description={hackathon.name}
+      />
 
       <Card>
         <CardHeader>

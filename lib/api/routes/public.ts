@@ -73,3 +73,99 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       { headers: { "Content-Type": "text/html" } }
     )
   })
+  .get("/hackathons/:slug", async ({ params }) => {
+    const { getPublicHackathon } = await import("@/lib/services/public-hackathons")
+    const hackathon = await getPublicHackathon(params.slug)
+
+    if (!hackathon) {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    return {
+      id: hackathon.id,
+      name: hackathon.name,
+      slug: hackathon.slug,
+      description: hackathon.description,
+      rules: hackathon.rules,
+      bannerUrl: hackathon.banner_url,
+      status: hackathon.status,
+      startsAt: hackathon.starts_at,
+      endsAt: hackathon.ends_at,
+      registrationOpensAt: hackathon.registration_opens_at,
+      registrationClosesAt: hackathon.registration_closes_at,
+      organizer: {
+        id: hackathon.organizer.id,
+        name: hackathon.organizer.name,
+        slug: hackathon.organizer.slug,
+        logoUrl: hackathon.organizer.logo_url,
+      },
+      sponsors: hackathon.sponsors.map((s) => ({
+        id: s.id,
+        name: s.name,
+        logoUrl: s.logo_url,
+        websiteUrl: s.website_url,
+        tier: s.tier,
+        tenant: s.tenant
+          ? {
+              slug: s.tenant.slug,
+              name: s.tenant.name,
+              logoUrl: s.tenant.logo_url,
+            }
+          : null,
+      })),
+    }
+  })
+  .get("/hackathons", async () => {
+    const { listPublicHackathons } = await import("@/lib/services/public-hackathons")
+    const hackathons = await listPublicHackathons()
+
+    return {
+      hackathons: hackathons.map((h) => ({
+        id: h.id,
+        name: h.name,
+        slug: h.slug,
+        description: h.description,
+        bannerUrl: h.banner_url,
+        status: h.status,
+        startsAt: h.starts_at,
+        endsAt: h.ends_at,
+        organizer: {
+          id: h.organizer.id,
+          name: h.organizer.name,
+          slug: h.organizer.slug,
+          logoUrl: h.organizer.logo_url,
+        },
+      })),
+    }
+  })
+  .get("/orgs/:slug", async ({ params }) => {
+    const { getPublicTenantWithHackathons } = await import("@/lib/services/tenant-profiles")
+    const tenant = await getPublicTenantWithHackathons(params.slug)
+
+    if (!tenant) {
+      return new Response(JSON.stringify({ error: "Organization not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    return {
+      id: tenant.id,
+      name: tenant.name,
+      slug: tenant.slug,
+      logoUrl: tenant.logo_url,
+      description: tenant.description,
+      websiteUrl: tenant.website_url,
+      hackathons: tenant.hackathons.map((h) => ({
+        id: h.id,
+        name: h.name,
+        slug: h.slug,
+        status: h.status,
+        startsAt: h.starts_at,
+        endsAt: h.ends_at,
+      })),
+    }
+  })

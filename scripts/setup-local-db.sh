@@ -42,6 +42,15 @@ verify_containers_healthy() {
   return 0
 }
 
+check_for_stopped_services() {
+  # Check if supabase status shows any stopped services
+  local status_output=$(supabase status 2>&1)
+  if echo "$status_output" | grep -q "Stopped services:"; then
+    return 0  # Has stopped services
+  fi
+  return 1  # No stopped services
+}
+
 start_supabase_with_recovery() {
   local max_attempts=2
   local attempt=1
@@ -104,7 +113,14 @@ start_supabase_with_recovery() {
 
 # Check if this project's Supabase is already running and healthy
 if supabase status &>/dev/null && verify_containers_healthy; then
-  echo "Supabase already running for this project, skipping startup..."
+  # Also check for stopped services that can cause 502 errors during db reset
+  if check_for_stopped_services; then
+    echo "Supabase has stopped services, doing clean restart..."
+    cleanup_corrupted_state
+    start_supabase_with_recovery
+  else
+    echo "Supabase already running for this project, skipping startup..."
+  fi
 else
   if supabase status &>/dev/null; then
     echo "Supabase state exists but containers are unhealthy"

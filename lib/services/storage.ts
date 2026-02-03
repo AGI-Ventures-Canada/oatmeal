@@ -2,9 +2,14 @@ import sharp from "sharp"
 import { supabase as getSupabase } from "@/lib/db/client"
 
 const LOGOS_BUCKET = "logos"
+const BANNERS_BUCKET = "banners"
 const MAX_LOGO_WIDTH = 800
 const MAX_LOGO_HEIGHT = 400
+const MAX_BANNER_WIDTH = 1920
+const MAX_BANNER_HEIGHT = 480
 const QUALITY = 85
+const MAX_OPTIMIZED_SIZE = 200 * 1024 // 200KB
+const MAX_BANNER_SIZE = 500 * 1024 // 500KB
 
 export type LogoVariant = "light" | "dark"
 
@@ -13,10 +18,25 @@ export interface UploadLogoResult {
   path: string
 }
 
+export class ImageTooLargeError extends Error {
+  constructor(size: number) {
+    super(`Optimized image is ${Math.round(size / 1024)}KB, max is ${MAX_OPTIMIZED_SIZE / 1024}KB`)
+    this.name = "ImageTooLargeError"
+  }
+}
+
 export async function optimizeImage(
   buffer: Buffer,
   mimeType: string
 ): Promise<{ buffer: Buffer; mimeType: string }> {
+  // SVGs pass through unchanged
+  if (mimeType === "image/svg+xml") {
+    if (buffer.length > MAX_OPTIMIZED_SIZE) {
+      throw new ImageTooLargeError(buffer.length)
+    }
+    return { buffer, mimeType }
+  }
+
   const image = sharp(buffer)
   const metadata = await image.metadata()
 
@@ -33,17 +53,29 @@ export async function optimizeImage(
     })
   }
 
-  if (mimeType === "image/svg+xml") {
-    return { buffer, mimeType }
+  // Try WebP first (best compression)
+  let optimized = await pipeline.clone().webp({ quality: QUALITY }).toBuffer()
+  let outputMimeType = "image/webp"
+
+  // If still too large, try lower quality
+  if (optimized.length > MAX_OPTIMIZED_SIZE) {
+    optimized = await pipeline.clone().webp({ quality: 60 }).toBuffer()
   }
 
-  if (mimeType === "image/png") {
-    const optimized = await pipeline.png({ quality: QUALITY }).toBuffer()
-    return { buffer: optimized, mimeType: "image/png" }
+  // If still too large, try even smaller dimensions
+  if (optimized.length > MAX_OPTIMIZED_SIZE) {
+    optimized = await sharp(buffer)
+      .resize(400, 200, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 60 })
+      .toBuffer()
   }
 
-  const optimized = await pipeline.webp({ quality: QUALITY }).toBuffer()
-  return { buffer: optimized, mimeType: "image/webp" }
+  // If still too large, give up
+  if (optimized.length > MAX_OPTIMIZED_SIZE) {
+    throw new ImageTooLargeError(optimized.length)
+  }
+
+  return { buffer: optimized, mimeType: outputMimeType }
 }
 
 export async function uploadLogo(
@@ -105,6 +137,106 @@ export async function deleteLogo(
 
   if (error) {
     console.error("Failed to delete logo:", error)
+    return false
+  }
+
+  return true
+}
+
+export interface UploadBannerResult {
+  url: string
+  path: string
+}
+
+export async function optimizeBanner(
+  buffer: Buffer,
+  mimeType: string
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  if (mimeType === "image/svg+xml") {
+    if (buffer.length > MAX_BANNER_SIZE) {
+      throw new ImageTooLargeError(buffer.length)
+    }
+    return { buffer, mimeType }
+  }
+
+  const image = sharp(buffer)
+  const metadata = await image.metadata()
+
+  const needsResize =
+    (metadata.width && metadata.width > MAX_BANNER_WIDTH) ||
+    (metadata.height && metadata.height > MAX_BANNER_HEIGHT)
+
+  let pipeline = image
+
+  if (needsResize) {
+    pipeline = pipeline.resize(MAX_BANNER_WIDTH, MAX_BANNER_HEIGHT, {
+      fit: "cover",
+      position: "center",
+    })
+  }
+
+  let optimized = await pipeline.clone().webp({ quality: QUALITY }).toBuffer()
+  const outputMimeType = "image/webp"
+
+  if (optimized.length > MAX_BANNER_SIZE) {
+    optimized = await pipeline.clone().webp({ quality: 70 }).toBuffer()
+  }
+
+  if (optimized.length > MAX_BANNER_SIZE) {
+    optimized = await pipeline.clone().webp({ quality: 50 }).toBuffer()
+  }
+
+  return { buffer: optimized, mimeType: outputMimeType }
+}
+
+export async function uploadBanner(
+  hackathonId: string,
+  file: Buffer,
+  originalMimeType: string
+): Promise<UploadBannerResult | null> {
+  const client = getSupabase()
+
+  const { buffer, mimeType } = await optimizeBanner(file, originalMimeType)
+
+  const extension = mimeType === "image/svg+xml" ? "svg" : "webp"
+  const filename = `banner.${extension}`
+  const path = `${hackathonId}/${filename}`
+
+  const { error } = await client.storage
+    .from(BANNERS_BUCKET)
+    .upload(path, buffer, {
+      contentType: mimeType,
+      upsert: true,
+      cacheControl: "3600",
+    })
+
+  if (error) {
+    console.error("Failed to upload banner:", error)
+    return null
+  }
+
+  const { data: urlData } = client.storage
+    .from(BANNERS_BUCKET)
+    .getPublicUrl(path)
+
+  return {
+    url: urlData.publicUrl,
+    path,
+  }
+}
+
+export async function deleteBanner(hackathonId: string): Promise<boolean> {
+  const client = getSupabase()
+
+  const extensions = ["webp", "png", "jpg", "svg"]
+  const paths = extensions.map((ext) => `${hackathonId}/banner.${ext}`)
+
+  const { error } = await client.storage
+    .from(BANNERS_BUCKET)
+    .remove(paths)
+
+  if (error) {
+    console.error("Failed to delete banner:", error)
     return false
   }
 

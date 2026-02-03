@@ -9,21 +9,23 @@ interface SponsorSectionProps {
   sponsors: SponsorWithTenant[]
 }
 
-const tierOrder: SponsorTier[] = ["title", "gold", "silver", "bronze", "partner"]
+const tierOrder: SponsorTier[] = ["gold", "silver", "bronze", "none", "title", "partner"]
 
 const tierLabels: Record<SponsorTier, string> = {
-  title: "Title Sponsor",
+  none: "Sponsors",
   gold: "Gold Sponsors",
   silver: "Silver Sponsors",
   bronze: "Bronze Sponsors",
+  title: "Title Sponsor",
   partner: "Partners",
 }
 
 const tierSizes: Record<SponsorTier, "sm" | "md" | "lg"> = {
-  title: "lg",
+  none: "md",
   gold: "lg",
   silver: "md",
-  bronze: "md",
+  bronze: "sm",
+  title: "lg",
   partner: "sm",
 }
 

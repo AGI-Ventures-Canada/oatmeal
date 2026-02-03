@@ -56,6 +56,11 @@ public = true
 file_size_limit = "50MiB"
 allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"]
 
+[storage.buckets.banners]
+public = true
+file_size_limit = "10MiB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/webp"]
+
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:3000"
