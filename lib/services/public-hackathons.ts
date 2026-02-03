@@ -9,18 +9,25 @@ export type PublicHackathon = Hackathon & {
   })[]
 }
 
-export async function getPublicHackathon(slug: string): Promise<PublicHackathon | null> {
+export async function getPublicHackathon(
+  slug: string,
+  options?: { includeUnpublished?: boolean }
+): Promise<PublicHackathon | null> {
   const client = getSupabase() as unknown as SupabaseClient
 
-  const { data: hackathon, error: hackathonError } = await client
+  let query = client
     .from("hackathons")
     .select(`
       *,
       organizer:tenants!tenant_id(id, name, slug, logo_url, logo_url_dark, clerk_org_id)
     `)
     .eq("slug", slug)
-    .in("status", ["published", "registration_open", "active", "judging", "completed"])
-    .single()
+
+  if (!options?.includeUnpublished) {
+    query = query.in("status", ["published", "registration_open", "active", "judging", "completed"])
+  }
+
+  const { data: hackathon, error: hackathonError } = await query.single()
 
   if (hackathonError || !hackathon) {
     console.error("Failed to get public hackathon:", hackathonError)
