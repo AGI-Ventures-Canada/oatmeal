@@ -34,150 +34,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      agent_runs: {
-        Row: {
-          agent_id: string
-          completed_at: string | null
-          created_at: string
-          created_by_key_id: string | null
-          error: Json | null
-          id: string
-          idempotency_key: string | null
-          input: Json | null
-          output: Json | null
-          result: Json | null
-          sandbox_id: string | null
-          started_at: string | null
-          status: Database["public"]["Enums"]["agent_run_status"]
-          steps: Json[] | null
-          tenant_id: string
-          token_usage: Json | null
-          trigger_type: Database["public"]["Enums"]["trigger_type"]
-          workflow_run_id: string | null
-        }
-        Insert: {
-          agent_id: string
-          completed_at?: string | null
-          created_at?: string
-          created_by_key_id?: string | null
-          error?: Json | null
-          id?: string
-          idempotency_key?: string | null
-          input?: Json | null
-          output?: Json | null
-          result?: Json | null
-          sandbox_id?: string | null
-          started_at?: string | null
-          status?: Database["public"]["Enums"]["agent_run_status"]
-          steps?: Json[] | null
-          tenant_id: string
-          token_usage?: Json | null
-          trigger_type?: Database["public"]["Enums"]["trigger_type"]
-          workflow_run_id?: string | null
-        }
-        Update: {
-          agent_id?: string
-          completed_at?: string | null
-          created_at?: string
-          created_by_key_id?: string | null
-          error?: Json | null
-          id?: string
-          idempotency_key?: string | null
-          input?: Json | null
-          output?: Json | null
-          result?: Json | null
-          sandbox_id?: string | null
-          started_at?: string | null
-          status?: Database["public"]["Enums"]["agent_run_status"]
-          steps?: Json[] | null
-          tenant_id?: string
-          token_usage?: Json | null
-          trigger_type?: Database["public"]["Enums"]["trigger_type"]
-          workflow_run_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agent_runs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_runs_created_by_key_id_fkey"
-            columns: ["created_by_key_id"]
-            isOneToOne: false
-            referencedRelation: "api_keys"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_runs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      agents: {
-        Row: {
-          config: Json | null
-          created_at: string
-          description: string | null
-          id: string
-          instructions: string | null
-          is_active: boolean | null
-          max_steps: number | null
-          model: string
-          name: string
-          skill_ids: string[] | null
-          tenant_id: string
-          timeout_ms: number | null
-          type: Database["public"]["Enums"]["agent_type"]
-          updated_at: string
-        }
-        Insert: {
-          config?: Json | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          instructions?: string | null
-          is_active?: boolean | null
-          max_steps?: number | null
-          model?: string
-          name: string
-          skill_ids?: string[] | null
-          tenant_id: string
-          timeout_ms?: number | null
-          type?: Database["public"]["Enums"]["agent_type"]
-          updated_at?: string
-        }
-        Update: {
-          config?: Json | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          instructions?: string | null
-          is_active?: boolean | null
-          max_steps?: number | null
-          model?: string
-          name?: string
-          skill_ids?: string[] | null
-          tenant_id?: string
-          timeout_ms?: number | null
-          type?: Database["public"]["Enums"]["agent_type"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agents_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       api_keys: {
         Row: {
           created_at: string
@@ -266,203 +122,169 @@ export type Database = {
           },
         ]
       }
-      email_addresses: {
+      hackathon_participants: {
         Row: {
-          address: string
-          agent_id: string | null
-          created_at: string
-          domain: string
+          clerk_user_id: string
+          hackathon_id: string
           id: string
-          is_active: boolean | null
-          is_custom_domain: boolean | null
-          local_part: string
-          tenant_id: string
-          updated_at: string
+          registered_at: string
+          role: Database["public"]["Enums"]["participant_role"]
+          team_id: string | null
         }
         Insert: {
-          address: string
-          agent_id?: string | null
-          created_at?: string
-          domain: string
+          clerk_user_id: string
+          hackathon_id: string
           id?: string
-          is_active?: boolean | null
-          is_custom_domain?: boolean | null
-          local_part: string
-          tenant_id: string
-          updated_at?: string
+          registered_at?: string
+          role?: Database["public"]["Enums"]["participant_role"]
+          team_id?: string | null
         }
         Update: {
-          address?: string
-          agent_id?: string | null
-          created_at?: string
-          domain?: string
+          clerk_user_id?: string
+          hackathon_id?: string
           id?: string
-          is_active?: boolean | null
-          is_custom_domain?: boolean | null
-          local_part?: string
-          tenant_id?: string
-          updated_at?: string
+          registered_at?: string
+          role?: Database["public"]["Enums"]["participant_role"]
+          team_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "email_addresses_agent_id_fkey"
-            columns: ["agent_id"]
+            foreignKeyName: "hackathon_participants_hackathon_id_fkey"
+            columns: ["hackathon_id"]
             isOneToOne: false
-            referencedRelation: "agents"
+            referencedRelation: "hackathons"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "email_addresses_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "hackathon_participants_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hackathon_sponsors: {
+        Row: {
+          created_at: string
+          display_order: number
+          hackathon_id: string
+          id: string
+          logo_url: string | null
+          name: string
+          sponsor_tenant_id: string | null
+          tier: Database["public"]["Enums"]["sponsor_tier"]
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          hackathon_id: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          sponsor_tenant_id?: string | null
+          tier?: Database["public"]["Enums"]["sponsor_tier"]
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          hackathon_id?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          sponsor_tenant_id?: string | null
+          tier?: Database["public"]["Enums"]["sponsor_tier"]
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hackathon_sponsors_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathon_sponsors_sponsor_tenant_id_fkey"
+            columns: ["sponsor_tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
       }
-      inbound_emails: {
+      hackathons: {
         Row: {
-          agent_run_id: string | null
-          attachments: Json | null
-          body_html: string | null
-          body_text: string | null
-          email_address_id: string
-          from_address: string
-          id: string
-          received_at: string
-          resend_email_id: string
-          subject: string | null
-        }
-        Insert: {
-          agent_run_id?: string | null
-          attachments?: Json | null
-          body_html?: string | null
-          body_text?: string | null
-          email_address_id: string
-          from_address: string
-          id?: string
-          received_at?: string
-          resend_email_id: string
-          subject?: string | null
-        }
-        Update: {
-          agent_run_id?: string | null
-          attachments?: Json | null
-          body_html?: string | null
-          body_text?: string | null
-          email_address_id?: string
-          from_address?: string
-          id?: string
-          received_at?: string
-          resend_email_id?: string
-          subject?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inbound_emails_agent_run_id_fkey"
-            columns: ["agent_run_id"]
-            isOneToOne: false
-            referencedRelation: "agent_runs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inbound_emails_email_address_id_fkey"
-            columns: ["email_address_id"]
-            isOneToOne: false
-            referencedRelation: "email_addresses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      luma_webhook_configs: {
-        Row: {
-          agent_id: string | null
-          calendar_id: string | null
+          allow_solo: boolean | null
+          banner_url: string | null
           created_at: string
-          event_types: Database["public"]["Enums"]["luma_event_type"][]
+          description: string | null
+          ends_at: string | null
           id: string
-          is_active: boolean | null
+          max_participants: number | null
+          max_team_size: number | null
+          metadata: Json | null
+          min_team_size: number | null
+          name: string
+          registration_closes_at: string | null
+          registration_opens_at: string | null
+          rules: string | null
+          slug: string
+          starts_at: string | null
+          status: Database["public"]["Enums"]["hackathon_status"]
           tenant_id: string
           updated_at: string
-          webhook_token: string
         }
         Insert: {
-          agent_id?: string | null
-          calendar_id?: string | null
+          allow_solo?: boolean | null
+          banner_url?: string | null
           created_at?: string
-          event_types?: Database["public"]["Enums"]["luma_event_type"][]
+          description?: string | null
+          ends_at?: string | null
           id?: string
-          is_active?: boolean | null
+          max_participants?: number | null
+          max_team_size?: number | null
+          metadata?: Json | null
+          min_team_size?: number | null
+          name: string
+          registration_closes_at?: string | null
+          registration_opens_at?: string | null
+          rules?: string | null
+          slug: string
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["hackathon_status"]
           tenant_id: string
           updated_at?: string
-          webhook_token: string
         }
         Update: {
-          agent_id?: string | null
-          calendar_id?: string | null
+          allow_solo?: boolean | null
+          banner_url?: string | null
           created_at?: string
-          event_types?: Database["public"]["Enums"]["luma_event_type"][]
+          description?: string | null
+          ends_at?: string | null
           id?: string
-          is_active?: boolean | null
+          max_participants?: number | null
+          max_team_size?: number | null
+          metadata?: Json | null
+          min_team_size?: number | null
+          name?: string
+          registration_closes_at?: string | null
+          registration_opens_at?: string | null
+          rules?: string | null
+          slug?: string
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["hackathon_status"]
           tenant_id?: string
           updated_at?: string
-          webhook_token?: string
         }
         Relationships: [
           {
-            foreignKeyName: "luma_webhook_configs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "luma_webhook_configs_tenant_id_fkey"
+            foreignKeyName: "hackathons_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      luma_webhook_events: {
-        Row: {
-          agent_run_id: string | null
-          config_id: string
-          event_type: Database["public"]["Enums"]["luma_event_type"]
-          id: string
-          payload: Json
-          received_at: string
-        }
-        Insert: {
-          agent_run_id?: string | null
-          config_id: string
-          event_type: Database["public"]["Enums"]["luma_event_type"]
-          id?: string
-          payload: Json
-          received_at?: string
-        }
-        Update: {
-          agent_run_id?: string | null
-          config_id?: string
-          event_type?: Database["public"]["Enums"]["luma_event_type"]
-          id?: string
-          payload?: Json
-          received_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "luma_webhook_events_agent_run_id_fkey"
-            columns: ["agent_run_id"]
-            isOneToOne: false
-            referencedRelation: "agent_runs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "luma_webhook_events_config_id_fkey"
-            columns: ["config_id"]
-            isOneToOne: false
-            referencedRelation: "luma_webhook_configs"
             referencedColumns: ["id"]
           },
         ]
@@ -567,57 +389,6 @@ export type Database = {
           },
         ]
       }
-      sandbox_sessions: {
-        Row: {
-          agent_run_id: string | null
-          created_at: string
-          daytona_sandbox_id: string
-          env_vars_encrypted: Json | null
-          id: string
-          snapshot_id: string | null
-          status: string
-          tenant_id: string
-          terminated_at: string | null
-        }
-        Insert: {
-          agent_run_id?: string | null
-          created_at?: string
-          daytona_sandbox_id: string
-          env_vars_encrypted?: Json | null
-          id?: string
-          snapshot_id?: string | null
-          status?: string
-          tenant_id: string
-          terminated_at?: string | null
-        }
-        Update: {
-          agent_run_id?: string | null
-          created_at?: string
-          daytona_sandbox_id?: string
-          env_vars_encrypted?: Json | null
-          id?: string
-          snapshot_id?: string | null
-          status?: string
-          tenant_id?: string
-          terminated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sandbox_sessions_agent_run_id_fkey"
-            columns: ["agent_run_id"]
-            isOneToOne: false
-            referencedRelation: "agent_runs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sandbox_sessions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       schedules: {
         Row: {
           agent_id: string | null
@@ -672,13 +443,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "schedules_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "schedules_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -687,55 +451,113 @@ export type Database = {
           },
         ]
       }
-      skills: {
+      submissions: {
         Row: {
-          content: string
           created_at: string
+          demo_video_url: string | null
           description: string | null
+          github_url: string | null
+          hackathon_id: string
           id: string
-          is_builtin: boolean | null
-          name: string
-          references_content: Json | null
-          scripts_content: Json | null
-          slug: string
-          tenant_id: string
+          live_app_url: string | null
+          metadata: Json | null
+          participant_id: string | null
+          status: Database["public"]["Enums"]["submission_status"]
+          team_id: string | null
+          title: string
           updated_at: string
-          version: number | null
         }
         Insert: {
-          content: string
           created_at?: string
+          demo_video_url?: string | null
           description?: string | null
+          github_url?: string | null
+          hackathon_id: string
           id?: string
-          is_builtin?: boolean | null
-          name: string
-          references_content?: Json | null
-          scripts_content?: Json | null
-          slug: string
-          tenant_id: string
+          live_app_url?: string | null
+          metadata?: Json | null
+          participant_id?: string | null
+          status?: Database["public"]["Enums"]["submission_status"]
+          team_id?: string | null
+          title: string
           updated_at?: string
-          version?: number | null
         }
         Update: {
-          content?: string
           created_at?: string
+          demo_video_url?: string | null
           description?: string | null
+          github_url?: string | null
+          hackathon_id?: string
           id?: string
-          is_builtin?: boolean | null
-          name?: string
-          references_content?: Json | null
-          scripts_content?: Json | null
-          slug?: string
-          tenant_id?: string
+          live_app_url?: string | null
+          metadata?: Json | null
+          participant_id?: string | null
+          status?: Database["public"]["Enums"]["submission_status"]
+          team_id?: string | null
+          title?: string
           updated_at?: string
-          version?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "skills_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "submissions_hackathon_id_fkey"
+            columns: ["hackathon_id"]
             isOneToOne: false
-            referencedRelation: "tenants"
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          captain_clerk_user_id: string
+          created_at: string
+          hackathon_id: string
+          id: string
+          invite_code: string
+          name: string
+          status: Database["public"]["Enums"]["team_status"]
+          updated_at: string
+        }
+        Insert: {
+          captain_clerk_user_id: string
+          created_at?: string
+          hackathon_id: string
+          id?: string
+          invite_code: string
+          name: string
+          status?: Database["public"]["Enums"]["team_status"]
+          updated_at?: string
+        }
+        Update: {
+          captain_clerk_user_id?: string
+          created_at?: string
+          hackathon_id?: string
+          id?: string
+          invite_code?: string
+          name?: string
+          status?: Database["public"]["Enums"]["team_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
             referencedColumns: ["id"]
           },
         ]
@@ -745,25 +567,40 @@ export type Database = {
           clerk_org_id: string | null
           clerk_user_id: string | null
           created_at: string
+          description: string | null
           id: string
+          logo_url: string | null
+          logo_url_dark: string | null
           name: string
+          slug: string | null
           updated_at: string
+          website_url: string | null
         }
         Insert: {
           clerk_org_id?: string | null
           clerk_user_id?: string | null
           created_at?: string
+          description?: string | null
           id?: string
+          logo_url?: string | null
+          logo_url_dark?: string | null
           name: string
+          slug?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Update: {
           clerk_org_id?: string | null
           clerk_user_id?: string | null
           created_at?: string
+          description?: string | null
           id?: string
+          logo_url?: string | null
+          logo_url_dark?: string | null
           name?: string
+          slug?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -873,23 +710,16 @@ export type Database = {
     }
     Enums: {
       actor_type: "user" | "api_key"
-      agent_run_status:
-        | "queued"
-        | "initializing"
-        | "running"
-        | "awaiting_input"
-        | "succeeded"
-        | "failed"
-        | "canceled"
-        | "timed_out"
-      agent_type: "ai_sdk" | "claude_sdk"
+      hackathon_status:
+        | "draft"
+        | "published"
+        | "registration_open"
+        | "active"
+        | "judging"
+        | "completed"
+        | "archived"
       integration_provider: "gmail" | "google_calendar" | "notion" | "luma"
-      luma_event_type:
-        | "event.created"
-        | "event.updated"
-        | "guest.registered"
-        | "guest.updated"
-        | "ticket.registered"
+      participant_role: "participant" | "judge" | "mentor" | "organizer"
       schedule_frequency:
         | "once"
         | "hourly"
@@ -897,12 +727,20 @@ export type Database = {
         | "weekly"
         | "monthly"
         | "cron"
-      trigger_type: "manual" | "scheduled" | "email" | "luma_webhook"
+      sponsor_tier: "title" | "gold" | "silver" | "bronze" | "partner"
+      submission_status:
+        | "draft"
+        | "submitted"
+        | "under_review"
+        | "accepted"
+        | "rejected"
+        | "winner"
+      team_status: "forming" | "locked" | "disbanded"
       webhook_event:
-        | "agent_run.started"
-        | "agent_run.completed"
-        | "agent_run.failed"
-        | "agent_run.step_completed"
+        | "hackathon.created"
+        | "hackathon.updated"
+        | "submission.created"
+        | "submission.submitted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1034,25 +872,17 @@ export const Constants = {
   public: {
     Enums: {
       actor_type: ["user", "api_key"],
-      agent_run_status: [
-        "queued",
-        "initializing",
-        "running",
-        "awaiting_input",
-        "succeeded",
-        "failed",
-        "canceled",
-        "timed_out",
+      hackathon_status: [
+        "draft",
+        "published",
+        "registration_open",
+        "active",
+        "judging",
+        "completed",
+        "archived",
       ],
-      agent_type: ["ai_sdk", "claude_sdk"],
       integration_provider: ["gmail", "google_calendar", "notion", "luma"],
-      luma_event_type: [
-        "event.created",
-        "event.updated",
-        "guest.registered",
-        "guest.updated",
-        "ticket.registered",
-      ],
+      participant_role: ["participant", "judge", "mentor", "organizer"],
       schedule_frequency: [
         "once",
         "hourly",
@@ -1061,12 +891,21 @@ export const Constants = {
         "monthly",
         "cron",
       ],
-      trigger_type: ["manual", "scheduled", "email", "luma_webhook"],
+      sponsor_tier: ["title", "gold", "silver", "bronze", "partner"],
+      submission_status: [
+        "draft",
+        "submitted",
+        "under_review",
+        "accepted",
+        "rejected",
+        "winner",
+      ],
+      team_status: ["forming", "locked", "disbanded"],
       webhook_event: [
-        "agent_run.started",
-        "agent_run.completed",
-        "agent_run.failed",
-        "agent_run.step_completed",
+        "hackathon.created",
+        "hackathon.updated",
+        "submission.created",
+        "submission.submitted",
       ],
     },
   },

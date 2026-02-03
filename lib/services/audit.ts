@@ -31,6 +31,14 @@ export type AuditAction =
   | "credential.saved"
   | "credential.updated"
   | "credential.deleted"
+  | "hackathon.created"
+  | "hackathon.updated"
+  | "sponsor.added"
+  | "sponsor.updated"
+  | "sponsor.removed"
+  | "org_profile.updated"
+  | "logo.uploaded"
+  | "logo.deleted"
 
 export type LogAuditInput = {
   principal: Exclude<Principal, { kind: "anon" }>

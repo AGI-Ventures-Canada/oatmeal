@@ -124,6 +124,11 @@ export interface Tenant {
   clerk_org_id: string | null
   clerk_user_id: string | null
   name: string
+  slug: string | null
+  logo_url: string | null
+  logo_url_dark: string | null
+  description: string | null
+  website_url: string | null
   created_at: string
   updated_at: string
 }
@@ -221,6 +226,34 @@ export interface OrgIntegration {
   scopes: string[] | null
   metadata: Json | null
   is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type SponsorTier = "title" | "gold" | "silver" | "bronze" | "partner"
+
+export interface HackathonSponsor {
+  id: string
+  hackathon_id: string
+  sponsor_tenant_id: string | null
+  name: string
+  logo_url: string | null
+  website_url: string | null
+  tier: SponsorTier
+  display_order: number
+  created_at: string
+}
+
+export interface TenantProfile {
+  id: string
+  clerk_org_id: string | null
+  clerk_user_id: string | null
+  name: string
+  slug: string | null
+  logo_url: string | null
+  logo_url_dark: string | null
+  description: string | null
+  website_url: string | null
   created_at: string
   updated_at: string
 }
