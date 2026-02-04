@@ -1,9 +1,10 @@
-import { describe, expect, it } from "bun:test"
-import { render } from "@testing-library/react"
+import { afterEach, describe, expect, it } from "bun:test"
+import { cleanup, render } from "@testing-library/react"
 import { LogEntry } from "@/components/dashboard/run-detail/log-entry"
 import type { StreamLogEntry } from "@/lib/workflows/agents/stream-types"
 
 describe("LogEntry", () => {
+  afterEach(cleanup)
   const baseLog: StreamLogEntry = {
     timestamp: "2026-01-18T12:00:00Z",
     level: "info",
