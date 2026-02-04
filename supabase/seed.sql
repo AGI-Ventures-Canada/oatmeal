@@ -1,6 +1,17 @@
 -- Seed data for local development
 -- This file runs automatically on `supabase db reset` and for preview branches
 
+-- ============================================================================
+-- PERSONAL TENANT (Your local dev user)
+-- ============================================================================
+INSERT INTO tenants (id, clerk_user_id, name, slug, description, created_at, updated_at)
+VALUES
+  ('d1d1d1d1-d1d1-d1d1-d1d1-d1d1d1d1d1d1', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'Dwayne Joseph', 'dwayne-joseph', 'Personal workspace for local development', now(), now())
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- ORGANIZATION TENANTS (Test orgs for hackathons)
+-- ============================================================================
 -- Test tenant (maps to a test Clerk org)
 INSERT INTO tenants (id, clerk_org_id, name, slug, description, website_url, created_at, updated_at)
 VALUES
@@ -181,5 +192,16 @@ VALUES
     0,
     now()
   )
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- HACKATHON REGISTRATIONS (Your user registered for sample hackathons)
+-- ============================================================================
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('d2d2d2d2-d2d2-d2d2-d2d2-d2d2d2d2d2d2', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now()),
+  ('d3d3d3d3-d3d3-d3d3-d3d3-d3d3d3d3d3d3', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now()),
+  ('d4d4d4d4-d4d4-d4d4-d4d4-d4d4d4d4d4d4', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now()),
+  ('d5d5d5d5-d5d5-d5d5-d5d5-d5d5d5d5d5d5', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now())
 ON CONFLICT (id) DO NOTHING;
 
