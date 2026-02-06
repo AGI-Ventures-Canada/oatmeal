@@ -10,6 +10,22 @@ const nextConfig: NextConfig = {
     "ai",
     "zod",
   ],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "http",
+        hostname: "127.0.0.1",
+        port: "54421",
+        pathname: "/storage/v1/object/public/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "54421",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
 }
 
 const withMDX = createMDX()
