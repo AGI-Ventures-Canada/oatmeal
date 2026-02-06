@@ -1,4 +1,5 @@
 import { Elysia } from "elysia"
+import { auth } from "@clerk/nextjs/server"
 
 export const publicRoutes = new Elysia({ prefix: "/public" })
   .get("/health", () => ({
@@ -123,6 +124,39 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
           : null,
       })),
     }
+  })
+  .post("/hackathons/:slug/register", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getPublicHackathon } = await import("@/lib/services/public-hackathons")
+    const hackathon = await getPublicHackathon(params.slug)
+
+    if (!hackathon) {
+      return new Response(
+        JSON.stringify({ error: "Hackathon not found", code: "hackathon_not_found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { registerForHackathon } = await import("@/lib/services/hackathons")
+    const result = await registerForHackathon(hackathon.id, userId)
+
+    if (!result.success) {
+      const statusCode = result.code === "already_registered" ? 409 : 400
+      return new Response(
+        JSON.stringify({ error: result.error, code: result.code }),
+        { status: statusCode, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    return { success: true, participantId: result.participantId }
   })
   .get("/hackathons", async () => {
     const { listPublicHackathons } = await import("@/lib/services/public-hackathons")
