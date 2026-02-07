@@ -69,4 +69,4 @@ jobs:
           echo "::warning::TypeScript check completed (errors shown above if any)"
 
       - name: Run tests
-        run: bun test
+        run: bun test:all
