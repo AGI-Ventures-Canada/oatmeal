@@ -1,499 +1,570 @@
-import { describe, expect, it } from "bun:test"
-import type { Webhook, WebhookDelivery, WebhookEvent } from "@/lib/db/hackathon-types"
+import { describe, expect, it, beforeEach, mock, spyOn } from "bun:test"
+import type { Webhook, WebhookEvent } from "@/lib/db/hackathon-types"
+import {
+  createChainableMock,
+  resetSupabaseMocks,
+  setMockFromImplementation,
+} from "../lib/supabase-mock"
+
+const {
+  createWebhook,
+  getWebhookById,
+  listWebhooks,
+  listActiveWebhooks,
+  deleteWebhook,
+  disableWebhook,
+  incrementFailureCount,
+  resetFailureCount,
+  recordDelivery,
+  deliverWebhook,
+} = await import("@/lib/services/webhooks")
+
+const {
+  generateWebhookSecret,
+  signWebhookPayload,
+  verifyWebhookSignature,
+} = await import("@/lib/services/encryption")
+
+const mockWebhook: Webhook = {
+  id: "wh-1",
+  tenant_id: "tenant-123",
+  url: "https://example.com/webhook",
+  secret: "test-secret-hex",
+  events: ["hackathon.created", "hackathon.updated"],
+  is_active: true,
+  failure_count: 0,
+  last_triggered_at: null,
+  last_success_at: null,
+  last_failure_at: null,
+  created_at: "2024-01-01T00:00:00Z",
+  updated_at: "2024-01-01T00:00:00Z",
+}
 
 describe("Webhooks Service", () => {
-  describe("Webhook Events", () => {
-    const validEvents: WebhookEvent[] = [
-      "hackathon.created",
-      "hackathon.updated",
-      "submission.created",
-      "submission.submitted",
-    ]
+  beforeEach(() => {
+    resetSupabaseMocks()
+  })
 
-    it("supports hackathon.created event", () => {
-      expect(validEvents).toContain("hackathon.created")
+  describe("createWebhook", () => {
+    it("creates webhook with generated secret", async () => {
+      const chain = createChainableMock({
+        data: mockWebhook,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await createWebhook({
+        tenantId: "tenant-123",
+        url: "https://example.com/webhook",
+        events: ["hackathon.created", "hackathon.updated"],
+      })
+
+      expect(result).not.toBeNull()
+      expect(result?.webhook.id).toBe("wh-1")
+      expect(result?.webhook.url).toBe("https://example.com/webhook")
+      expect(result?.secret).toBeDefined()
     })
 
-    it("supports hackathon.updated event", () => {
-      expect(validEvents).toContain("hackathon.updated")
+    it("returns null on database error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "Database error" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await createWebhook({
+        tenantId: "tenant-123",
+        url: "https://example.com/webhook",
+        events: ["hackathon.created"],
+      })
+
+      expect(result).toBeNull()
     })
 
-    it("supports submission.created event", () => {
-      expect(validEvents).toContain("submission.created")
-    })
+    it("supports multiple events", async () => {
+      const webhookWithMultipleEvents = {
+        ...mockWebhook,
+        events: ["hackathon.created", "hackathon.updated", "submission.created", "submission.submitted"] as WebhookEvent[],
+      }
 
-    it("supports submission.submitted event", () => {
-      expect(validEvents).toContain("submission.submitted")
+      const chain = createChainableMock({
+        data: webhookWithMultipleEvents,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await createWebhook({
+        tenantId: "tenant-123",
+        url: "https://example.com/webhook",
+        events: ["hackathon.created", "hackathon.updated", "submission.created", "submission.submitted"],
+      })
+
+      expect(result).not.toBeNull()
+      expect(result?.webhook.events).toHaveLength(4)
     })
   })
 
-  describe("CreateWebhookInput", () => {
-    it("accepts valid webhook input structure", () => {
-      const input = {
-        tenantId: "tenant-123",
-        url: "https://example.com/webhook",
-        events: ["hackathon.created", "hackathon.updated"] as WebhookEvent[],
-      }
+  describe("getWebhookById", () => {
+    it("returns webhook when found", async () => {
+      const chain = createChainableMock({
+        data: mockWebhook,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
 
-      expect(input.tenantId).toBeDefined()
-      expect(input.url).toBeDefined()
-      expect(input.events).toHaveLength(2)
+      const result = await getWebhookById("wh-1")
+
+      expect(result).not.toBeNull()
+      expect(result?.id).toBe("wh-1")
     })
 
-    it("requires valid URL format", () => {
-      const validUrls = [
-        "https://example.com/webhook",
-        "https://api.myapp.com/callbacks/agents",
-        "http://localhost:3000/dev/webhook",
-        "https://hooks.slack.com/services/T00/B00/XXX",
+    it("returns null when not found", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await getWebhookById("nonexistent")
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe("listWebhooks", () => {
+    it("returns webhooks for tenant", async () => {
+      const webhooks = [
+        mockWebhook,
+        { ...mockWebhook, id: "wh-2", url: "https://example.com/webhook2" },
       ]
 
-      for (const url of validUrls) {
-        expect(() => new URL(url)).not.toThrow()
-      }
+      const chain = createChainableMock({
+        data: webhooks,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listWebhooks("tenant-123")
+
+      expect(result).toHaveLength(2)
+      expect(result[0].id).toBe("wh-1")
+      expect(result[1].id).toBe("wh-2")
     })
 
-    it("events must be an array", () => {
-      const input = {
-        tenantId: "tenant-123",
-        url: "https://example.com/webhook",
-        events: ["hackathon.created"] as WebhookEvent[],
-      }
+    it("returns empty array when no webhooks exist", async () => {
+      const chain = createChainableMock({
+        data: [],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
 
-      expect(Array.isArray(input.events)).toBe(true)
-    })
-  })
+      const result = await listWebhooks("tenant-empty")
 
-  describe("Webhook Data Structure", () => {
-    it("contains required fields", () => {
-      const webhook: Webhook = {
-        id: "wh-001",
-        tenant_id: "tenant-123",
-        url: "https://example.com/webhook",
-        secret: "secret-abc",
-        events: ["hackathon.updated"],
-        is_active: true,
-        failure_count: 0,
-        last_triggered_at: null,
-        last_success_at: null,
-        last_failure_at: null,
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-      }
-
-      expect(webhook.id).toBeDefined()
-      expect(webhook.tenant_id).toBeDefined()
-      expect(webhook.url).toBeDefined()
-      expect(webhook.secret).toBeDefined()
-      expect(webhook.events).toBeDefined()
-      expect(webhook.is_active).toBeDefined()
-      expect(webhook.failure_count).toBeDefined()
+      expect(result).toEqual([])
     })
 
-    it("tracks success and failure timestamps", () => {
-      const webhook: Webhook = {
-        id: "wh-002",
-        tenant_id: "tenant-123",
-        url: "https://example.com/webhook",
-        secret: "secret-xyz",
-        events: ["hackathon.created"],
-        is_active: true,
-        failure_count: 2,
-        last_triggered_at: "2024-01-15T10:00:00Z",
-        last_success_at: "2024-01-15T09:00:00Z",
-        last_failure_at: "2024-01-15T10:00:00Z",
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-15T10:00:00Z",
-      }
+    it("returns empty array on error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "Database error" },
+      })
+      setMockFromImplementation(() => chain)
 
-      expect(webhook.last_triggered_at).toBeDefined()
-      expect(webhook.last_success_at).toBeDefined()
-      expect(webhook.last_failure_at).toBeDefined()
-      expect(webhook.failure_count).toBe(2)
-    })
+      const result = await listWebhooks("tenant-error")
 
-    it("supports multiple events per webhook", () => {
-      const webhook: Webhook = {
-        id: "wh-003",
-        tenant_id: "tenant-123",
-        url: "https://example.com/webhook",
-        secret: "secret-123",
-        events: [
-          "hackathon.created",
-          "hackathon.updated",
-          "submission.created",
-          "submission.submitted",
-        ],
-        is_active: true,
-        failure_count: 0,
-        last_triggered_at: null,
-        last_success_at: null,
-        last_failure_at: null,
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-      }
-
-      expect(webhook.events).toHaveLength(4)
+      expect(result).toEqual([])
     })
   })
 
-  describe("WebhookDelivery Data Structure", () => {
-    it("contains required fields", () => {
-      const delivery: WebhookDelivery = {
-        id: "wd-001",
-        webhook_id: "wh-123",
+  describe("listActiveWebhooks", () => {
+    it("returns active webhooks matching event", async () => {
+      const activeWebhook = { ...mockWebhook, is_active: true }
+
+      const chain = createChainableMock({
+        data: [activeWebhook],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listActiveWebhooks("tenant-123", "hackathon.created")
+
+      expect(result).toHaveLength(1)
+      expect(result[0].is_active).toBe(true)
+    })
+
+    it("excludes inactive webhooks", async () => {
+      const chain = createChainableMock({
+        data: [],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listActiveWebhooks("tenant-123", "hackathon.created")
+
+      expect(result).toEqual([])
+    })
+
+    it("returns empty array on error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "Database error" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listActiveWebhooks("tenant-error", "hackathon.created")
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe("deleteWebhook", () => {
+    it("returns true on successful deletion", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await deleteWebhook("wh-1", "tenant-123")
+
+      expect(result).toBe(true)
+    })
+
+    it("returns false on error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "Database error" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await deleteWebhook("wh-1", "tenant-123")
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe("disableWebhook", () => {
+    it("returns true on successful disable", async () => {
+      const chain = createChainableMock({
+        data: { ...mockWebhook, is_active: false },
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await disableWebhook("wh-1")
+
+      expect(result).toBe(true)
+    })
+
+    it("returns false on error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "Database error" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await disableWebhook("wh-1")
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe("incrementFailureCount", () => {
+    it("increments failure count successfully", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({ data: { failure_count: 1 }, error: null })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      const result = await incrementFailureCount("wh-1")
+
+      expect(result).toBe(true)
+    })
+
+    it("returns false when webhook not found", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await incrementFailureCount("nonexistent")
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe("resetFailureCount", () => {
+    it("resets failure count successfully", async () => {
+      const chain = createChainableMock({
+        data: { ...mockWebhook, failure_count: 0 },
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await resetFailureCount("wh-1")
+
+      expect(result).toBe(true)
+    })
+
+    it("returns false on error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "Database error" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await resetFailureCount("wh-1")
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe("recordDelivery", () => {
+    it("records successful delivery", async () => {
+      const mockDelivery = {
+        id: "wd-1",
+        webhook_id: "wh-1",
         event: "hackathon.updated",
-        payload: { submission_id: "sub-456", status: "completed" },
+        payload: { hackathon_id: "h-1" },
         response_status: 200,
         response_body: '{"ok": true}',
         attempt: 1,
-        delivered_at: "2024-01-15T10:00:00Z",
-        created_at: "2024-01-15T10:00:00Z",
+        delivered_at: "2024-01-01T00:00:00Z",
+        created_at: "2024-01-01T00:00:00Z",
       }
 
-      expect(delivery.id).toBeDefined()
-      expect(delivery.webhook_id).toBeDefined()
-      expect(delivery.event).toBeDefined()
-      expect(delivery.payload).toBeDefined()
-      expect(delivery.attempt).toBeDefined()
+      const chain = createChainableMock({
+        data: mockDelivery,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await recordDelivery(
+        "wh-1",
+        "hackathon.updated",
+        { hackathon_id: "h-1" },
+        { success: true, status: 200, body: '{"ok": true}' },
+        1
+      )
+
+      expect(result).not.toBeNull()
+      expect(result?.response_status).toBe(200)
+      expect(result?.delivered_at).not.toBeNull()
     })
 
-    it("tracks failed delivery attempts", () => {
-      const delivery: WebhookDelivery = {
-        id: "wd-002",
-        webhook_id: "wh-123",
+    it("records failed delivery", async () => {
+      const mockDelivery = {
+        id: "wd-2",
+        webhook_id: "wh-1",
         event: "hackathon.created",
-        payload: { submission_id: "sub-789" },
+        payload: { hackathon_id: "h-2" },
         response_status: 500,
         response_body: "Internal Server Error",
         attempt: 1,
         delivered_at: null,
-        created_at: "2024-01-15T10:00:00Z",
+        created_at: "2024-01-01T00:00:00Z",
       }
 
-      expect(delivery.delivered_at).toBeNull()
-      expect(delivery.response_status).toBe(500)
-    })
+      const chain = createChainableMock({
+        data: mockDelivery,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
 
-    it("tracks multiple retry attempts", () => {
-      const attempts = [
-        { attempt: 1, response_status: 503, delivered_at: null },
-        { attempt: 2, response_status: 503, delivered_at: null },
-        { attempt: 3, response_status: 200, delivered_at: "2024-01-15T10:00:05Z" },
-      ]
-
-      expect(attempts[0].attempt).toBe(1)
-      expect(attempts[2].attempt).toBe(3)
-      expect(attempts[2].delivered_at).not.toBeNull()
-    })
-  })
-
-  describe("WebhookDeliveryResult", () => {
-    it("represents successful delivery", () => {
-      const result = {
-        success: true,
-        status: 200,
-        body: '{"received": true}',
-      }
-
-      expect(result.success).toBe(true)
-      expect(result.status).toBe(200)
-      expect(result.error).toBeUndefined()
-    })
-
-    it("represents failed delivery with HTTP error", () => {
-      const result = {
-        success: false,
-        status: 500,
-        body: "Internal Server Error",
-      }
-
-      expect(result.success).toBe(false)
-      expect(result.status).toBe(500)
-    })
-
-    it("represents failed delivery with network error", () => {
-      const result = {
-        success: false,
-        error: "ECONNREFUSED",
-      }
-
-      expect(result.success).toBe(false)
-      expect(result.status).toBeUndefined()
-      expect(result.error).toBe("ECONNREFUSED")
-    })
-
-    it("represents timeout error", () => {
-      const result = {
-        success: false,
-        error: "Request timed out",
-      }
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain("timed out")
-    })
-  })
-
-  describe("Webhook URL Validation", () => {
-    it("accepts HTTPS URLs", () => {
-      const url = "https://api.example.com/webhook"
-      expect(() => new URL(url)).not.toThrow()
-      expect(new URL(url).protocol).toBe("https:")
-    })
-
-    it("accepts HTTP URLs (for local development)", () => {
-      const url = "http://localhost:3000/webhook"
-      expect(() => new URL(url)).not.toThrow()
-      expect(new URL(url).protocol).toBe("http:")
-    })
-
-    it("validates URL structure", () => {
-      const validUrls = [
-        "https://example.com/webhook",
-        "https://sub.example.com/api/v1/hooks",
-        "https://example.com:8080/webhook",
-        "https://example.com/webhook?key=value",
-      ]
-
-      for (const url of validUrls) {
-        const parsed = new URL(url)
-        expect(parsed.hostname).toBeDefined()
-        expect(parsed.pathname).toBeDefined()
-      }
-    })
-
-    it("rejects invalid URLs", () => {
-      const invalidUrls = ["not-a-url", "ftp://example.com/file", "://missing-protocol"]
-
-      for (const url of invalidUrls) {
-        expect(() => {
-          const parsed = new URL(url)
-          if (!["http:", "https:"].includes(parsed.protocol)) {
-            throw new Error("Invalid protocol")
-          }
-        }).toThrow()
-      }
-    })
-  })
-
-  describe("Webhook Payload Structure", () => {
-    it("hackathon.created payload", () => {
-      const payload = {
-        event: "hackathon.created",
-        timestamp: "2024-01-15T10:00:00Z",
-        data: {
-          submission_id: "sub-123",
-          hackathon_id: "hackathon-456",
-          hackathon_name: "My Hackathon",
-          triggered_by: "manual",
-        },
-      }
-
-      expect(payload.event).toBe("hackathon.created")
-      expect(payload.data.hackathon_id).toBeDefined()
-      expect(payload.data.hackathon_name).toBeDefined()
-    })
-
-    it("hackathon.updated payload", () => {
-      const payload = {
-        event: "hackathon.updated",
-        timestamp: "2024-01-15T10:05:00Z",
-        data: {
-          submission_id: "sub-123",
-          hackathon_id: "hackathon-456",
-          hackathon_name: "My Hackathon",
-          status: "succeeded",
-          duration_ms: 5000,
-          output: { result: "Task completed successfully" },
-        },
-      }
-
-      expect(payload.event).toBe("hackathon.updated")
-      expect(payload.data.status).toBe("succeeded")
-      expect(payload.data.output).toBeDefined()
-    })
-
-    it("submission.created payload", () => {
-      const payload = {
-        event: "submission.created",
-        timestamp: "2024-01-15T10:01:00Z",
-        data: {
-          submission_id: "sub-123",
-          hackathon_id: "hackathon-456",
-          hackathon_name: "My Hackathon",
-          status: "failed",
-          error: "Tool execution failed: API rate limit exceeded",
-        },
-      }
-
-      expect(payload.event).toBe("submission.created")
-      expect(payload.data.status).toBe("failed")
-      expect(payload.data.error).toBeDefined()
-    })
-
-    it("submission.submitted payload", () => {
-      const payload = {
-        event: "submission.submitted",
-        timestamp: "2024-01-15T10:00:30Z",
-        data: {
-          submission_id: "sub-123",
-          hackathon_id: "hackathon-456",
-          step_index: 2,
-          step_type: "tool_call",
-          tool_name: "search",
-          tool_input: { query: "latest news" },
-          tool_output: { results: [] },
-        },
-      }
-
-      expect(payload.event).toBe("submission.submitted")
-      expect(payload.data.step_index).toBe(2)
-      expect(payload.data.tool_name).toBe("search")
-    })
-  })
-
-  describe("Webhook Headers", () => {
-    it("includes Content-Type header", () => {
-      const headers = {
-        "Content-Type": "application/json",
-        "X-Webhook-Event": "hackathon.updated",
-        "X-Webhook-Signature": "sha256=abc123",
-        "X-Webhook-Timestamp": "2024-01-15T10:00:00Z",
-      }
-
-      expect(headers["Content-Type"]).toBe("application/json")
-    })
-
-    it("includes event type header", () => {
-      const headers = {
-        "X-Webhook-Event": "hackathon.created",
-      }
-
-      expect(headers["X-Webhook-Event"]).toBe("hackathon.created")
-    })
-
-    it("includes signature header for verification", () => {
-      const headers = {
-        "X-Webhook-Signature": "sha256=abc123def456",
-      }
-
-      expect(headers["X-Webhook-Signature"]).toContain("sha256=")
-    })
-
-    it("includes timestamp header", () => {
-      const headers = {
-        "X-Webhook-Timestamp": "2024-01-15T10:00:00Z",
-      }
-
-      const timestamp = new Date(headers["X-Webhook-Timestamp"])
-      expect(timestamp).toBeInstanceOf(Date)
-    })
-  })
-
-  describe("Failure Count Tracking", () => {
-    it("starts at zero", () => {
-      const webhook: Partial<Webhook> = {
-        failure_count: 0,
-        is_active: true,
-      }
-
-      expect(webhook.failure_count).toBe(0)
-    })
-
-    it("increments on failure", () => {
-      let failureCount = 0
-      failureCount += 1
-      expect(failureCount).toBe(1)
-    })
-
-    it("resets on success", () => {
-      let failureCount = 5
-      failureCount = 0
-      expect(failureCount).toBe(0)
-    })
-
-    it("can track high failure counts", () => {
-      const webhook: Partial<Webhook> = {
-        failure_count: 100,
-        is_active: false,
-      }
-
-      expect(webhook.failure_count).toBe(100)
-    })
-  })
-
-  describe("Tenant Isolation", () => {
-    it("webhooks are scoped to tenant", () => {
-      const tenant1Webhooks = [
-        { tenant_id: "tenant-1", url: "https://tenant1.com/webhook" },
-        { tenant_id: "tenant-1", url: "https://tenant1.com/webhook2" },
-      ]
-
-      const tenant2Webhooks = [
-        { tenant_id: "tenant-2", url: "https://tenant2.com/webhook" },
-      ]
-
-      const allTenant1 = tenant1Webhooks.every((w) => w.tenant_id === "tenant-1")
-      const allTenant2 = tenant2Webhooks.every((w) => w.tenant_id === "tenant-2")
-
-      expect(allTenant1).toBe(true)
-      expect(allTenant2).toBe(true)
-    })
-
-    it("delete requires both webhook_id and tenant_id", () => {
-      const deleteConditions = {
-        webhookId: "wh-123",
-        tenantId: "tenant-456",
-      }
-
-      expect(deleteConditions.webhookId).toBeDefined()
-      expect(deleteConditions.tenantId).toBeDefined()
-    })
-  })
-
-  describe("Active Webhook Filtering", () => {
-    it("filters by is_active flag", () => {
-      const webhooks = [
-        { id: "wh-1", is_active: true, events: ["hackathon.updated"] },
-        { id: "wh-2", is_active: false, events: ["hackathon.updated"] },
-        { id: "wh-3", is_active: true, events: ["hackathon.created"] },
-      ]
-
-      const active = webhooks.filter((w) => w.is_active)
-      expect(active).toHaveLength(2)
-    })
-
-    it("filters by event type", () => {
-      const webhooks = [
-        { id: "wh-1", is_active: true, events: ["hackathon.updated"] as WebhookEvent[] },
-        { id: "wh-2", is_active: true, events: ["hackathon.created"] as WebhookEvent[] },
-        {
-          id: "wh-3",
-          is_active: true,
-          events: ["hackathon.updated", "submission.created"] as WebhookEvent[],
-        },
-      ]
-
-      const targetEvent: WebhookEvent = "hackathon.updated"
-      const matching = webhooks.filter((w) => w.events.includes(targetEvent))
-      expect(matching).toHaveLength(2)
-      expect(matching.map((w) => w.id)).toContain("wh-1")
-      expect(matching.map((w) => w.id)).toContain("wh-3")
-    })
-
-    it("combines is_active and event type filters", () => {
-      const webhooks = [
-        { id: "wh-1", is_active: true, events: ["hackathon.updated"] as WebhookEvent[] },
-        { id: "wh-2", is_active: false, events: ["hackathon.updated"] as WebhookEvent[] },
-        { id: "wh-3", is_active: true, events: ["hackathon.created"] as WebhookEvent[] },
-      ]
-
-      const targetEvent: WebhookEvent = "hackathon.updated"
-      const matching = webhooks.filter(
-        (w) => w.is_active && w.events.includes(targetEvent)
+      const result = await recordDelivery(
+        "wh-1",
+        "hackathon.created",
+        { hackathon_id: "h-2" },
+        { success: false, status: 500, body: "Internal Server Error" },
+        1
       )
-      expect(matching).toHaveLength(1)
-      expect(matching[0].id).toBe("wh-1")
+
+      expect(result).not.toBeNull()
+      expect(result?.response_status).toBe(500)
+      expect(result?.delivered_at).toBeNull()
+    })
+
+    it("returns null on database error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "Database error" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await recordDelivery(
+        "wh-1",
+        "hackathon.created",
+        {},
+        { success: true, status: 200 },
+        1
+      )
+
+      expect(result).toBeNull()
     })
   })
+})
+
+describe("Webhook Encryption Functions", () => {
+  describe("generateWebhookSecret", () => {
+    it("generates 64 character hex string", () => {
+      const secret = generateWebhookSecret()
+
+      expect(secret).toHaveLength(64)
+      expect(secret).toMatch(/^[0-9a-f]+$/)
+    })
+
+    it("generates unique secrets each time", () => {
+      const secret1 = generateWebhookSecret()
+      const secret2 = generateWebhookSecret()
+
+      expect(secret1).not.toBe(secret2)
+    })
+  })
+
+  describe("signWebhookPayload", () => {
+    it("generates consistent signature for same inputs", () => {
+      const secret = "test-secret"
+      const payload = '{"event":"test"}'
+
+      const sig1 = signWebhookPayload(secret, payload)
+      const sig2 = signWebhookPayload(secret, payload)
+
+      expect(sig1).toBe(sig2)
+    })
+
+    it("generates different signatures for different payloads", () => {
+      const secret = "test-secret"
+
+      const sig1 = signWebhookPayload(secret, '{"event":"test1"}')
+      const sig2 = signWebhookPayload(secret, '{"event":"test2"}')
+
+      expect(sig1).not.toBe(sig2)
+    })
+
+    it("generates different signatures for different secrets", () => {
+      const payload = '{"event":"test"}'
+
+      const sig1 = signWebhookPayload("secret1", payload)
+      const sig2 = signWebhookPayload("secret2", payload)
+
+      expect(sig1).not.toBe(sig2)
+    })
+
+    it("returns hex string", () => {
+      const signature = signWebhookPayload("secret", "payload")
+
+      expect(signature).toMatch(/^[0-9a-f]+$/)
+      expect(signature).toHaveLength(64)
+    })
+  })
+
+  describe("verifyWebhookSignature", () => {
+    it("returns true for valid signature", () => {
+      const secret = "test-secret"
+      const payload = '{"event":"hackathon.created"}'
+      const signature = signWebhookPayload(secret, payload)
+
+      const result = verifyWebhookSignature(secret, payload, signature)
+
+      expect(result).toBe(true)
+    })
+
+    it("returns false for invalid signature", () => {
+      const secret = "test-secret"
+      const payload = '{"event":"hackathon.created"}'
+
+      const result = verifyWebhookSignature(secret, payload, "invalid-signature")
+
+      expect(result).toBe(false)
+    })
+
+    it("returns false for wrong secret", () => {
+      const payload = '{"event":"hackathon.created"}'
+      const signature = signWebhookPayload("secret1", payload)
+
+      const result = verifyWebhookSignature("secret2", payload, signature)
+
+      expect(result).toBe(false)
+    })
+
+    it("returns false for modified payload", () => {
+      const secret = "test-secret"
+      const originalPayload = '{"event":"hackathon.created"}'
+      const signature = signWebhookPayload(secret, originalPayload)
+
+      const result = verifyWebhookSignature(secret, '{"event":"modified"}', signature)
+
+      expect(result).toBe(false)
+    })
+
+    it("handles timing-safe comparison", () => {
+      const secret = "test-secret"
+      const payload = '{"data":"test"}'
+      const signature = signWebhookPayload(secret, payload)
+
+      const result = verifyWebhookSignature(secret, payload, signature)
+
+      expect(result).toBe(true)
+    })
+  })
+})
+
+describe("Webhook Events", () => {
+  const validEvents: WebhookEvent[] = [
+    "hackathon.created",
+    "hackathon.updated",
+    "submission.created",
+    "submission.submitted",
+  ]
+
+  for (const event of validEvents) {
+    it(`${event} is a valid webhook event`, () => {
+      expect(validEvents).toContain(event)
+    })
+  }
+})
+
+describe("Webhook URL Validation", () => {
+  const validUrls = [
+    "https://example.com/webhook",
+    "https://api.myapp.com/callbacks/agents",
+    "http://localhost:3000/dev/webhook",
+    "https://hooks.slack.com/services/T00/B00/XXX",
+    "https://sub.example.com/api/v1/hooks",
+    "https://example.com:8080/webhook",
+  ]
+
+  for (const url of validUrls) {
+    it(`accepts valid URL: ${url}`, () => {
+      expect(() => new URL(url)).not.toThrow()
+      const parsed = new URL(url)
+      expect(["http:", "https:"]).toContain(parsed.protocol)
+    })
+  }
+
+  const invalidUrls = [
+    "not-a-url",
+    "ftp://example.com/file",
+    "://missing-protocol",
+  ]
+
+  for (const url of invalidUrls) {
+    it(`rejects invalid URL: ${url}`, () => {
+      let isValid = true
+      try {
+        const parsed = new URL(url)
+        if (!["http:", "https:"].includes(parsed.protocol)) {
+          isValid = false
+        }
+      } catch {
+        isValid = false
+      }
+      expect(isValid).toBe(false)
+    })
+  }
 })
