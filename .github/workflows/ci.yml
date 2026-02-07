@@ -20,7 +20,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: "1.3.6"
 
       - name: Cache Bun dependencies
         uses: actions/cache@v4
@@ -48,7 +48,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: "1.3.6"
 
       - name: Cache Bun dependencies
         uses: actions/cache@v4
@@ -69,4 +69,4 @@ jobs:
           echo "::warning::TypeScript check completed (errors shown above if any)"
 
       - name: Run tests
-        run: bun test
+        run: bun test:all
