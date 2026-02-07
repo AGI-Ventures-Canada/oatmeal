@@ -6,6 +6,15 @@ type ParticipantWithHackathon = HackathonParticipant & {
   hackathons: Hackathon
 }
 
+function sortByStartDate<T extends { starts_at: string | null }>(items: T[]): T[] {
+  return items.sort((a, b) => {
+    if (!a.starts_at && !b.starts_at) return 0
+    if (!a.starts_at) return 1
+    if (!b.starts_at) return -1
+    return new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+  })
+}
+
 export async function listParticipatingHackathons(
   clerkUserId: string
 ): Promise<(Hackathon & { role: string })[]> {
@@ -20,9 +29,11 @@ export async function listParticipatingHackathons(
     return []
   }
 
-  return (data as unknown as ParticipantWithHackathon[])
+  const hackathons = (data as unknown as ParticipantWithHackathon[])
     .filter((r) => r.hackathons)
     .map((r) => ({ ...r.hackathons, role: r.role }))
+
+  return sortByStartDate(hackathons)
 }
 
 export async function listOrganizedHackathons(
@@ -33,7 +44,7 @@ export async function listOrganizedHackathons(
     .from("hackathons")
     .select("*")
     .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false })
+    .order("starts_at", { ascending: true, nullsFirst: false })
 
   if (error) {
     console.error("Failed to list organized hackathons:", error)
@@ -62,9 +73,11 @@ export async function listSponsoredHackathons(
     return []
   }
 
-  return (data as unknown as SponsorWithHackathon[])
+  const hackathons = (data as unknown as SponsorWithHackathon[])
     .filter((r) => r.hackathons)
     .map((r) => r.hackathons)
+
+  return sortByStartDate(hackathons)
 }
 
 function generateSlug(name: string): string {

@@ -706,7 +706,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      register_for_hackathon: {
+        Args: { p_clerk_user_id: string; p_hackathon_id: string }
+        Returns: {
+          error_code: string
+          error_message: string
+          participant_id: string
+          success: boolean
+        }[]
+      }
     }
     Enums: {
       actor_type: "user" | "api_key"
