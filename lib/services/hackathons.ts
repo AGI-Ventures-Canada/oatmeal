@@ -1,18 +1,10 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Hackathon, HackathonParticipant } from "@/lib/db/hackathon-types"
+import { sortByStartDate } from "@/lib/utils/format"
 
 type ParticipantWithHackathon = HackathonParticipant & {
   hackathons: Hackathon
-}
-
-function sortByStartDate<T extends { starts_at: string | null }>(items: T[]): T[] {
-  return items.sort((a, b) => {
-    if (!a.starts_at && !b.starts_at) return 0
-    if (!a.starts_at) return 1
-    if (!b.starts_at) return -1
-    return new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
-  })
 }
 
 export async function listParticipatingHackathons(

@@ -34,3 +34,16 @@ export function formatDateRange(
 
   return `${start.toLocaleDateString("en-US", opts)} – ${end.toLocaleDateString("en-US", opts)}`
 }
+
+export function sortByStartDate<T extends { starts_at: string | null }>(
+  items: T[],
+  descending = false
+): T[] {
+  return items.sort((a, b) => {
+    if (!a.starts_at && !b.starts_at) return 0
+    if (!a.starts_at) return 1
+    if (!b.starts_at) return -1
+    const diff = new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+    return descending ? -diff : diff
+  })
+}

@@ -1,6 +1,7 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { TenantProfile, Hackathon } from "@/lib/db/hackathon-types"
+import { sortByStartDate } from "@/lib/utils/format"
 
 export async function getPublicTenantBySlug(
   slug: string
@@ -202,22 +203,19 @@ export async function getPublicTenantWithEvents(
     console.error("Failed to get sponsored hackathons:", sponsorshipsError)
   }
 
-  const sponsoredHackathons = (sponsorships || [])
-    .map((s) => {
-      const hackathon = s.hackathons as unknown as Hackathon & {
-        organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark">
-      }
-      return hackathon
-    })
-    .filter((h) =>
-      ["published", "registration_open", "active", "judging", "completed"].includes(h.status)
-    )
-    .sort((a, b) => {
-      if (!a.starts_at && !b.starts_at) return 0
-      if (!a.starts_at) return 1
-      if (!b.starts_at) return -1
-      return new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
-    })
+  const sponsoredHackathons = sortByStartDate(
+    (sponsorships || [])
+      .map((s) => {
+        const hackathon = s.hackathons as unknown as Hackathon & {
+          organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark">
+        }
+        return hackathon
+      })
+      .filter((h) =>
+        ["published", "registration_open", "active", "judging", "completed"].includes(h.status)
+      ),
+    true
+  )
 
   return {
     ...(tenant as unknown as TenantProfile),
