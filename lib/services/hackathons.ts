@@ -1,6 +1,6 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Hackathon, HackathonParticipant, HackathonStatus } from "@/lib/db/hackathon-types"
+import type { Hackathon, HackathonParticipant } from "@/lib/db/hackathon-types"
 
 type ParticipantWithHackathon = HackathonParticipant & {
   hackathons: Hackathon
@@ -193,62 +193,28 @@ export async function registerForHackathon(
 ): Promise<RegisterResult> {
   const client = getSupabase() as unknown as SupabaseClient
 
-  const { data: hackathon, error: hackathonError } = await client
-    .from("hackathons")
-    .select("id, status, registration_opens_at, registration_closes_at, max_participants")
-    .eq("id", hackathonId)
-    .single()
+  const { data, error } = await client.rpc("register_for_hackathon", {
+    p_hackathon_id: hackathonId,
+    p_clerk_user_id: clerkUserId,
+  })
 
-  if (hackathonError || !hackathon) {
-    return { success: false, error: "Hackathon not found", code: "hackathon_not_found" }
+  if (error) {
+    console.error("Failed to register for hackathon:", error)
+    return { success: false, error: "Failed to register", code: "rpc_failed" }
   }
 
-  const status = hackathon.status as HackathonStatus
-  const now = new Date()
-  const opensAt = hackathon.registration_opens_at ? new Date(hackathon.registration_opens_at) : null
-  const closesAt = hackathon.registration_closes_at ? new Date(hackathon.registration_closes_at) : null
-
-  if (status === "draft" || status === "archived") {
-    return { success: false, error: "Registration is not open", code: "registration_not_open" }
+  const result = data?.[0]
+  if (!result) {
+    return { success: false, error: "Failed to register", code: "no_result" }
   }
 
-  if (opensAt && closesAt) {
-    if (now < opensAt) {
-      return { success: false, error: "Registration has not opened yet", code: "registration_not_open" }
-    }
-    if (now > closesAt) {
-      return { success: false, error: "Registration has closed", code: "registration_closed" }
-    }
-  } else if (status !== "registration_open" && status !== "active") {
-    return { success: false, error: "Registration is not open", code: "registration_not_open" }
+  if (result.success) {
+    return { success: true, participantId: result.participant_id }
   }
 
-  const alreadyRegistered = await isUserRegistered(hackathonId, clerkUserId)
-  if (alreadyRegistered) {
-    return { success: false, error: "Already registered for this hackathon", code: "already_registered" }
+  return {
+    success: false,
+    error: result.error_message || "Failed to register",
+    code: result.error_code || "unknown",
   }
-
-  if (hackathon.max_participants) {
-    const currentCount = await getParticipantCount(hackathonId)
-    if (currentCount >= hackathon.max_participants) {
-      return { success: false, error: "Event is at full capacity", code: "at_capacity" }
-    }
-  }
-
-  const { data: participant, error: insertError } = await client
-    .from("hackathon_participants")
-    .insert({
-      hackathon_id: hackathonId,
-      clerk_user_id: clerkUserId,
-      role: "participant",
-    })
-    .select("id")
-    .single()
-
-  if (insertError) {
-    console.error("Failed to register for hackathon:", insertError)
-    return { success: false, error: "Failed to register", code: "insert_failed" }
-  }
-
-  return { success: true, participantId: participant.id }
 }
