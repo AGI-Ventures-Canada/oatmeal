@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Clock, Moon, Sun, Calendar, CalendarDays, Zap } from "lucide-react"
 import type { HackathonStatus, TenantProfile } from "@/lib/db/hackathon-types"
 import { RegistrationButton } from "./registration-button"
+import { getTimelineState } from "@/lib/utils/timeline"
+import { formatDateRange } from "@/lib/utils/format"
 
 interface RegistrationProps {
   hackathonSlug: string
@@ -64,93 +66,6 @@ function CountdownBadge({ startsAt }: { startsAt: string }) {
   }, [startsAt])
 
   return <Badge variant="default">{timeLeft}</Badge>
-}
-
-interface TimelineState {
-  label: string
-  variant: "default" | "secondary" | "outline"
-}
-
-function getTimelineState(
-  status: HackathonStatus,
-  registrationOpensAt: string | null | undefined,
-  registrationClosesAt: string | null | undefined,
-  startsAt: string | null,
-  endsAt: string | null
-): TimelineState {
-  const now = new Date()
-
-  if (status === "completed") {
-    return { label: "Completed", variant: "outline" }
-  }
-
-  if (status === "judging") {
-    return { label: "Judging", variant: "default" }
-  }
-
-  if (status === "active") {
-    return { label: "Live", variant: "default" }
-  }
-
-  if (status === "draft") {
-    return { label: "Draft", variant: "secondary" }
-  }
-
-  if (status === "archived") {
-    return { label: "Archived", variant: "outline" }
-  }
-
-  const opensAt = registrationOpensAt ? new Date(registrationOpensAt) : null
-  const closesAt = registrationClosesAt ? new Date(registrationClosesAt) : null
-  const starts = startsAt ? new Date(startsAt) : null
-  const ends = endsAt ? new Date(endsAt) : null
-
-  if (opensAt && closesAt) {
-    if (now < opensAt) {
-      return { label: "Coming Soon", variant: "secondary" }
-    }
-    if (now >= opensAt && now <= closesAt) {
-      return { label: "Registration Open", variant: "default" }
-    }
-    if (now > closesAt && starts && now < starts) {
-      return { label: "Registration Closed", variant: "secondary" }
-    }
-    if (starts && ends && now >= starts && now <= ends) {
-      return { label: "Live", variant: "default" }
-    }
-    if (ends && now > ends) {
-      return { label: "Completed", variant: "outline" }
-    }
-  }
-
-  if (status === "registration_open") {
-    return { label: "Registration Open", variant: "default" }
-  }
-
-  return { label: "Coming Soon", variant: "secondary" }
-}
-
-function formatDateRange(startsAt: string | null, endsAt: string | null): string {
-  if (!startsAt) return "Dates TBD"
-
-  const start = new Date(startsAt)
-  const formatOptions: Intl.DateTimeFormatOptions = {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }
-
-  if (!endsAt) {
-    return start.toLocaleDateString("en-US", formatOptions)
-  }
-
-  const end = new Date(endsAt)
-
-  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
-    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.getDate()}, ${end.getFullYear()}`
-  }
-
-  return `${start.toLocaleDateString("en-US", formatOptions)} - ${end.toLocaleDateString("en-US", formatOptions)}`
 }
 
 function formatTimeRange(startsAt: string | null, endsAt: string | null): string | null {
@@ -239,7 +154,13 @@ export function EventHero({
 }: EventHeroProps) {
   const durationInfo = getDurationInfo(startsAt, endsAt)
   const timeRange = formatTimeRange(startsAt, endsAt)
-  const timelineState = getTimelineState(status, registrationOpensAt, registrationClosesAt, startsAt, endsAt)
+  const timelineState = getTimelineState({
+    status,
+    registration_opens_at: registrationOpensAt,
+    registration_closes_at: registrationClosesAt,
+    starts_at: startsAt,
+    ends_at: endsAt,
+  })
 
   const showCountdown = isRegistered && startsAt && new Date(startsAt) > new Date() && status !== "active" && status !== "completed" && status !== "judging"
 

@@ -1,10 +1,13 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test"
-import type { Hackathon, HackathonParticipant } from "@/lib/db/hackathon-types"
+import type { Hackathon } from "@/lib/db/hackathon-types"
 
 const mockFrom = mock(() => ({}))
+const mockRpc = mock(
+  () => Promise.resolve({ data: null, error: null }) as Promise<{ data: unknown; error: unknown }>
+)
 
 mock.module("@/lib/db/client", () => ({
-  supabase: () => ({ from: mockFrom }),
+  supabase: () => ({ from: mockFrom, rpc: mockRpc }),
 }))
 
 const {
@@ -55,6 +58,7 @@ function createChainableMock(
 describe("Hackathons Service", () => {
   beforeEach(() => {
     mockFrom.mockReset()
+    mockRpc.mockReset()
   })
 
   describe("listParticipatingHackathons", () => {
@@ -237,12 +241,25 @@ describe("Hackathons Service", () => {
   })
 
   describe("registerForHackathon", () => {
-    it("returns error when hackathon not found", async () => {
-      const chain = createChainableMock({
-        data: null,
-        error: { message: "Not found" },
+    it("returns success when registration succeeds", async () => {
+      mockRpc.mockResolvedValue({
+        data: [{ success: true, participant_id: "p123", error_code: null, error_message: null }],
+        error: null,
       })
-      mockFrom.mockReturnValue(chain)
+
+      const result = await registerForHackathon("h1", "user_123")
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.participantId).toBe("p123")
+      }
+    })
+
+    it("returns error when hackathon not found", async () => {
+      mockRpc.mockResolvedValue({
+        data: [{ success: false, participant_id: null, error_code: "hackathon_not_found", error_message: "Hackathon not found" }],
+        error: null,
+      })
 
       const result = await registerForHackathon("h_missing", "user_123")
 
@@ -253,23 +270,72 @@ describe("Hackathons Service", () => {
     })
 
     it("returns error when registration is not open", async () => {
-      const chain = createChainableMock({
-        data: {
-          id: "h1",
-          status: "draft",
-          registration_opens_at: null,
-          registration_closes_at: null,
-          max_participants: null,
-        },
+      mockRpc.mockResolvedValue({
+        data: [{ success: false, participant_id: null, error_code: "registration_not_open", error_message: "Registration is not open" }],
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
 
       const result = await registerForHackathon("h1", "user_123")
 
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.code).toBe("registration_not_open")
+      }
+    })
+
+    it("returns error when already registered", async () => {
+      mockRpc.mockResolvedValue({
+        data: [{ success: false, participant_id: null, error_code: "already_registered", error_message: "Already registered for this hackathon" }],
+        error: null,
+      })
+
+      const result = await registerForHackathon("h1", "user_123")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("already_registered")
+      }
+    })
+
+    it("returns error when at capacity", async () => {
+      mockRpc.mockResolvedValue({
+        data: [{ success: false, participant_id: null, error_code: "at_capacity", error_message: "Event is at full capacity" }],
+        error: null,
+      })
+
+      const result = await registerForHackathon("h1", "user_123")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("at_capacity")
+      }
+    })
+
+    it("returns error when RPC fails", async () => {
+      mockRpc.mockResolvedValue({
+        data: null,
+        error: { message: "RPC error" },
+      })
+
+      const result = await registerForHackathon("h1", "user_123")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("rpc_failed")
+      }
+    })
+
+    it("returns error when no result from RPC", async () => {
+      mockRpc.mockResolvedValue({
+        data: [],
+        error: null,
+      })
+
+      const result = await registerForHackathon("h1", "user_123")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("no_result")
       }
     })
   })
