@@ -3,6 +3,8 @@ import type { HackathonStatus } from "@/lib/db/hackathon-types"
 export interface TimelineState {
   label: string
   variant: "default" | "secondary" | "outline"
+  showCountdown?: boolean
+  startsAt?: string
 }
 
 export interface TimelineInput {
@@ -55,10 +57,23 @@ export function getTimelineState(hackathon: TimelineInput): TimelineState {
       return { label: "Coming Soon", variant: "secondary" }
     }
     if (now >= opensAt && now <= closesAt) {
+      if (startsAt && now < startsAt) {
+        return {
+          label: "Registration Open",
+          variant: "default",
+          showCountdown: true,
+          startsAt: starts_at!,
+        }
+      }
       return { label: "Registration Open", variant: "default" }
     }
     if (now > closesAt && startsAt && now < startsAt) {
-      return { label: "Registration Closed", variant: "secondary" }
+      return {
+        label: "Registration Closed",
+        variant: "secondary",
+        showCountdown: true,
+        startsAt: starts_at!,
+      }
     }
     if (startsAt && endsAt && now >= startsAt && now <= endsAt) {
       return { label: "Live", variant: "default" }
@@ -69,6 +84,14 @@ export function getTimelineState(hackathon: TimelineInput): TimelineState {
   }
 
   if (status === "registration_open") {
+    if (startsAt && now < startsAt) {
+      return {
+        label: "Registration Open",
+        variant: "default",
+        showCountdown: true,
+        startsAt: starts_at!,
+      }
+    }
     return { label: "Registration Open", variant: "default" }
   }
 

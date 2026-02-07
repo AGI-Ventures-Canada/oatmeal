@@ -118,6 +118,18 @@ export function RegistrationButton({
     )
   }
 
+  function getErrorMessage(code: string, fallback: string): string {
+    const errorMessages: Record<string, string> = {
+      not_authenticated: "Please sign in to register.",
+      hackathon_not_found: "This hackathon no longer exists.",
+      already_registered: "You're already registered for this event.",
+      registration_not_open: "Registration is not currently open.",
+      registration_closed: "Registration has closed.",
+      at_capacity: "This event has reached maximum capacity.",
+    }
+    return errorMessages[code] || fallback
+  }
+
   async function handleRegister() {
     setIsLoading(true)
     setError(null)
@@ -127,17 +139,27 @@ export function RegistrationButton({
         method: "POST",
       })
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch {
+        setError("Unable to process response. Please try again.")
+        return
+      }
 
       if (!response.ok) {
-        setError(data.error || "Failed to register")
+        setError(getErrorMessage(data.code, data.error || "Failed to register"))
         return
       }
 
       setIsRegistered(true)
       router.refresh()
-    } catch {
-      setError("Something went wrong. Please try again.")
+    } catch (err) {
+      if (err instanceof TypeError && err.message.includes("fetch")) {
+        setError("Network error. Please check your connection and try again.")
+      } else {
+        setError("An unexpected error occurred. Please try again.")
+      }
     } finally {
       setIsLoading(false)
     }

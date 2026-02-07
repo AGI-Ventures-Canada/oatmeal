@@ -183,6 +183,44 @@ export async function getParticipantCount(hackathonId: string): Promise<number> 
   return count ?? 0
 }
 
+export type RegistrationInfo = {
+  isRegistered: boolean
+  participantCount: number
+}
+
+export async function getRegistrationInfo(
+  hackathonId: string,
+  clerkUserId: string
+): Promise<RegistrationInfo> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const [registrationResult, countResult] = await Promise.all([
+    client
+      .from("hackathon_participants")
+      .select("id")
+      .eq("hackathon_id", hackathonId)
+      .eq("clerk_user_id", clerkUserId)
+      .maybeSingle(),
+    client
+      .from("hackathon_participants")
+      .select("*", { count: "exact", head: true })
+      .eq("hackathon_id", hackathonId)
+      .eq("role", "participant"),
+  ])
+
+  if (registrationResult.error) {
+    console.error("Failed to check registration:", registrationResult.error)
+  }
+  if (countResult.error) {
+    console.error("Failed to get participant count:", countResult.error)
+  }
+
+  return {
+    isRegistered: registrationResult.data !== null,
+    participantCount: countResult.count ?? 0,
+  }
+}
+
 type RegisterResult =
   | { success: true; participantId: string }
   | { success: false; error: string; code: string }
