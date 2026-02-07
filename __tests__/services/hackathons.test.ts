@@ -15,6 +15,7 @@ const {
   listOrganizedHackathons,
   isUserRegistered,
   getParticipantCount,
+  getRegistrationInfo,
   registerForHackathon,
 } = await import("@/lib/services/hackathons")
 
@@ -237,6 +238,51 @@ describe("Hackathons Service", () => {
       const result = await getParticipantCount("h_err")
 
       expect(result).toBe(0)
+    })
+  })
+
+  describe("getRegistrationInfo", () => {
+    it("returns both registration status and count in parallel", async () => {
+      let callCount = 0
+      mockFrom.mockImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({ data: { id: "p1" }, error: null })
+        }
+        return createChainableMock({ data: null, error: null, count: 25 })
+      })
+
+      const result = await getRegistrationInfo("h1", "user_123")
+
+      expect(result.isRegistered).toBe(true)
+      expect(result.participantCount).toBe(25)
+    })
+
+    it("returns not registered with correct count", async () => {
+      let callCount = 0
+      mockFrom.mockImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({ data: null, error: null })
+        }
+        return createChainableMock({ data: null, error: null, count: 10 })
+      })
+
+      const result = await getRegistrationInfo("h1", "user_new")
+
+      expect(result.isRegistered).toBe(false)
+      expect(result.participantCount).toBe(10)
+    })
+
+    it("handles errors gracefully", async () => {
+      mockFrom.mockImplementation(() =>
+        createChainableMock({ data: null, error: { message: "DB error" }, count: null })
+      )
+
+      const result = await getRegistrationInfo("h1", "user_err")
+
+      expect(result.isRegistered).toBe(false)
+      expect(result.participantCount).toBe(0)
     })
   })
 

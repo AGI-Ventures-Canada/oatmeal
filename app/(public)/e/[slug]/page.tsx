@@ -57,11 +57,10 @@ export default async function EventPage({ params }: PageProps) {
   let participantCount = 0
 
   if (userId) {
-    const { isUserRegistered, getParticipantCount } = await import(
-      "@/lib/services/hackathons"
-    )
-    isRegistered = await isUserRegistered(hackathon.id, userId)
-    participantCount = await getParticipantCount(hackathon.id)
+    const { getRegistrationInfo } = await import("@/lib/services/hackathons")
+    const registrationInfo = await getRegistrationInfo(hackathon.id, userId)
+    isRegistered = registrationInfo.isRegistered
+    participantCount = registrationInfo.participantCount
   }
 
   return (
