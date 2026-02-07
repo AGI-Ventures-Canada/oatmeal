@@ -1,12 +1,10 @@
-"use client"
-
-import { useState, useEffect } from "react"
 import { OptimizedImage } from "@/components/ui/optimized-image"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Clock, Moon, Sun, Calendar, CalendarDays, Zap } from "lucide-react"
 import type { HackathonStatus, TenantProfile } from "@/lib/db/hackathon-types"
 import { RegistrationButton } from "./registration-button"
+import { CountdownBadge } from "./countdown-badge"
 import { getTimelineState } from "@/lib/utils/timeline"
 import { formatDateRange } from "@/lib/utils/format"
 
@@ -31,41 +29,6 @@ interface EventHeroProps {
   onDatesClick?: () => void
   registrationProps?: RegistrationProps
   isRegistered?: boolean
-}
-
-function CountdownBadge({ startsAt }: { startsAt: string }) {
-  const [timeLeft, setTimeLeft] = useState("")
-
-  useEffect(() => {
-    function updateCountdown() {
-      const now = new Date()
-      const start = new Date(startsAt)
-      const diff = start.getTime() - now.getTime()
-
-      if (diff <= 0) {
-        setTimeLeft("Starting now")
-        return
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-
-      if (days > 0) {
-        setTimeLeft(`Starts in ${days}d ${hours}h`)
-      } else if (hours > 0) {
-        setTimeLeft(`Starts in ${hours}h ${minutes}m`)
-      } else {
-        setTimeLeft(`Starts in ${minutes}m`)
-      }
-    }
-
-    updateCountdown()
-    const interval = setInterval(updateCountdown, 60000)
-    return () => clearInterval(interval)
-  }, [startsAt])
-
-  return <Badge variant="default">{timeLeft}</Badge>
 }
 
 function formatTimeRange(startsAt: string | null, endsAt: string | null): string | null {

@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDateRange } from "@/lib/utils/format"
+import { getTimelineState } from "@/lib/utils/timeline"
 import type { Metadata } from "next"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
@@ -35,37 +36,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${tenant.name} | Oatmeal`,
     description: tenant.description || `${tenant.name} on Oatmeal`,
-  }
-}
-
-function getStatusLabel(status: HackathonStatus): string {
-  switch (status) {
-    case "published":
-      return "Coming Soon"
-    case "registration_open":
-      return "Registration Open"
-    case "active":
-      return "Live"
-    case "judging":
-      return "Judging"
-    case "completed":
-      return "Completed"
-    default:
-      return status
-  }
-}
-
-function getStatusBadgeVariant(
-  status: HackathonStatus
-): "default" | "secondary" | "outline" {
-  switch (status) {
-    case "active":
-    case "registration_open":
-      return "default"
-    case "completed":
-      return "outline"
-    default:
-      return "secondary"
   }
 }
 
@@ -217,9 +187,18 @@ function HackathonGrid({ hackathons }: { hackathons: HackathonWithRole[] }) {
                         ? "Organizer"
                         : "Sponsor"}
                   </Badge>
-                  <Badge variant={getStatusBadgeVariant(hackathon.status)}>
-                    {getStatusLabel(hackathon.status)}
-                  </Badge>
+                  {(() => {
+                    const timelineState = getTimelineState({
+                      status: hackathon.status,
+                      starts_at: hackathon.starts_at,
+                      ends_at: hackathon.ends_at,
+                    })
+                    return (
+                      <Badge variant={timelineState.variant}>
+                        {timelineState.label}
+                      </Badge>
+                    )
+                  })()}
                 </div>
               </div>
               {hackathon.description && (
