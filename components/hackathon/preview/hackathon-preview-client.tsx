@@ -10,9 +10,16 @@ import type { PublicHackathon } from "@/lib/services/public-hackathons"
 interface HackathonPreviewClientProps {
   hackathon: PublicHackathon
   isEditable: boolean
+  isRegistered?: boolean
+  participantCount?: number
 }
 
-function HackathonPreviewContent({ hackathon, isEditable }: HackathonPreviewClientProps) {
+function HackathonPreviewContent({
+  hackathon,
+  isEditable,
+  isRegistered = false,
+  participantCount = 0,
+}: HackathonPreviewClientProps) {
   const { openSection } = useEdit()
   const hasTimeline = hackathon.registration_opens_at || hackathon.registration_closes_at || hackathon.starts_at || hackathon.ends_at
 
@@ -26,8 +33,19 @@ function HackathonPreviewContent({ hackathon, isEditable }: HackathonPreviewClie
           status={hackathon.status}
           startsAt={hackathon.starts_at}
           endsAt={hackathon.ends_at}
+          registrationOpensAt={hackathon.registration_opens_at}
+          registrationClosesAt={hackathon.registration_closes_at}
           organizer={hackathon.organizer}
           onDatesClick={isEditable ? () => openSection("timeline") : undefined}
+          isRegistered={isRegistered}
+          registrationProps={{
+            hackathonSlug: hackathon.slug,
+            registrationOpensAt: hackathon.registration_opens_at,
+            registrationClosesAt: hackathon.registration_closes_at,
+            maxParticipants: hackathon.max_participants,
+            participantCount,
+            isRegistered,
+          }}
         />
       </EditableSection>
 
@@ -120,10 +138,20 @@ function HackathonPreviewContent({ hackathon, isEditable }: HackathonPreviewClie
   )
 }
 
-export function HackathonPreviewClient({ hackathon, isEditable }: HackathonPreviewClientProps) {
+export function HackathonPreviewClient({
+  hackathon,
+  isEditable,
+  isRegistered,
+  participantCount,
+}: HackathonPreviewClientProps) {
   return (
     <EditProvider isEditable={isEditable}>
-      <HackathonPreviewContent hackathon={hackathon} isEditable={isEditable} />
+      <HackathonPreviewContent
+        hackathon={hackathon}
+        isEditable={isEditable}
+        isRegistered={isRegistered}
+        participantCount={participantCount}
+      />
     </EditProvider>
   )
 }
