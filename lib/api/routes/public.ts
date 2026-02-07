@@ -1,5 +1,9 @@
 import { Elysia } from "elysia"
 import { auth } from "@clerk/nextjs/server"
+import { exchangeCodeForTokens, saveIntegration, getProviderConfig } from "@/lib/integrations/oauth"
+import { getPublicHackathon, listPublicHackathons } from "@/lib/services/public-hackathons"
+import { registerForHackathon } from "@/lib/services/hackathons"
+import { getPublicTenantWithHackathons } from "@/lib/services/tenant-profiles"
 
 export const publicRoutes = new Elysia({ prefix: "/public" })
   .get("/health", () => ({
@@ -42,10 +46,6 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
-    const { exchangeCodeForTokens, saveIntegration, getProviderConfig } = await import(
-      "@/lib/integrations/oauth"
-    )
-
     const providerType = provider as "gmail" | "google_calendar" | "notion" | "luma"
     const config = getProviderConfig(providerType)
 
@@ -81,7 +81,6 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     )
   })
   .get("/hackathons/:slug", async ({ params }) => {
-    const { getPublicHackathon } = await import("@/lib/services/public-hackathons")
     const hackathon = await getPublicHackathon(params.slug)
 
     if (!hackathon) {
@@ -135,7 +134,6 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
-    const { getPublicHackathon } = await import("@/lib/services/public-hackathons")
     const hackathon = await getPublicHackathon(params.slug)
 
     if (!hackathon) {
@@ -145,7 +143,6 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
-    const { registerForHackathon } = await import("@/lib/services/hackathons")
     const result = await registerForHackathon(hackathon.id, userId)
 
     if (!result.success) {
@@ -159,7 +156,6 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     return { success: true, participantId: result.participantId }
   })
   .get("/hackathons", async () => {
-    const { listPublicHackathons } = await import("@/lib/services/public-hackathons")
     const hackathons = await listPublicHackathons()
 
     return {
@@ -182,7 +178,6 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     }
   })
   .get("/orgs/:slug", async ({ params }) => {
-    const { getPublicTenantWithHackathons } = await import("@/lib/services/tenant-profiles")
     const tenant = await getPublicTenantWithHackathons(params.slug)
 
     if (!tenant) {

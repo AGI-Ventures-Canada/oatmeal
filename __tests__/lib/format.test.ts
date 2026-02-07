@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { formatDate, formatDateTime, formatDateRange } from "@/lib/utils/format"
+import { formatDate, formatDateTime, formatDateRange, sortByStartDate } from "@/lib/utils/format"
 
 describe("formatDate", () => {
   it("formats string date to YYYY-MM-DD", () => {
@@ -64,5 +64,52 @@ describe("formatDateRange", () => {
   it("uses en-dash separator", () => {
     const result = formatDateRange("2026-03-10T00:00:00Z", "2026-03-15T00:00:00Z")
     expect(result).toContain("–")
+  })
+})
+
+describe("sortByStartDate", () => {
+  it("sorts items by start date ascending by default", () => {
+    const items = [
+      { starts_at: "2026-03-15T00:00:00Z" },
+      { starts_at: "2026-01-01T00:00:00Z" },
+      { starts_at: "2026-02-10T00:00:00Z" },
+    ]
+    const sorted = sortByStartDate(items)
+    expect(sorted[0].starts_at).toBe("2026-01-01T00:00:00Z")
+    expect(sorted[1].starts_at).toBe("2026-02-10T00:00:00Z")
+    expect(sorted[2].starts_at).toBe("2026-03-15T00:00:00Z")
+  })
+
+  it("sorts items by start date descending when specified", () => {
+    const items = [
+      { starts_at: "2026-01-01T00:00:00Z" },
+      { starts_at: "2026-03-15T00:00:00Z" },
+    ]
+    const sorted = sortByStartDate(items, true)
+    expect(sorted[0].starts_at).toBe("2026-03-15T00:00:00Z")
+    expect(sorted[1].starts_at).toBe("2026-01-01T00:00:00Z")
+  })
+
+  it("places null dates at the end", () => {
+    const items = [
+      { starts_at: null },
+      { starts_at: "2026-01-01T00:00:00Z" },
+      { starts_at: null },
+    ]
+    const sorted = sortByStartDate(items)
+    expect(sorted[0].starts_at).toBe("2026-01-01T00:00:00Z")
+    expect(sorted[1].starts_at).toBeNull()
+    expect(sorted[2].starts_at).toBeNull()
+  })
+
+  it("does not mutate the original array", () => {
+    const items = [
+      { starts_at: "2026-03-15T00:00:00Z" },
+      { starts_at: "2026-01-01T00:00:00Z" },
+    ]
+    const original = [...items]
+    sortByStartDate(items)
+    expect(items[0].starts_at).toBe(original[0].starts_at)
+    expect(items[1].starts_at).toBe(original[1].starts_at)
   })
 })

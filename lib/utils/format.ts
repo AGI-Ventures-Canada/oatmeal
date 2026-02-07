@@ -39,7 +39,7 @@ export function sortByStartDate<T extends { starts_at: string | null }>(
   items: T[],
   descending = false
 ): T[] {
-  return items.sort((a, b) => {
+  return [...items].sort((a, b) => {
     if (!a.starts_at && !b.starts_at) return 0
     if (!a.starts_at) return 1
     if (!b.starts_at) return -1

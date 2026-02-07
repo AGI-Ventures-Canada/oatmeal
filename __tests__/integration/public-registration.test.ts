@@ -17,10 +17,25 @@ mock.module("@clerk/nextjs/server", () => ({
 
 mock.module("@/lib/services/public-hackathons", () => ({
   getPublicHackathon: mockGetPublicHackathon,
+  listPublicHackathons: mock(() => Promise.resolve([])),
+  getHackathonByIdForOrganizer: mock(() => Promise.resolve(null)),
+  getHackathonByIdWithFullData: mock(() => Promise.resolve(null)),
+  getHackathonByIdWithAccess: mock(() => Promise.resolve(null)),
+  updateHackathonSettings: mock(() => Promise.resolve(null)),
 }))
 
 mock.module("@/lib/services/hackathons", () => ({
   registerForHackathon: mockRegisterForHackathon,
+}))
+
+mock.module("@/lib/services/tenant-profiles", () => ({
+  getPublicTenantWithHackathons: mock(() => Promise.resolve(null)),
+}))
+
+mock.module("@/lib/integrations/oauth", () => ({
+  exchangeCodeForTokens: mock(() => Promise.resolve(null)),
+  saveIntegration: mock(() => Promise.resolve()),
+  getProviderConfig: mock(() => null),
 }))
 
 const { Elysia } = await import("elysia")
