@@ -63,6 +63,7 @@ mock.module("@/lib/auth/principal", () => {
 mock.module("@/lib/services/rate-limit", () => ({
   checkRateLimit: () => ({ allowed: true, remaining: 100, resetAt: Date.now() + 60000 }),
   getRateLimitHeaders: () => ({}),
+  defaultRateLimits: { "api_key:default": { maxRequests: 100, windowMs: 60000 } },
   RateLimitError: class RateLimitError extends Error {
     resetAt: number
     remaining: number
