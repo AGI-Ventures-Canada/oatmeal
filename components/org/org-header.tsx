@@ -1,4 +1,4 @@
-import Image from "next/image"
+import { OptimizedImage } from "@/components/ui/optimized-image"
 import Link from "next/link"
 import { ExternalLink } from "lucide-react"
 import type { TenantProfile } from "@/lib/db/hackathon-types"
@@ -14,7 +14,7 @@ export function OrgHeader({ org }: OrgHeaderProps) {
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6 max-w-3xl mx-auto">
           <div className="relative h-24 w-24 shrink-0 bg-muted flex items-center justify-center">
             {org.logo_url ? (
-              <Image
+              <OptimizedImage
                 src={org.logo_url}
                 alt={org.name}
                 fill

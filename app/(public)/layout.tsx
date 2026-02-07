@@ -1,4 +1,4 @@
-import Link from "next/link"
+import { HeaderLogo } from "@/components/public/header-logo"
 import { HeaderAuth } from "@/components/public/header-auth"
 
 export default function PublicLayout({
@@ -10,9 +10,7 @@ export default function PublicLayout({
     <div className="min-h-screen flex flex-col">
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="font-bold text-xl">
-            Oatmeal
-          </Link>
+          <HeaderLogo />
           <nav className="flex items-center gap-4">
             <HeaderAuth />
           </nav>

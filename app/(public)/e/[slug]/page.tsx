@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function EventPage({ params }: PageProps) {
   const { slug } = await params
-  const { orgId } = await auth()
+  const { orgId, userId } = await auth()
 
   let hackathon = await getPublicHackathon(slug)
   let isPreview = false
@@ -51,6 +51,17 @@ export default async function EventPage({ params }: PageProps) {
 
   if (!hackathon) {
     notFound()
+  }
+
+  let isRegistered = false
+  let participantCount = 0
+
+  if (userId) {
+    const { isUserRegistered, getParticipantCount } = await import(
+      "@/lib/services/hackathons"
+    )
+    isRegistered = await isUserRegistered(hackathon.id, userId)
+    participantCount = await getParticipantCount(hackathon.id)
   }
 
   return (
@@ -79,7 +90,12 @@ export default async function EventPage({ params }: PageProps) {
         organizerLogoUrl={hackathon.organizer.logo_url}
       />
 
-      <HackathonPreviewClient hackathon={hackathon} isEditable={isOrganizer} />
+      <HackathonPreviewClient
+        hackathon={hackathon}
+        isEditable={isOrganizer}
+        isRegistered={isRegistered}
+        participantCount={participantCount}
+      />
     </div>
   )
 }

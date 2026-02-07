@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
+import { OptimizedImage } from "@/components/ui/optimized-image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -354,7 +354,7 @@ export function SponsorsEditForm({ hackathonId, initialSponsors }: SponsorsEditF
                   className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left"
                 >
                   {org.logoUrl ? (
-                    <Image
+                    <OptimizedImage
                       src={org.logoUrl}
                       alt={org.name}
                       width={32}
@@ -429,7 +429,7 @@ export function SponsorsEditForm({ hackathonId, initialSponsors }: SponsorsEditF
                   } ${deleted ? "opacity-50" : ""}`}
                 >
                   {sponsor.logo_url ? (
-                    <Image
+                    <OptimizedImage
                       src={sponsor.logo_url}
                       alt={sponsor.name}
                       width={32}
