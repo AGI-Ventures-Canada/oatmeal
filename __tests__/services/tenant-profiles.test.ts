@@ -1,11 +1,10 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach } from "bun:test"
 import type { TenantProfile } from "@/lib/db/hackathon-types"
-
-const mockFrom = mock(() => ({}))
-
-mock.module("@/lib/db/client", () => ({
-  supabase: () => ({ from: mockFrom }),
-}))
+import {
+  createChainableMock,
+  resetSupabaseMocks,
+  setMockFromImplementation,
+} from "../lib/supabase-mock"
 
 const {
   getPublicTenantBySlug,
@@ -31,24 +30,9 @@ const mockTenant: TenantProfile = {
   updated_at: "2026-01-01T00:00:00Z",
 }
 
-function createChainableMock(resolvedValue: { data: unknown; error: unknown }) {
-  const chain: Record<string, unknown> = {
-    select: mock(() => chain),
-    update: mock(() => chain),
-    eq: mock(() => chain),
-    neq: mock(() => chain),
-    in: mock(() => chain),
-    order: mock(() => chain),
-    single: mock(() => chain),
-    maybeSingle: mock(() => chain),
-    then: (resolve: (v: unknown) => void) => resolve(resolvedValue),
-  }
-  return chain
-}
-
 describe("Tenant Profiles Service", () => {
   beforeEach(() => {
-    mockFrom.mockReset()
+    resetSupabaseMocks()
   })
 
   describe("getPublicTenantBySlug", () => {
@@ -57,7 +41,7 @@ describe("Tenant Profiles Service", () => {
         data: mockTenant,
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicTenantBySlug("test-org")
 
@@ -71,7 +55,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: { message: "Not found" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicTenantBySlug("nonexistent")
 
@@ -85,7 +69,7 @@ describe("Tenant Profiles Service", () => {
         data: mockTenant,
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicTenantById("t1")
 
@@ -98,7 +82,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: { message: "Not found" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicTenantById("nonexistent")
 
@@ -112,7 +96,7 @@ describe("Tenant Profiles Service", () => {
         data: { ...mockTenant, description: "Updated description" },
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await updateTenantProfile("t1", {
         description: "Updated description",
@@ -127,7 +111,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await updateTenantProfile("t1", { name: "New Name" })
 
@@ -163,7 +147,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await isSlugAvailable("available-slug")
 
@@ -175,7 +159,7 @@ describe("Tenant Profiles Service", () => {
         data: { id: "t2" },
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await isSlugAvailable("taken-slug")
 
@@ -187,7 +171,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await isSlugAvailable("my-slug", "t1")
 
@@ -199,7 +183,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await isSlugAvailable("any-slug")
 
@@ -219,7 +203,7 @@ describe("Tenant Profiles Service", () => {
       })
 
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) return tenantChain
         return hackathonsChain
@@ -237,7 +221,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: { message: "Not found" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicTenantWithHackathons("nonexistent")
 
@@ -255,7 +239,7 @@ describe("Tenant Profiles Service", () => {
       })
 
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) return tenantChain
         return hackathonsChain
@@ -309,7 +293,7 @@ describe("Tenant Profiles Service", () => {
       })
 
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) return tenantChain
         if (callCount === 2) return organizedChain
@@ -333,7 +317,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: { code: "PGRST116", message: "Not found" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicTenantWithEvents("nonexistent")
 
@@ -351,7 +335,7 @@ describe("Tenant Profiles Service", () => {
       })
 
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) return tenantChain
         return emptyChain
@@ -388,7 +372,7 @@ describe("Tenant Profiles Service", () => {
       })
 
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) return tenantChain
         if (callCount === 2) return organizedChain
@@ -417,7 +401,7 @@ describe("Tenant Profiles Service", () => {
       })
 
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) return tenantChain
         if (callCount === 2) return errorChain
@@ -446,7 +430,7 @@ describe("Tenant Profiles Service", () => {
       })
 
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) return tenantChain
         if (callCount === 2) return organizedChain
@@ -500,7 +484,7 @@ describe("Tenant Profiles Service", () => {
       })
 
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) return tenantChain
         if (callCount === 2) return organizedChain

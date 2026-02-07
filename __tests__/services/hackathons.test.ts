@@ -1,14 +1,11 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach } from "bun:test"
 import type { Hackathon } from "@/lib/db/hackathon-types"
-
-const mockFrom = mock(() => ({}))
-const mockRpc = mock(
-  () => Promise.resolve({ data: null, error: null }) as Promise<{ data: unknown; error: unknown }>
-)
-
-mock.module("@/lib/db/client", () => ({
-  supabase: () => ({ from: mockFrom, rpc: mockRpc }),
-}))
+import {
+  createChainableMock,
+  resetSupabaseMocks,
+  setMockFromImplementation,
+  setMockRpcImplementation,
+} from "../lib/supabase-mock"
 
 const {
   listParticipatingHackathons,
@@ -41,25 +38,9 @@ const mockHackathon: Hackathon = {
   updated_at: "2026-01-01T00:00:00Z",
 }
 
-function createChainableMock(
-  resolvedValue: { data: unknown; error: unknown; count?: number | null }
-) {
-  const chain = {
-    select: mock(() => chain),
-    eq: mock(() => chain),
-    order: mock(() => chain),
-    maybeSingle: mock(() => chain),
-    single: mock(() => chain),
-    insert: mock(() => chain),
-    then: (resolve: (v: unknown) => void) => resolve(resolvedValue),
-  }
-  return chain
-}
-
 describe("Hackathons Service", () => {
   beforeEach(() => {
-    mockFrom.mockReset()
-    mockRpc.mockReset()
+    resetSupabaseMocks()
   })
 
   describe("listParticipatingHackathons", () => {
@@ -74,7 +55,7 @@ describe("Hackathons Service", () => {
         ],
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listParticipatingHackathons("user_123")
 
@@ -85,7 +66,7 @@ describe("Hackathons Service", () => {
 
     it("returns empty array when user has no hackathons", async () => {
       const chain = createChainableMock({ data: [], error: null })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listParticipatingHackathons("user_empty")
 
@@ -97,7 +78,7 @@ describe("Hackathons Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listParticipatingHackathons("user_err")
 
@@ -116,7 +97,7 @@ describe("Hackathons Service", () => {
         ],
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listParticipatingHackathons("user_mixed")
 
@@ -132,7 +113,7 @@ describe("Hackathons Service", () => {
         data: [mockHackathon],
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listOrganizedHackathons("t1")
 
@@ -142,7 +123,7 @@ describe("Hackathons Service", () => {
 
     it("returns empty array when tenant has no hackathons", async () => {
       const chain = createChainableMock({ data: [], error: null })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listOrganizedHackathons("t_empty")
 
@@ -154,7 +135,7 @@ describe("Hackathons Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listOrganizedHackathons("t_err")
 
@@ -168,7 +149,7 @@ describe("Hackathons Service", () => {
         data: { id: "p1" },
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await isUserRegistered("h1", "user_123")
 
@@ -180,7 +161,7 @@ describe("Hackathons Service", () => {
         data: null,
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await isUserRegistered("h1", "user_new")
 
@@ -192,7 +173,7 @@ describe("Hackathons Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await isUserRegistered("h1", "user_err")
 
@@ -207,7 +188,7 @@ describe("Hackathons Service", () => {
         error: null,
         count: 42,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getParticipantCount("h1")
 
@@ -220,7 +201,7 @@ describe("Hackathons Service", () => {
         error: null,
         count: 0,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getParticipantCount("h_empty")
 
@@ -233,7 +214,7 @@ describe("Hackathons Service", () => {
         error: { message: "DB error" },
         count: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getParticipantCount("h_err")
 
@@ -244,7 +225,7 @@ describe("Hackathons Service", () => {
   describe("getRegistrationInfo", () => {
     it("returns both registration status and count in parallel", async () => {
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) {
           return createChainableMock({ data: { id: "p1" }, error: null })
@@ -260,7 +241,7 @@ describe("Hackathons Service", () => {
 
     it("returns not registered with correct count", async () => {
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) {
           return createChainableMock({ data: null, error: null })
@@ -275,7 +256,7 @@ describe("Hackathons Service", () => {
     })
 
     it("handles errors gracefully", async () => {
-      mockFrom.mockImplementation(() =>
+      setMockFromImplementation(() =>
         createChainableMock({ data: null, error: { message: "DB error" }, count: null })
       )
 
@@ -288,10 +269,12 @@ describe("Hackathons Service", () => {
 
   describe("registerForHackathon", () => {
     it("returns success when registration succeeds", async () => {
-      mockRpc.mockResolvedValue({
-        data: [{ success: true, participant_id: "p123", error_code: null, error_message: null }],
-        error: null,
-      })
+      setMockRpcImplementation(() =>
+        Promise.resolve({
+          data: [{ success: true, participant_id: "p123", error_code: null, error_message: null }],
+          error: null,
+        })
+      )
 
       const result = await registerForHackathon("h1", "user_123")
 
@@ -302,10 +285,12 @@ describe("Hackathons Service", () => {
     })
 
     it("returns error when hackathon not found", async () => {
-      mockRpc.mockResolvedValue({
-        data: [{ success: false, participant_id: null, error_code: "hackathon_not_found", error_message: "Hackathon not found" }],
-        error: null,
-      })
+      setMockRpcImplementation(() =>
+        Promise.resolve({
+          data: [{ success: false, participant_id: null, error_code: "hackathon_not_found", error_message: "Hackathon not found" }],
+          error: null,
+        })
+      )
 
       const result = await registerForHackathon("h_missing", "user_123")
 
@@ -316,10 +301,12 @@ describe("Hackathons Service", () => {
     })
 
     it("returns error when registration is not open", async () => {
-      mockRpc.mockResolvedValue({
-        data: [{ success: false, participant_id: null, error_code: "registration_not_open", error_message: "Registration is not open" }],
-        error: null,
-      })
+      setMockRpcImplementation(() =>
+        Promise.resolve({
+          data: [{ success: false, participant_id: null, error_code: "registration_not_open", error_message: "Registration is not open" }],
+          error: null,
+        })
+      )
 
       const result = await registerForHackathon("h1", "user_123")
 
@@ -330,10 +317,12 @@ describe("Hackathons Service", () => {
     })
 
     it("returns error when already registered", async () => {
-      mockRpc.mockResolvedValue({
-        data: [{ success: false, participant_id: null, error_code: "already_registered", error_message: "Already registered for this hackathon" }],
-        error: null,
-      })
+      setMockRpcImplementation(() =>
+        Promise.resolve({
+          data: [{ success: false, participant_id: null, error_code: "already_registered", error_message: "Already registered for this hackathon" }],
+          error: null,
+        })
+      )
 
       const result = await registerForHackathon("h1", "user_123")
 
@@ -344,10 +333,12 @@ describe("Hackathons Service", () => {
     })
 
     it("returns error when at capacity", async () => {
-      mockRpc.mockResolvedValue({
-        data: [{ success: false, participant_id: null, error_code: "at_capacity", error_message: "Event is at full capacity" }],
-        error: null,
-      })
+      setMockRpcImplementation(() =>
+        Promise.resolve({
+          data: [{ success: false, participant_id: null, error_code: "at_capacity", error_message: "Event is at full capacity" }],
+          error: null,
+        })
+      )
 
       const result = await registerForHackathon("h1", "user_123")
 
@@ -358,10 +349,12 @@ describe("Hackathons Service", () => {
     })
 
     it("returns error when RPC fails", async () => {
-      mockRpc.mockResolvedValue({
-        data: null,
-        error: { message: "RPC error" },
-      })
+      setMockRpcImplementation(() =>
+        Promise.resolve({
+          data: null,
+          error: { message: "RPC error" },
+        })
+      )
 
       const result = await registerForHackathon("h1", "user_123")
 
@@ -372,10 +365,12 @@ describe("Hackathons Service", () => {
     })
 
     it("returns error when no result from RPC", async () => {
-      mockRpc.mockResolvedValue({
-        data: [],
-        error: null,
-      })
+      setMockRpcImplementation(() =>
+        Promise.resolve({
+          data: [],
+          error: null,
+        })
+      )
 
       const result = await registerForHackathon("h1", "user_123")
 

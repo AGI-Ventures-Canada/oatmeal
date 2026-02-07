@@ -1,75 +1,37 @@
-import { describe, expect, it } from "bun:test"
-import type { AuditAction } from "@/lib/services/audit"
+import { describe, expect, it, beforeEach } from "bun:test"
+import type { UserPrincipal, ApiKeyPrincipal } from "@/lib/auth/types"
+import {
+  createChainableMock,
+  resetSupabaseMocks,
+  setMockFromImplementation,
+} from "../lib/supabase-mock"
+
+const { logAudit, listAuditLogs } = await import("@/lib/services/audit")
+
+const mockUserPrincipal: UserPrincipal = {
+  kind: "user",
+  tenantId: "tenant-123",
+  userId: "user-456",
+  orgId: "org-789",
+  orgRole: "org:admin",
+  scopes: ["keys:read", "keys:write"],
+}
+
+const mockApiKeyPrincipal: ApiKeyPrincipal = {
+  kind: "api_key",
+  tenantId: "tenant-123",
+  keyId: "key-456",
+  scopes: ["hackathons:read", "hackathons:write"],
+}
 
 describe("Audit Service", () => {
-  describe("Audit Actions", () => {
-    const validActions: AuditAction[] = [
-      "api_key.created",
-      "api_key.revoked",
-      "job.created",
-      "job.canceled",
-    ]
-
-    it("supports api_key.created action", () => {
-      expect(validActions).toContain("api_key.created")
-    })
-
-    it("supports api_key.revoked action", () => {
-      expect(validActions).toContain("api_key.revoked")
-    })
-
-    it("supports job.created action", () => {
-      expect(validActions).toContain("job.created")
-    })
-
-    it("supports job.canceled action", () => {
-      expect(validActions).toContain("job.canceled")
-    })
+  beforeEach(() => {
+    resetSupabaseMocks()
   })
 
-  describe("Actor Type Mapping", () => {
-    it("maps user principal to user actor type", () => {
-      const principal = { kind: "user" as const }
-      const actorType = principal.kind === "user" ? "user" : "api_key"
-      expect(actorType).toBe("user")
-    })
-
-    it("maps api_key principal to api_key actor type", () => {
-      const principal = { kind: "api_key" as const }
-      const actorType = principal.kind === "user" ? "user" : "api_key"
-      expect(actorType).toBe("api_key")
-    })
-  })
-
-  describe("Actor ID Extraction", () => {
-    it("extracts userId from user principal", () => {
-      const principal = {
-        kind: "user" as const,
-        userId: "user-123",
-        tenantId: "tenant-1",
-        orgId: "org-1",
-        orgRole: "admin",
-        scopes: [],
-      }
-      const actorId = principal.kind === "user" ? principal.userId : ""
-      expect(actorId).toBe("user-123")
-    })
-
-    it("extracts keyId from api_key principal", () => {
-      const principal = {
-        kind: "api_key" as const,
-        keyId: "key-456",
-        tenantId: "tenant-1",
-        scopes: [],
-      }
-      const actorId = principal.kind === "api_key" ? principal.keyId : ""
-      expect(actorId).toBe("key-456")
-    })
-  })
-
-  describe("Audit Log Structure", () => {
-    it("includes required fields", () => {
-      const auditLog = {
+  describe("logAudit", () => {
+    it("creates audit log for user principal", async () => {
+      const mockAuditLog = {
         id: "audit-1",
         tenant_id: "tenant-123",
         action: "api_key.created",
@@ -78,119 +40,336 @@ describe("Audit Service", () => {
         resource_type: "api_key",
         resource_id: "key-789",
         metadata: { name: "My API Key" },
-        created_at: new Date().toISOString(),
+        created_at: "2024-01-01T00:00:00Z",
       }
 
-      expect(auditLog.id).toBeDefined()
-      expect(auditLog.tenant_id).toBeDefined()
-      expect(auditLog.action).toBeDefined()
-      expect(auditLog.actor_type).toBeDefined()
-      expect(auditLog.actor_id).toBeDefined()
-      expect(auditLog.resource_type).toBeDefined()
-      expect(auditLog.created_at).toBeDefined()
+      const chain = createChainableMock({
+        data: mockAuditLog,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await logAudit({
+        principal: mockUserPrincipal,
+        action: "api_key.created",
+        resourceType: "api_key",
+        resourceId: "key-789",
+        metadata: { name: "My API Key" },
+      })
+
+      expect(result).not.toBeNull()
+      expect(result?.action).toBe("api_key.created")
+      expect(result?.actor_type).toBe("user")
+      expect(result?.actor_id).toBe("user-456")
     })
 
-    it("resource_id is optional", () => {
-      const auditLog = {
-        id: "audit-1",
+    it("creates audit log for api_key principal", async () => {
+      const mockAuditLog = {
+        id: "audit-2",
         tenant_id: "tenant-123",
         action: "job.created",
         actor_type: "api_key",
         actor_id: "key-456",
         resource_type: "job",
+        resource_id: "job-789",
+        metadata: { type: "completion" },
+        created_at: "2024-01-01T00:00:00Z",
+      }
+
+      const chain = createChainableMock({
+        data: mockAuditLog,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await logAudit({
+        principal: mockApiKeyPrincipal,
+        action: "job.created",
+        resourceType: "job",
+        resourceId: "job-789",
+        metadata: { type: "completion" },
+      })
+
+      expect(result).not.toBeNull()
+      expect(result?.action).toBe("job.created")
+      expect(result?.actor_type).toBe("api_key")
+      expect(result?.actor_id).toBe("key-456")
+    })
+
+    it("handles optional resource_id", async () => {
+      const mockAuditLog = {
+        id: "audit-3",
+        tenant_id: "tenant-123",
+        action: "hackathon.created",
+        actor_type: "user",
+        actor_id: "user-456",
+        resource_type: "hackathon",
         resource_id: null,
         metadata: null,
-        created_at: new Date().toISOString(),
+        created_at: "2024-01-01T00:00:00Z",
       }
 
-      expect(auditLog.resource_id).toBeNull()
+      const chain = createChainableMock({
+        data: mockAuditLog,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await logAudit({
+        principal: mockUserPrincipal,
+        action: "hackathon.created",
+        resourceType: "hackathon",
+      })
+
+      expect(result).not.toBeNull()
+      expect(result?.resource_id).toBeNull()
     })
 
-    it("metadata is optional", () => {
-      const auditLog = {
-        id: "audit-1",
+    it("handles optional metadata", async () => {
+      const mockAuditLog = {
+        id: "audit-4",
         tenant_id: "tenant-123",
-        action: "job.canceled",
+        action: "api_key.revoked",
+        actor_type: "user",
+        actor_id: "user-456",
+        resource_type: "api_key",
+        resource_id: "key-123",
+        metadata: null,
+        created_at: "2024-01-01T00:00:00Z",
+      }
+
+      const chain = createChainableMock({
+        data: mockAuditLog,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await logAudit({
+        principal: mockUserPrincipal,
+        action: "api_key.revoked",
+        resourceType: "api_key",
+        resourceId: "key-123",
+      })
+
+      expect(result).not.toBeNull()
+      expect(result?.metadata).toBeNull()
+    })
+
+    it("returns null on database error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "Database error" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await logAudit({
+        principal: mockUserPrincipal,
+        action: "api_key.created",
+        resourceType: "api_key",
+        resourceId: "key-789",
+      })
+
+      expect(result).toBeNull()
+    })
+
+    it("handles complex metadata objects", async () => {
+      const complexMetadata = {
+        nested: { deep: { value: 123 } },
+        array: [1, 2, 3],
+        string: "test",
+      }
+
+      const mockAuditLog = {
+        id: "audit-5",
+        tenant_id: "tenant-123",
+        action: "hackathon.updated",
         actor_type: "api_key",
         actor_id: "key-456",
-        resource_type: "job",
-        resource_id: "job-789",
-        metadata: null,
-        created_at: new Date().toISOString(),
+        resource_type: "hackathon",
+        resource_id: "h-123",
+        metadata: complexMetadata,
+        created_at: "2024-01-01T00:00:00Z",
       }
 
-      expect(auditLog.metadata).toBeNull()
-    })
+      const chain = createChainableMock({
+        data: mockAuditLog,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
 
-    it("metadata can be any JSON", () => {
-      const validMetadata = [
-        { name: "Test" },
-        { count: 123, tags: ["a", "b"] },
-        { nested: { deep: { value: true } } },
-        null,
-      ]
+      const result = await logAudit({
+        principal: mockApiKeyPrincipal,
+        action: "hackathon.updated",
+        resourceType: "hackathon",
+        resourceId: "h-123",
+        metadata: complexMetadata,
+      })
 
-      for (const metadata of validMetadata) {
-        expect(() => JSON.stringify(metadata)).not.toThrow()
-      }
+      expect(result).not.toBeNull()
+      expect(result?.metadata).toEqual(complexMetadata)
     })
   })
 
-  describe("List Audit Logs", () => {
-    it("default limit applies when not specified", () => {
-      const options = { limit: undefined, offset: undefined }
-      const effectiveLimit = options.limit ?? 50
-      expect(effectiveLimit).toBe(50)
-    })
-
-    it("respects custom limit", () => {
-      const options = { limit: 10 }
-      const effectiveLimit = options.limit ?? 50
-      expect(effectiveLimit).toBe(10)
-    })
-
-    it("respects offset for pagination", () => {
-      const options = { limit: 10, offset: 20 }
-      const rangeStart = options.offset
-      const rangeEnd = options.offset + (options.limit ?? 50) - 1
-
-      expect(rangeStart).toBe(20)
-      expect(rangeEnd).toBe(29)
-    })
-
-    it("orders by created_at descending", () => {
-      const logs = [
-        { created_at: "2024-01-03T00:00:00Z" },
-        { created_at: "2024-01-01T00:00:00Z" },
-        { created_at: "2024-01-02T00:00:00Z" },
+  describe("listAuditLogs", () => {
+    it("returns audit logs for tenant", async () => {
+      const mockLogs = [
+        {
+          id: "audit-1",
+          tenant_id: "tenant-123",
+          action: "api_key.created",
+          actor_type: "user",
+          actor_id: "user-456",
+          resource_type: "api_key",
+          resource_id: "key-1",
+          metadata: null,
+          created_at: "2024-01-03T00:00:00Z",
+        },
+        {
+          id: "audit-2",
+          tenant_id: "tenant-123",
+          action: "job.created",
+          actor_type: "api_key",
+          actor_id: "key-456",
+          resource_type: "job",
+          resource_id: "job-1",
+          metadata: null,
+          created_at: "2024-01-02T00:00:00Z",
+        },
       ]
 
-      const sorted = [...logs].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )
+      const chain = createChainableMock({
+        data: mockLogs,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
 
-      expect(sorted[0].created_at).toBe("2024-01-03T00:00:00Z")
-      expect(sorted[1].created_at).toBe("2024-01-02T00:00:00Z")
-      expect(sorted[2].created_at).toBe("2024-01-01T00:00:00Z")
+      const result = await listAuditLogs("tenant-123")
+
+      expect(result).toHaveLength(2)
+      expect(result[0].action).toBe("api_key.created")
+      expect(result[1].action).toBe("job.created")
+    })
+
+    it("returns empty array when no logs exist", async () => {
+      const chain = createChainableMock({
+        data: [],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listAuditLogs("tenant-empty")
+
+      expect(result).toEqual([])
+    })
+
+    it("returns empty array on error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "Database error" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listAuditLogs("tenant-error")
+
+      expect(result).toEqual([])
+    })
+
+    it("respects limit option", async () => {
+      const mockLogs = [
+        {
+          id: "audit-1",
+          tenant_id: "tenant-123",
+          action: "api_key.created",
+          actor_type: "user",
+          actor_id: "user-456",
+          resource_type: "api_key",
+          resource_id: "key-1",
+          metadata: null,
+          created_at: "2024-01-01T00:00:00Z",
+        },
+      ]
+
+      const chain = createChainableMock({
+        data: mockLogs,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listAuditLogs("tenant-123", { limit: 1 })
+
+      expect(result).toHaveLength(1)
+    })
+
+    it("respects offset option for pagination", async () => {
+      const mockLogs = [
+        {
+          id: "audit-3",
+          tenant_id: "tenant-123",
+          action: "job.canceled",
+          actor_type: "api_key",
+          actor_id: "key-456",
+          resource_type: "job",
+          resource_id: "job-3",
+          metadata: null,
+          created_at: "2024-01-01T00:00:00Z",
+        },
+      ]
+
+      const chain = createChainableMock({
+        data: mockLogs,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listAuditLogs("tenant-123", { limit: 10, offset: 20 })
+
+      expect(result).toHaveLength(1)
     })
   })
 
-  describe("Tenant Isolation", () => {
-    it("audit logs are scoped to tenant", () => {
-      const tenant1Logs = [
-        { tenant_id: "tenant-1", action: "job.created" },
-        { tenant_id: "tenant-1", action: "job.canceled" },
-      ]
+  describe("Audit Actions", () => {
+    const testCases: Array<{ action: string; resourceType: string }> = [
+      { action: "api_key.created", resourceType: "api_key" },
+      { action: "api_key.revoked", resourceType: "api_key" },
+      { action: "job.created", resourceType: "job" },
+      { action: "job.canceled", resourceType: "job" },
+      { action: "webhook.created", resourceType: "webhook" },
+      { action: "webhook.deleted", resourceType: "webhook" },
+      { action: "hackathon.created", resourceType: "hackathon" },
+      { action: "hackathon.updated", resourceType: "hackathon" },
+    ]
 
-      const tenant2Logs = [
-        { tenant_id: "tenant-2", action: "api_key.created" },
-      ]
+    for (const { action, resourceType } of testCases) {
+      it(`logs ${action} action correctly`, async () => {
+        const mockAuditLog = {
+          id: "audit-test",
+          tenant_id: "tenant-123",
+          action,
+          actor_type: "user",
+          actor_id: "user-456",
+          resource_type: resourceType,
+          resource_id: "resource-123",
+          metadata: null,
+          created_at: "2024-01-01T00:00:00Z",
+        }
 
-      const allTenant1 = tenant1Logs.every((log) => log.tenant_id === "tenant-1")
-      const allTenant2 = tenant2Logs.every((log) => log.tenant_id === "tenant-2")
+        const chain = createChainableMock({
+          data: mockAuditLog,
+          error: null,
+        })
+        setMockFromImplementation(() => chain)
 
-      expect(allTenant1).toBe(true)
-      expect(allTenant2).toBe(true)
-    })
+        const result = await logAudit({
+          principal: mockUserPrincipal,
+          action: action as Parameters<typeof logAudit>[0]["action"],
+          resourceType,
+          resourceId: "resource-123",
+        })
+
+        expect(result).not.toBeNull()
+        expect(result?.action).toBe(action)
+        expect(result?.resource_type).toBe(resourceType)
+      })
+    }
   })
 })

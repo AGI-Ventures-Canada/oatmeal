@@ -1,20 +1,26 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test"
+import { mockAuth, mockClerkClient, resetClerkMocks } from "../lib/supabase-mock"
 
-const mockAuth = mock(() => Promise.resolve({ userId: null }))
 const mockGetPublicHackathon = mock(() => Promise.resolve(null))
 const mockRegisterForHackathon = mock(() =>
   Promise.resolve({ success: true, participantId: "p1" })
 )
 
-mock.module("@clerk/nextjs/server", () => ({
-  auth: mockAuth,
-}))
-
 mock.module("@/lib/services/public-hackathons", () => ({
   getPublicHackathon: mockGetPublicHackathon,
+  listPublicHackathons: mock(() => Promise.resolve([])),
+  getHackathonByIdForOrganizer: mock(() => Promise.resolve(null)),
+  updateHackathonSettings: mock(() => Promise.resolve(null)),
 }))
 
 mock.module("@/lib/services/hackathons", () => ({
+  listParticipatingHackathons: mock(() => Promise.resolve([])),
+  listOrganizedHackathons: mock(() => Promise.resolve([])),
+  isUserRegistered: mock(() => Promise.resolve(false)),
+  getParticipantCount: mock(() => Promise.resolve(0)),
+  getRegistrationInfo: mock(() =>
+    Promise.resolve({ isRegistered: false, participantCount: 0 })
+  ),
   registerForHackathon: mockRegisterForHackathon,
 }))
 
@@ -46,7 +52,7 @@ const mockHackathon = {
 
 describe("Public Registration Routes", () => {
   beforeEach(() => {
-    mockAuth.mockReset()
+    resetClerkMocks()
     mockGetPublicHackathon.mockReset()
     mockRegisterForHackathon.mockReset()
   })

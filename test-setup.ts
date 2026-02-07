@@ -1,4 +1,5 @@
 import { Window } from "happy-dom"
+import "./__tests__/lib/supabase-mock"
 
 const window = new Window()
 Object.assign(globalThis, {
