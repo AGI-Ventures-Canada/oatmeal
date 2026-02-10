@@ -93,8 +93,8 @@ export function AppSidebarSimple() {
 
   useEffect(() => {
     if (!organization) {
-      setTenantSlug(null)
-      return
+      const id = requestAnimationFrame(() => setTenantSlug(null))
+      return () => cancelAnimationFrame(id)
     }
     let cancelled = false
     fetch("/api/dashboard/org-profile")
