@@ -944,7 +944,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         resourceId: params.id,
       })
 
-      return { url: result.url }
+      return { url: uploadResult.url }
     }
   )
   .delete("/hackathons/:id/banner", async ({ principal, params }) => {

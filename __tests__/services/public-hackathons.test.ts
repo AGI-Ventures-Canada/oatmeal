@@ -6,7 +6,7 @@ import {
   setMockFromImplementation,
 } from "../lib/supabase-mock"
 
-const { getPublicHackathon, listPublicHackathons, getHackathonByIdForOrganizer, updateHackathonSettings } = await import(
+const { getPublicHackathon, listPublicHackathons, getHackathonByIdForOrganizer, checkHackathonOrganizer, updateHackathonSettings } = await import(
   "@/lib/services/public-hackathons"
 )
 
@@ -174,6 +174,47 @@ describe("Public Hackathons Service", () => {
       const result = await getHackathonByIdForOrganizer("h1", "wrong-tenant")
 
       expect(result).toBeNull()
+    })
+  })
+
+  describe("checkHackathonOrganizer", () => {
+    it("returns ok with hackathon when tenant owns it", async () => {
+      const chain = createChainableMock({
+        data: mockHackathon,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await checkHackathonOrganizer("h1", "t1")
+
+      expect(result.status).toBe("ok")
+      if (result.status === "ok") {
+        expect(result.hackathon.name).toBe("Test Hackathon")
+      }
+    })
+
+    it("returns not_found when hackathon does not exist", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "Not found", code: "PGRST116" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await checkHackathonOrganizer("nonexistent", "t1")
+
+      expect(result.status).toBe("not_found")
+    })
+
+    it("returns not_authorized when tenant does not own hackathon", async () => {
+      const chain = createChainableMock({
+        data: mockHackathon,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await checkHackathonOrganizer("h1", "wrong-tenant")
+
+      expect(result.status).toBe("not_authorized")
     })
   })
 
