@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, mock, spyOn } from "bun:test"
+import { describe, expect, it, beforeEach } from "bun:test"
 import type { Webhook, WebhookEvent } from "@/lib/db/hackathon-types"
 import {
   createChainableMock,
@@ -16,7 +16,6 @@ const {
   incrementFailureCount,
   resetFailureCount,
   recordDelivery,
-  deliverWebhook,
 } = await import("@/lib/services/webhooks")
 
 const {

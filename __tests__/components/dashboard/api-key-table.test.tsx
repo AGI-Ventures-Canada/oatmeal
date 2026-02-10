@@ -1,5 +1,5 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from "bun:test"
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react"
+import { render, screen, cleanup } from "@testing-library/react"
 import { ApiKeyTable } from "@/components/dashboard/api-key-table"
 import type { ApiKeyDisplay } from "@/lib/types/dashboard"
 

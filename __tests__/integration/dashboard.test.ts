@@ -1,5 +1,5 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test"
-import { mockAuth, resetClerkMocks } from "../lib/supabase-mock"
+import { resetClerkMocks } from "../lib/supabase-mock"
 
 const mockListApiKeys = mock(() => Promise.resolve([]))
 const mockCreateApiKey = mock(() =>
@@ -50,7 +50,7 @@ mock.module("@/lib/auth/principal", () => {
 
   return {
     resolvePrincipal: mockResolvePrincipal,
-    requirePrincipal: (principal: unknown, _types: string[], _scopes?: string[]) => {
+    requirePrincipal: (principal: unknown, ..._rest: unknown[]) => {
       if (!principal || (principal as { kind: string }).kind === "anon") {
         throw new AuthError("Unauthorized", 401)
       }
