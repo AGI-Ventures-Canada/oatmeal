@@ -54,13 +54,32 @@ export default async function EventPage({ params }: PageProps) {
 
   let isRegistered = false
   let participantCount = 0
+  let submission = null
 
   if (userId) {
     const { getRegistrationInfo } = await import("@/lib/services/hackathons")
     const registrationInfo = await getRegistrationInfo(hackathon.id, userId)
     isRegistered = registrationInfo.isRegistered
     participantCount = registrationInfo.participantCount
+
+    if (isRegistered) {
+      const { getSubmissionForParticipant } = await import("@/lib/services/submissions")
+      submission = await getSubmissionForParticipant(hackathon.id, userId)
+    }
   }
+
+  const { getHackathonSubmissions } = await import("@/lib/services/submissions")
+  const rawSubmissions = await getHackathonSubmissions(hackathon.id)
+  const gallerySubmissions = rawSubmissions.map((s) => ({
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    githubUrl: s.github_url,
+    liveAppUrl: s.live_app_url,
+    demoVideoUrl: s.demo_video_url,
+    submitter: s.submitter_name,
+    createdAt: s.created_at,
+  }))
 
   return (
     <div>
@@ -79,6 +98,8 @@ export default async function EventPage({ params }: PageProps) {
         isRegistered={isRegistered}
         participantCount={participantCount}
         showEditToggle={isOrganizer}
+        submission={submission}
+        submissions={gallerySubmissions}
       />
     </div>
   )

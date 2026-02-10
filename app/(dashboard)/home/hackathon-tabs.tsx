@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Trophy, Search, Star, Plus } from "lucide-react"
+import { Trophy, Search, Star, Plus, Check } from "lucide-react"
 import { CreateHackathonDrawer } from "@/components/hackathon/create-hackathon-drawer"
 import { CountdownBadge } from "@/components/hackathon/countdown-badge"
 import {
@@ -44,13 +44,16 @@ type Props = {
   myHackathons: HackathonWithRole[]
   organizedHackathons: Hackathon[]
   sponsoredHackathons: Hackathon[]
+  submittedHackathonIds: string[]
 }
 
 export function HackathonTabs({
   myHackathons,
   organizedHackathons,
   sponsoredHackathons,
+  submittedHackathonIds,
 }: Props) {
+  const submittedSet = new Set(submittedHackathonIds)
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -127,8 +130,14 @@ export function HackathonTabs({
                     </div>
                     <CardDescription>{h.description}</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex gap-2">
                     <Badge variant="outline">{h.role}</Badge>
+                    {submittedSet.has(h.id) && (
+                      <Badge variant="secondary">
+                        <Check className="mr-1 size-3" />
+                        Submitted
+                      </Badge>
+                    )}
                   </CardContent>
                 </Card>
               </Link>
@@ -159,7 +168,7 @@ export function HackathonTabs({
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {organizedHackathons.map((h) => (
-              <Link key={h.id} href={`/e/${h.slug}`}>
+              <Link key={h.id} href={`/hackathons/${h.id}`}>
                 <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
                   <CardHeader>
                     <div className="flex items-center justify-between">

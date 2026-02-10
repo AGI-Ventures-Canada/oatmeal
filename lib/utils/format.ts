@@ -35,6 +35,22 @@ export function formatDateRange(
   return `${start.toLocaleDateString("en-US", opts)} – ${end.toLocaleDateString("en-US", opts)}`
 }
 
+export function formatDateTimeDisplay(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date
+  const dateOpts: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }
+  const timeOpts: Intl.DateTimeFormatOptions = {
+    hour: "numeric",
+    minute: "2-digit",
+  }
+  const dateStr = d.toLocaleDateString("en-US", dateOpts)
+  const timeStr = d.toLocaleTimeString("en-US", timeOpts)
+  return `${dateStr} at ${timeStr}`
+}
+
 export function sortByStartDate<T extends { starts_at: string | null }>(
   items: T[],
   descending = false

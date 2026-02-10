@@ -2,19 +2,22 @@ import { OptimizedImage } from "@/components/ui/optimized-image"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Clock, Moon, Sun, Calendar, CalendarDays, Zap } from "lucide-react"
-import type { HackathonStatus, TenantProfile } from "@/lib/db/hackathon-types"
+import type { HackathonStatus, TenantProfile, Submission } from "@/lib/db/hackathon-types"
 import { RegistrationButton } from "./registration-button"
+import { SubmissionButton } from "./submission-button"
 import { CountdownBadge } from "./countdown-badge"
 import { getTimelineState } from "@/lib/utils/timeline"
 import { formatDateRange } from "@/lib/utils/format"
 
 interface RegistrationProps {
   hackathonSlug: string
+  status: HackathonStatus
   registrationOpensAt: string | null
   registrationClosesAt: string | null
   maxParticipants: number | null
   participantCount: number
   isRegistered: boolean
+  submission?: Submission | null
 }
 
 interface EventHeroProps {
@@ -225,7 +228,7 @@ export function EventHero({
               </span>
             </div>
             {registrationProps && (
-              <div className="mt-4">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <RegistrationButton
                   hackathonSlug={registrationProps.hackathonSlug}
                   status={status}
@@ -234,6 +237,12 @@ export function EventHero({
                   maxParticipants={registrationProps.maxParticipants}
                   participantCount={registrationProps.participantCount}
                   isRegistered={registrationProps.isRegistered}
+                />
+                <SubmissionButton
+                  hackathonSlug={registrationProps.hackathonSlug}
+                  status={registrationProps.status}
+                  isRegistered={registrationProps.isRegistered}
+                  submission={registrationProps.submission ?? null}
                 />
               </div>
             )}

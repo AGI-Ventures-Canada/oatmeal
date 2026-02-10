@@ -1,6 +1,7 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Hackathon, TenantProfile, HackathonSponsor, HackathonStatus } from "@/lib/db/hackathon-types"
+import { getEffectiveStatus } from "@/lib/utils/timeline"
 
 export type PublicHackathon = Hackathon & {
   organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark" | "clerk_org_id">
@@ -53,6 +54,7 @@ export async function getPublicHackathon(
 
   return {
     ...hackathon,
+    status: getEffectiveStatus(hackathon),
     sponsors: sponsors || [],
   } as unknown as PublicHackathon
 }
@@ -141,6 +143,7 @@ export async function getHackathonByIdWithFullData(
 
   return {
     ...hackathon,
+    status: getEffectiveStatus(hackathon),
     sponsors: sponsors || [],
   } as unknown as PublicHackathon
 }

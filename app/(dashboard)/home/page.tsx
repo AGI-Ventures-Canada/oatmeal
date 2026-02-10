@@ -7,6 +7,7 @@ import {
   listOrganizedHackathons,
   listSponsoredHackathons,
 } from "@/lib/services/hackathons"
+import { getSubmittedHackathonIds } from "@/lib/services/submissions"
 import { Button } from "@/components/ui/button"
 import { CreateHackathonDrawer } from "@/components/hackathon/create-hackathon-drawer"
 import { HackathonTabs } from "./hackathon-tabs"
@@ -21,10 +22,11 @@ export default async function DashboardPage() {
 
   const tenant = await resolvePageTenant()
 
-  const [myHackathons, organizedHackathons, sponsoredHackathons] = await Promise.all([
+  const [myHackathons, organizedHackathons, sponsoredHackathons, submittedHackathonIds] = await Promise.all([
     listParticipatingHackathons(userId),
     listOrganizedHackathons(tenant.id),
     listSponsoredHackathons(tenant.id),
+    getSubmittedHackathonIds(userId),
   ])
 
   return (
@@ -49,6 +51,7 @@ export default async function DashboardPage() {
         myHackathons={myHackathons}
         organizedHackathons={organizedHackathons}
         sponsoredHackathons={sponsoredHackathons}
+        submittedHackathonIds={Array.from(submittedHackathonIds)}
       />
     </div>
   )

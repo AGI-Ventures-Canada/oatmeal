@@ -1,9 +1,17 @@
-import { Elysia } from "elysia"
+import { Elysia, t } from "elysia"
 import { auth } from "@clerk/nextjs/server"
 import { exchangeCodeForTokens, saveIntegration, getProviderConfig } from "@/lib/integrations/oauth"
 import { getPublicHackathon, listPublicHackathons } from "@/lib/services/public-hackathons"
 import { registerForHackathon, getParticipantCount, isUserRegistered } from "@/lib/services/hackathons"
 import { getPublicTenantWithEvents } from "@/lib/services/tenant-profiles"
+import {
+  getParticipantWithTeam,
+  getSubmissionForParticipant,
+  getExistingSubmission,
+  createSubmission,
+  updateSubmission,
+  getHackathonSubmissions,
+} from "@/lib/services/submissions"
 
 export const publicRoutes = new Elysia({ prefix: "/public" })
   .get("/health", () => ({
@@ -155,6 +163,256 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
 
     return { success: true, participantId: result.participantId }
   })
+  .get("/hackathons/:slug/submissions/me", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return { submission: null }
+    }
+
+    const hackathon = await getPublicHackathon(params.slug)
+
+    if (!hackathon) {
+      return { submission: null }
+    }
+
+    const submission = await getSubmissionForParticipant(hackathon.id, userId)
+
+    if (!submission) {
+      return { submission: null }
+    }
+
+    return {
+      submission: {
+        id: submission.id,
+        title: submission.title,
+        description: submission.description,
+        githubUrl: submission.github_url,
+        liveAppUrl: submission.live_app_url,
+        status: submission.status,
+        createdAt: submission.created_at,
+        updatedAt: submission.updated_at,
+      },
+    }
+  })
+  .get("/hackathons/:slug/submissions", async ({ params }) => {
+    const hackathon = await getPublicHackathon(params.slug)
+
+    if (!hackathon) {
+      return new Response(
+        JSON.stringify({ error: "Hackathon not found", code: "hackathon_not_found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const submissions = await getHackathonSubmissions(hackathon.id)
+
+    return {
+      submissions: submissions.map((s) => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        githubUrl: s.github_url,
+        liveAppUrl: s.live_app_url,
+        demoVideoUrl: s.demo_video_url,
+        status: s.status,
+        createdAt: s.created_at,
+        submitter: s.submitter_name,
+      })),
+    }
+  })
+  .post(
+    "/hackathons/:slug/submissions",
+    async ({ params, body }) => {
+      const { userId } = await auth()
+
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const hackathon = await getPublicHackathon(params.slug)
+
+      if (!hackathon) {
+        return new Response(
+          JSON.stringify({ error: "Hackathon not found", code: "hackathon_not_found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      if (hackathon.status !== "active") {
+        return new Response(
+          JSON.stringify({ error: "Submissions are not currently open", code: "submissions_closed" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const participant = await getParticipantWithTeam(hackathon.id, userId)
+
+      if (!participant) {
+        return new Response(
+          JSON.stringify({ error: "You must register before submitting", code: "not_registered" }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const existing = await getExistingSubmission(
+        hackathon.id,
+        participant.participantId,
+        participant.teamId
+      )
+
+      if (existing) {
+        return new Response(
+          JSON.stringify({ error: "You have already submitted a project", code: "already_submitted" }),
+          { status: 409, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      try {
+        const url = new URL(body.githubUrl)
+        if (url.hostname !== "github.com" && url.hostname !== "www.github.com") {
+          return new Response(
+            JSON.stringify({ error: "GitHub URL must be from github.com", code: "invalid_github_url" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          )
+        }
+      } catch {
+        return new Response(
+          JSON.stringify({ error: "Invalid GitHub URL", code: "invalid_github_url" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const submission = await createSubmission(
+        hackathon.id,
+        participant.participantId,
+        participant.teamId,
+        {
+          title: body.title,
+          description: body.description,
+          githubUrl: body.githubUrl,
+          liveAppUrl: body.liveAppUrl,
+        }
+      )
+
+      if (!submission) {
+        return new Response(
+          JSON.stringify({ error: "Failed to create submission", code: "create_failed" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      return { success: true, submissionId: submission.id }
+    },
+    {
+      body: t.Object({
+        title: t.String({ minLength: 1, maxLength: 100 }),
+        description: t.String({ minLength: 1, maxLength: 280 }),
+        githubUrl: t.String(),
+        liveAppUrl: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+    }
+  )
+  .patch(
+    "/hackathons/:slug/submissions",
+    async ({ params, body }) => {
+      const { userId } = await auth()
+
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const hackathon = await getPublicHackathon(params.slug)
+
+      if (!hackathon) {
+        return new Response(
+          JSON.stringify({ error: "Hackathon not found", code: "hackathon_not_found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      if (hackathon.status !== "active") {
+        return new Response(
+          JSON.stringify({ error: "Submissions are not currently open", code: "submissions_closed" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const participant = await getParticipantWithTeam(hackathon.id, userId)
+
+      if (!participant) {
+        return new Response(
+          JSON.stringify({ error: "You must register before submitting", code: "not_registered" }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const existing = await getExistingSubmission(
+        hackathon.id,
+        participant.participantId,
+        participant.teamId
+      )
+
+      if (!existing) {
+        return new Response(
+          JSON.stringify({ error: "No submission found to update", code: "no_submission" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      if (body.githubUrl) {
+        try {
+          const url = new URL(body.githubUrl)
+          if (url.hostname !== "github.com" && url.hostname !== "www.github.com") {
+            return new Response(
+              JSON.stringify({ error: "GitHub URL must be from github.com", code: "invalid_github_url" }),
+              { status: 400, headers: { "Content-Type": "application/json" } }
+            )
+          }
+        } catch {
+          return new Response(
+            JSON.stringify({ error: "Invalid GitHub URL", code: "invalid_github_url" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          )
+        }
+      }
+
+      const submission = await updateSubmission(
+        existing.id,
+        participant.participantId,
+        participant.teamId,
+        {
+          title: body.title,
+          description: body.description,
+          githubUrl: body.githubUrl,
+          liveAppUrl: body.liveAppUrl,
+        }
+      )
+
+      if (!submission) {
+        return new Response(
+          JSON.stringify({ error: "Failed to update submission", code: "update_failed" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      return { success: true, submissionId: submission.id }
+    },
+    {
+      body: t.Object({
+        title: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
+        description: t.Optional(t.String({ minLength: 1, maxLength: 280 })),
+        githubUrl: t.Optional(t.String()),
+        liveAppUrl: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+    }
+  )
   .get("/hackathons", async () => {
     const hackathons = await listPublicHackathons()
 

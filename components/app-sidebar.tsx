@@ -24,7 +24,7 @@ import {
   ExternalLink,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname, useSearchParams } from "next/navigation"
+import { usePathname, useSearchParams, useRouter } from "next/navigation"
 import {
   useUser,
   useClerk,
@@ -87,6 +87,7 @@ const settingsItems = [
 export function AppSidebar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const { user } = useUser()
   const { signOut, openUserProfile } = useClerk()
   const { organization } = useOrganization()
@@ -148,7 +149,10 @@ export function AppSidebar() {
                 <DropdownMenuLabel>Organizations</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => setActive?.({ organization: null })}
+                  onClick={() => {
+                    setActive?.({ organization: null })
+                    router.push("/home")
+                  }}
                   className="gap-2"
                 >
                   <div className="flex size-5 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
@@ -159,7 +163,10 @@ export function AppSidebar() {
                 {userMemberships?.data?.map((mem) => (
                   <DropdownMenuItem
                     key={mem.organization.id}
-                    onClick={() => setActive?.({ organization: mem.organization.id })}
+                    onClick={() => {
+                      setActive?.({ organization: mem.organization.id })
+                      router.push("/home")
+                    }}
                     className="gap-2"
                   >
                     {mem.organization.imageUrl ? (

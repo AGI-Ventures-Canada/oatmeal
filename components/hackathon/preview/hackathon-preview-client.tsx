@@ -7,7 +7,10 @@ import { HackathonEditDrawer } from "@/components/hackathon/edit-drawer/hackatho
 import { OrganizerLogoPrompt } from "@/components/hackathon/organizer-logo-prompt"
 import { EventHero } from "@/components/hackathon/event-hero"
 import { SponsorSection } from "@/components/hackathon/sponsor-section"
+import { SubmissionGallery, type GallerySubmission } from "@/components/hackathon/submission-gallery"
+import { formatDateTimeDisplay } from "@/lib/utils/format"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
+import type { Submission } from "@/lib/db/hackathon-types"
 
 interface HackathonPreviewClientProps {
   hackathon: PublicHackathon
@@ -15,6 +18,8 @@ interface HackathonPreviewClientProps {
   isRegistered?: boolean
   participantCount?: number
   showEditToggle?: boolean
+  submission?: Submission | null
+  submissions?: GallerySubmission[]
 }
 
 function HackathonPreviewContent({
@@ -22,6 +27,8 @@ function HackathonPreviewContent({
   isRegistered = false,
   participantCount = 0,
   showEditToggle = false,
+  submission = null,
+  submissions = [],
 }: Omit<HackathonPreviewClientProps, "isEditable">) {
   const { isEditable, editMode, openSection } = useEdit()
   const hasTimeline = hackathon.registration_opens_at || hackathon.registration_closes_at || hackathon.starts_at || hackathon.ends_at
@@ -51,11 +58,13 @@ function HackathonPreviewContent({
           isRegistered={isRegistered}
           registrationProps={{
             hackathonSlug: hackathon.slug,
+            status: hackathon.status,
             registrationOpensAt: hackathon.registration_opens_at,
             registrationClosesAt: hackathon.registration_closes_at,
             maxParticipants: hackathon.max_participants,
             participantCount,
             isRegistered,
+            submission,
           }}
         />
       </EditableSection>
@@ -114,25 +123,25 @@ function HackathonPreviewContent({
                       {hackathon.registration_opens_at && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Registration Opens</span>
-                          <span>{new Date(hackathon.registration_opens_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                          <span>{formatDateTimeDisplay(hackathon.registration_opens_at)}</span>
                         </div>
                       )}
                       {hackathon.registration_closes_at && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Registration Closes</span>
-                          <span>{new Date(hackathon.registration_closes_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                          <span>{formatDateTimeDisplay(hackathon.registration_closes_at)}</span>
                         </div>
                       )}
                       {hackathon.starts_at && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Hackathon Starts</span>
-                          <span>{new Date(hackathon.starts_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                          <span>{formatDateTimeDisplay(hackathon.starts_at)}</span>
                         </div>
                       )}
                       {hackathon.ends_at && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Hackathon Ends</span>
-                          <span>{new Date(hackathon.ends_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                          <span>{formatDateTimeDisplay(hackathon.ends_at)}</span>
                         </div>
                       )}
                     </div>
@@ -142,6 +151,8 @@ function HackathonPreviewContent({
             </div>
           </div>
         </section>
+
+        <SubmissionGallery submissions={submissions} />
       </div>
 
       {isEditable && editMode && <HackathonEditDrawer hackathon={hackathon} />}
@@ -155,6 +166,8 @@ export function HackathonPreviewClient({
   isRegistered,
   participantCount,
   showEditToggle = false,
+  submission,
+  submissions,
 }: HackathonPreviewClientProps) {
   return (
     <EditProvider isEditable={isEditable} defaultEditMode={!showEditToggle}>
@@ -163,6 +176,8 @@ export function HackathonPreviewClient({
         isRegistered={isRegistered}
         participantCount={participantCount}
         showEditToggle={showEditToggle}
+        submission={submission}
+        submissions={submissions}
       />
     </EditProvider>
   )
