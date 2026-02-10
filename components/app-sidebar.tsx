@@ -100,11 +100,15 @@ export function AppSidebar() {
   const [tenantSlug, setTenantSlug] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!organization) {
-      const id = requestAnimationFrame(() => setTenantSlug(null))
-      return () => cancelAnimationFrame(id)
-    }
     let cancelled = false
+
+    if (!organization) {
+      Promise.resolve().then(() => {
+        if (!cancelled) setTenantSlug(null)
+      })
+      return () => { cancelled = true }
+    }
+
     fetch("/api/dashboard/org-profile")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -114,7 +118,7 @@ export function AppSidebar() {
         if (!cancelled) setTenantSlug(null)
       })
     return () => { cancelled = true }
-  }, [organization?.id])
+  }, [organization])
 
   const isSettingsView = pathname.startsWith("/settings")
   const currentTab = searchParams.get("tab")

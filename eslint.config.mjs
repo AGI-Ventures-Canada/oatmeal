@@ -5,6 +5,27 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      "components/ai-elements/**/*.tsx",
+      "components/app-sidebar.tsx",
+    ],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -19,6 +40,8 @@ const eslintConfig = defineConfig([
     "lib/**/*.js",
     // Fumadocs generated source
     ".source/**",
+    // Workflow DevKit generated routes
+    "app/.well-known/workflow/**",
   ]),
 ]);
 
