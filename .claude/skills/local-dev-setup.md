@@ -147,7 +147,7 @@ git checkout -b feature/your-feature-name
 | Health Check | http://localhost:3000/api/public/health |
 | LLMs.txt | http://localhost:3000/llms.txt |
 | Supabase Studio | http://localhost:54423 |
-| Supabase API | http://localhost:54421 |
+| Supabase API | http://localhost:54321 |
 | Inbucket (email) | http://localhost:54424 |
 
 ## Project Structure

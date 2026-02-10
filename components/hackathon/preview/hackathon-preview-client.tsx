@@ -2,7 +2,9 @@
 
 import { EditProvider, useEdit } from "./edit-context"
 import { EditableSection } from "./editable-section"
+import { EditModeToggle } from "./edit-mode-toggle"
 import { HackathonEditDrawer } from "@/components/hackathon/edit-drawer/hackathon-edit-drawer"
+import { OrganizerLogoPrompt } from "@/components/hackathon/organizer-logo-prompt"
 import { EventHero } from "@/components/hackathon/event-hero"
 import { SponsorSection } from "@/components/hackathon/sponsor-section"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
@@ -12,19 +14,28 @@ interface HackathonPreviewClientProps {
   isEditable: boolean
   isRegistered?: boolean
   participantCount?: number
+  showEditToggle?: boolean
 }
 
 function HackathonPreviewContent({
   hackathon,
-  isEditable,
   isRegistered = false,
   participantCount = 0,
-}: HackathonPreviewClientProps) {
-  const { openSection } = useEdit()
+  showEditToggle = false,
+}: Omit<HackathonPreviewClientProps, "isEditable">) {
+  const { isEditable, editMode, openSection } = useEdit()
   const hasTimeline = hackathon.registration_opens_at || hackathon.registration_closes_at || hackathon.starts_at || hackathon.ends_at
 
   return (
     <>
+      {showEditToggle && <EditModeToggle />}
+      {editMode && (
+        <OrganizerLogoPrompt
+          organizerId={hackathon.organizer.id}
+          organizerClerkOrgId={hackathon.organizer.clerk_org_id}
+          organizerLogoUrl={hackathon.organizer.logo_url}
+        />
+      )}
       <div>
       <EditableSection section="hero">
         <EventHero
@@ -36,7 +47,7 @@ function HackathonPreviewContent({
           registrationOpensAt={hackathon.registration_opens_at}
           registrationClosesAt={hackathon.registration_closes_at}
           organizer={hackathon.organizer}
-          onDatesClick={isEditable ? () => openSection("timeline") : undefined}
+          onDatesClick={isEditable && editMode ? () => openSection("timeline") : undefined}
           isRegistered={isRegistered}
           registrationProps={{
             hackathonSlug: hackathon.slug,
@@ -59,8 +70,8 @@ function HackathonPreviewContent({
         </EditableSection>
 
         <section className="py-12 border-t">
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto space-y-8">
+          <div className="mx-auto max-w-4xl px-4">
+            <div className="space-y-8">
               <EditableSection
                 section="about"
                 isEmpty={!hackathon.description}
@@ -133,7 +144,7 @@ function HackathonPreviewContent({
         </section>
       </div>
 
-      {isEditable && <HackathonEditDrawer hackathon={hackathon} />}
+      {isEditable && editMode && <HackathonEditDrawer hackathon={hackathon} />}
     </>
   )
 }
@@ -143,14 +154,15 @@ export function HackathonPreviewClient({
   isEditable,
   isRegistered,
   participantCount,
+  showEditToggle = false,
 }: HackathonPreviewClientProps) {
   return (
-    <EditProvider isEditable={isEditable}>
+    <EditProvider isEditable={isEditable} defaultEditMode={!showEditToggle}>
       <HackathonPreviewContent
         hackathon={hackathon}
-        isEditable={isEditable}
         isRegistered={isRegistered}
         participantCount={participantCount}
+        showEditToggle={showEditToggle}
       />
     </EditProvider>
   )

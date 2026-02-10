@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import {
   Trophy,
   Search,
@@ -19,6 +20,8 @@ import {
   Users,
   Star,
   Megaphone,
+  Globe,
+  ExternalLink,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
@@ -91,6 +94,25 @@ export function AppSidebar() {
     userMemberships: { infinite: true },
   })
 
+  const [tenantSlug, setTenantSlug] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!organization) {
+      setTenantSlug(null)
+      return
+    }
+    let cancelled = false
+    fetch("/api/dashboard/org-profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setTenantSlug(data?.slug ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setTenantSlug(null)
+      })
+    return () => { cancelled = true }
+  }, [organization?.id])
+
   const isSettingsView = pathname.startsWith("/settings")
   const currentTab = searchParams.get("tab")
 
@@ -156,19 +178,24 @@ export function AppSidebar() {
                 ))}
                 <DropdownMenuSeparator />
                 {organization && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings/profile">
-                      <Settings className="size-4 mr-2" />
-                      Organization Settings
-                    </Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings/profile">
+                        <Settings className="size-4 mr-2" />
+                        Organization Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    {tenantSlug && (
+                      <DropdownMenuItem asChild>
+                        <Link href={`/o/${tenantSlug}`} target="_blank">
+                          <Globe className="size-4 mr-2" />
+                          Organization Page
+                          <ExternalLink className="size-3 ml-auto opacity-50" />
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                  </>
                 )}
-                <DropdownMenuItem asChild>
-                  <Link href="/onboarding" className="gap-2">
-                    <Building2 className="size-4" />
-                    Switch Organization
-                  </Link>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>

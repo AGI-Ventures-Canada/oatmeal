@@ -160,7 +160,7 @@ export function EventHero({
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
       </div>
-      <div className="container mx-auto px-4">
+      <div className="mx-auto max-w-4xl px-4">
         <div className="relative -mt-20 md:-mt-24">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2 flex-wrap">
@@ -207,7 +207,7 @@ export function EventHero({
                   alt={organizer.name}
                   width={24}
                   height={24}
-                  className="rounded-full"
+                  className="object-contain"
                 />
               )}
               <span className="text-sm text-muted-foreground">

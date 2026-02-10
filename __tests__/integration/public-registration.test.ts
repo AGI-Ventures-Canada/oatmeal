@@ -5,6 +5,8 @@ const mockGetPublicHackathon = mock(() => Promise.resolve(null))
 const mockRegisterForHackathon = mock(() =>
   Promise.resolve({ success: true, participantId: "p1" })
 )
+const mockGetParticipantCount = mock(() => Promise.resolve(42))
+const mockIsUserRegistered = mock(() => Promise.resolve(false))
 
 mock.module("@clerk/nextjs/server", () => ({
   auth: mockAuth,
@@ -26,10 +28,14 @@ mock.module("@/lib/services/public-hackathons", () => ({
 
 mock.module("@/lib/services/hackathons", () => ({
   registerForHackathon: mockRegisterForHackathon,
+  getParticipantCount: mockGetParticipantCount,
+  isUserRegistered: mockIsUserRegistered,
 }))
 
+const mockGetPublicTenantWithEvents = mock(() => Promise.resolve(null))
+
 mock.module("@/lib/services/tenant-profiles", () => ({
-  getPublicTenantWithHackathons: mock(() => Promise.resolve(null)),
+  getPublicTenantWithEvents: mockGetPublicTenantWithEvents,
 }))
 
 mock.module("@/lib/integrations/oauth", () => ({
@@ -69,6 +75,9 @@ describe("Public Registration Routes", () => {
     mockAuth.mockReset()
     mockGetPublicHackathon.mockReset()
     mockRegisterForHackathon.mockReset()
+    mockGetParticipantCount.mockReset()
+    mockIsUserRegistered.mockReset()
+    mockGetPublicTenantWithEvents.mockReset()
   })
 
   describe("POST /api/public/hackathons/:slug/register", () => {
@@ -216,6 +225,140 @@ describe("Public Registration Routes", () => {
       )
 
       expect(mockRegisterForHackathon).toHaveBeenCalledWith("h1", "user_456")
+    })
+  })
+
+  describe("GET /api/public/hackathons/:slug/registration", () => {
+    it("returns 404 when hackathon not found", async () => {
+      mockGetPublicHackathon.mockResolvedValue(null)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/public/hackathons/nonexistent/registration")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(404)
+      expect(data.error).toBe("Hackathon not found")
+    })
+
+    it("returns participant count and isRegistered null when not authenticated", async () => {
+      mockAuth.mockResolvedValue({ userId: null })
+      mockGetPublicHackathon.mockResolvedValue(mockHackathon)
+      mockGetParticipantCount.mockResolvedValue(25)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/public/hackathons/test-hackathon/registration")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.participantCount).toBe(25)
+      expect(data.isRegistered).toBeNull()
+    })
+
+    it("returns participant count and isRegistered true when authenticated and registered", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_123" })
+      mockGetPublicHackathon.mockResolvedValue(mockHackathon)
+      mockGetParticipantCount.mockResolvedValue(42)
+      mockIsUserRegistered.mockResolvedValue(true)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/public/hackathons/test-hackathon/registration")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.participantCount).toBe(42)
+      expect(data.isRegistered).toBe(true)
+    })
+
+    it("returns isRegistered false when authenticated but not registered", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_123" })
+      mockGetPublicHackathon.mockResolvedValue(mockHackathon)
+      mockGetParticipantCount.mockResolvedValue(10)
+      mockIsUserRegistered.mockResolvedValue(false)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/public/hackathons/test-hackathon/registration")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.participantCount).toBe(10)
+      expect(data.isRegistered).toBe(false)
+    })
+  })
+
+  describe("GET /api/public/orgs/:slug", () => {
+    const mockTenant = {
+      id: "t1",
+      name: "Test Org",
+      slug: "test-org",
+      logo_url: "https://example.com/logo.png",
+      logo_url_dark: null,
+      description: "A test org",
+      website_url: "https://example.com",
+      organizedHackathons: [
+        {
+          id: "h1",
+          name: "Org Hackathon",
+          slug: "org-hackathon",
+          description: "Organized event",
+          banner_url: null,
+          status: "active",
+          starts_at: "2026-03-01T00:00:00Z",
+          ends_at: "2026-03-02T00:00:00Z",
+          role: "organizer",
+        },
+      ],
+      sponsoredHackathons: [
+        {
+          id: "h2",
+          name: "Sponsored Hackathon",
+          slug: "sponsored-hackathon",
+          description: "Sponsored event",
+          banner_url: null,
+          status: "completed",
+          starts_at: "2026-01-01T00:00:00Z",
+          ends_at: "2026-01-02T00:00:00Z",
+          role: "sponsor",
+          organizer: {
+            id: "t2",
+            name: "Other Org",
+            slug: "other-org",
+            logo_url: null,
+          },
+        },
+      ],
+    }
+
+    it("returns 404 when org not found", async () => {
+      mockGetPublicTenantWithEvents.mockResolvedValue(null)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/public/orgs/nonexistent")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(404)
+      expect(data.error).toBe("Organization not found")
+    })
+
+    it("returns org with organized and sponsored hackathons", async () => {
+      mockGetPublicTenantWithEvents.mockResolvedValue(mockTenant)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/public/orgs/test-org")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.name).toBe("Test Org")
+      expect(data.organizedHackathons).toHaveLength(1)
+      expect(data.organizedHackathons[0].slug).toBe("org-hackathon")
+      expect(data.sponsoredHackathons).toHaveLength(1)
+      expect(data.sponsoredHackathons[0].slug).toBe("sponsored-hackathon")
+      expect(data.sponsoredHackathons[0].organizer.name).toBe("Other Org")
     })
   })
 })

@@ -1,16 +1,22 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
 import { Upload, X, Sun, Moon, Sparkles } from "lucide-react"
 
 type LogoUploadModalProps = {
@@ -20,8 +26,8 @@ type LogoUploadModalProps = {
 }
 
 type UploadState = {
-  light: { file: File | null; preview: string | null; uploading: boolean }
-  dark: { file: File | null; preview: string | null; uploading: boolean }
+  light: { file: File | null; preview: string | null; deleted: boolean }
+  dark: { file: File | null; preview: string | null; deleted: boolean }
 }
 
 export function LogoUploadModal({
@@ -32,10 +38,17 @@ export function LogoUploadModal({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [state, setState] = useState<UploadState>({
-    light: { file: null, preview: lightLogoUrl, uploading: false },
-    dark: { file: null, preview: darkLogoUrl, uploading: false },
+    light: { file: null, preview: lightLogoUrl, deleted: false },
+    dark: { file: null, preview: darkLogoUrl, deleted: false },
   })
   const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const hasPendingChanges =
+    state.light.file !== null ||
+    state.light.deleted ||
+    state.dark.file !== null ||
+    state.dark.deleted
 
   const lightInputRef = useRef<HTMLInputElement>(null)
   const darkInputRef = useRef<HTMLInputElement>(null)
@@ -58,84 +71,83 @@ export function LogoUploadModal({
     const preview = URL.createObjectURL(file)
     setState((prev) => ({
       ...prev,
-      [variant]: { ...prev[variant], file, preview },
+      [variant]: { file, preview, deleted: false },
     }))
   }
 
-  async function handleUpload(variant: "light" | "dark") {
-    const { file } = state[variant]
-    if (!file) return
-
-    setState((prev) => ({
-      ...prev,
-      [variant]: { ...prev[variant], uploading: true },
-    }))
-
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("variant", variant)
-
-      const res = await fetch("/api/dashboard/upload-logo", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Upload failed")
+  function handleRemove(variant: "light" | "dark") {
+    const original = variant === "light" ? lightLogoUrl : darkLogoUrl
+    setState((prev) => {
+      const v = prev[variant]
+      if (v.file) {
+        if (v.preview) URL.revokeObjectURL(v.preview)
+        return { ...prev, [variant]: { file: null, preview: original, deleted: false } }
       }
+      return { ...prev, [variant]: { file: null, preview: null, deleted: true } }
+    })
+  }
 
-      const data = await res.json()
-      setState((prev) => ({
-        ...prev,
-        [variant]: { file: null, preview: data.url, uploading: false },
-      }))
+  async function handleSave() {
+    setSaving(true)
+    setError(null)
+    try {
+      for (const variant of ["light", "dark"] as const) {
+        const v = state[variant]
+        if (v.file) {
+          const formData = new FormData()
+          formData.append("file", v.file)
+          formData.append("variant", variant)
+          const res = await fetch("/api/dashboard/upload-logo", {
+            method: "POST",
+            body: formData,
+          })
+          if (!res.ok) {
+            const data = await res.json()
+            throw new Error(data.error || "Upload failed")
+          }
+        } else if (v.deleted) {
+          const res = await fetch(`/api/dashboard/logo/${variant}`, {
+            method: "DELETE",
+          })
+          if (!res.ok) throw new Error("Delete failed")
+        }
+      }
       router.refresh()
+      setOpen(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed")
-      setState((prev) => ({
-        ...prev,
-        [variant]: { ...prev[variant], uploading: false },
-      }))
+      setError(err instanceof Error ? err.message : "Save failed")
+    } finally {
+      setSaving(false)
     }
   }
 
-  async function handleDelete(variant: "light" | "dark") {
-    setState((prev) => ({
-      ...prev,
-      [variant]: { ...prev[variant], uploading: true },
-    }))
-
-    try {
-      const res = await fetch(`/api/dashboard/logo/${variant}`, {
-        method: "DELETE",
+  function handleOpenChange(isOpen: boolean) {
+    setOpen(isOpen)
+    if (isOpen) {
+      setState({
+        light: { file: null, preview: lightLogoUrl, deleted: false },
+        dark: { file: null, preview: darkLogoUrl, deleted: false },
       })
+      setError(null)
+    } else {
+      if (state.light.file && state.light.preview) URL.revokeObjectURL(state.light.preview)
+      if (state.dark.file && state.dark.preview) URL.revokeObjectURL(state.dark.preview)
+    }
+  }
 
-      if (!res.ok) {
-        throw new Error("Delete failed")
-      }
-
-      setState((prev) => ({
-        ...prev,
-        [variant]: { file: null, preview: null, uploading: false },
-      }))
-      router.refresh()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed")
-      setState((prev) => ({
-        ...prev,
-        [variant]: { ...prev[variant], uploading: false },
-      }))
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && hasPendingChanges && !saving) {
+      e.preventDefault()
+      handleSave()
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger || <Button variant="outline">Upload Logo</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onKeyDown={handleKeyDown}>
         <DialogHeader>
           <DialogTitle>Organization Logo</DialogTitle>
           <DialogDescription>
@@ -144,71 +156,24 @@ export function LogoUploadModal({
         </DialogHeader>
 
         <div className="space-y-6 pt-2">
-          {/* Example section */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="text-center space-y-2">
-              <div className="bg-[#f5f5f4] border rounded-lg p-4 flex items-center justify-center h-16">
-                <div className="flex items-center gap-1.5">
-                  <Sparkles className="size-4 text-[#1a1a1a]" />
-                  <span className="text-[#1a1a1a] font-semibold">ACME</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                <Sun className="size-3" />
-                <span>Light mode</span>
-              </div>
-            </div>
-            <div className="text-center space-y-2">
-              <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 flex items-center justify-center h-16">
-                <div className="flex items-center gap-1.5">
-                  <Sparkles className="size-4 text-white" />
-                  <span className="text-white font-semibold">ACME</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                <Moon className="size-3" />
-                <span>Dark mode</span>
-              </div>
-            </div>
-          </div>
-
           <p className="text-xs text-muted-foreground text-center">
             Upload one logo if it works on both, or separate versions for each theme.
           </p>
 
-          {/* Upload zones */}
           <div className="grid grid-cols-2 gap-4">
             <LogoDropzone
               variant="light"
               preview={state.light.preview}
-              file={state.light.file}
-              uploading={state.light.uploading}
               inputRef={lightInputRef}
               onFileSelect={(f) => handleFileSelect("light", f)}
-              onUpload={() => handleUpload("light")}
-              onDelete={() => handleDelete("light")}
-              onClear={() =>
-                setState((prev) => ({
-                  ...prev,
-                  light: { ...prev.light, file: null, preview: lightLogoUrl },
-                }))
-              }
+              onRemove={() => handleRemove("light")}
             />
             <LogoDropzone
               variant="dark"
               preview={state.dark.preview}
-              file={state.dark.file}
-              uploading={state.dark.uploading}
               inputRef={darkInputRef}
               onFileSelect={(f) => handleFileSelect("dark", f)}
-              onUpload={() => handleUpload("dark")}
-              onDelete={() => handleDelete("dark")}
-              onClear={() =>
-                setState((prev) => ({
-                  ...prev,
-                  dark: { ...prev.dark, file: null, preview: darkLogoUrl },
-                }))
-              }
+              onRemove={() => handleRemove("dark")}
             />
           </div>
 
@@ -220,6 +185,15 @@ export function LogoUploadModal({
             PNG, JPEG, WebP, or SVG. Images are automatically optimized.
           </p>
         </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={saving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!hasPendingChanges || saving}>
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -228,32 +202,47 @@ export function LogoUploadModal({
 type LogoDropzoneProps = {
   variant: "light" | "dark"
   preview: string | null
-  file: File | null
-  uploading: boolean
   inputRef: React.RefObject<HTMLInputElement | null>
   onFileSelect: (file: File | null) => void
-  onUpload: () => void
-  onDelete: () => void
-  onClear: () => void
+  onRemove: () => void
 }
 
 function LogoDropzone({
   variant,
   preview,
-  file,
-  uploading,
   inputRef,
   onFileSelect,
-  onUpload,
-  onDelete,
-  onClear,
+  onRemove,
 }: LogoDropzoneProps) {
+  const [dragging, setDragging] = useState(false)
   const isLight = variant === "light"
   const bgClass = isLight ? "bg-[#f5f5f4]" : "bg-[#1a1a1a]"
   const borderClass = isLight ? "border-[#e5e5e5]" : "border-[#333]"
   const textClass = isLight ? "text-[#666]" : "text-[#999]"
 
-  return (
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragging(false)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragging(false)
+    const droppedFile = e.dataTransfer.files?.[0]
+    if (droppedFile) {
+      onFileSelect(droppedFile)
+    }
+  }, [onFileSelect])
+
+  const dropzone = (
     <div className="space-y-2">
       <div className="flex items-center justify-center gap-1.5 text-xs font-medium">
         {isLight ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
@@ -269,8 +258,11 @@ function LogoDropzone({
       />
 
       <div
-        className={`${bgClass} ${borderClass} border rounded-lg relative flex items-center justify-center h-24 cursor-pointer transition-all hover:opacity-80`}
+        className={`${bgClass} ${borderClass} border rounded-lg relative flex items-center justify-center h-24 cursor-pointer transition-all hover:opacity-80 ${dragging ? "ring-2 ring-primary" : ""}`}
         onClick={() => inputRef.current?.click()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         {preview ? (
           <>
@@ -280,49 +272,48 @@ function LogoDropzone({
               alt={`${variant} logo preview`}
               className="max-h-16 max-w-full object-contain p-2"
             />
-            {!file && (
-              <button
-                type="button"
-                className="absolute top-1.5 right-1.5 p-1 bg-background/90 rounded hover:bg-background transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete()
-                }}
-                disabled={uploading}
-              >
-                <X className="size-3" />
-              </button>
-            )}
+            <button
+              type="button"
+              className="absolute top-1.5 right-1.5 p-1 bg-background/90 rounded hover:bg-background transition-colors"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemove()
+              }}
+            >
+              <X className="size-3" />
+            </button>
           </>
         ) : (
           <div className={`flex flex-col items-center gap-1.5 ${textClass}`}>
             <Upload className="size-5" />
-            <span className="text-xs">Upload</span>
+            <span className="text-xs">Drop or click</span>
           </div>
         )}
       </div>
 
-      {file && (
-        <div className="flex gap-1.5">
-          <Button
-            size="sm"
-            onClick={onUpload}
-            disabled={uploading}
-            className="flex-1 h-7 text-xs"
-          >
-            {uploading ? "Saving..." : "Save"}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onClear}
-            disabled={uploading}
-            className="h-7 text-xs"
-          >
-            Cancel
-          </Button>
-        </div>
-      )}
     </div>
+  )
+
+  if (preview) return dropzone
+
+  return (
+    <HoverCard openDelay={200} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        {dropzone}
+      </HoverCardTrigger>
+      <HoverCardContent side="top" className="w-auto p-3">
+        <div className="text-center space-y-2">
+          <div className={`${isLight ? "bg-[#f5f5f4] border" : "bg-[#1a1a1a] border border-[#333]"} rounded-lg p-4 flex items-center justify-center h-16`}>
+            <div className="flex items-center gap-1.5">
+              <Sparkles className={`size-4 ${isLight ? "text-[#1a1a1a]" : "text-white"}`} />
+              <span className={`font-semibold ${isLight ? "text-[#1a1a1a]" : "text-white"}`}>ACME</span>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {isLight ? "Logo on light backgrounds" : "Logo on dark backgrounds"}
+          </p>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
   )
 }

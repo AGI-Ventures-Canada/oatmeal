@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
 import { getPublicHackathon } from "@/lib/services/public-hackathons"
-import { OrganizerLogoPrompt } from "@/components/hackathon/organizer-logo-prompt"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, Pencil } from "lucide-react"
+import { Eye } from "lucide-react"
 import type { Metadata } from "next"
 
 type PageProps = {
@@ -74,26 +73,12 @@ export default async function EventPage({ params }: PageProps) {
         </Alert>
       )}
 
-      {isOrganizer && !isPreview && (
-        <Alert className="rounded-none border-x-0 border-t-0 bg-muted">
-          <Pencil className="size-4" />
-          <AlertDescription>
-            You are the organizer. Click on any section to edit it inline.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <OrganizerLogoPrompt
-        organizerId={hackathon.organizer.id}
-        organizerClerkOrgId={hackathon.organizer.clerk_org_id}
-        organizerLogoUrl={hackathon.organizer.logo_url}
-      />
-
       <HackathonPreviewClient
         hackathon={hackathon}
         isEditable={isOrganizer}
         isRegistered={isRegistered}
         participantCount={participantCount}
+        showEditToggle={isOrganizer}
       />
     </div>
   )

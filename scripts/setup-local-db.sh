@@ -51,6 +51,27 @@ check_for_stopped_services() {
   return 1  # No stopped services
 }
 
+wait_for_storage() {
+  local storage_url="http://127.0.0.1:54321/storage/v1/bucket"
+  local max_attempts=12
+  local attempt=1
+  local wait_seconds=5
+
+  echo "Waiting for storage service to be ready..."
+  while [ $attempt -le $max_attempts ]; do
+    if curl -s --connect-timeout 3 --max-time 5 -o /dev/null -w "%{http_code}" "$storage_url" 2>/dev/null | grep -qE "^[2-4]"; then
+      echo "Storage service is ready"
+      return 0
+    fi
+    echo "  Storage not ready yet (attempt $attempt/$max_attempts)..."
+    sleep $wait_seconds
+    attempt=$((attempt + 1))
+  done
+
+  echo "Warning: Storage service did not become ready within $((max_attempts * wait_seconds))s"
+  return 1
+}
+
 start_supabase_with_recovery() {
   local max_attempts=2
   local attempt=1
@@ -66,14 +87,6 @@ start_supabase_with_recovery() {
     # Wait for completion or timeout
     local elapsed=0
     while kill -0 $pid 2>/dev/null && [ $elapsed -lt $timeout_seconds ]; do
-      # Check if DB is healthy while waiting
-      if [ $elapsed -gt 30 ] && verify_containers_healthy; then
-        echo "DB container healthy - terminating health check wait"
-        kill $pid 2>/dev/null || true
-        wait $pid 2>/dev/null || true
-        echo "Supabase started successfully"
-        return 0
-      fi
       sleep 5
       elapsed=$((elapsed + 5))
     done
@@ -128,6 +141,8 @@ else
   fi
   start_supabase_with_recovery
 fi
+
+wait_for_storage
 
 echo "Getting Supabase credentials..."
 STATUS_JSON=$(supabase status --output json 2>/dev/null)

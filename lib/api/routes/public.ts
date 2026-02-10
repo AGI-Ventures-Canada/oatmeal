@@ -2,8 +2,8 @@ import { Elysia } from "elysia"
 import { auth } from "@clerk/nextjs/server"
 import { exchangeCodeForTokens, saveIntegration, getProviderConfig } from "@/lib/integrations/oauth"
 import { getPublicHackathon, listPublicHackathons } from "@/lib/services/public-hackathons"
-import { registerForHackathon } from "@/lib/services/hackathons"
-import { getPublicTenantWithHackathons } from "@/lib/services/tenant-profiles"
+import { registerForHackathon, getParticipantCount, isUserRegistered } from "@/lib/services/hackathons"
+import { getPublicTenantWithEvents } from "@/lib/services/tenant-profiles"
 
 export const publicRoutes = new Elysia({ prefix: "/public" })
   .get("/health", () => ({
@@ -177,8 +177,29 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       })),
     }
   })
+  .get("/hackathons/:slug/registration", async ({ params }) => {
+    const hackathon = await getPublicHackathon(params.slug)
+
+    if (!hackathon) {
+      return new Response(
+        JSON.stringify({ error: "Hackathon not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { userId } = await auth()
+    const [participantCount, registered] = await Promise.all([
+      getParticipantCount(hackathon.id),
+      userId ? isUserRegistered(hackathon.id, userId) : Promise.resolve(false),
+    ])
+
+    return {
+      participantCount,
+      isRegistered: userId ? registered : null,
+    }
+  })
   .get("/orgs/:slug", async ({ params }) => {
-    const tenant = await getPublicTenantWithHackathons(params.slug)
+    const tenant = await getPublicTenantWithEvents(params.slug)
 
     if (!tenant) {
       return new Response(JSON.stringify({ error: "Organization not found" }), {
@@ -192,15 +213,34 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       name: tenant.name,
       slug: tenant.slug,
       logoUrl: tenant.logo_url,
+      logoUrlDark: tenant.logo_url_dark,
       description: tenant.description,
       websiteUrl: tenant.website_url,
-      hackathons: tenant.hackathons.map((h) => ({
+      organizedHackathons: tenant.organizedHackathons.map((h) => ({
         id: h.id,
         name: h.name,
         slug: h.slug,
+        description: h.description,
+        bannerUrl: h.banner_url,
         status: h.status,
         startsAt: h.starts_at,
         endsAt: h.ends_at,
+      })),
+      sponsoredHackathons: tenant.sponsoredHackathons.map((h) => ({
+        id: h.id,
+        name: h.name,
+        slug: h.slug,
+        description: h.description,
+        bannerUrl: h.banner_url,
+        status: h.status,
+        startsAt: h.starts_at,
+        endsAt: h.ends_at,
+        organizer: {
+          id: h.organizer.id,
+          name: h.organizer.name,
+          slug: h.organizer.slug,
+          logoUrl: h.organizer.logo_url,
+        },
       })),
     }
   })

@@ -84,11 +84,11 @@ VALUES
 3. You may use any AI APIs and frameworks
 4. Projects must include a working demo
 5. Judging criteria: Innovation, Technical Execution, Impact, Presentation',
-    now() + interval '30 days',
-    now() + interval '32 days',
-    now() - interval '7 days',
-    now() + interval '28 days',
-    'published',
+    now() - interval '16 days',
+    now() - interval '14 days',
+    now() - interval '45 days',
+    now() - interval '18 days',
+    'completed',
     1,
     4,
     true,
@@ -128,11 +128,11 @@ VALUES
 3. 24-hour hackathon
 4. Free API credits provided
 5. Winner gets $5,000 and featured integration',
-    now() + interval '14 days',
-    now() + interval '15 days',
-    now() - interval '3 days',
-    now() + interval '13 days',
-    'published',
+    now() - interval '32 days',
+    now() - interval '31 days',
+    now() - interval '50 days',
+    now() - interval '34 days',
+    'completed',
     1,
     3,
     true,
@@ -380,11 +380,11 @@ VALUES
 4. Multiple categories: visual art, music, writing, interactive media
 5. Winners receive $8,000 CAD and gallery exhibition opportunities
 6. Open to artists, musicians, writers, and developers',
-    now() + interval '8 days',
-    now() + interval '10 days',
-    now() - interval '10 days',
-    now() + interval '6 days',
-    'published',
+    now() - interval '62 days',
+    now() - interval '60 days',
+    now() - interval '80 days',
+    now() - interval '64 days',
+    'completed',
     1,
     3,
     true,
@@ -487,4 +487,3 @@ VALUES
   ('d4d4d4d4-d4d4-d4d4-d4d4-d4d4d4d4d4d4', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now()),
   ('d5d5d5d5-d5d5-d5d5-d5d5-d5d5d5d5d5d5', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now())
 ON CONFLICT (id) DO NOTHING;
-
