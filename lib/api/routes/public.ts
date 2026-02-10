@@ -413,11 +413,15 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       }),
     }
   )
-  .get("/hackathons", async () => {
-    const hackathons = await listPublicHackathons()
+  .get("/hackathons", async ({ query }) => {
+    const q = (query as Record<string, string | undefined>).q
+    const hackathons = await listPublicHackathons(q ? { search: q } : undefined)
+
+    const { sortByStatusPriority } = await import("@/lib/utils/sort-hackathons")
+    const sorted = sortByStatusPriority(hackathons)
 
     return {
-      hackathons: hackathons.map((h) => ({
+      hackathons: sorted.map((h) => ({
         id: h.id,
         name: h.name,
         slug: h.slug,
@@ -426,6 +430,8 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         status: h.status,
         startsAt: h.starts_at,
         endsAt: h.ends_at,
+        registrationOpensAt: h.registration_opens_at,
+        registrationClosesAt: h.registration_closes_at,
         organizer: {
           id: h.organizer.id,
           name: h.organizer.name,

@@ -59,6 +59,7 @@ function HackathonPreviewContent({
           registrationProps={{
             hackathonSlug: hackathon.slug,
             status: hackathon.status,
+            endsAt: hackathon.ends_at,
             registrationOpensAt: hackathon.registration_opens_at,
             registrationClosesAt: hackathon.registration_closes_at,
             maxParticipants: hackathon.max_participants,

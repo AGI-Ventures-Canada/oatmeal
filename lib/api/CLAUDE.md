@@ -1,6 +1,6 @@
 # Elysia API Layer
 
-This directory contains the Elysia API server that handles all `/api/*` routes.
+This directory contains the Elysia API server for the Oatmeal hackathon platform, handling all `/api/*` routes.
 
 ## Architecture
 
@@ -11,15 +11,17 @@ All API routes are handled by a single Elysia instance via a Next.js catch-all r
 ## Route Namespaces
 
 ```
-/api/public/*     → No auth (anon)
-/api/dashboard/*  → Clerk user OR API key (dual-auth)
-/api/v1/*         → API key only (legacy, for job operations)
+/api/public/*     → No auth (anon) — browse hackathons, register, submit projects
+/api/dashboard/*  → Clerk user OR API key (dual-auth) — manage hackathons, org settings
+/api/v1/*         → API key only — programmatic access for jobs, webhooks
 ```
 
 **Note:** Most endpoints in `/api/dashboard/*` support both auth methods with appropriate scope requirements. Exceptions that remain Clerk-only:
 - `/keys`, `/keys/:id/revoke` - API key management (security)
 - `/integrations/*` - OAuth requires user browser flow
 - `/credentials/*` - Contains sensitive secrets
+- `/hackathons/participating`, `/hackathons/sponsored` - User-specific views
+- `/organizations/search` - User-specific search
 
 ## Key Patterns
 

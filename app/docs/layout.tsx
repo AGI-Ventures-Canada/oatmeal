@@ -9,12 +9,12 @@ export default function Layout({ children }: { children: ReactNode }) {
       <DocsLayout
         tree={source.pageTree}
         nav={{
-          title: "Agents Server SDK",
+          title: "Oatmeal API",
         }}
         links={[
           {
             text: "Dashboard",
-            url: "/agents",
+            url: "/home",
           },
         ]}
       >

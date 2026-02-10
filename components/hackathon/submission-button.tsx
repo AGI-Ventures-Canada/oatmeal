@@ -75,12 +75,15 @@ export function SubmissionButton({
   }
 
   if (!canSubmit) {
-    return (
-      <Button disabled variant="outline" size="lg">
-        <Lock className="size-4" />
-        Submissions Closed
-      </Button>
-    )
+    if (status === "judging" || status === "completed") {
+      return (
+        <Button disabled variant="outline" size="lg">
+          <Lock className="size-4" />
+          Submissions Closed
+        </Button>
+      )
+    }
+    return null
   }
 
   function resetForm() {

@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
-import { Plus } from "lucide-react"
 import { resolvePageTenant } from "@/lib/services/tenants"
 import {
   listParticipatingHackathons,
@@ -8,8 +7,6 @@ import {
   listSponsoredHackathons,
 } from "@/lib/services/hackathons"
 import { getSubmittedHackathonIds } from "@/lib/services/submissions"
-import { Button } from "@/components/ui/button"
-import { CreateHackathonDrawer } from "@/components/hackathon/create-hackathon-drawer"
 import { HackathonTabs } from "./hackathon-tabs"
 import { PageHeader } from "@/components/page-header"
 
@@ -35,16 +32,6 @@ export default async function DashboardPage() {
         breadcrumbs={[{ label: "Dashboard" }]}
         title="Dashboard"
         description="Your hackathons at a glance"
-        actions={
-          <CreateHackathonDrawer
-            trigger={
-              <Button>
-                <Plus className="mr-2 size-4" />
-                Create Hackathon
-              </Button>
-            }
-          />
-        }
       />
 
       <HackathonTabs

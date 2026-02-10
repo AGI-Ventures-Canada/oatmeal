@@ -663,21 +663,77 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
     return { success: true }
   })
-  .get("/hackathons", async ({ principal }) => {
+  .get("/hackathons", async ({ principal, query }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 
+    const q = (query as Record<string, string | undefined>).q
     const { listOrganizedHackathons } = await import("@/lib/services/hackathons")
-    const hackathons = await listOrganizedHackathons(principal.tenantId)
+    const hackathons = await listOrganizedHackathons(principal.tenantId, q ? { search: q } : undefined)
+
+    const { sortByStatusPriority } = await import("@/lib/utils/sort-hackathons")
+    const sorted = sortByStatusPriority(hackathons)
 
     return {
-      hackathons: hackathons.map((h) => ({
+      hackathons: sorted.map((h) => ({
         id: h.id,
         name: h.name,
         slug: h.slug,
+        description: h.description,
         status: h.status,
         startsAt: h.starts_at,
         endsAt: h.ends_at,
+        registrationOpensAt: h.registration_opens_at,
+        registrationClosesAt: h.registration_closes_at,
         createdAt: h.created_at,
+      })),
+    }
+  })
+  .get("/hackathons/participating", async ({ principal, query }) => {
+    requirePrincipal(principal, ["user"])
+
+    const q = (query as Record<string, string | undefined>).q
+    const { listParticipatingHackathons } = await import("@/lib/services/hackathons")
+    const hackathons = await listParticipatingHackathons(principal.userId!, q ? { search: q } : undefined)
+
+    const { sortByStatusPriority } = await import("@/lib/utils/sort-hackathons")
+    const sorted = sortByStatusPriority(hackathons)
+
+    return {
+      hackathons: sorted.map((h) => ({
+        id: h.id,
+        name: h.name,
+        slug: h.slug,
+        description: h.description,
+        status: h.status,
+        startsAt: h.starts_at,
+        endsAt: h.ends_at,
+        registrationOpensAt: h.registration_opens_at,
+        registrationClosesAt: h.registration_closes_at,
+        role: h.role,
+      })),
+    }
+  })
+  .get("/hackathons/sponsored", async ({ principal, query }) => {
+    requirePrincipal(principal, ["user"])
+
+    const q = (query as Record<string, string | undefined>).q
+    const { listSponsoredHackathons } = await import("@/lib/services/hackathons")
+    const hackathons = await listSponsoredHackathons(principal.tenantId, q ? { search: q } : undefined)
+
+    const { sortByStatusPriority } = await import("@/lib/utils/sort-hackathons")
+    const sorted = sortByStatusPriority(hackathons)
+
+    return {
+      hackathons: sorted.map((h) => ({
+        id: h.id,
+        name: h.name,
+        slug: h.slug,
+        description: h.description,
+        status: h.status,
+        startsAt: h.starts_at,
+        endsAt: h.ends_at,
+        registrationOpensAt: h.registration_opens_at,
+        registrationClosesAt: h.registration_closes_at,
       })),
     }
   })
@@ -723,15 +779,22 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .get("/hackathons/:id", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 
-    const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
-    const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
-    if (!hackathon) {
+    if (result.status === "not_found") {
       return new Response(JSON.stringify({ error: "Hackathon not found" }), {
         status: 404,
         headers: { "Content-Type": "application/json" },
       })
     }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized to manage this hackathon. You may need to switch to the correct organization." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+    const hackathon = result.hackathon
 
     return {
       id: hackathon.id,
@@ -817,12 +880,18 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     async ({ principal, params, request }) => {
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
-      const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
-      const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
-      if (!hackathon) {
+      if (result.status === "not_found") {
         return new Response(JSON.stringify({ error: "Hackathon not found" }), {
           status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized to manage this hackathon. You may need to switch to the correct organization." }), {
+          status: 403,
           headers: { "Content-Type": "application/json" },
         })
       }
@@ -854,9 +923,9 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
       const { uploadBanner } = await import("@/lib/services/storage")
       const buffer = Buffer.from(await file.arrayBuffer())
-      const result = await uploadBanner(params.id, buffer, file.type)
+      const uploadResult = await uploadBanner(params.id, buffer, file.type)
 
-      if (!result) {
+      if (!uploadResult) {
         return new Response(JSON.stringify({ error: "Failed to upload banner" }), {
           status: 500,
           headers: { "Content-Type": "application/json" },
@@ -865,7 +934,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
       const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
       await updateHackathonSettings(params.id, principal.tenantId, {
-        bannerUrl: result.url,
+        bannerUrl: uploadResult.url,
       })
 
       await logAudit({
@@ -881,12 +950,18 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .delete("/hackathons/:id/banner", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
-    const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
-    const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
-    if (!hackathon) {
+    if (result.status === "not_found") {
       return new Response(JSON.stringify({ error: "Hackathon not found" }), {
         status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized to manage this hackathon. You may need to switch to the correct organization." }), {
+        status: 403,
         headers: { "Content-Type": "application/json" },
       })
     }
@@ -911,12 +986,18 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .get("/hackathons/:id/sponsors", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 
-    const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
-    const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
-    if (!hackathon) {
+    if (result.status === "not_found") {
       return new Response(JSON.stringify({ error: "Hackathon not found" }), {
         status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized to manage this hackathon. You may need to switch to the correct organization." }), {
+        status: 403,
         headers: { "Content-Type": "application/json" },
       })
     }
@@ -949,12 +1030,18 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     async ({ principal, params, body }) => {
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
-      const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
-      const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
-      if (!hackathon) {
+      if (result.status === "not_found") {
         return new Response(JSON.stringify({ error: "Hackathon not found" }), {
           status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized to manage this hackathon. You may need to switch to the correct organization." }), {
+          status: 403,
           headers: { "Content-Type": "application/json" },
         })
       }
@@ -1008,12 +1095,18 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     async ({ principal, params, body }) => {
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
-      const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
-      const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
-      if (!hackathon) {
+      if (result.status === "not_found") {
         return new Response(JSON.stringify({ error: "Hackathon not found" }), {
           status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized to manage this hackathon. You may need to switch to the correct organization." }), {
+          status: 403,
           headers: { "Content-Type": "application/json" },
         })
       }
@@ -1061,12 +1154,18 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .delete("/hackathons/:id/sponsors/:sponsorId", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
-    const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
-    const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
-    if (!hackathon) {
+    if (result.status === "not_found") {
       return new Response(JSON.stringify({ error: "Hackathon not found" }), {
         status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized to manage this hackathon. You may need to switch to the correct organization." }), {
+        status: 403,
         headers: { "Content-Type": "application/json" },
       })
     }
@@ -1095,12 +1194,18 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     async ({ principal, params, body }) => {
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
-      const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
-      const hackathon = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
-      if (!hackathon) {
+      if (result.status === "not_found") {
         return new Response(JSON.stringify({ error: "Hackathon not found" }), {
           status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized to manage this hackathon. You may need to switch to the correct organization." }), {
+          status: 403,
           headers: { "Content-Type": "application/json" },
         })
       }

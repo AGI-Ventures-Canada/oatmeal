@@ -109,6 +109,45 @@ describe("Public Hackathons Service", () => {
 
       expect(result).toEqual([])
     })
+
+    it("applies search filter when search option provided", async () => {
+      const chain = createChainableMock({
+        data: [{ ...mockHackathon, organizer: mockOrganizer }],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listPublicHackathons({ search: "test" })
+
+      expect(result).toHaveLength(1)
+      expect(chain.or).toHaveBeenCalled()
+    })
+
+    it("skips search filter for short queries", async () => {
+      const chain = createChainableMock({
+        data: [{ ...mockHackathon, organizer: mockOrganizer }],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listPublicHackathons({ search: "a" })
+
+      expect(result).toHaveLength(1)
+      expect(chain.or).not.toHaveBeenCalled()
+    })
+
+    it("sanitizes special characters in search", async () => {
+      const chain = createChainableMock({
+        data: [],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listPublicHackathons({ search: "%()" })
+
+      expect(result).toEqual([])
+      expect(chain.or).not.toHaveBeenCalled()
+    })
   })
 
   describe("getHackathonByIdForOrganizer", () => {

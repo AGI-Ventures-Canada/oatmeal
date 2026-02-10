@@ -20,7 +20,8 @@ VALUES
   ('55555555-5555-5555-5555-555555555555', 'org_tavily', 'Tavily', 'tavily', 'AI-powered search API for developers', 'https://tavily.com', now(), now()),
   ('66666666-6666-6666-6666-666666666666', 'org_anthropic', 'Anthropic', 'anthropic', 'AI safety company building reliable, interpretable AI systems', 'https://anthropic.com', now(), now()),
   ('77777777-7777-7777-7777-777777777777', 'org_openai', 'OpenAI', 'openai', 'AI research and deployment company', 'https://openai.com', now(), now()),
-  ('12345678-1234-1234-1234-123456789012', 'org_3998CZRtAOrKPFpY9g5RBuUN3Py', 'AGI Ventures Canada', 'agi-ventures-canada', NULL, NULL, now(), now())
+  ('12345678-1234-1234-1234-123456789012', 'org_3998CZRtAOrKPFpY9g5RBuUN3Py', 'AGI Ventures Canada', 'agi-ventures-canada', NULL, NULL, now(), now()),
+  ('99990000-9999-9999-9999-999900009999', 'org_39UEiyWJhVSLPzFAJZI4CFNm2Ba', 'AGI House', 'agi-house', 'AI hacker house and community in the Bay Area, hosting hackathons, dinners, and events for the AI community', 'https://agihouse.org', now(), now())
 ON CONFLICT (id) DO NOTHING;
 
 -- Personal tenant (maps to a Clerk user)
@@ -439,6 +440,332 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
+-- ============================================================================
+-- AGI HOUSE HACKATHONS
+-- ============================================================================
+INSERT INTO hackathons (id, tenant_id, name, slug, description, rules, starts_at, ends_at, registration_opens_at, registration_closes_at, status, min_team_size, max_team_size, allow_solo, created_at, updated_at)
+VALUES
+  (
+    'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1',
+    '99990000-9999-9999-9999-999900009999',
+    'MCP Agents Hackathon',
+    'mcp-agents-hackathon',
+    'Build AI agents powered by the Model Context Protocol! Create tools, servers, and autonomous agents that leverage MCP to connect LLMs with real-world data sources and capabilities. Hosted at AGI House SF.',
+    '1. Teams of 1-4 people
+2. Must use the Model Context Protocol
+3. All code must be written during the hackathon
+4. Working demo required at end of event
+5. Judging criteria: Innovation, Technical Depth, Usefulness, Demo Quality
+6. Prizes: $10,000 total pool',
+    now() - interval '23 days',
+    now() - interval '22 days',
+    now() - interval '40 days',
+    now() - interval '25 days',
+    'completed',
+    1,
+    4,
+    true,
+    now() - interval '45 days',
+    now()
+  ),
+  (
+    'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2',
+    '99990000-9999-9999-9999-999900009999',
+    'GenAI Goes Local',
+    'genai-goes-local',
+    'Run AI models on the edge! Build applications that leverage local LLMs, on-device inference, and privacy-preserving AI. No cloud required. Explore quantization, optimization, and novel architectures for consumer hardware.',
+    '1. Solo or teams up to 3
+2. Must run inference locally (no cloud API calls for primary model)
+3. Support for consumer-grade hardware required
+4. Benchmark results must be provided
+5. Judging: Performance, Usability, Innovation, Hardware Efficiency
+6. Prizes: $7,500 + NVIDIA hardware',
+    now() - interval '44 days',
+    now() - interval '43 days',
+    now() - interval '60 days',
+    now() - interval '46 days',
+    'completed',
+    1,
+    3,
+    true,
+    now() - interval '65 days',
+    now()
+  ),
+  (
+    'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3',
+    '99990000-9999-9999-9999-999900009999',
+    'Generative UI Hackathon',
+    'generative-ui-hackathon',
+    'Design the future of user interfaces! Build applications where AI generates, adapts, and personalizes UI components in real-time. From AI-driven design systems to conversational interfaces that render rich components.',
+    '1. Teams of 1-4 people
+2. UI must be dynamically generated or adapted by AI
+3. Must demonstrate at least 3 distinct UI generation patterns
+4. Accessibility considerations required
+5. Judging: Design Quality, Innovation, Technical Execution, User Experience
+6. Prizes: $8,000 + design tool credits',
+    now() - interval '65 days',
+    now() - interval '64 days',
+    now() - interval '80 days',
+    now() - interval '67 days',
+    'completed',
+    1,
+    4,
+    true,
+    now() - interval '85 days',
+    now()
+  ),
+  (
+    'aaa40004-aaa4-aaa4-aaa4-aaa40004aaa4',
+    '99990000-9999-9999-9999-999900009999',
+    'AI x Commerce Build Day',
+    'ai-commerce-build-day',
+    'Reimagine commerce with AI! Build intelligent shopping assistants, personalized recommendation engines, dynamic pricing systems, or AI-powered supply chain tools. From checkout optimization to conversational commerce.',
+    '1. Teams of 2-5 people
+2. Must address a real commerce challenge
+3. Integration with at least one commerce platform encouraged
+4. Working prototype required
+5. Judging: Business Impact, Technical Depth, User Experience, Scalability
+6. Prizes: $12,000 + commerce platform credits',
+    now() + interval '20 days',
+    now() + interval '21 days',
+    now() - interval '5 days',
+    now() + interval '18 days',
+    'published',
+    2,
+    5,
+    false,
+    now() - interval '10 days',
+    now()
+  ),
+  (
+    'aaa50005-aaa5-aaa5-aaa5-aaa50005aaa5',
+    '99990000-9999-9999-9999-999900009999',
+    'Open Source AGI Hack',
+    'open-source-agi-hack',
+    'Advance the open-source AI ecosystem! Build open-source tools, models, and frameworks that push the boundaries of artificial general intelligence. From training infrastructure to evaluation benchmarks to novel architectures.',
+    '1. Teams of 1-6 people
+2. All code must be open source (MIT or Apache 2.0)
+3. Must contribute to the open-source AI ecosystem
+4. Documentation and reproducibility required
+5. Judging: Impact, Technical Innovation, Community Value, Code Quality
+6. Prizes: $15,000 + compute credits',
+    now() + interval '45 days',
+    now() + interval '47 days',
+    now() + interval '5 days',
+    now() + interval '40 days',
+    'published',
+    1,
+    6,
+    true,
+    now() - interval '3 days',
+    now()
+  ),
+  (
+    'aaa60006-aaa6-aaa6-aaa6-aaa60006aaa6',
+    '99990000-9999-9999-9999-999900009999',
+    'Aerospace AI Hackathon',
+    'aerospace-ai-hackathon',
+    'Apply AI to the final frontier! Build systems for satellite imagery analysis, autonomous navigation, space mission planning, drone coordination, or aviation safety. From orbit to atmosphere, AI is transforming aerospace.',
+    '1. Teams of 2-4 people
+2. Must address an aerospace or aviation challenge
+3. Simulation or real-world demo required
+4. Safety analysis mandatory for autonomous systems
+5. Judging: Innovation, Feasibility, Technical Rigor, Safety Considerations
+6. Prizes: $20,000 + industry mentorship',
+    now() + interval '70 days',
+    now() + interval '72 days',
+    now() + interval '20 days',
+    now() + interval '65 days',
+    'published',
+    2,
+    4,
+    false,
+    now() - interval '1 day',
+    now()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- Additional hackathons by OTHER orgs (for participating/sponsoring pages)
+INSERT INTO hackathons (id, tenant_id, name, slug, description, rules, starts_at, ends_at, registration_opens_at, registration_closes_at, status, min_team_size, max_team_size, allow_solo, created_at, updated_at)
+VALUES
+  (
+    'aa11aa11-aa11-aa11-aa11-aa11aa11aa11',
+    '77777777-7777-7777-7777-777777777777',
+    'GPT Builders Jam',
+    'gpt-builders-jam',
+    'Build custom GPTs, plugins, and AI-powered tools using the latest OpenAI APIs. Whether you''re building assistants, creative tools, or enterprise solutions, show us what you can do.',
+    '1. Teams of 1-3 people
+2. Must use OpenAI APIs
+3. 24-hour hackathon
+4. Free API credits provided
+5. Winner gets $10,000 and featured in OpenAI showcase',
+    now() - interval '25 days',
+    now() - interval '24 days',
+    now() - interval '45 days',
+    now() - interval '27 days',
+    'completed',
+    1,
+    3,
+    true,
+    now() - interval '50 days',
+    now()
+  ),
+  (
+    'bb22bb22-bb22-bb22-bb22-bb22bb22bb22',
+    '55555555-5555-5555-5555-555555555555',
+    'Tavily Data Visualization Hack',
+    'tavily-data-viz-hack',
+    'Turn data into insights! Build beautiful, interactive visualizations powered by AI search. Combine Tavily''s search capabilities with data visualization to create compelling dashboards and explorations.',
+    '1. Solo or teams up to 4
+2. Must use Tavily API for data sourcing
+3. Focus on interactive visualizations
+4. 48-hour format
+5. Winner receives $7,500 and Tavily partnership',
+    now() + interval '30 days',
+    now() + interval '32 days',
+    now() - interval '3 days',
+    now() + interval '25 days',
+    'published',
+    1,
+    4,
+    true,
+    now() - interval '10 days',
+    now()
+  ),
+  (
+    'cc33cc33-cc33-cc33-cc33-cc33cc33cc33',
+    '66666666-6666-6666-6666-666666666666',
+    'Constitutional AI Challenge',
+    'constitutional-ai-challenge',
+    'Explore constitutional AI principles! Build systems that align AI behavior with human values through scalable oversight, interpretability tools, or novel alignment techniques.',
+    '1. Teams of 1-4 people
+2. Focus on alignment and constitutional AI
+3. Research proposals and code both welcome
+4. Claude API access provided
+5. Top 3 receive $12,000 and Anthropic mentorship',
+    now() + interval '55 days',
+    now() + interval '57 days',
+    now() + interval '10 days',
+    now() + interval '50 days',
+    'published',
+    1,
+    4,
+    true,
+    now() - interval '4 days',
+    now()
+  ),
+  (
+    'dd44dd44-dd44-dd44-dd44-dd44dd44dd44',
+    '22222222-2222-2222-2222-222222222222',
+    'Quantum ML Hackathon',
+    'quantum-ml-hackathon',
+    'Explore the frontier of quantum computing meets machine learning. Build quantum-enhanced ML models, quantum circuit optimizers, or novel quantum algorithms for AI applications.',
+    '1. Teams of 2-4 people
+2. Quantum simulators and hardware access provided
+3. Both theoretical and applied projects welcome
+4. 72-hour hackathon
+5. Top teams receive $15,000 and quantum lab access',
+    now() + interval '80 days',
+    now() + interval '83 days',
+    now() + interval '25 days',
+    now() + interval '75 days',
+    'published',
+    2,
+    4,
+    false,
+    now() - interval '2 days',
+    now()
+  ),
+  (
+    'ee55ee55-ee55-ee55-ee55-ee55ee55ee55',
+    '77777777-7777-7777-7777-777777777777',
+    'DevTools AI Hackathon',
+    'devtools-ai-hackathon',
+    'Build AI-powered developer tools! From code assistants to automated testing, CI/CD optimization, or debugging tools. Make developers more productive with AI.',
+    '1. Solo or teams up to 3
+2. Must improve developer workflow
+3. Integration with existing tools encouraged
+4. Working demo required
+5. Winner receives $8,000 and OpenAI enterprise pilot',
+    now() - interval '40 days',
+    now() - interval '38 days',
+    now() - interval '60 days',
+    now() - interval '42 days',
+    'completed',
+    1,
+    3,
+    true,
+    now() - interval '65 days',
+    now()
+  ),
+  (
+    'ff66ff66-ff66-ff66-ff66-ff66ff66ff66',
+    '55555555-5555-5555-5555-555555555555',
+    'Multilingual NLP Challenge',
+    'multilingual-nlp-challenge',
+    'Break language barriers with AI! Build multilingual search, translation, summarization, or content generation tools. Focus on underrepresented languages and accessibility.',
+    '1. Teams of 1-5 people
+2. Must support at least 3 languages
+3. Focus on underrepresented languages encouraged
+4. Tavily multilingual search API access provided
+5. Winners receive $9,000 and UN partnership opportunity',
+    now() + interval '40 days',
+    now() + interval '42 days',
+    now() + interval '5 days',
+    now() + interval '35 days',
+    'published',
+    1,
+    5,
+    true,
+    now() - interval '5 days',
+    now()
+  ),
+  (
+    'aa77aa77-aa77-aa77-aa77-aa77aa77aa77',
+    '66666666-6666-6666-6666-666666666666',
+    'Real-time AI Applications Hack',
+    'realtime-ai-hack',
+    'Build AI applications that work in real-time! From live transcription and translation to real-time anomaly detection and adaptive interfaces. Speed and responsiveness are key.',
+    '1. Teams of 1-4 people
+2. Must demonstrate real-time capabilities
+3. Latency benchmarks required
+4. Claude API streaming access provided
+5. Top projects receive $11,000 and compute credits',
+    now() + interval '70 days',
+    now() + interval '72 days',
+    now() + interval '15 days',
+    now() + interval '65 days',
+    'published',
+    1,
+    4,
+    true,
+    now() - interval '1 day',
+    now()
+  ),
+  (
+    'bb88bb88-bb88-bb88-bb88-bb88bb88bb88',
+    '22222222-2222-2222-2222-222222222222',
+    'Open Source AI Hackathon',
+    'open-source-ai-hackathon',
+    'Build open source AI tools the community needs! From model training frameworks to deployment tools, from evaluation suites to data pipelines. All projects must be open source.',
+    '1. Teams of 1-6 people
+2. All code must be open sourced (MIT or Apache 2.0)
+3. Must solve a real community need
+4. Documentation and onboarding quality judged
+5. Winners receive $6,000 and GitHub sponsorship',
+    now() + interval '95 days',
+    now() + interval '97 days',
+    now() + interval '35 days',
+    now() + interval '90 days',
+    'published',
+    1,
+    6,
+    true,
+    now(),
+    now()
+  )
+ON CONFLICT (id) DO NOTHING;
+
 -- Sample sponsors for hackathons
 INSERT INTO hackathon_sponsors (id, hackathon_id, sponsor_tenant_id, name, logo_url, website_url, tier, display_order, created_at)
 VALUES
@@ -477,6 +804,334 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
+-- AGI Ventures Canada sponsoring other orgs' hackathons
+INSERT INTO hackathon_sponsors (id, hackathon_id, sponsor_tenant_id, name, logo_url, website_url, tier, display_order, created_at)
+VALUES
+  (
+    'a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a0a0',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'gold',
+    2,
+    now()
+  ),
+  (
+    'b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b0b0',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'gold',
+    1,
+    now()
+  ),
+  (
+    'c0c0c0c0-c0c0-c0c0-c0c0-c0c0c0c0c0c0',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'silver',
+    0,
+    now()
+  ),
+  (
+    'd0a0d0a0-d0a0-d0a0-d0a0-d0a0d0a0d0a0',
+    'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'gold',
+    0,
+    now()
+  ),
+  (
+    'e0a0e0a0-e0a0-e0a0-e0a0-e0a0e0a0e0a0',
+    'aa11aa11-aa11-aa11-aa11-aa11aa11aa11',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'gold',
+    0,
+    now()
+  ),
+  (
+    'f0a0f0a0-f0a0-f0a0-f0a0-f0a0f0a0f0a0',
+    'bb22bb22-bb22-bb22-bb22-bb22bb22bb22',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'silver',
+    0,
+    now()
+  ),
+  (
+    'a1b1a1b1-a1b1-a1b1-a1b1-a1b1a1b1a1b1',
+    'ee55ee55-ee55-ee55-ee55-ee55ee55ee55',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'gold',
+    0,
+    now()
+  ),
+  (
+    'b1c1b1c1-b1c1-b1c1-b1c1-b1c1b1c1b1c1',
+    'ff66ff66-ff66-ff66-ff66-ff66ff66ff66',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'silver',
+    0,
+    now()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- AGI House sponsoring other orgs' hackathons
+INSERT INTO hackathon_sponsors (id, hackathon_id, sponsor_tenant_id, name, logo_url, website_url, tier, display_order, created_at)
+VALUES
+  (
+    'a9a90001-a9a9-a9a9-a9a9-a9a90001a9a9',
+    'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    '99990000-9999-9999-9999-999900009999',
+    'AGI House',
+    NULL,
+    'https://agihouse.org',
+    'gold',
+    1,
+    now()
+  ),
+  (
+    'a9a90002-a9a9-a9a9-a9a9-a9a90002a9a9',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    '99990000-9999-9999-9999-999900009999',
+    'AGI House',
+    NULL,
+    'https://agihouse.org',
+    'silver',
+    2,
+    now()
+  ),
+  (
+    'a9a90003-a9a9-a9a9-a9a9-a9a90003a9a9',
+    'aa11aa11-aa11-aa11-aa11-aa11aa11aa11',
+    '99990000-9999-9999-9999-999900009999',
+    'AGI House',
+    NULL,
+    'https://agihouse.org',
+    'gold',
+    1,
+    now()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- Tenant-backed sponsors on AGI House hackathons
+INSERT INTO hackathon_sponsors (id, hackathon_id, sponsor_tenant_id, name, logo_url, website_url, tier, display_order, created_at)
+VALUES
+  (
+    'a9b90001-a9b9-a9b9-a9b9-a9b90001a9b9',
+    'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1',
+    '66666666-6666-6666-6666-666666666666',
+    'Anthropic',
+    NULL,
+    'https://anthropic.com',
+    'gold',
+    0,
+    now()
+  ),
+  (
+    'a9b90002-a9b9-a9b9-a9b9-a9b90002a9b9',
+    'aaa50005-aaa5-aaa5-aaa5-aaa50005aaa5',
+    '77777777-7777-7777-7777-777777777777',
+    'OpenAI',
+    NULL,
+    'https://openai.com',
+    'silver',
+    1,
+    now()
+  ),
+  (
+    'a9b90003-a9b9-a9b9-a9b9-a9b90003a9b9',
+    'aaa40004-aaa4-aaa4-aaa4-aaa40004aaa4',
+    '55555555-5555-5555-5555-555555555555',
+    'Tavily',
+    NULL,
+    'https://tavily.com',
+    'silver',
+    1,
+    now()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- Fake manual sponsors on AGI House hackathons (no sponsor_tenant_id)
+INSERT INTO hackathon_sponsors (id, hackathon_id, sponsor_tenant_id, name, logo_url, website_url, tier, display_order, created_at)
+VALUES
+  (
+    'a9c90001-a9c9-a9c9-a9c9-a9c90001a9c9',
+    'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1',
+    NULL,
+    'Microsoft',
+    NULL,
+    'https://microsoft.com',
+    'title',
+    1,
+    now()
+  ),
+  (
+    'a9c90002-a9c9-a9c9-a9c9-a9c90002a9c9',
+    'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1',
+    NULL,
+    'Sequoia Capital',
+    NULL,
+    'https://sequoiacap.com',
+    'silver',
+    2,
+    now()
+  ),
+  (
+    'a9c90003-a9c9-a9c9-a9c9-a9c90003a9c9',
+    'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2',
+    NULL,
+    'NVIDIA',
+    NULL,
+    'https://nvidia.com',
+    'title',
+    0,
+    now()
+  ),
+  (
+    'a9c90004-a9c9-a9c9-a9c9-a9c90004a9c9',
+    'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2',
+    NULL,
+    'Intel',
+    NULL,
+    'https://intel.com',
+    'gold',
+    1,
+    now()
+  ),
+  (
+    'a9c90005-a9c9-a9c9-a9c9-a9c90005a9c9',
+    'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3',
+    NULL,
+    'Google',
+    NULL,
+    'https://google.com',
+    'title',
+    0,
+    now()
+  ),
+  (
+    'a9c90006-a9c9-a9c9-a9c9-a9c90006a9c9',
+    'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3',
+    NULL,
+    'Microsoft',
+    NULL,
+    'https://microsoft.com',
+    'silver',
+    1,
+    now()
+  ),
+  (
+    'a9c90007-a9c9-a9c9-a9c9-a9c90007a9c9',
+    'aaa40004-aaa4-aaa4-aaa4-aaa40004aaa4',
+    NULL,
+    'Google',
+    NULL,
+    'https://google.com',
+    'gold',
+    0,
+    now()
+  ),
+  (
+    'a9c90008-a9c9-a9c9-a9c9-a9c90008a9c9',
+    'aaa40004-aaa4-aaa4-aaa4-aaa40004aaa4',
+    NULL,
+    'Apple',
+    NULL,
+    'https://apple.com',
+    'silver',
+    2,
+    now()
+  ),
+  (
+    'a9c90009-a9c9-a9c9-a9c9-a9c90009a9c9',
+    'aaa50005-aaa5-aaa5-aaa5-aaa50005aaa5',
+    NULL,
+    'Microsoft',
+    NULL,
+    'https://microsoft.com',
+    'title',
+    0,
+    now()
+  ),
+  (
+    'a9c9000a-a9c9-a9c9-a9c9-a9c9000aa9c9',
+    'aaa50005-aaa5-aaa5-aaa5-aaa50005aaa5',
+    NULL,
+    'Sequoia Capital',
+    NULL,
+    'https://sequoiacap.com',
+    'gold',
+    2,
+    now()
+  ),
+  (
+    'a9c9000b-a9c9-a9c9-a9c9-a9c9000ba9c9',
+    'aaa50005-aaa5-aaa5-aaa5-aaa50005aaa5',
+    NULL,
+    'a16z',
+    NULL,
+    'https://a16z.com',
+    'silver',
+    3,
+    now()
+  ),
+  (
+    'a9c9000c-a9c9-a9c9-a9c9-a9c9000ca9c9',
+    'aaa60006-aaa6-aaa6-aaa6-aaa60006aaa6',
+    NULL,
+    'NVIDIA',
+    NULL,
+    'https://nvidia.com',
+    'title',
+    0,
+    now()
+  ),
+  (
+    'a9c9000d-a9c9-a9c9-a9c9-a9c9000da9c9',
+    'aaa60006-aaa6-aaa6-aaa6-aaa60006aaa6',
+    NULL,
+    'a16z',
+    NULL,
+    'https://a16z.com',
+    'gold',
+    1,
+    now()
+  ),
+  (
+    'a9c9000e-a9c9-a9c9-a9c9-a9c9000ea9c9',
+    'aaa60006-aaa6-aaa6-aaa6-aaa60006aaa6',
+    NULL,
+    'Boeing',
+    NULL,
+    'https://boeing.com',
+    'silver',
+    2,
+    now()
+  )
+ON CONFLICT (id) DO NOTHING;
+
 -- ============================================================================
 -- HACKATHON REGISTRATIONS (Your user registered for sample hackathons)
 -- ============================================================================
@@ -485,5 +1140,895 @@ VALUES
   ('d2d2d2d2-d2d2-d2d2-d2d2-d2d2d2d2d2d2', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now()),
   ('d3d3d3d3-d3d3-d3d3-d3d3-d3d3d3d3d3d3', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now()),
   ('d4d4d4d4-d4d4-d4d4-d4d4-d4d4d4d4d4d4', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now()),
-  ('d5d5d5d5-d5d5-d5d5-d5d5-d5d5d5d5d5d5', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now())
+  ('d5d5d5d5-d5d5-d5d5-d5d5-d5d5d5d5d5d5', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now()),
+  ('d6d6d6d6-d6d6-d6d6-d6d6-d6d6d6d6d6d6', 'aa11aa11-aa11-aa11-aa11-aa11aa11aa11', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now() - interval '20 days'),
+  ('d7d7d7d7-d7d7-d7d7-d7d7-d7d7d7d7d7d7', 'bb22bb22-bb22-bb22-bb22-bb22bb22bb22', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now() - interval '2 days'),
+  ('d8d8d8d8-d8d8-d8d8-d8d8-d8d8d8d8d8d8', 'cc33cc33-cc33-cc33-cc33-cc33cc33cc33', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now() - interval '1 day'),
+  ('d9d9d9d9-d9d9-d9d9-d9d9-d9d9d9d9d9d9', 'dd44dd44-dd44-dd44-dd44-dd44dd44dd44', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now()),
+  ('dadadada-dada-dada-dada-dadadadadada', 'ee55ee55-ee55-ee55-ee55-ee55ee55ee55', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now() - interval '35 days'),
+  ('dbdbdbdb-dbdb-dbdb-dbdb-dbdbdbdbdbdb', 'ff66ff66-ff66-ff66-ff66-ff66ff66ff66', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now() - interval '3 days'),
+  ('dcdcdcdc-dcdc-dcdc-dcdc-dcdcdcdcdcdc', 'aa77aa77-aa77-aa77-aa77-aa77aa77aa77', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now()),
+  ('ddddeeee-ddee-ddee-ddee-ddddeeeeddee', 'bb88bb88-bb88-bb88-bb88-bb88bb88bb88', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now()),
+  ('a9d90001-a9d9-a9d9-a9d9-a9d90001a9d9', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now() - interval '30 days'),
+  ('a9d90002-a9d9-a9d9-a9d9-a9d90002a9d9', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now() - interval '50 days'),
+  ('a9d90003-a9d9-a9d9-a9d9-a9d90003a9d9', 'aaa40004-aaa4-aaa4-aaa4-aaa40004aaa4', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now() - interval '3 days'),
+  ('a9d90004-a9d9-a9d9-a9d9-a9d90004a9d9', 'aaa50005-aaa5-aaa5-aaa5-aaa50005aaa5', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now())
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- SEED PARTICIPANTS (Fake users across 6 hackathons)
+-- ============================================================================
+-- AI Agents 2026 (completed) — 25 participants
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('10011001-1001-1001-1001-100110011001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_001', 'participant', now() - interval '40 days'),
+  ('10021002-1002-1002-1002-100210021002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_002', 'participant', now() - interval '39 days'),
+  ('10031003-1003-1003-1003-100310031003', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_003', 'participant', now() - interval '38 days'),
+  ('10041004-1004-1004-1004-100410041004', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_004', 'participant', now() - interval '37 days'),
+  ('10051005-1005-1005-1005-100510051005', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_005', 'participant', now() - interval '36 days'),
+  ('10061006-1006-1006-1006-100610061006', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_006', 'participant', now() - interval '35 days'),
+  ('10071007-1007-1007-1007-100710071007', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_007', 'participant', now() - interval '34 days'),
+  ('10081008-1008-1008-1008-100810081008', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_008', 'participant', now() - interval '33 days'),
+  ('10091009-1009-1009-1009-100910091009', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_009', 'participant', now() - interval '32 days'),
+  ('100a100a-100a-100a-100a-100a100a100a', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_010', 'participant', now() - interval '31 days'),
+  ('100b100b-100b-100b-100b-100b100b100b', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_011', 'participant', now() - interval '30 days'),
+  ('100c100c-100c-100c-100c-100c100c100c', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_012', 'participant', now() - interval '30 days'),
+  ('100d100d-100d-100d-100d-100d100d100d', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_013', 'participant', now() - interval '29 days'),
+  ('100e100e-100e-100e-100e-100e100e100e', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_014', 'participant', now() - interval '28 days'),
+  ('100f100f-100f-100f-100f-100f100f100f', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_015', 'participant', now() - interval '27 days'),
+  ('10101010-1010-1010-1010-101010101010', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_016', 'participant', now() - interval '26 days'),
+  ('10111011-1011-1011-1011-101110111011', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_017', 'participant', now() - interval '25 days'),
+  ('10121012-1012-1012-1012-101210121012', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_018', 'participant', now() - interval '25 days'),
+  ('10131013-1013-1013-1013-101310131013', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_019', 'participant', now() - interval '24 days'),
+  ('10141014-1014-1014-1014-101410141014', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_020', 'participant', now() - interval '23 days'),
+  ('10151015-1015-1015-1015-101510151015', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_021', 'participant', now() - interval '22 days'),
+  ('10161016-1016-1016-1016-101610161016', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_022', 'participant', now() - interval '21 days'),
+  ('10171017-1017-1017-1017-101710171017', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_023', 'participant', now() - interval '20 days'),
+  ('10181018-1018-1018-1018-101810181018', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_024', 'participant', now() - interval '19 days'),
+  ('10191019-1019-1019-1019-101910191019', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_025', 'participant', now() - interval '18 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- Search & Discovery (completed) — 15 participants (some cross-participate)
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('101a101a-101a-101a-101a-101a101a101a', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_001', 'participant', now() - interval '48 days'),
+  ('101b101b-101b-101b-101b-101b101b101b', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_003', 'participant', now() - interval '47 days'),
+  ('101c101c-101c-101c-101c-101c101c101c', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_005', 'participant', now() - interval '46 days'),
+  ('101d101d-101d-101d-101d-101d101d101d', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_026', 'participant', now() - interval '45 days'),
+  ('101e101e-101e-101e-101e-101e101e101e', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_027', 'participant', now() - interval '44 days'),
+  ('101f101f-101f-101f-101f-101f101f101f', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_028', 'participant', now() - interval '43 days'),
+  ('10201020-1020-1020-1020-102010201020', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_029', 'participant', now() - interval '42 days'),
+  ('10211021-1021-1021-1021-102110211021', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_030', 'participant', now() - interval '41 days'),
+  ('10221022-1022-1022-1022-102210221022', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_031', 'participant', now() - interval '40 days'),
+  ('10231023-1023-1023-1023-102310231023', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_032', 'participant', now() - interval '39 days'),
+  ('10241024-1024-1024-1024-102410241024', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_033', 'participant', now() - interval '38 days'),
+  ('10251025-1025-1025-1025-102510251025', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_034', 'participant', now() - interval '37 days'),
+  ('10261026-1026-1026-1026-102610261026', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_035', 'participant', now() - interval '36 days'),
+  ('10271027-1027-1027-1027-102710271027', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_036', 'participant', now() - interval '36 days'),
+  ('10281028-1028-1028-1028-102810281028', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_037', 'participant', now() - interval '35 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- AI Art & Creative (completed) — 18 participants (some cross-participate)
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('10291029-1029-1029-1029-102910291029', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_002', 'participant', now() - interval '78 days'),
+  ('102a102a-102a-102a-102a-102a102a102a', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_004', 'participant', now() - interval '77 days'),
+  ('102b102b-102b-102b-102b-102b102b102b', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_006', 'participant', now() - interval '76 days'),
+  ('102c102c-102c-102c-102c-102c102c102c', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_038', 'participant', now() - interval '75 days'),
+  ('102d102d-102d-102d-102d-102d102d102d', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_039', 'participant', now() - interval '75 days'),
+  ('102e102e-102e-102e-102e-102e102e102e', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_040', 'participant', now() - interval '74 days'),
+  ('102f102f-102f-102f-102f-102f102f102f', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_041', 'participant', now() - interval '73 days'),
+  ('10301030-1030-1030-1030-103010301030', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_042', 'participant', now() - interval '72 days'),
+  ('10311031-1031-1031-1031-103110311031', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_043', 'participant', now() - interval '72 days'),
+  ('10321032-1032-1032-1032-103210321032', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_044', 'participant', now() - interval '71 days'),
+  ('10331033-1033-1033-1033-103310331033', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_045', 'participant', now() - interval '70 days'),
+  ('10341034-1034-1034-1034-103410341034', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_046', 'participant', now() - interval '70 days'),
+  ('10351035-1035-1035-1035-103510351035', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_047', 'participant', now() - interval '69 days'),
+  ('10361036-1036-1036-1036-103610361036', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_048', 'participant', now() - interval '68 days'),
+  ('10371037-1037-1037-1037-103710371037', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_049', 'participant', now() - interval '68 days'),
+  ('10381038-1038-1038-1038-103810381038', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_050', 'participant', now() - interval '67 days'),
+  ('10391039-1039-1039-1039-103910391039', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_051', 'participant', now() - interval '67 days'),
+  ('103a103a-103a-103a-103a-103a103a103a', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_052', 'participant', now() - interval '66 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- Climate Tech (published) — 4 participants
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('103b103b-103b-103b-103b-103b103b103b', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'user_seed_007', 'participant', now() - interval '5 days'),
+  ('103c103c-103c-103c-103c-103c103c103c', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'user_seed_053', 'participant', now() - interval '4 days'),
+  ('103d103d-103d-103d-103d-103d103d103d', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'user_seed_054', 'participant', now() - interval '3 days'),
+  ('103e103e-103e-103e-103e-103e103e103e', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'user_seed_055', 'participant', now() - interval '2 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- AI Safety Jam (published) — 5 participants
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('103f103f-103f-103f-103f-103f103f103f', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'user_seed_008', 'participant', now() - interval '4 days'),
+  ('10401040-1040-1040-1040-104010401040', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'user_seed_056', 'participant', now() - interval '3 days'),
+  ('10411041-1041-1041-1041-104110411041', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'user_seed_057', 'participant', now() - interval '3 days'),
+  ('10421042-1042-1042-1042-104210421042', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'user_seed_058', 'participant', now() - interval '2 days'),
+  ('10431043-1043-1043-1043-104310431043', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'user_seed_059', 'participant', now() - interval '1 day')
+ON CONFLICT (id) DO NOTHING;
+
+-- AGI Innovation Summit (published) — 4 participants
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('10441044-1044-1044-1044-104410441044', 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'user_seed_009', 'participant', now() - interval '4 days'),
+  ('10451045-1045-1045-1045-104510451045', 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'user_seed_060', 'participant', now() - interval '3 days'),
+  ('10461046-1046-1046-1046-104610461046', 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'user_seed_061', 'participant', now() - interval '2 days'),
+  ('10471047-1047-1047-1047-104710471047', 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'user_seed_062', 'participant', now() - interval '1 day')
+ON CONFLICT (id) DO NOTHING;
+
+-- Extra AI Agents participants for more solo submissions
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('10481048-1048-1048-1048-104810481048', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_063', 'participant', now() - interval '22 days'),
+  ('10491049-1049-1049-1049-104910491049', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_064', 'participant', now() - interval '21 days'),
+  ('104a104a-104a-104a-104a-104a104a104a', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_065', 'participant', now() - interval '20 days'),
+  ('104b104b-104b-104b-104b-104b104b104b', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_066', 'participant', now() - interval '20 days'),
+  ('104c104c-104c-104c-104c-104c104c104c', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_067', 'participant', now() - interval '19 days'),
+  ('104d104d-104d-104d-104d-104d104d104d', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_068', 'participant', now() - interval '19 days'),
+  ('104e104e-104e-104e-104e-104e104e104e', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_069', 'participant', now() - interval '18 days'),
+  ('104f104f-104f-104f-104f-104f104f104f', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user_seed_070', 'participant', now() - interval '18 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- Extra Search & Discovery participants for more solo submissions
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('10501050-1050-1050-1050-105010501050', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_063', 'participant', now() - interval '38 days'),
+  ('10511051-1051-1051-1051-105110511051', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_064', 'participant', now() - interval '37 days'),
+  ('10521052-1052-1052-1052-105210521052', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_065', 'participant', now() - interval '36 days'),
+  ('10531053-1053-1053-1053-105310531053', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_066', 'participant', now() - interval '36 days'),
+  ('10541054-1054-1054-1054-105410541054', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_067', 'participant', now() - interval '35 days'),
+  ('10551055-1055-1055-1055-105510551055', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'user_seed_068', 'participant', now() - interval '35 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- Extra AI Art participants for more solo submissions
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('10561056-1056-1056-1056-105610561056', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_053', 'participant', now() - interval '70 days'),
+  ('10571057-1057-1057-1057-105710571057', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_054', 'participant', now() - interval '69 days'),
+  ('10581058-1058-1058-1058-105810581058', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_055', 'participant', now() - interval '68 days'),
+  ('10591059-1059-1059-1059-105910591059', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_069', 'participant', now() - interval '68 days'),
+  ('105a105a-105a-105a-105a-105a105a105a', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_070', 'participant', now() - interval '67 days'),
+  ('105b105b-105b-105b-105b-105b105b105b', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_056', 'participant', now() - interval '67 days'),
+  ('105c105c-105c-105c-105c-105c105c105c', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user_seed_057', 'participant', now() - interval '66 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- SEED TEAMS
+-- ============================================================================
+-- AI Agents 2026 — 7 teams
+INSERT INTO teams (id, hackathon_id, name, captain_clerk_user_id, invite_code, status, created_at, updated_at)
+VALUES
+  ('20012001-2001-2001-2001-200120012001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Neural Navigators', 'user_seed_001', 'SEED-A-001', 'locked', now() - interval '38 days', now() - interval '16 days'),
+  ('20022002-2002-2002-2002-200220022002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Agent Smiths', 'user_seed_004', 'SEED-A-002', 'locked', now() - interval '36 days', now() - interval '16 days'),
+  ('20032003-2003-2003-2003-200320032003', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Autonomous Minds', 'user_seed_007', 'SEED-A-003', 'locked', now() - interval '34 days', now() - interval '16 days'),
+  ('20042004-2004-2004-2004-200420042004', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Swarm Intelligence', 'user_seed_010', 'SEED-A-004', 'locked', now() - interval '32 days', now() - interval '16 days'),
+  ('20052005-2005-2005-2005-200520052005', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ReAct Squad', 'user_seed_013', 'SEED-A-005', 'locked', now() - interval '30 days', now() - interval '16 days'),
+  ('20062006-2006-2006-2006-200620062006', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Chain of Thought', 'user_seed_016', 'SEED-A-006', 'locked', now() - interval '28 days', now() - interval '16 days'),
+  ('20072007-2007-2007-2007-200720072007', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Tool Callers', 'user_seed_019', 'SEED-A-007', 'locked', now() - interval '26 days', now() - interval '16 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- Search & Discovery — 4 teams
+INSERT INTO teams (id, hackathon_id, name, captain_clerk_user_id, invite_code, status, created_at, updated_at)
+VALUES
+  ('20082008-2008-2008-2008-200820082008', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'Query Wizards', 'user_seed_001', 'SEED-S-001', 'locked', now() - interval '46 days', now() - interval '32 days'),
+  ('20092009-2009-2009-2009-200920092009', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'Semantic Seekers', 'user_seed_026', 'SEED-S-002', 'locked', now() - interval '44 days', now() - interval '32 days'),
+  ('200a200a-200a-200a-200a-200a200a200a', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'Index Architects', 'user_seed_029', 'SEED-S-003', 'locked', now() - interval '42 days', now() - interval '32 days'),
+  ('200b200b-200b-200b-200b-200b200b200b', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'Retrieval Rangers', 'user_seed_032', 'SEED-S-004', 'locked', now() - interval '40 days', now() - interval '32 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- AI Art & Creative — 5 teams
+INSERT INTO teams (id, hackathon_id, name, captain_clerk_user_id, invite_code, status, created_at, updated_at)
+VALUES
+  ('200c200c-200c-200c-200c-200c200c200c', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Pixel Dreamers', 'user_seed_002', 'SEED-C-001', 'locked', now() - interval '76 days', now() - interval '62 days'),
+  ('200d200d-200d-200d-200d-200d200d200d', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Creative Circuits', 'user_seed_038', 'SEED-C-002', 'locked', now() - interval '74 days', now() - interval '62 days'),
+  ('200e200e-200e-200e-200e-200e200e200e', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Neural Canvas', 'user_seed_041', 'SEED-C-003', 'locked', now() - interval '72 days', now() - interval '62 days'),
+  ('200f200f-200f-200f-200f-200f200f200f', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Generative Collective', 'user_seed_044', 'SEED-C-004', 'locked', now() - interval '70 days', now() - interval '62 days'),
+  ('20102010-2010-2010-2010-201020102010', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Diffusion Lab', 'user_seed_048', 'SEED-C-005', 'locked', now() - interval '68 days', now() - interval '62 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- ASSIGN PARTICIPANTS TO TEAMS
+-- ============================================================================
+-- AI Agents teams (3-4 members each, some solo participants remain unassigned)
+UPDATE hackathon_participants SET team_id = '20012001-2001-2001-2001-200120012001' WHERE id IN ('10011001-1001-1001-1001-100110011001', '10021002-1002-1002-1002-100210021002', '10031003-1003-1003-1003-100310031003');
+UPDATE hackathon_participants SET team_id = '20022002-2002-2002-2002-200220022002' WHERE id IN ('10041004-1004-1004-1004-100410041004', '10051005-1005-1005-1005-100510051005', '10061006-1006-1006-1006-100610061006');
+UPDATE hackathon_participants SET team_id = '20032003-2003-2003-2003-200320032003' WHERE id IN ('10071007-1007-1007-1007-100710071007', '10081008-1008-1008-1008-100810081008', '10091009-1009-1009-1009-100910091009');
+UPDATE hackathon_participants SET team_id = '20042004-2004-2004-2004-200420042004' WHERE id IN ('100a100a-100a-100a-100a-100a100a100a', '100b100b-100b-100b-100b-100b100b100b', '100c100c-100c-100c-100c-100c100c100c', '100d100d-100d-100d-100d-100d100d100d');
+UPDATE hackathon_participants SET team_id = '20052005-2005-2005-2005-200520052005' WHERE id IN ('100e100e-100e-100e-100e-100e100e100e', '100f100f-100f-100f-100f-100f100f100f', '10101010-1010-1010-1010-101010101010');
+UPDATE hackathon_participants SET team_id = '20062006-2006-2006-2006-200620062006' WHERE id IN ('10111011-1011-1011-1011-101110111011', '10121012-1012-1012-1012-101210121012', '10131013-1013-1013-1013-101310131013', '10141014-1014-1014-1014-101410141014');
+UPDATE hackathon_participants SET team_id = '20072007-2007-2007-2007-200720072007' WHERE id IN ('10151015-1015-1015-1015-101510151015', '10161016-1016-1016-1016-101610161016', '10171017-1017-1017-1017-101710171017');
+-- Participants 10181018..10191019 remain solo
+
+-- Search & Discovery teams (2-3 members each, some solo)
+UPDATE hackathon_participants SET team_id = '20082008-2008-2008-2008-200820082008' WHERE id IN ('101a101a-101a-101a-101a-101a101a101a', '101b101b-101b-101b-101b-101b101b101b', '101c101c-101c-101c-101c-101c101c101c');
+UPDATE hackathon_participants SET team_id = '20092009-2009-2009-2009-200920092009' WHERE id IN ('101d101d-101d-101d-101d-101d101d101d', '101e101e-101e-101e-101e-101e101e101e', '101f101f-101f-101f-101f-101f101f101f');
+UPDATE hackathon_participants SET team_id = '200a200a-200a-200a-200a-200a200a200a' WHERE id IN ('10201020-1020-1020-1020-102010201020', '10211021-1021-1021-1021-102110211021');
+UPDATE hackathon_participants SET team_id = '200b200b-200b-200b-200b-200b200b200b' WHERE id IN ('10221022-1022-1022-1022-102210221022', '10231023-1023-1023-1023-102310231023', '10241024-1024-1024-1024-102410241024');
+-- Participants 10251025..10281028 remain solo
+
+-- AI Art teams (2-3 members each, some solo)
+UPDATE hackathon_participants SET team_id = '200c200c-200c-200c-200c-200c200c200c' WHERE id IN ('10291029-1029-1029-1029-102910291029', '102a102a-102a-102a-102a-102a102a102a', '102b102b-102b-102b-102b-102b102b102b');
+UPDATE hackathon_participants SET team_id = '200d200d-200d-200d-200d-200d200d200d' WHERE id IN ('102c102c-102c-102c-102c-102c102c102c', '102d102d-102d-102d-102d-102d102d102d', '102e102e-102e-102e-102e-102e102e102e');
+UPDATE hackathon_participants SET team_id = '200e200e-200e-200e-200e-200e200e200e' WHERE id IN ('102f102f-102f-102f-102f-102f102f102f', '10301030-1030-1030-1030-103010301030', '10311031-1031-1031-1031-103110311031');
+UPDATE hackathon_participants SET team_id = '200f200f-200f-200f-200f-200f200f200f' WHERE id IN ('10321032-1032-1032-1032-103210321032', '10331033-1033-1033-1033-103310331033');
+UPDATE hackathon_participants SET team_id = '20102010-2010-2010-2010-201020102010' WHERE id IN ('10361036-1036-1036-1036-103610361036', '10371037-1037-1037-1037-103710371037');
+-- Participants 10341034..10351035, 10381038..103a103a remain solo
+
+-- ============================================================================
+-- SEED SUBMISSIONS
+-- ============================================================================
+
+-- ---- AI Agents 2026 (completed) — 18 submissions (7 team + 11 solo), all 'submitted' ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  -- Team submissions
+  ('30013001-3001-3001-3001-300130013001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, '20012001-2001-2001-2001-200120012001',
+   'AgentOS', 'A modular operating system for orchestrating multi-agent workflows with automatic task decomposition and parallel execution.',
+   'https://github.com/seed/agent-os', 'https://agent-os.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('30023002-3002-3002-3002-300230023002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, '20022002-2002-2002-2002-200220022002',
+   'DebugBot', 'An AI agent that reads stack traces, reproduces bugs in sandboxed environments, and proposes verified fixes with test cases.',
+   'https://github.com/seed/debugbot', NULL, 'https://youtube.com/watch?v=seed_debugbot',
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('30033003-3003-3003-3003-300330033003', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, '20032003-2003-2003-2003-200320032003',
+   'MarketMind', 'Autonomous market research agent that monitors competitor activity, synthesizes reports, and surfaces actionable insights.',
+   'https://github.com/seed/marketmind', 'https://marketmind.demo.dev', 'https://youtube.com/watch?v=seed_marketmind',
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('30043004-3004-3004-3004-300430043004', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, '20042004-2004-2004-2004-200420042004',
+   'SwarmDeploy', 'Multi-agent deployment system where specialized agents handle CI, testing, security scanning, and rollout coordination.',
+   'https://github.com/seed/swarmdeploy', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('30053005-3005-3005-3005-300530053005', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, '20052005-2005-2005-2005-200520052005',
+   'MeetingPilot', 'Agent that joins video calls, takes structured notes, extracts action items, and files follow-up tasks in project management tools.',
+   'https://github.com/seed/meetingpilot', 'https://meetingpilot.demo.dev', 'https://youtube.com/watch?v=seed_meetingpilot',
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('30063006-3006-3006-3006-300630063006', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, '20062006-2006-2006-2006-200620062006',
+   'CodeReviewAgent', 'Automated pull request reviewer that identifies bugs, security issues, and style violations with inline suggestions.',
+   'https://github.com/seed/codereview-agent', NULL, 'https://youtube.com/watch?v=seed_codereview',
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('30073007-3007-3007-3007-300730073007', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, '20072007-2007-2007-2007-200720072007',
+   'DataPipelineAgent', 'Self-healing ETL agent that monitors data pipelines, detects anomalies, and auto-remediates common failures.',
+   'https://github.com/seed/datapipeline-agent', 'https://datapipeline.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  -- Solo submissions
+  ('30083008-3008-3008-3008-300830083008', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '10181018-1018-1018-1018-101810181018', NULL,
+   'ResearchRadar', 'Personal research assistant that monitors arXiv, filters papers by relevance, and generates weekly digest summaries.',
+   'https://github.com/seed/research-radar', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('30093009-3009-3009-3009-300930093009', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '10191019-1019-1019-1019-101910191019', NULL,
+   'PromptForge', 'Interactive prompt engineering workbench with version control, A/B testing, and automated evaluation metrics.',
+   'https://github.com/seed/promptforge', 'https://promptforge.demo.dev', 'https://youtube.com/watch?v=seed_promptforge',
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  -- Dev user submission (for testing Edit Submission flow)
+  ('300a300a-300a-300a-300a-300a300a300a', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'd2d2d2d2-d2d2-d2d2-d2d2-d2d2d2d2d2d2', NULL,
+   'TaskWeaver', 'An AI task orchestrator that breaks down complex goals into executable sub-tasks and coordinates multiple tool-use agents.',
+   'https://github.com/seed/taskweaver', 'https://taskweaver.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ---- Search & Discovery (completed) — 15 submissions (4 team + 11 solo), all 'submitted' ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  -- Team submissions
+  ('300b300b-300b-300b-300b-300b300b300b', 'cccccccc-cccc-cccc-cccc-cccccccccccc', NULL, '20082008-2008-2008-2008-200820082008',
+   'SemanticExplorer', 'Visual knowledge graph explorer with natural language queries, powered by Tavily search and embedding-based clustering.',
+   'https://github.com/seed/semantic-explorer', 'https://semantic-explorer.demo.dev', 'https://youtube.com/watch?v=seed_semexplore',
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  ('300c300c-300c-300c-300c-300c300c300c', 'cccccccc-cccc-cccc-cccc-cccccccccccc', NULL, '20092009-2009-2009-2009-200920092009',
+   'ContextFinder', 'Developer documentation search that understands code context and returns relevant examples from across multiple frameworks.',
+   'https://github.com/seed/contextfinder', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  ('300d300d-300d-300d-300d-300d300d300d', 'cccccccc-cccc-cccc-cccc-cccccccccccc', NULL, '200a200a-200a-200a-200a-200a200a200a',
+   'NewsDigest AI', 'Real-time news aggregator that clusters stories by topic, identifies primary sources, and detects narrative bias.',
+   'https://github.com/seed/newsdigest-ai', 'https://newsdigest.demo.dev', 'https://youtube.com/watch?v=seed_newsdigest',
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  ('300e300e-300e-300e-300e-300e300e300e', 'cccccccc-cccc-cccc-cccc-cccccccccccc', NULL, '200b200b-200b-200b-200b-200b200b200b',
+   'PatentScout', 'Patent prior-art search tool that matches inventions to existing patents using semantic similarity and citation graph analysis.',
+   'https://github.com/seed/patentscout', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  -- Solo submissions
+  ('300f300f-300f-300f-300f-300f300f300f', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '10251025-1025-1025-1025-102510251025', NULL,
+   'RecipeSearch', 'Ingredient-aware recipe finder that suggests meals based on what you have, dietary restrictions, and cooking skill level.',
+   'https://github.com/seed/recipesearch', 'https://recipesearch.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  ('30103010-3010-3010-3010-301030103010', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '10261026-1026-1026-1026-102610261026', NULL,
+   'LegalSearch', 'Case law search engine using semantic embedding and citation network analysis to find relevant legal precedents.',
+   'https://github.com/seed/legalsearch', NULL, 'https://youtube.com/watch?v=seed_legalsearch',
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  ('30113011-3011-3011-3011-301130113011', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '10271027-1027-1027-1027-102710271027', NULL,
+   'CodebaseNavigator', 'Semantic code search across polyglot repositories with natural language queries and dependency-aware ranking.',
+   'https://github.com/seed/codebase-navigator', 'https://codenav.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  ('30123012-3012-3012-3012-301230123012', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '10281028-1028-1028-1028-102810281028', NULL,
+   'PaperTrail', 'Academic paper recommendation engine with citation-aware search and collaborative filtering across research domains.',
+   'https://github.com/seed/papertrail', NULL, 'https://youtube.com/watch?v=seed_papertrail',
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ---- AI Art & Creative (completed) — 18 submissions (5 team + 13 solo), all 'submitted' ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  -- Team submissions
+  ('30133013-3013-3013-3013-301330133013', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', NULL, '200c200c-200c-200c-200c-200c200c200c',
+   'DreamCanvas', 'Collaborative AI art studio where multiple users paint together with AI style transfer applied in real-time.',
+   'https://github.com/seed/dreamcanvas', 'https://dreamcanvas.demo.dev', 'https://youtube.com/watch?v=seed_dreamcanvas',
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('30143014-3014-3014-3014-301430143014', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', NULL, '200d200d-200d-200d-200d-200d200d200d',
+   'SonicForge', 'AI music composition tool that generates full arrangements from hummed melodies with customizable genre and instrumentation.',
+   'https://github.com/seed/sonicforge', NULL, 'https://youtube.com/watch?v=seed_sonicforge',
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('30153015-3015-3015-3015-301530153015', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', NULL, '200e200e-200e-200e-200e-200e200e200e',
+   'StoryWeaver', 'Interactive fiction engine where AI generates branching narratives with consistent characters and visual scene illustrations.',
+   'https://github.com/seed/storyweaver', 'https://storyweaver.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('30163016-3016-3016-3016-301630163016', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', NULL, '200f200f-200f-200f-200f-200f200f200f',
+   'StyleMorph', 'Real-time video style transfer that applies artistic styles to webcam feeds for live streaming and video calls.',
+   'https://github.com/seed/stylemorph', 'https://stylemorph.demo.dev', 'https://youtube.com/watch?v=seed_stylemorph',
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('30173017-3017-3017-3017-301730173017', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', NULL, '20102010-2010-2010-2010-201020102010',
+   'MotionPoet', 'AI-driven motion graphics generator that creates animations from text descriptions with keyframe interpolation.',
+   'https://github.com/seed/motionpoet', NULL, 'https://youtube.com/watch?v=seed_motionpoet',
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  -- Solo submissions
+  ('30183018-3018-3018-3018-301830183018', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '10341034-1034-1034-1034-103410341034', NULL,
+   'PaletteGPT', 'Color palette generator that creates harmonious color schemes from text descriptions of moods, seasons, or concepts.',
+   'https://github.com/seed/palettegpt', 'https://palettegpt.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('30193019-3019-3019-3019-301930193019', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '10351035-1035-1035-1035-103510351035', NULL,
+   'TypoArt', 'AI typography tool that generates custom lettering and font styles from artistic descriptions and reference images.',
+   'https://github.com/seed/typoart', NULL, 'https://youtube.com/watch?v=seed_typoart',
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('301a301a-301a-301a-301a-301a301a301a', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '10381038-1038-1038-1038-103810381038', NULL,
+   'BeatCraft', 'AI beat maker that generates drum patterns and bass lines from genre descriptions and BPM targets.',
+   'https://github.com/seed/beatcraft', 'https://beatcraft.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('301b301b-301b-301b-301b-301b301b301b', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '10391039-1039-1039-1039-103910391039', NULL,
+   'SceneSketch', 'Text-to-storyboard tool for filmmakers that generates shot compositions and camera angle suggestions.',
+   'https://github.com/seed/scenesketch', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('301c301c-301c-301c-301c-301c301c301c', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '103a103a-103a-103a-103a-103a103a103a', NULL,
+   'VoiceClone Studio', 'Ethical voice cloning tool with consent verification for creating personalized AI narrators and podcast hosts.',
+   'https://github.com/seed/voiceclone-studio', 'https://voiceclone.demo.dev', 'https://youtube.com/watch?v=seed_voiceclone',
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('301d301d-301d-301d-301d-301d301d301d', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '10351035-1035-1035-1035-103510351035', NULL,
+   'PixelUpscaler', 'Retro pixel art upscaler that converts low-resolution sprites to high-res illustrations while preserving artistic intent.',
+   'https://github.com/seed/pixel-upscaler', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ---- Additional AI Agents solo submissions ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  ('30293029-3029-3029-3029-302930293029', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '10481048-1048-1048-1048-104810481048', NULL,
+   'DocuAgent', 'AI agent that reads codebases, generates comprehensive documentation, and keeps docs in sync with code changes.',
+   'https://github.com/seed/docuagent', 'https://docuagent.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('302a302a-302a-302a-302a-302a302a302a', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '10491049-1049-1049-1049-104910491049', NULL,
+   'InboxZero', 'Email triage agent that categorizes, summarizes, and drafts responses with configurable persona and priorities.',
+   'https://github.com/seed/inboxzero', NULL, 'https://youtube.com/watch?v=seed_inboxzero',
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('302b302b-302b-302b-302b-302b302b302b', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '104a104a-104a-104a-104a-104a104a104a', NULL,
+   'TravelPlanner AI', 'Trip planning agent that searches flights, hotels, and activities then builds optimized itineraries with budget tracking.',
+   'https://github.com/seed/travelplanner', 'https://travelplanner.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('302c302c-302c-302c-302c-302c302c302c', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '104b104b-104b-104b-104b-104b104b104b', NULL,
+   'SQLAgent', 'Natural language to SQL agent with schema understanding, query optimization, and result visualization.',
+   'https://github.com/seed/sqlagent', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('302d302d-302d-302d-302d-302d302d302d', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '104c104c-104c-104c-104c-104c104c104c', NULL,
+   'APIScout', 'Agent that discovers, tests, and integrates third-party APIs by reading documentation and generating client code.',
+   'https://github.com/seed/apiscout', 'https://apiscout.demo.dev', 'https://youtube.com/watch?v=seed_apiscout',
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('302e302e-302e-302e-302e-302e302e302e', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '104d104d-104d-104d-104d-104d104d104d', NULL,
+   'HealthBot', 'Personal wellness agent that tracks habits, suggests exercises, and provides evidence-based nutrition guidance.',
+   'https://github.com/seed/healthbot', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('302f302f-302f-302f-302f-302f302f302f', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '104e104e-104e-104e-104e-104e104e104e', NULL,
+   'ContractReview', 'Legal document analysis agent that highlights risks, missing clauses, and suggests standardized alternatives.',
+   'https://github.com/seed/contractreview', 'https://contractreview.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days'),
+
+  ('30303030-3030-3030-3030-303030303030', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '104f104f-104f-104f-104f-104f104f104f', NULL,
+   'GitAssist', 'Commit message and PR description generator that analyzes diffs and follows repository conventions.',
+   'https://github.com/seed/gitassist', NULL, 'https://youtube.com/watch?v=seed_gitassist',
+   'submitted', '{}'::jsonb, now() - interval '15 days', now() - interval '14 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ---- Additional Search & Discovery solo submissions ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  ('30313031-3031-3031-3031-303130313031', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '10501050-1050-1050-1050-105010501050', NULL,
+   'ProductHunt AI', 'Product discovery engine that matches user needs to tools and SaaS products using semantic similarity and reviews.',
+   'https://github.com/seed/producthunt-ai', 'https://producthunt-ai.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  ('30323032-3032-3032-3032-303230323032', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '10511051-1051-1051-1051-105110511051', NULL,
+   'TalentMatch', 'Resume-to-job matching engine using skill extraction, experience weighting, and culture-fit scoring.',
+   'https://github.com/seed/talentmatch', NULL, 'https://youtube.com/watch?v=seed_talentmatch',
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  ('30333033-3033-3033-3033-303330333033', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '10521052-1052-1052-1052-105210521052', NULL,
+   'MusicDiscover', 'Music recommendation engine that understands mood, activity context, and listening history to suggest tracks.',
+   'https://github.com/seed/musicdiscover', 'https://musicdiscover.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  ('30343034-3034-3034-3034-303430343034', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '10531053-1053-1053-1053-105310531053', NULL,
+   'StackOverflow++', 'Enhanced code Q&A search that synthesizes answers from multiple sources and validates code snippets.',
+   'https://github.com/seed/stackoverflow-plus', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  ('30353035-3035-3035-3035-303530353035', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '10541054-1054-1054-1054-105410541054', NULL,
+   'EventRadar', 'Local event discovery platform using NLP to extract events from social media, newsletters, and community boards.',
+   'https://github.com/seed/eventradar', 'https://eventradar.demo.dev', 'https://youtube.com/watch?v=seed_eventradar',
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days'),
+
+  ('30363036-3036-3036-3036-303630363036', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '10551055-1055-1055-1055-105510551055', NULL,
+   'DatasetFinder', 'ML dataset search engine that matches research questions to relevant open datasets with quality and recency scoring.',
+   'https://github.com/seed/datasetfinder', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '32 days', now() - interval '31 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ---- Additional AI Art & Creative solo submissions ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  ('30373037-3037-3037-3037-303730373037', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '10561056-1056-1056-1056-105610561056', NULL,
+   'ComicGen', 'AI comic strip generator that creates multi-panel stories with consistent characters from text prompts.',
+   'https://github.com/seed/comicgen', 'https://comicgen.demo.dev', 'https://youtube.com/watch?v=seed_comicgen',
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('30383038-3038-3038-3038-303830383038', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '10571057-1057-1057-1057-105710571057', NULL,
+   'SoundScape', 'Ambient soundscape generator for focus and relaxation using AI-composed layered audio environments.',
+   'https://github.com/seed/soundscape', 'https://soundscape.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('30393039-3039-3039-3039-303930393039', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '10581058-1058-1058-1058-105810581058', NULL,
+   'FashionMuse', 'AI fashion design assistant that generates clothing designs from mood boards and trend analysis.',
+   'https://github.com/seed/fashionmuse', NULL, 'https://youtube.com/watch?v=seed_fashionmuse',
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('303a303a-303a-303a-303a-303a303a303a', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '10591059-1059-1059-1059-105910591059', NULL,
+   'PoetryEngine', 'AI poetry composition tool with meter analysis, rhyme suggestion, and style emulation across literary traditions.',
+   'https://github.com/seed/poetryengine', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('303b303b-303b-303b-303b-303b303b303b', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '105a105a-105a-105a-105a-105a105a105a', NULL,
+   'LogoForge', 'AI logo designer that creates brand identity assets from company descriptions and style preferences.',
+   'https://github.com/seed/logoforge', 'https://logoforge.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('303c303c-303c-303c-303c-303c303c303c', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '105b105b-105b-105b-105b-105b105b105b', NULL,
+   'ArchViz AI', 'Architectural visualization tool that generates 3D renders from floor plans and style descriptions.',
+   'https://github.com/seed/archviz-ai', NULL, 'https://youtube.com/watch?v=seed_archviz',
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
+
+  ('303d303d-303d-303d-303d-303d303d303d', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', '105c105c-105c-105c-105c-105c105c105c', NULL,
+   'DanceChoreographer', 'AI dance move generator that creates choreography sequences from music analysis and style parameters.',
+   'https://github.com/seed/dancechoreographer', 'https://dancechoreographer.demo.dev', 'https://youtube.com/watch?v=seed_dancechoreo',
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ---- Climate Tech (published) — 4 submissions, all 'draft' ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  ('301e301e-301e-301e-301e-301e301e301e', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '103b103b-103b-103b-103b-103b103b103b', NULL,
+   'CarbonLens', 'Supply chain carbon footprint analyzer using satellite imagery and shipping data to track emissions.',
+   'https://github.com/seed/carbonlens', NULL, NULL,
+   'draft', '{}'::jsonb, now() - interval '2 days', now() - interval '1 day'),
+
+  ('301f301f-301f-301f-301f-301f301f301f', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '103c103c-103c-103c-103c-103c103c103c', NULL,
+   'GridOptimizer', 'ML model for optimizing renewable energy grid distribution based on weather forecasts and demand patterns.',
+   'https://github.com/seed/gridoptimizer', NULL, NULL,
+   'draft', '{}'::jsonb, now() - interval '2 days', now() - interval '1 day'),
+
+  ('30203020-3020-3020-3020-302030203020', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '103d103d-103d-103d-103d-103d103d103d', NULL,
+   'WasteWise', 'Computer vision waste sorting assistant for municipalities with contamination detection and recycling optimization.',
+   'https://github.com/seed/wastewise', NULL, NULL,
+   'draft', '{}'::jsonb, now() - interval '1 day', now() - interval '1 day'),
+
+  ('30213021-3021-3021-3021-302130213021', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '103e103e-103e-103e-103e-103e103e103e', NULL,
+   'EcoRoute', 'Carbon-aware route planner for logistics fleets that optimizes delivery paths for both speed and emissions.',
+   'https://github.com/seed/ecoroute', NULL, NULL,
+   'draft', '{}'::jsonb, now() - interval '1 day', now())
+ON CONFLICT (id) DO NOTHING;
+
+-- ---- AI Safety Jam (published) — 4 submissions, all 'draft' ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  ('30223022-3022-3022-3022-302230223022', 'dddddddd-dddd-dddd-dddd-dddddddddddd', '103f103f-103f-103f-103f-103f103f103f', NULL,
+   'HalluciGuard', 'Hallucination detection layer for LLM outputs using cross-referencing and confidence calibration.',
+   'https://github.com/seed/halluciguard', NULL, NULL,
+   'draft', '{}'::jsonb, now() - interval '1 day', now()),
+
+  ('30233023-3023-3023-3023-302330233023', 'dddddddd-dddd-dddd-dddd-dddddddddddd', '10411041-1041-1041-1041-104110411041', NULL,
+   'BiasAudit', 'Automated fairness testing framework that probes LLMs for demographic bias across multiple dimensions.',
+   'https://github.com/seed/biasaudit', NULL, NULL,
+   'draft', '{}'::jsonb, now() - interval '1 day', now()),
+
+  ('30243024-3024-3024-3024-302430243024', 'dddddddd-dddd-dddd-dddd-dddddddddddd', '10421042-1042-1042-1042-104210421042', NULL,
+   'SafePrompt', 'Prompt injection detection and sanitization library for production LLM applications.',
+   'https://github.com/seed/safeprompt', NULL, NULL,
+   'draft', '{}'::jsonb, now() - interval '1 day', now()),
+
+  ('30253025-3025-3025-3025-302530253025', 'dddddddd-dddd-dddd-dddd-dddddddddddd', '10431043-1043-1043-1043-104310431043', NULL,
+   'AlignBench', 'Benchmark suite for evaluating AI alignment across instruction following, refusal, and value consistency.',
+   'https://github.com/seed/alignbench', NULL, NULL,
+   'draft', '{}'::jsonb, now() - interval '1 day', now())
+ON CONFLICT (id) DO NOTHING;
+
+-- ---- AGI Innovation Summit (published) — 3 submissions, all 'draft' ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  ('30263026-3026-3026-3026-302630263026', 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', '10441044-1044-1044-1044-104410441044', NULL,
+   'ReasonChain', 'Multi-step reasoning framework that chains specialized models for complex problem decomposition.',
+   'https://github.com/seed/reasonchain', NULL, NULL,
+   'draft', '{}'::jsonb, now() - interval '1 day', now()),
+
+  ('30273027-3027-3027-3027-302730273027', 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', '10451045-1045-1045-1045-104510451045', NULL,
+   'MemoryGraph', 'Long-term memory system for LLMs using dynamic knowledge graphs with episodic and semantic memory layers.',
+   'https://github.com/seed/memorygraph', NULL, NULL,
+   'draft', '{}'::jsonb, now() - interval '1 day', now()),
+
+  ('30283028-3028-3028-3028-302830283028', 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', '10461046-1046-1046-1046-104610461046', NULL,
+   'WorldSim', 'Lightweight world model simulator for testing agent decision-making in procedurally generated environments.',
+   'https://github.com/seed/worldsim', NULL, NULL,
+   'draft', '{}'::jsonb, now() - interval '1 day', now())
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- AGI HOUSE HACKATHON PARTICIPANTS
+-- ============================================================================
+
+-- MCP Agents Hackathon (completed) — 20 participants
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('a9e00001-a9e0-a9e0-a9e0-a9e00001a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_071', 'participant', now() - interval '38 days'),
+  ('a9e00002-a9e0-a9e0-a9e0-a9e00002a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_072', 'participant', now() - interval '37 days'),
+  ('a9e00003-a9e0-a9e0-a9e0-a9e00003a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_073', 'participant', now() - interval '37 days'),
+  ('a9e00004-a9e0-a9e0-a9e0-a9e00004a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_074', 'participant', now() - interval '36 days'),
+  ('a9e00005-a9e0-a9e0-a9e0-a9e00005a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_075', 'participant', now() - interval '36 days'),
+  ('a9e00006-a9e0-a9e0-a9e0-a9e00006a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_076', 'participant', now() - interval '35 days'),
+  ('a9e00007-a9e0-a9e0-a9e0-a9e00007a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_077', 'participant', now() - interval '35 days'),
+  ('a9e00008-a9e0-a9e0-a9e0-a9e00008a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_078', 'participant', now() - interval '34 days'),
+  ('a9e00009-a9e0-a9e0-a9e0-a9e00009a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_079', 'participant', now() - interval '34 days'),
+  ('a9e0000a-a9e0-a9e0-a9e0-a9e0000aa9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_080', 'participant', now() - interval '33 days'),
+  ('a9e0000b-a9e0-a9e0-a9e0-a9e0000ba9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_081', 'participant', now() - interval '33 days'),
+  ('a9e0000c-a9e0-a9e0-a9e0-a9e0000ca9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_082', 'participant', now() - interval '32 days'),
+  ('a9e0000d-a9e0-a9e0-a9e0-a9e0000da9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_083', 'participant', now() - interval '32 days'),
+  ('a9e0000e-a9e0-a9e0-a9e0-a9e0000ea9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_084', 'participant', now() - interval '31 days'),
+  ('a9e0000f-a9e0-a9e0-a9e0-a9e0000fa9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_085', 'participant', now() - interval '31 days'),
+  ('a9e00010-a9e0-a9e0-a9e0-a9e00010a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_086', 'participant', now() - interval '30 days'),
+  ('a9e00011-a9e0-a9e0-a9e0-a9e00011a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_087', 'participant', now() - interval '30 days'),
+  ('a9e00012-a9e0-a9e0-a9e0-a9e00012a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_088', 'participant', now() - interval '29 days'),
+  ('a9e00013-a9e0-a9e0-a9e0-a9e00013a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_089', 'participant', now() - interval '28 days'),
+  ('a9e00014-a9e0-a9e0-a9e0-a9e00014a9e0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'user_seed_090', 'participant', now() - interval '27 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- GenAI Goes Local (completed) — 15 participants
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('a9e00015-a9e0-a9e0-a9e0-a9e00015a9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_091', 'participant', now() - interval '58 days'),
+  ('a9e00016-a9e0-a9e0-a9e0-a9e00016a9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_092', 'participant', now() - interval '57 days'),
+  ('a9e00017-a9e0-a9e0-a9e0-a9e00017a9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_093', 'participant', now() - interval '57 days'),
+  ('a9e00018-a9e0-a9e0-a9e0-a9e00018a9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_094', 'participant', now() - interval '56 days'),
+  ('a9e00019-a9e0-a9e0-a9e0-a9e00019a9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_095', 'participant', now() - interval '56 days'),
+  ('a9e0001a-a9e0-a9e0-a9e0-a9e0001aa9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_096', 'participant', now() - interval '55 days'),
+  ('a9e0001b-a9e0-a9e0-a9e0-a9e0001ba9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_097', 'participant', now() - interval '55 days'),
+  ('a9e0001c-a9e0-a9e0-a9e0-a9e0001ca9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_098', 'participant', now() - interval '54 days'),
+  ('a9e0001d-a9e0-a9e0-a9e0-a9e0001da9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_099', 'participant', now() - interval '54 days'),
+  ('a9e0001e-a9e0-a9e0-a9e0-a9e0001ea9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_100', 'participant', now() - interval '53 days'),
+  ('a9e0001f-a9e0-a9e0-a9e0-a9e0001fa9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_101', 'participant', now() - interval '52 days'),
+  ('a9e00020-a9e0-a9e0-a9e0-a9e00020a9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_102', 'participant', now() - interval '52 days'),
+  ('a9e00021-a9e0-a9e0-a9e0-a9e00021a9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_103', 'participant', now() - interval '51 days'),
+  ('a9e00022-a9e0-a9e0-a9e0-a9e00022a9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_104', 'participant', now() - interval '51 days'),
+  ('a9e00023-a9e0-a9e0-a9e0-a9e00023a9e0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'user_seed_105', 'participant', now() - interval '50 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- Generative UI Hackathon (completed) — 18 participants + dev user
+INSERT INTO hackathon_participants (id, hackathon_id, clerk_user_id, role, registered_at)
+VALUES
+  ('a9e00024-a9e0-a9e0-a9e0-a9e00024a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now() - interval '75 days'),
+  ('a9e00025-a9e0-a9e0-a9e0-a9e00025a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_106', 'participant', now() - interval '78 days'),
+  ('a9e00026-a9e0-a9e0-a9e0-a9e00026a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_107', 'participant', now() - interval '77 days'),
+  ('a9e00027-a9e0-a9e0-a9e0-a9e00027a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_108', 'participant', now() - interval '77 days'),
+  ('a9e00028-a9e0-a9e0-a9e0-a9e00028a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_109', 'participant', now() - interval '76 days'),
+  ('a9e00029-a9e0-a9e0-a9e0-a9e00029a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_110', 'participant', now() - interval '76 days'),
+  ('a9e0002a-a9e0-a9e0-a9e0-a9e0002aa9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_111', 'participant', now() - interval '75 days'),
+  ('a9e0002b-a9e0-a9e0-a9e0-a9e0002ba9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_112', 'participant', now() - interval '75 days'),
+  ('a9e0002c-a9e0-a9e0-a9e0-a9e0002ca9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_113', 'participant', now() - interval '74 days'),
+  ('a9e0002d-a9e0-a9e0-a9e0-a9e0002da9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_114', 'participant', now() - interval '74 days'),
+  ('a9e0002e-a9e0-a9e0-a9e0-a9e0002ea9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_115', 'participant', now() - interval '73 days'),
+  ('a9e0002f-a9e0-a9e0-a9e0-a9e0002fa9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_116', 'participant', now() - interval '73 days'),
+  ('a9e00030-a9e0-a9e0-a9e0-a9e00030a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_117', 'participant', now() - interval '72 days'),
+  ('a9e00031-a9e0-a9e0-a9e0-a9e00031a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_118', 'participant', now() - interval '72 days'),
+  ('a9e00032-a9e0-a9e0-a9e0-a9e00032a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_119', 'participant', now() - interval '71 days'),
+  ('a9e00033-a9e0-a9e0-a9e0-a9e00033a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_120', 'participant', now() - interval '71 days'),
+  ('a9e00034-a9e0-a9e0-a9e0-a9e00034a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_121', 'participant', now() - interval '70 days'),
+  ('a9e00035-a9e0-a9e0-a9e0-a9e00035a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_122', 'participant', now() - interval '70 days'),
+  ('a9e00036-a9e0-a9e0-a9e0-a9e00036a9e0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'user_seed_123', 'participant', now() - interval '69 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- AGI HOUSE TEAMS
+-- ============================================================================
+
+-- MCP Agents Hackathon — 5 teams
+INSERT INTO teams (id, hackathon_id, name, captain_clerk_user_id, invite_code, status, created_at, updated_at)
+VALUES
+  ('a9f00001-a9f0-a9f0-a9f0-a9f00001a9f0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'Protocol Pioneers', 'user_seed_071', 'SEED-MCP-001', 'locked', now() - interval '36 days', now() - interval '23 days'),
+  ('a9f00002-a9f0-a9f0-a9f0-a9f00002a9f0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'Server Syndicate', 'user_seed_074', 'SEED-MCP-002', 'locked', now() - interval '35 days', now() - interval '23 days'),
+  ('a9f00003-a9f0-a9f0-a9f0-a9f00003a9f0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'Tool Smiths', 'user_seed_077', 'SEED-MCP-003', 'locked', now() - interval '34 days', now() - interval '23 days'),
+  ('a9f00004-a9f0-a9f0-a9f0-a9f00004a9f0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'Context Crew', 'user_seed_080', 'SEED-MCP-004', 'locked', now() - interval '33 days', now() - interval '23 days'),
+  ('a9f00005-a9f0-a9f0-a9f0-a9f00005a9f0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'Resource Runners', 'user_seed_083', 'SEED-MCP-005', 'locked', now() - interval '32 days', now() - interval '23 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- GenAI Goes Local — 4 teams
+INSERT INTO teams (id, hackathon_id, name, captain_clerk_user_id, invite_code, status, created_at, updated_at)
+VALUES
+  ('a9f00006-a9f0-a9f0-a9f0-a9f00006a9f0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'Edge Lords', 'user_seed_091', 'SEED-LOC-001', 'locked', now() - interval '56 days', now() - interval '44 days'),
+  ('a9f00007-a9f0-a9f0-a9f0-a9f00007a9f0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'Quantized Minds', 'user_seed_094', 'SEED-LOC-002', 'locked', now() - interval '55 days', now() - interval '44 days'),
+  ('a9f00008-a9f0-a9f0-a9f0-a9f00008a9f0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'On-Device AI', 'user_seed_097', 'SEED-LOC-003', 'locked', now() - interval '54 days', now() - interval '44 days'),
+  ('a9f00009-a9f0-a9f0-a9f0-a9f00009a9f0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'Silicon Whisperers', 'user_seed_100', 'SEED-LOC-004', 'locked', now() - interval '53 days', now() - interval '44 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- Generative UI Hackathon — 5 teams
+INSERT INTO teams (id, hackathon_id, name, captain_clerk_user_id, invite_code, status, created_at, updated_at)
+VALUES
+  ('a9f0000a-a9f0-a9f0-a9f0-a9f0000aa9f0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'Pixel Wizards', 'user_seed_106', 'SEED-GUI-001', 'locked', now() - interval '76 days', now() - interval '65 days'),
+  ('a9f0000b-a9f0-a9f0-a9f0-a9f0000ba9f0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'Layout Engine', 'user_seed_109', 'SEED-GUI-002', 'locked', now() - interval '75 days', now() - interval '65 days'),
+  ('a9f0000c-a9f0-a9f0-a9f0-a9f0000ca9f0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'Component Factory', 'user_seed_112', 'SEED-GUI-003', 'locked', now() - interval '74 days', now() - interval '65 days'),
+  ('a9f0000d-a9f0-a9f0-a9f0-a9f0000da9f0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'Render Rebels', 'user_seed_115', 'SEED-GUI-004', 'locked', now() - interval '73 days', now() - interval '65 days'),
+  ('a9f0000e-a9f0-a9f0-a9f0-a9f0000ea9f0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'CSS Alchemists', 'user_seed_118', 'SEED-GUI-005', 'locked', now() - interval '72 days', now() - interval '65 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- AGI HOUSE TEAM ASSIGNMENTS
+-- ============================================================================
+
+-- MCP Agents teams (3 members each, remaining are solo)
+UPDATE hackathon_participants SET team_id = 'a9f00001-a9f0-a9f0-a9f0-a9f00001a9f0' WHERE id IN ('a9e00001-a9e0-a9e0-a9e0-a9e00001a9e0', 'a9e00002-a9e0-a9e0-a9e0-a9e00002a9e0', 'a9e00003-a9e0-a9e0-a9e0-a9e00003a9e0');
+UPDATE hackathon_participants SET team_id = 'a9f00002-a9f0-a9f0-a9f0-a9f00002a9f0' WHERE id IN ('a9e00004-a9e0-a9e0-a9e0-a9e00004a9e0', 'a9e00005-a9e0-a9e0-a9e0-a9e00005a9e0', 'a9e00006-a9e0-a9e0-a9e0-a9e00006a9e0');
+UPDATE hackathon_participants SET team_id = 'a9f00003-a9f0-a9f0-a9f0-a9f00003a9f0' WHERE id IN ('a9e00007-a9e0-a9e0-a9e0-a9e00007a9e0', 'a9e00008-a9e0-a9e0-a9e0-a9e00008a9e0', 'a9e00009-a9e0-a9e0-a9e0-a9e00009a9e0');
+UPDATE hackathon_participants SET team_id = 'a9f00004-a9f0-a9f0-a9f0-a9f00004a9f0' WHERE id IN ('a9e0000a-a9e0-a9e0-a9e0-a9e0000aa9e0', 'a9e0000b-a9e0-a9e0-a9e0-a9e0000ba9e0', 'a9e0000c-a9e0-a9e0-a9e0-a9e0000ca9e0', 'a9e0000d-a9e0-a9e0-a9e0-a9e0000da9e0');
+UPDATE hackathon_participants SET team_id = 'a9f00005-a9f0-a9f0-a9f0-a9f00005a9f0' WHERE id IN ('a9e0000e-a9e0-a9e0-a9e0-a9e0000ea9e0', 'a9e0000f-a9e0-a9e0-a9e0-a9e0000fa9e0', 'a9e00010-a9e0-a9e0-a9e0-a9e00010a9e0');
+-- Participants a9e00011..a9e00014 remain solo
+
+-- GenAI Goes Local teams (3 members each, remaining are solo)
+UPDATE hackathon_participants SET team_id = 'a9f00006-a9f0-a9f0-a9f0-a9f00006a9f0' WHERE id IN ('a9e00015-a9e0-a9e0-a9e0-a9e00015a9e0', 'a9e00016-a9e0-a9e0-a9e0-a9e00016a9e0', 'a9e00017-a9e0-a9e0-a9e0-a9e00017a9e0');
+UPDATE hackathon_participants SET team_id = 'a9f00007-a9f0-a9f0-a9f0-a9f00007a9f0' WHERE id IN ('a9e00018-a9e0-a9e0-a9e0-a9e00018a9e0', 'a9e00019-a9e0-a9e0-a9e0-a9e00019a9e0', 'a9e0001a-a9e0-a9e0-a9e0-a9e0001aa9e0');
+UPDATE hackathon_participants SET team_id = 'a9f00008-a9f0-a9f0-a9f0-a9f00008a9f0' WHERE id IN ('a9e0001b-a9e0-a9e0-a9e0-a9e0001ba9e0', 'a9e0001c-a9e0-a9e0-a9e0-a9e0001ca9e0', 'a9e0001d-a9e0-a9e0-a9e0-a9e0001da9e0');
+UPDATE hackathon_participants SET team_id = 'a9f00009-a9f0-a9f0-a9f0-a9f00009a9f0' WHERE id IN ('a9e0001e-a9e0-a9e0-a9e0-a9e0001ea9e0', 'a9e0001f-a9e0-a9e0-a9e0-a9e0001fa9e0', 'a9e00020-a9e0-a9e0-a9e0-a9e00020a9e0');
+-- Participants a9e00021..a9e00023 remain solo
+
+-- Generative UI teams (3 members each, remaining are solo)
+UPDATE hackathon_participants SET team_id = 'a9f0000a-a9f0-a9f0-a9f0-a9f0000aa9f0' WHERE id IN ('a9e00025-a9e0-a9e0-a9e0-a9e00025a9e0', 'a9e00026-a9e0-a9e0-a9e0-a9e00026a9e0', 'a9e00027-a9e0-a9e0-a9e0-a9e00027a9e0');
+UPDATE hackathon_participants SET team_id = 'a9f0000b-a9f0-a9f0-a9f0-a9f0000ba9f0' WHERE id IN ('a9e00028-a9e0-a9e0-a9e0-a9e00028a9e0', 'a9e00029-a9e0-a9e0-a9e0-a9e00029a9e0', 'a9e0002a-a9e0-a9e0-a9e0-a9e0002aa9e0');
+UPDATE hackathon_participants SET team_id = 'a9f0000c-a9f0-a9f0-a9f0-a9f0000ca9f0' WHERE id IN ('a9e0002b-a9e0-a9e0-a9e0-a9e0002ba9e0', 'a9e0002c-a9e0-a9e0-a9e0-a9e0002ca9e0', 'a9e0002d-a9e0-a9e0-a9e0-a9e0002da9e0');
+UPDATE hackathon_participants SET team_id = 'a9f0000d-a9f0-a9f0-a9f0-a9f0000da9f0' WHERE id IN ('a9e0002e-a9e0-a9e0-a9e0-a9e0002ea9e0', 'a9e0002f-a9e0-a9e0-a9e0-a9e0002fa9e0', 'a9e00030-a9e0-a9e0-a9e0-a9e00030a9e0');
+UPDATE hackathon_participants SET team_id = 'a9f0000e-a9f0-a9f0-a9f0-a9f0000ea9f0' WHERE id IN ('a9e00031-a9e0-a9e0-a9e0-a9e00031a9e0', 'a9e00032-a9e0-a9e0-a9e0-a9e00032a9e0');
+-- Dev user (a9e00024) and participants a9e00033..a9e00036 remain solo
+
+-- ============================================================================
+-- AGI HOUSE SUBMISSIONS
+-- ============================================================================
+
+-- ---- MCP Agents Hackathon (completed) — 5 team + 8 solo = 13 submissions ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  ('a9a00001-a9a0-a9a0-a9a0-a9a00001a9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', NULL, 'a9f00001-a9f0-a9f0-a9f0-a9f00001a9f0',
+   'MCP Gateway', 'Universal MCP server gateway that aggregates multiple tool servers behind a single endpoint with load balancing, caching, and access control. Supports hot-reloading server configs.',
+   'https://github.com/seed/mcp-gateway', 'https://mcp-gateway.demo.dev', 'https://youtube.com/watch?v=seed_mcpgateway',
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a00002-a9a0-a9a0-a9a0-a9a00002a9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', NULL, 'a9f00002-a9f0-a9f0-a9f0-a9f00002a9f0',
+   'MCPilot', 'Autonomous coding agent that chains MCP tool servers for file editing, terminal commands, and browser testing to complete full development tasks from issue descriptions.',
+   'https://github.com/seed/mcpilot', NULL, 'https://youtube.com/watch?v=seed_mcpilot',
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a00003-a9a0-a9a0-a9a0-a9a00003a9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', NULL, 'a9f00003-a9f0-a9f0-a9f0-a9f00003a9f0',
+   'DataBridge MCP', 'MCP server that connects LLMs to live database schemas, enabling natural language queries across Postgres, MySQL, and MongoDB with automatic SQL generation and result formatting.',
+   'https://github.com/seed/databridge-mcp', 'https://databridge.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a00004-a9a0-a9a0-a9a0-a9a00004a9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', NULL, 'a9f00004-a9f0-a9f0-a9f0-a9f00004a9f0',
+   'MCP Observatory', 'Real-time monitoring dashboard for MCP server fleets with request tracing, latency metrics, error tracking, and automatic anomaly detection across tool calls.',
+   'https://github.com/seed/mcp-observatory', 'https://mcp-observatory.demo.dev', 'https://youtube.com/watch?v=seed_mcpobs',
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a00005-a9a0-a9a0-a9a0-a9a00005a9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', NULL, 'a9f00005-a9f0-a9f0-a9f0-a9f00005a9f0',
+   'MCP Marketplace', 'Community marketplace for discovering, sharing, and installing MCP tool servers with one-click setup, ratings, and compatibility checking.',
+   'https://github.com/seed/mcp-marketplace', 'https://mcp-marketplace.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a00006-a9a0-a9a0-a9a0-a9a00006a9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'a9e00011-a9e0-a9e0-a9e0-a9e00011a9e0', NULL,
+   'MCP Debugger', 'Interactive debugger for MCP tool servers that lets you step through tool calls, inspect payloads, mock responses, and replay conversations for testing.',
+   'https://github.com/seed/mcp-debugger', NULL, 'https://youtube.com/watch?v=seed_mcpdebug',
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a00007-a9a0-a9a0-a9a0-a9a00007a9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'a9e00012-a9e0-a9e0-a9e0-a9e00012a9e0', NULL,
+   'GitMCP', 'MCP server that wraps git operations with semantic understanding — review PRs, resolve conflicts, generate changelogs, and manage releases through natural language.',
+   'https://github.com/seed/gitmcp', 'https://gitmcp.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a00008-a9a0-a9a0-a9a0-a9a00008a9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'a9e00013-a9e0-a9e0-a9e0-a9e00013a9e0', NULL,
+   'BrowserMCP', 'Headless browser automation MCP server for web scraping, testing, and interaction with full JavaScript rendering and screenshot capture.',
+   'https://github.com/seed/browsermcp', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a00009-a9a0-a9a0-a9a0-a9a00009a9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'a9e00014-a9e0-a9e0-a9e0-a9e00014a9e0', NULL,
+   'SlackMCP', 'MCP server for Slack workspace management — search messages, summarize channels, draft replies, and manage notifications through tool calls.',
+   'https://github.com/seed/slackmcp', NULL, 'https://youtube.com/watch?v=seed_slackmcp',
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a0000a-a9a0-a9a0-a9a0-a9a0000aa9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'a9d90001-a9d9-a9d9-a9d9-a9d90001a9d9', NULL,
+   'MCP Compose', 'Docker-compose-style orchestration for MCP servers — define multi-server environments in YAML, manage dependencies, and spin up complete tool ecosystems.',
+   'https://github.com/seed/mcp-compose', 'https://mcp-compose.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a0000b-a9a0-a9a0-a9a0-a9a0000ba9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'a9e0000a-a9e0-a9e0-a9e0-a9e0000aa9e0', NULL,
+   'CalendarMCP', 'MCP server for Google Calendar that schedules meetings, finds optimal times across attendees, and manages event conflicts with natural language.',
+   'https://github.com/seed/calendarmcp', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a0000c-a9a0-a9a0-a9a0-a9a0000ca9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'a9e0000d-a9e0-a9e0-a9e0-a9e0000da9e0', NULL,
+   'DesignMCP', 'Figma-integrated MCP server that converts design tokens to code, generates component variations, and syncs design changes with code repositories.',
+   'https://github.com/seed/designmcp', 'https://designmcp.demo.dev', 'https://youtube.com/watch?v=seed_designmcp',
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days'),
+
+  ('a9a0000d-a9a0-a9a0-a9a0-a9a0000da9a0', 'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1', 'a9e00010-a9e0-a9e0-a9e0-a9e00010a9e0', NULL,
+   'CICD-MCP', 'MCP server for CI/CD pipelines — trigger builds, check statuses, read logs, and manage deployments across GitHub Actions, GitLab CI, and Jenkins.',
+   'https://github.com/seed/cicd-mcp', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '22 days', now() - interval '22 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ---- GenAI Goes Local (completed) — 4 team + 6 solo = 10 submissions ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  ('a9a00010-a9a0-a9a0-a9a0-a9a00010a9a0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', NULL, 'a9f00006-a9f0-a9f0-a9f0-a9f00006a9f0',
+   'TinyChat', 'Fully offline chat assistant running quantized Llama 3 on consumer GPUs with 4-bit GPTQ, streaming responses under 200ms first-token latency on an RTX 3060.',
+   'https://github.com/seed/tinychat', 'https://tinychat.demo.dev', 'https://youtube.com/watch?v=seed_tinychat',
+   'submitted', '{}'::jsonb, now() - interval '43 days', now() - interval '43 days'),
+
+  ('a9a00011-a9a0-a9a0-a9a0-a9a00011a9a0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', NULL, 'a9f00007-a9f0-a9f0-a9f0-a9f00007a9f0',
+   'WhisperLocal', 'Real-time speech-to-text running Whisper on-device with speaker diarization, punctuation restoration, and live subtitle overlay for any application.',
+   'https://github.com/seed/whisperlocal', NULL, 'https://youtube.com/watch?v=seed_whisperlocal',
+   'submitted', '{}'::jsonb, now() - interval '43 days', now() - interval '43 days'),
+
+  ('a9a00012-a9a0-a9a0-a9a0-a9a00012a9a0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', NULL, 'a9f00008-a9f0-a9f0-a9f0-a9f00008a9f0',
+   'OfflineTranslate', 'Privacy-first translation app running NLLB-200 locally with support for 50+ languages, document batch processing, and a macOS menu bar interface.',
+   'https://github.com/seed/offline-translate', 'https://offline-translate.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '43 days', now() - interval '43 days'),
+
+  ('a9a00013-a9a0-a9a0-a9a0-a9a00013a9a0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', NULL, 'a9f00009-a9f0-a9f0-a9f0-a9f00009a9f0',
+   'VisionEdge', 'On-device object detection and scene understanding pipeline using quantized YOLOv8 + CLIP for real-time camera analysis without cloud dependencies.',
+   'https://github.com/seed/visionedge', NULL, 'https://youtube.com/watch?v=seed_visionedge',
+   'submitted', '{}'::jsonb, now() - interval '43 days', now() - interval '43 days'),
+
+  ('a9a00014-a9a0-a9a0-a9a0-a9a00014a9a0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'a9e00021-a9e0-a9e0-a9e0-a9e00021a9e0', NULL,
+   'LocalRAG', 'Completely offline RAG pipeline with local embeddings, vector store, and inference — index documents and ask questions without any network access.',
+   'https://github.com/seed/localrag', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '43 days', now() - interval '43 days'),
+
+  ('a9a00015-a9a0-a9a0-a9a0-a9a00015a9a0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'a9e00022-a9e0-a9e0-a9e0-a9e00022a9e0', NULL,
+   'CodeComplete Local', 'VS Code extension providing Copilot-style code completions using a local 7B parameter model with intelligent context windowing and 50ms latency.',
+   'https://github.com/seed/codecomplete-local', NULL, 'https://youtube.com/watch?v=seed_codecomplete',
+   'submitted', '{}'::jsonb, now() - interval '43 days', now() - interval '43 days'),
+
+  ('a9a00016-a9a0-a9a0-a9a0-a9a00016a9a0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'a9e00023-a9e0-a9e0-a9e0-a9e00023a9e0', NULL,
+   'MailSense', 'Local email classifier and summarizer that processes your inbox on-device, categorizes messages, and drafts responses without sending data to any cloud service.',
+   'https://github.com/seed/mailsense', 'https://mailsense.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '43 days', now() - interval '43 days'),
+
+  ('a9a00017-a9a0-a9a0-a9a0-a9a00017a9a0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'a9d90002-a9d9-a9d9-a9d9-a9d90002a9d9', NULL,
+   'PhotoTag Local', 'On-device photo organizer using local vision models for auto-tagging, face clustering, and natural language photo search across your library.',
+   'https://github.com/seed/phototag-local', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '43 days', now() - interval '43 days'),
+
+  ('a9a00018-a9a0-a9a0-a9a0-a9a00018a9a0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'a9e0001e-a9e0-a9e0-a9e0-a9e0001ea9e0', NULL,
+   'EdgeSummarizer', 'Browser extension that summarizes web pages, PDFs, and articles using a local language model — no data leaves your machine.',
+   'https://github.com/seed/edge-summarizer', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '43 days', now() - interval '43 days'),
+
+  ('a9a00019-a9a0-a9a0-a9a0-a9a00019a9a0', 'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2', 'a9e00020-a9e0-a9e0-a9e0-a9e00020a9e0', NULL,
+   'NotesMind', 'Local-first smart notes app with on-device semantic search, auto-linking between notes, and AI-generated summaries powered by a quantized Phi-3 model.',
+   'https://github.com/seed/notesmind', 'https://notesmind.demo.dev', 'https://youtube.com/watch?v=seed_notesmind',
+   'submitted', '{}'::jsonb, now() - interval '43 days', now() - interval '43 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ---- Generative UI Hackathon (completed) — 5 team + 7 solo = 12 submissions ----
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  ('a9a00020-a9a0-a9a0-a9a0-a9a00020a9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', NULL, 'a9f0000a-a9f0-a9f0-a9f0-a9f0000aa9f0',
+   'UIForge', 'AI-powered design system that generates complete, accessible React component libraries from brand guidelines and wireframe sketches.',
+   'https://github.com/seed/uiforge', 'https://uiforge.demo.dev', 'https://youtube.com/watch?v=seed_uiforge',
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days'),
+
+  ('a9a00021-a9a0-a9a0-a9a0-a9a00021a9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', NULL, 'a9f0000b-a9f0-a9f0-a9f0-a9f0000ba9f0',
+   'ChatUI Kit', 'Conversational interface framework where AI responses render as rich, interactive components — charts, forms, carousels, and maps instead of plain text.',
+   'https://github.com/seed/chatui-kit', 'https://chatui-kit.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days'),
+
+  ('a9a00022-a9a0-a9a0-a9a0-a9a00022a9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', NULL, 'a9f0000c-a9f0-a9f0-a9f0-a9f0000ca9f0',
+   'AdaptiveLayout', 'AI layout engine that dynamically rearranges page components based on user behavior, screen size, and content priority scores in real-time.',
+   'https://github.com/seed/adaptive-layout', NULL, 'https://youtube.com/watch?v=seed_adaptlayout',
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days'),
+
+  ('a9a00023-a9a0-a9a0-a9a0-a9a00023a9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', NULL, 'a9f0000d-a9f0-a9f0-a9f0-a9f0000da9f0',
+   'FormGenius', 'Intelligent form builder that generates multi-step forms from natural language descriptions with validation rules, conditional logic, and accessibility baked in.',
+   'https://github.com/seed/formgenius', 'https://formgenius.demo.dev', 'https://youtube.com/watch?v=seed_formgenius',
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days'),
+
+  ('a9a00024-a9a0-a9a0-a9a0-a9a00024a9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', NULL, 'a9f0000e-a9f0-a9f0-a9f0-a9f0000ea9f0',
+   'ThemeAlchemy', 'Real-time theming engine where users describe their preferred aesthetic in natural language and the AI generates complete design tokens, animations, and component variants.',
+   'https://github.com/seed/theme-alchemy', 'https://themealchemy.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days'),
+
+  ('a9a00025-a9a0-a9a0-a9a0-a9a00025a9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'a9e00033-a9e0-a9e0-a9e0-a9e00033a9e0', NULL,
+   'DashGen', 'Generates complete admin dashboards from database schemas — tables, charts, filters, and CRUD forms all created automatically with customizable templates.',
+   'https://github.com/seed/dashgen', 'https://dashgen.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days'),
+
+  ('a9a00026-a9a0-a9a0-a9a0-a9a00026a9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'a9e00034-a9e0-a9e0-a9e0-a9e00034a9e0', NULL,
+   'SketchToCode', 'Converts hand-drawn wireframe sketches to production-ready React and Tailwind components using vision models and code generation.',
+   'https://github.com/seed/sketch-to-code', NULL, 'https://youtube.com/watch?v=seed_sketchcode',
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days'),
+
+  ('a9a00027-a9a0-a9a0-a9a0-a9a00027a9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'a9e00035-a9e0-a9e0-a9e0-a9e00035a9e0', NULL,
+   'EmailCraft', 'AI email template builder that generates responsive HTML emails from text descriptions with inline styles, dark mode support, and client compatibility testing.',
+   'https://github.com/seed/emailcraft', 'https://emailcraft.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days'),
+
+  ('a9a00028-a9a0-a9a0-a9a0-a9a00028a9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'a9e00036-a9e0-a9e0-a9e0-a9e00036a9e0', NULL,
+   'AnimateAI', 'CSS animation generator that creates complex keyframe animations, transitions, and micro-interactions from natural language descriptions.',
+   'https://github.com/seed/animate-ai', NULL, 'https://youtube.com/watch?v=seed_animateai',
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days'),
+
+  ('a9a00029-a9a0-a9a0-a9a0-a9a00029a9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'a9e00024-a9e0-a9e0-a9e0-a9e00024a9e0', NULL,
+   'VoiceUI Builder', 'Generates voice-controlled interfaces — speak your intent and watch components assemble on screen with voice navigation, form filling, and accessibility.',
+   'https://github.com/seed/voiceui-builder', 'https://voiceui.demo.dev', 'https://youtube.com/watch?v=seed_voiceui',
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days'),
+
+  ('a9a0002a-a9a0-a9a0-a9a0-a9a0002aa9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'a9e0002e-a9e0-a9e0-a9e0-a9e0002ea9e0', NULL,
+   'DataVizGen', 'Chart and data visualization generator that creates interactive D3.js visualizations from datasets and natural language descriptions of desired insights.',
+   'https://github.com/seed/datavizgen', 'https://datavizgen.demo.dev', NULL,
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days'),
+
+  ('a9a0002b-a9a0-a9a0-a9a0-a9a0002ba9a0', 'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3', 'a9e00030-a9e0-a9e0-a9e0-a9e00030a9e0', NULL,
+   'LandingAI', 'One-prompt landing page generator that creates fully responsive marketing pages with hero sections, testimonials, pricing tables, and CTAs.',
+   'https://github.com/seed/landingai', NULL, NULL,
+   'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days')
 ON CONFLICT (id) DO NOTHING;

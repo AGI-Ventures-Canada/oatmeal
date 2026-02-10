@@ -59,12 +59,14 @@ export async function getPublicHackathon(
   } as unknown as PublicHackathon
 }
 
-export async function listPublicHackathons(): Promise<
+export async function listPublicHackathons(
+  options?: { search?: string }
+): Promise<
   (Hackathon & { organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark" | "clerk_org_id"> })[]
 > {
   const client = getSupabase() as unknown as SupabaseClient
 
-  const { data, error } = await client
+  let query = client
     .from("hackathons")
     .select(`
       *,
@@ -72,6 +74,15 @@ export async function listPublicHackathons(): Promise<
     `)
     .in("status", ["published", "registration_open", "active", "judging", "completed"])
     .order("starts_at", { ascending: true })
+
+  if (options?.search && options.search.length >= 2) {
+    const sanitized = options.search.replace(/[%_().,\\]/g, "")
+    if (sanitized.length >= 2) {
+      query = query.or(`name.ilike.%${sanitized}%,description.ilike.%${sanitized}%`)
+    }
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error("Failed to list public hackathons:", error)
@@ -83,25 +94,40 @@ export async function listPublicHackathons(): Promise<
   })[]
 }
 
+export type OrganizerCheckResult =
+  | { status: "ok"; hackathon: Hackathon }
+  | { status: "not_found" }
+  | { status: "not_authorized" }
+
 export async function getHackathonByIdForOrganizer(
   hackathonId: string,
   tenantId: string
 ): Promise<Hackathon | null> {
+  const result = await checkHackathonOrganizer(hackathonId, tenantId)
+  return result.status === "ok" ? result.hackathon : null
+}
+
+export async function checkHackathonOrganizer(
+  hackathonId: string,
+  tenantId: string
+): Promise<OrganizerCheckResult> {
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data, error } = await client
     .from("hackathons")
     .select("*")
     .eq("id", hackathonId)
-    .eq("tenant_id", tenantId)
     .single()
 
-  if (error) {
-    console.error("Failed to get hackathon for organizer:", error)
-    return null
+  if (error || !data) {
+    return { status: "not_found" }
   }
 
-  return data as unknown as Hackathon
+  if (data.tenant_id !== tenantId) {
+    return { status: "not_authorized" }
+  }
+
+  return { status: "ok", hackathon: data as unknown as Hackathon }
 }
 
 export async function getHackathonByIdWithFullData(

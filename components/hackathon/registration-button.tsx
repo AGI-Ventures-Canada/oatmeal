@@ -11,6 +11,7 @@ import type { HackathonStatus } from "@/lib/db/hackathon-types"
 interface RegistrationButtonProps {
   hackathonSlug: string
   status: HackathonStatus
+  endsAt: string | null
   registrationOpensAt: string | null
   registrationClosesAt: string | null
   maxParticipants: number | null
@@ -18,9 +19,13 @@ interface RegistrationButtonProps {
   isRegistered: boolean
 }
 
+const blockedStatuses: HackathonStatus[] = ["draft", "archived", "completed", "judging"]
+const openStatuses: HackathonStatus[] = ["registration_open", "active"]
+
 export function RegistrationButton({
   hackathonSlug,
   status,
+  endsAt,
   registrationOpensAt,
   registrationClosesAt,
   maxParticipants,
@@ -43,16 +48,6 @@ export function RegistrationButton({
     )
   }
 
-  if (!isSignedIn) {
-    return (
-      <Button asChild size="lg">
-        <Link href={`/sign-in?redirect_url=${encodeURIComponent(pathname)}`}>
-          Sign in to Register
-        </Link>
-      </Button>
-    )
-  }
-
   if (isRegistered) {
     return (
       <Button disabled variant="secondary" size="lg">
@@ -65,8 +60,9 @@ export function RegistrationButton({
   const now = new Date()
   const opensAt = registrationOpensAt ? new Date(registrationOpensAt) : null
   const closesAt = registrationClosesAt ? new Date(registrationClosesAt) : null
+  const eventEndsAt = endsAt ? new Date(endsAt) : null
 
-  if (status === "draft" || status === "archived") {
+  if (blockedStatuses.includes(status)) {
     return (
       <Button disabled variant="secondary" size="lg">
         <Lock className="size-4" />
@@ -75,24 +71,34 @@ export function RegistrationButton({
     )
   }
 
-  if (opensAt && closesAt) {
-    if (now < opensAt) {
-      return (
-        <Button disabled variant="secondary" size="lg">
-          <CalendarClock className="size-4" />
-          Opens {opensAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-        </Button>
-      )
-    }
-    if (now > closesAt) {
-      return (
-        <Button disabled variant="secondary" size="lg">
-          <Lock className="size-4" />
-          Registration Closed
-        </Button>
-      )
-    }
-  } else if (status !== "registration_open" && status !== "active") {
+  if (eventEndsAt && now > eventEndsAt) {
+    return (
+      <Button disabled variant="secondary" size="lg">
+        <Lock className="size-4" />
+        Event Ended
+      </Button>
+    )
+  }
+
+  if (opensAt && now < opensAt) {
+    return (
+      <Button disabled variant="secondary" size="lg">
+        <CalendarClock className="size-4" />
+        Opens {opensAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+      </Button>
+    )
+  }
+
+  if (closesAt && now > closesAt) {
+    return (
+      <Button disabled variant="secondary" size="lg">
+        <Lock className="size-4" />
+        Registration Closed
+      </Button>
+    )
+  }
+
+  if (!opensAt && !closesAt && !openStatuses.includes(status)) {
     if (status === "published") {
       return (
         <Button disabled variant="secondary" size="lg">
@@ -105,6 +111,16 @@ export function RegistrationButton({
       <Button disabled variant="secondary" size="lg">
         <Lock className="size-4" />
         Registration Closed
+      </Button>
+    )
+  }
+
+  if (!isSignedIn) {
+    return (
+      <Button asChild size="lg">
+        <Link href={`/sign-in?redirect_url=${encodeURIComponent(pathname)}`}>
+          Sign in to Register
+        </Link>
       </Button>
     )
   }
@@ -125,6 +141,7 @@ export function RegistrationButton({
       already_registered: "You're already registered for this event.",
       registration_not_open: "Registration is not currently open.",
       registration_closed: "Registration has closed.",
+      event_ended: "This event has ended.",
       at_capacity: "This event has reached maximum capacity.",
     }
     return errorMessages[code] || fallback

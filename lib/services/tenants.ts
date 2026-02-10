@@ -37,7 +37,7 @@ export async function getOrCreateTenant(
     .single()
 
   if (error) {
-    console.error("Failed to create org tenant:", error)
+    console.error("Failed to create org tenant:", error.message, error.code, error.details)
     const { data: retried } = await getSupabase()
       .from("tenants")
       .select("*")
@@ -71,7 +71,7 @@ export async function getOrCreatePersonalTenant(
     .single()
 
   if (error) {
-    console.error("Failed to create personal tenant:", error)
+    console.error("Failed to create personal tenant:", error.message, error.code, error.details)
     const { data: retried } = await getSupabase()
       .from("tenants")
       .select("*")

@@ -21,6 +21,7 @@ mock.module("@/lib/services/public-hackathons", () => ({
   getPublicHackathon: mockGetPublicHackathon,
   listPublicHackathons: mock(() => Promise.resolve([])),
   getHackathonByIdForOrganizer: mock(() => Promise.resolve(null)),
+  checkHackathonOrganizer: mock(() => Promise.resolve({ status: "not_found" })),
   getHackathonByIdWithFullData: mock(() => Promise.resolve(null)),
   getHackathonByIdWithAccess: mock(() => Promise.resolve(null)),
   updateHackathonSettings: mock(() => Promise.resolve(null)),
@@ -188,6 +189,26 @@ describe("Public Registration Routes", () => {
 
       expect(res.status).toBe(400)
       expect(data.code).toBe("at_capacity")
+    })
+
+    it("returns 400 when event has ended", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_123" })
+      mockGetPublicHackathon.mockResolvedValue(mockHackathon)
+      mockRegisterForHackathon.mockResolvedValue({
+        success: false,
+        error: "This event has ended",
+        code: "event_ended",
+      })
+
+      const res = await app.handle(
+        new Request("http://localhost/api/public/hackathons/test-hackathon/register", {
+          method: "POST",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.code).toBe("event_ended")
     })
 
     it("returns 400 when registration has closed", async () => {

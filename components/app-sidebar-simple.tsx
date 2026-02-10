@@ -11,7 +11,6 @@ import {
   UserCog,
   BookOpen,
   ChevronLeft,
-  ChevronRight,
   Key,
   Clock,
   Webhook,
@@ -43,15 +42,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
 } from "@/components/ui/sidebar"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,12 +54,12 @@ import {
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { CreateHackathonDrawer } from "@/components/hackathon/create-hackathon-drawer"
 
-const navItems = [
+const mainItems = [
   { title: "Dashboard", href: "/home", icon: Home },
   { title: "Browse", href: "/browse", icon: Search },
 ]
 
-const hackathonSubItems = [
+const hackathonItems = [
   { title: "Participating", href: "/home?tab=participating", icon: Users },
   { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
   { title: "Sponsoring", href: "/home?tab=sponsored", icon: Star },
@@ -76,6 +67,7 @@ const hackathonSubItems = [
 
 const manageItems = [
   { title: "Settings", href: "/settings", icon: Settings },
+  { title: "API Docs", href: "/docs", icon: BookOpen },
 ]
 
 const settingsItems = [
@@ -86,7 +78,7 @@ const settingsItems = [
   { title: "Integrations", href: "/settings/integrations", icon: Plug },
 ]
 
-export function AppSidebar() {
+export function AppSidebarSimple() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -119,6 +111,13 @@ export function AppSidebar() {
   const isSettingsView = pathname.startsWith("/settings")
   const currentTab = searchParams.get("tab")
 
+  function isActive(item: { href: string }) {
+    const url = new URL(item.href, "http://x")
+    const tab = url.searchParams.get("tab")
+    if (tab) return pathname === "/home" && currentTab === tab
+    return pathname.startsWith(url.pathname)
+  }
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -126,15 +125,15 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="h-auto py-2">
+                <SidebarMenuButton className="h-auto py-2.5">
                   {organization?.imageUrl ? (
                     <img
                       src={organization.imageUrl}
                       alt={organization.name || "Organization"}
-                      className="size-6 rounded object-cover"
+                      className="size-7 rounded object-cover"
                     />
                   ) : (
-                    <div className="flex size-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
+                    <div className="flex size-7 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
                       {organization?.name?.charAt(0).toUpperCase() || user?.firstName?.charAt(0)?.toUpperCase() || "P"}
                     </div>
                   )}
@@ -216,10 +215,10 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild className="h-10">
                     <Link href="/home">
                       <ChevronLeft />
-                      <span className="font-semibold">Settings</span>
+                      <span className="font-semibold text-sm">Settings</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -229,10 +228,10 @@ export function AppSidebar() {
               <SidebarMenu>
                 {settingsItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={pathname === item.href}>
+                    <SidebarMenuButton asChild isActive={pathname === item.href} className="h-10">
                       <Link href={item.href}>
                         <item.icon />
-                        <span>{item.title}</span>
+                        <span className="text-sm">{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -243,58 +242,45 @@ export function AppSidebar() {
         ) : (
           <>
             <SidebarGroup>
-              <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {navItems.map((item) => (
+                  {mainItems.map((item) => (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                      <SidebarMenuButton asChild isActive={isActive(item)} className="h-10">
                         <Link href={item.href}>
                           <item.icon />
-                          <span>{item.title}</span>
+                          <span className="text-sm">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
-                  <Collapsible defaultOpen className="group/collapsible">
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton>
-                          <Trophy />
-                          <span>Hackathons</span>
-                          <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {hackathonSubItems.map((item) => {
-                            const itemTab = new URL(item.href, "http://x").searchParams.get("tab")
-                            const isActive = pathname === "/home" && currentTab === itemTab
-                            return (
-                              <SidebarMenuSubItem key={item.href}>
-                                <SidebarMenuSubButton asChild isActive={isActive}>
-                                  <Link href={item.href}>
-                                    <item.icon />
-                                    <span>{item.title}</span>
-                                  </Link>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            )
-                          })}
-                          <SidebarMenuSubItem>
-                            <CreateHackathonDrawer
-                              trigger={
-                                <SidebarMenuSubButton>
-                                  <Plus />
-                                  <span>Create Hackathon</span>
-                                </SidebarMenuSubButton>
-                              }
-                            />
-                          </SidebarMenuSubItem>
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Hackathons</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {hackathonItems.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={isActive(item)} className="h-10">
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span className="text-sm">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
-                  </Collapsible>
+                  ))}
+                  <SidebarMenuItem>
+                    <CreateHackathonDrawer
+                      trigger={
+                        <SidebarMenuButton className="h-10">
+                          <Plus />
+                          <span className="text-sm">Create Hackathon</span>
+                        </SidebarMenuButton>
+                      }
+                    />
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -304,29 +290,14 @@ export function AppSidebar() {
                 <SidebarMenu>
                   {manageItems.map((item) => (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                      <SidebarMenuButton asChild isActive={isActive(item)} className="h-10">
                         <Link href={item.href}>
                           <item.icon />
-                          <span>{item.title}</span>
+                          <span className="text-sm">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-            <SidebarGroup>
-              <SidebarGroupLabel>Resources</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href="/docs">
-                        <BookOpen />
-                        <span>Documentation</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -338,15 +309,15 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="h-auto py-2">
+                <SidebarMenuButton className="h-auto py-2.5">
                   {user?.imageUrl ? (
                     <img
                       src={user.imageUrl}
                       alt={user.fullName || "User"}
-                      className="size-6 rounded-full"
+                      className="size-7 rounded-full"
                     />
                   ) : (
-                    <div className="flex size-6 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                    <div className="flex size-7 items-center justify-center rounded-full bg-muted text-xs font-semibold">
                       {user?.firstName?.charAt(0) || user?.emailAddresses[0]?.emailAddress?.charAt(0).toUpperCase() || "U"}
                     </div>
                   )}

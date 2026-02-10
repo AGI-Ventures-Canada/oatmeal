@@ -35,7 +35,7 @@ export default async function SettingsPage({ params }: PageProps) {
     <div className="space-y-6">
       <PageHeader
         breadcrumbs={[
-          { label: "Hackathons", href: "/hackathons" },
+          { label: "Dashboard", href: "/home" },
           { label: hackathon.name, href: `/hackathons/${hackathon.id}` },
           { label: "Settings" },
         ]}

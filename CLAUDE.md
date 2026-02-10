@@ -125,6 +125,10 @@ bunx shadcn@latest add <component-name>
 
 Check existing components before creating new ones.
 
+### Sidebar
+
+The dashboard sidebar is `components/app-sidebar-simple.tsx` — a custom component, **not** the shadcn/ui sidebar primitives in `/components/ui`. Always modify `app-sidebar-simple.tsx` for sidebar changes.
+
 ### shadcn/ui Styling
 
 **CRITICAL: Use shadcn components as-is. Do not add custom styling.**

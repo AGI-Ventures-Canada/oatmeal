@@ -8,7 +8,8 @@ type ParticipantWithHackathon = HackathonParticipant & {
 }
 
 export async function listParticipatingHackathons(
-  clerkUserId: string
+  clerkUserId: string,
+  options?: { search?: string }
 ): Promise<(Hackathon & { role: string })[]> {
   const client = getSupabase() as unknown as SupabaseClient
   const { data, error } = await client
@@ -21,22 +22,39 @@ export async function listParticipatingHackathons(
     return []
   }
 
-  const hackathons = (data as unknown as ParticipantWithHackathon[])
+  let hackathons = (data as unknown as ParticipantWithHackathon[])
     .filter((r) => r.hackathons)
     .map((r) => ({ ...r.hackathons, role: r.role }))
+
+  if (options?.search && options.search.length >= 2) {
+    const q = options.search.toLowerCase()
+    hackathons = hackathons.filter(
+      (h) => h.name.toLowerCase().includes(q) || h.description?.toLowerCase().includes(q)
+    )
+  }
 
   return sortByStartDate(hackathons)
 }
 
 export async function listOrganizedHackathons(
-  tenantId: string
+  tenantId: string,
+  options?: { search?: string }
 ): Promise<Hackathon[]> {
   const client = getSupabase() as unknown as SupabaseClient
-  const { data, error } = await client
+  let query = client
     .from("hackathons")
     .select("*")
     .eq("tenant_id", tenantId)
     .order("starts_at", { ascending: true, nullsFirst: false })
+
+  if (options?.search && options.search.length >= 2) {
+    const sanitized = options.search.replace(/[%_().,\\]/g, "")
+    if (sanitized.length >= 2) {
+      query = query.or(`name.ilike.%${sanitized}%,description.ilike.%${sanitized}%`)
+    }
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error("Failed to list organized hackathons:", error)
@@ -52,7 +70,8 @@ type SponsorWithHackathon = {
 }
 
 export async function listSponsoredHackathons(
-  tenantId: string
+  tenantId: string,
+  options?: { search?: string }
 ): Promise<Hackathon[]> {
   const client = getSupabase() as unknown as SupabaseClient
   const { data, error } = await client
@@ -65,9 +84,16 @@ export async function listSponsoredHackathons(
     return []
   }
 
-  const hackathons = (data as unknown as SponsorWithHackathon[])
+  let hackathons = (data as unknown as SponsorWithHackathon[])
     .filter((r) => r.hackathons)
     .map((r) => r.hackathons)
+
+  if (options?.search && options.search.length >= 2) {
+    const q = options.search.toLowerCase()
+    hackathons = hackathons.filter(
+      (h) => h.name.toLowerCase().includes(q) || h.description?.toLowerCase().includes(q)
+    )
+  }
 
   return sortByStartDate(hackathons)
 }

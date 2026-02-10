@@ -5,11 +5,10 @@ import { resolvePageTenant } from "@/lib/services/tenants"
 import { getHackathonByIdWithFullData, getHackathonByIdWithAccess } from "@/lib/services/public-hackathons"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Pencil } from "lucide-react"
+import { ExternalLink } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -44,7 +43,7 @@ export default async function HackathonPage({ params }: PageProps) {
       <div className="space-y-6">
         <PageHeader
           breadcrumbs={[
-            { label: "Hackathons", href: "/hackathons" },
+            { label: "Dashboard", href: "/home" },
             { label: accessCheck.name },
           ]}
           title={accessCheck.name}
@@ -80,7 +79,7 @@ export default async function HackathonPage({ params }: PageProps) {
     <div className="space-y-6">
       <PageHeader
         breadcrumbs={[
-          { label: "Hackathons", href: "/hackathons" },
+          { label: "Dashboard", href: "/home" },
           { label: hackathon!.name },
         ]}
         title={hackathon!.name}
@@ -94,13 +93,6 @@ export default async function HackathonPage({ params }: PageProps) {
           />
         }
       />
-
-      <Alert>
-        <Pencil className="size-4" />
-        <AlertDescription>
-          Hover over any section and click to edit inline. Changes are saved automatically.
-        </AlertDescription>
-      </Alert>
 
       <div className="rounded-lg border overflow-hidden">
         <HackathonPreviewClient hackathon={hackathon!} isEditable={true} />

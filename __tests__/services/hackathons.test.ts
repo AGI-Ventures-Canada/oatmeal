@@ -10,6 +10,7 @@ import {
 const {
   listParticipatingHackathons,
   listOrganizedHackathons,
+  listSponsoredHackathons,
   isUserRegistered,
   getParticipantCount,
   getRegistrationInfo,
@@ -105,6 +106,36 @@ describe("Hackathons Service", () => {
       expect(result[0].name).toBe("Second")
       expect(result[0].role).toBe("judge")
     })
+
+    it("filters by search in memory", async () => {
+      const chain = createChainableMock({
+        data: [
+          { hackathon_id: "h1", role: "participant", hackathons: { ...mockHackathon, name: "React Hack" } },
+          { hackathon_id: "h2", role: "participant", hackathons: { ...mockHackathon, id: "h2", name: "Vue Hack" } },
+        ],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listParticipatingHackathons("user_123", { search: "react" })
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe("React Hack")
+    })
+
+    it("searches description too", async () => {
+      const chain = createChainableMock({
+        data: [
+          { hackathon_id: "h1", role: "participant", hackathons: { ...mockHackathon, name: "Generic", description: "Build with React" } },
+        ],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listParticipatingHackathons("user_123", { search: "react" })
+
+      expect(result).toHaveLength(1)
+    })
   })
 
   describe("listOrganizedHackathons", () => {
@@ -140,6 +171,90 @@ describe("Hackathons Service", () => {
       const result = await listOrganizedHackathons("t_err")
 
       expect(result).toEqual([])
+    })
+
+    it("applies search filter when search option provided", async () => {
+      const chain = createChainableMock({
+        data: [mockHackathon],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listOrganizedHackathons("t1", { search: "test" })
+
+      expect(result).toHaveLength(1)
+      expect(chain.or).toHaveBeenCalled()
+    })
+
+    it("skips search filter for short queries", async () => {
+      const chain = createChainableMock({
+        data: [mockHackathon],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listOrganizedHackathons("t1", { search: "a" })
+
+      expect(result).toHaveLength(1)
+      expect(chain.or).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("listSponsoredHackathons", () => {
+    it("returns sponsored hackathons", async () => {
+      const chain = createChainableMock({
+        data: [{ hackathon_id: "h1", hackathons: mockHackathon }],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listSponsoredHackathons("t1")
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe("Test Hackathon")
+    })
+
+    it("returns empty array on error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "DB error" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listSponsoredHackathons("t_err")
+
+      expect(result).toEqual([])
+    })
+
+    it("filters by search in memory", async () => {
+      const chain = createChainableMock({
+        data: [
+          { hackathon_id: "h1", hackathons: { ...mockHackathon, name: "React Hack" } },
+          { hackathon_id: "h2", hackathons: { ...mockHackathon, id: "h2", name: "Vue Hack" } },
+        ],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listSponsoredHackathons("t1", { search: "react" })
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe("React Hack")
+    })
+
+    it("filters out rows where hackathons is null", async () => {
+      const chain = createChainableMock({
+        data: [
+          { hackathon_id: "h1", hackathons: null },
+          { hackathon_id: "h2", hackathons: mockHackathon },
+        ],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listSponsoredHackathons("t1")
+
+      expect(result).toHaveLength(1)
     })
   })
 
@@ -329,6 +444,22 @@ describe("Hackathons Service", () => {
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.code).toBe("already_registered")
+      }
+    })
+
+    it("returns error when event has ended", async () => {
+      setMockRpcImplementation(() =>
+        Promise.resolve({
+          data: [{ success: false, participant_id: null, error_code: "event_ended", error_message: "This event has ended" }],
+          error: null,
+        })
+      )
+
+      const result = await registerForHackathon("h1", "user_123")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("event_ended")
       }
     })
 
