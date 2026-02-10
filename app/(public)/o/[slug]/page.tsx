@@ -74,7 +74,7 @@ export default async function OrgPage({ params }: PageProps) {
               </Card>
             ) : (
               <Tabs defaultValue="all" className="w-full">
-                <TabsList className="mb-6">
+                <TabsList variant="line" className="mb-6">
                   <TabsTrigger value="all">
                     All ({totalUniqueEvents})
                   </TabsTrigger>

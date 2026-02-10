@@ -74,7 +74,7 @@ export function HackathonTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-      <TabsList>
+      <TabsList variant="line">
         <TabsTrigger value="participating">
           Participating
           {myHackathons.length > 0 && (
