@@ -110,6 +110,38 @@ type Tenant = Tables<"tenants">;
 - **Migration order matters**: Files run sequentially by timestamp
 - **Seed data**: Goes in `supabase/seed.sql`, not in migrations
 
+## Seed Data Organization
+
+Seed data is organized in modular files under `supabase/seeds/` for maintainability:
+
+```
+supabase/seeds/
+├── 01_tenants.sql              # Base tenants (orgs and users)
+├── 02_api_keys_and_audit.sql   # API keys and audit logs
+├── 03_hackathons_demo.sql      # Demo org hackathons
+├── 04_hackathons_agi_ventures.sql
+├── 05_hackathons_agi_house.sql
+├── 06_hackathons_other_orgs.sql
+├── 07_sponsors.sql             # Hackathon sponsors
+├── 08_participants_dev_user.sql
+├── 09_participants_seed.sql
+├── 10_participants_agi_house.sql
+├── 11_teams.sql
+├── 12_teams_agi_house.sql
+├── 13_team_assignments.sql
+├── 14-19_submissions_*.sql     # Project submissions
+```
+
+**Files are numbered by foreign key dependencies** - tenants first, then hackathons, then participants, etc.
+
+**Editing seed data:**
+
+1. Edit the appropriate file in `supabase/seeds/`
+2. Regenerate seed.sql: `cat supabase/seeds/*.sql > supabase/seed.sql`
+3. Test with `supabase db reset`
+
+**Important:** Supabase runs `seed.sql` directly - it doesn't support psql `\ir` includes. The `seed.sql` file must contain the concatenated content.
+
 ## When Creating New Tables
 
 Always add RLS with DENY ALL policy so application can bypass using service key:
