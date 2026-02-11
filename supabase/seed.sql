@@ -84,11 +84,11 @@ VALUES
 3. You may use any AI APIs and frameworks
 4. Projects must include a working demo
 5. Judging criteria: Innovation, Technical Execution, Impact, Presentation',
-    now() + interval '30 days',
-    now() + interval '32 days',
-    now() - interval '7 days',
-    now() + interval '28 days',
-    'published',
+    now() - interval '16 days',
+    now() - interval '14 days',
+    now() - interval '45 days',
+    now() - interval '18 days',
+    'completed',
     1,
     4,
     true,
@@ -128,11 +128,11 @@ VALUES
 3. 24-hour hackathon
 4. Free API credits provided
 5. Winner gets $5,000 and featured integration',
-    now() + interval '14 days',
-    now() + interval '15 days',
-    now() - interval '3 days',
-    now() + interval '13 days',
-    'published',
+    now() - interval '32 days',
+    now() - interval '31 days',
+    now() - interval '50 days',
+    now() - interval '34 days',
+    'completed',
     1,
     3,
     true,
@@ -380,11 +380,11 @@ VALUES
 4. Multiple categories: visual art, music, writing, interactive media
 5. Winners receive $8,000 CAD and gallery exhibition opportunities
 6. Open to artists, musicians, writers, and developers',
-    now() + interval '8 days',
-    now() + interval '10 days',
-    now() - interval '10 days',
-    now() + interval '6 days',
-    'published',
+    now() - interval '62 days',
+    now() - interval '60 days',
+    now() - interval '80 days',
+    now() - interval '64 days',
+    'completed',
     1,
     3,
     true,
@@ -488,3 +488,213 @@ VALUES
   ('d5d5d5d5-d5d5-d5d5-d5d5-d5d5d5d5d5d5', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'user_39BZw9GPM79s3lcPIZn8tDLtoQg', 'participant', now())
 ON CONFLICT (id) DO NOTHING;
 
+-- ============================================================================
+-- TEAMS (For completed hackathon submissions)
+-- ============================================================================
+INSERT INTO teams (id, hackathon_id, name, captain_clerk_user_id, invite_code, status, created_at, updated_at)
+VALUES
+  -- AI Art & Creative Expression Contest teams
+  ('e1010101-0101-0101-0101-010101010101', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Synesthesia Labs', 'user_alice_chen_001', 'SYNTH-2026-ART1', 'locked', now() - interval '65 days', now() - interval '60 days'),
+  ('e2020202-0202-0202-0202-020202020202', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Haiku Hackers', 'user_maya_patel_002', 'HAIKU-2026-ART2', 'locked', now() - interval '65 days', now() - interval '61 days'),
+  ('e3030303-0303-0303-0303-030303030303', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Neural Harmonics', 'user_james_wilson_003', 'NEURAL-2026-ART3', 'locked', now() - interval '65 days', now() - interval '62 days'),
+  ('e4040404-0404-0404-0404-040404040404', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Dream Team VR', 'user_emma_zhang_004', 'DREAM-2026-ART4', 'locked', now() - interval '65 days', now() - interval '60 days'),
+  -- AI Agents Hackathon 2026 teams
+  ('fa1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'AutoPilot Crew', 'user_david_park_005', 'AUTO-2026-AGT1', 'locked', now() - interval '20 days', now() - interval '14 days'),
+  ('fa2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a2a', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Code Reviewers United', 'user_kevin_chen_006', 'CODE-2026-AGT2', 'locked', now() - interval '20 days', now() - interval '15 days'),
+  ('fa3a3a3a-3a3a-3a3a-3a3a-3a3a3a3a3a3a', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Research Collective', 'user_michelle_torres_007', 'RSRCH-2026-AGT3', 'locked', now() - interval '20 days', now() - interval '14 days'),
+  ('fa4a4a4a-4a4a-4a4a-4a4a-4a4a4a4a4a4a', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Bug Hunters', 'user_ryan_obrien_008', 'DEBUG-2026-AGT4', 'locked', now() - interval '20 days', now() - interval '15 days'),
+  -- Search & Discovery Hack teams
+  ('fc1c1c1c-1c1c-1c1c-1c1c-1c1c1c1c1c1c', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'Doc Searchers', 'user_alex_kumar_009', 'DOCS-2026-SRC1', 'locked', now() - interval '35 days', now() - interval '31 days'),
+  ('fc2c2c2c-2c2c-2c2c-2c2c-2c2c2c2c2c2c', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'Graph Explorers', 'user_sofia_rodriguez_010', 'GRAPH-2026-SRC2', 'locked', now() - interval '35 days', now() - interval '32 days'),
+  ('fc3c3c3c-3c3c-3c3c-3c3c-3c3c3c3c3c3c', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'Smart Shoppers', 'user_nina_patel_011', 'SHOP-2026-SRC3', 'locked', now() - interval '35 days', now() - interval '31 days'),
+  ('fc4c4c4c-4c4c-4c4c-4c4c-4c4c4c4c4c4c', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'Legal Eagles', 'user_hannah_white_012', 'LEGAL-2026-SRC4', 'locked', now() - interval '35 days', now() - interval '32 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- PROJECT SUBMISSIONS (For completed hackathons)
+-- ============================================================================
+INSERT INTO submissions (id, hackathon_id, participant_id, team_id, title, description, github_url, live_app_url, demo_video_url, status, metadata, created_at, updated_at)
+VALUES
+  (
+    '51515151-5151-5151-5151-515151515151',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    NULL,
+    'e1010101-0101-0101-0101-010101010101',
+    'Synesthesia Canvas',
+    'An AI-powered art generator that transforms music into visual art in real-time. Users can upload or stream any song, and our model analyzes tempo, mood, instrumentation, and harmonic structure to generate a corresponding abstract painting. Each song produces a unique, shareable artwork.',
+    'https://github.com/example/synesthesia-canvas',
+    'https://synesthesia-canvas.demo.com',
+    'https://youtube.com/watch?v=demo1',
+    'submitted',
+    '{"category": "interactive_media", "tools": ["Stable Diffusion", "Spotify API", "WebGL"], "team_members": ["Alice Chen", "Bob Martinez"]}'::jsonb,
+    now() - interval '60 days',
+    now() - interval '58 days'
+  ),
+  (
+    '52525252-5252-5252-5252-525252525252',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    NULL,
+    'e2020202-0202-0202-0202-020202020202',
+    'Poetic Lens',
+    'An AI camera app that generates haiku poetry inspired by photos you take. Point your camera at anything - a sunset, a cup of coffee, a busy street - and our fine-tuned LLM creates a unique haiku capturing the essence of the moment. Supports 12 languages.',
+    'https://github.com/example/poetic-lens',
+    'https://poetic-lens.app',
+    'https://youtube.com/watch?v=demo2',
+    'submitted',
+    '{"category": "writing", "tools": ["Claude API", "React Native", "Vision API"], "team_members": ["Maya Patel"]}'::jsonb,
+    now() - interval '61 days',
+    now() - interval '59 days'
+  ),
+  (
+    '53535353-5353-5353-5353-535353535353',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    NULL,
+    'e3030303-0303-0303-0303-030303030303',
+    'NeuralBeats Studio',
+    'A collaborative music composition tool where humans and AI jam together. Play a melody, and the AI responds with harmonies, counter-melodies, or rhythmic accompaniment in your chosen genre. Export finished tracks as MIDI or audio files.',
+    'https://github.com/example/neuralbeats-studio',
+    'https://neuralbeats.studio',
+    'https://youtube.com/watch?v=demo3',
+    'submitted',
+    '{"category": "music", "tools": ["Magenta.js", "Web Audio API", "TensorFlow.js"], "team_members": ["James Wilson", "Sarah Kim", "Raj Gupta"]}'::jsonb,
+    now() - interval '62 days',
+    now() - interval '58 days'
+  ),
+  (
+    '54545454-5454-5454-5454-545454545454',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    NULL,
+    'e4040404-0404-0404-0404-040404040404',
+    'DreamWeaver VR',
+    'A VR experience that generates immersive 3D dreamscapes from text descriptions. Describe your dream - "a floating city made of crystals above a purple ocean" - and step into it within seconds. Explore AI-generated worlds that respond to your voice commands.',
+    'https://github.com/example/dreamweaver-vr',
+    NULL,
+    'https://youtube.com/watch?v=demo4',
+    'submitted',
+    '{"category": "visual_art", "tools": ["Gaussian Splatting", "Unity", "GPT-4", "Quest 3"], "team_members": ["Emma Zhang", "Carlos Rivera"]}'::jsonb,
+    now() - interval '60 days',
+    now() - interval '60 days'
+  ),
+  -- AI Agents Hackathon 2026 submissions
+  (
+    'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    NULL,
+    'fa1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a',
+    'AutoPilot PM',
+    'An AI project manager that autonomously breaks down tasks, assigns priorities, schedules sprints, and sends daily standups. Integrates with Jira, Linear, and Slack to keep your team on track without manual intervention.',
+    'https://github.com/example/autopilot-pm',
+    'https://autopilot-pm.demo.com',
+    'https://youtube.com/watch?v=agents1',
+    'submitted',
+    '{"tools": ["Claude API", "LangGraph", "Slack SDK"], "team_members": ["David Park", "Lisa Wong"]}'::jsonb,
+    now() - interval '14 days',
+    now() - interval '14 days'
+  ),
+  (
+    'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    NULL,
+    'fa2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a2a',
+    'CodeReview Agent',
+    'A multi-agent system for automated code review. One agent analyzes code quality, another checks security vulnerabilities, a third suggests performance optimizations, and an orchestrator combines their feedback into actionable PR comments.',
+    'https://github.com/example/codereview-agent',
+    'https://codereview-agent.app',
+    'https://youtube.com/watch?v=agents2',
+    'submitted',
+    '{"tools": ["OpenAI Assistants", "GitHub API", "SonarQube"], "team_members": ["Kevin Chen", "Priya Sharma", "Tom Anderson"]}'::jsonb,
+    now() - interval '15 days',
+    now() - interval '14 days'
+  ),
+  (
+    'a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    NULL,
+    'fa3a3a3a-3a3a-3a3a-3a3a-3a3a3a3a3a3a',
+    'ResearchBuddy',
+    'An autonomous research assistant that takes a topic, searches academic papers, synthesizes findings, identifies gaps in the literature, and generates a structured research summary with proper citations.',
+    'https://github.com/example/research-buddy',
+    'https://research-buddy.io',
+    'https://youtube.com/watch?v=agents3',
+    'submitted',
+    '{"tools": ["Anthropic Claude", "Semantic Scholar API", "Zotero"], "team_members": ["Michelle Torres"]}'::jsonb,
+    now() - interval '14 days',
+    now() - interval '13 days'
+  ),
+  (
+    'a4a4a4a4-a4a4-a4a4-a4a4-a4a4a4a4a4a4',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    NULL,
+    'fa4a4a4a-4a4a-4a4a-4a4a-4a4a4a4a4a4a',
+    'DebugDetective',
+    'An AI debugging agent that reproduces bugs from issue reports, isolates the root cause through systematic testing, proposes fixes, and validates them against your test suite. Turns bug reports into PRs automatically.',
+    'https://github.com/example/debug-detective',
+    NULL,
+    'https://youtube.com/watch?v=agents4',
+    'submitted',
+    '{"tools": ["GPT-4", "pytest", "Docker"], "team_members": ["Ryan O''Brien", "Yuki Tanaka"]}'::jsonb,
+    now() - interval '15 days',
+    now() - interval '14 days'
+  ),
+  -- Search & Discovery Hack submissions
+  (
+    'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    NULL,
+    'fc1c1c1c-1c1c-1c1c-1c1c-1c1c1c1c1c1c',
+    'TavilyDocs',
+    'A documentation search engine that understands natural language queries and returns precise answers from your codebase docs. Ask "how do I authenticate?" and get the exact code snippet, not just links.',
+    'https://github.com/example/tavily-docs',
+    'https://tavily-docs.demo.com',
+    'https://youtube.com/watch?v=search1',
+    'submitted',
+    '{"tools": ["Tavily API", "Supabase pgvector", "Next.js"], "team_members": ["Alex Kumar"]}'::jsonb,
+    now() - interval '31 days',
+    now() - interval '31 days'
+  ),
+  (
+    'c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    NULL,
+    'fc2c2c2c-2c2c-2c2c-2c2c-2c2c2c2c2c2c',
+    'NewsGraph Explorer',
+    'A knowledge graph visualization tool that maps connections between news articles, people, organizations, and events. Uses Tavily to fetch real-time news and builds an interactive exploration interface.',
+    'https://github.com/example/newsgraph-explorer',
+    'https://newsgraph.app',
+    'https://youtube.com/watch?v=search2',
+    'submitted',
+    '{"tools": ["Tavily API", "Neo4j", "D3.js", "React"], "team_members": ["Sofia Rodriguez", "Marcus Johnson"]}'::jsonb,
+    now() - interval '32 days',
+    now() - interval '31 days'
+  ),
+  (
+    'c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    NULL,
+    'fc3c3c3c-3c3c-3c3c-3c3c-3c3c3c3c3c3c',
+    'ShopSmart Search',
+    'A product comparison engine that searches across multiple e-commerce sites, extracts specs and reviews, and presents side-by-side comparisons with AI-generated summaries of pros and cons.',
+    'https://github.com/example/shopsmart-search',
+    'https://shopsmart-search.com',
+    'https://youtube.com/watch?v=search3',
+    'submitted',
+    '{"tools": ["Tavily API", "Claude", "Puppeteer"], "team_members": ["Nina Patel", "Chris Lee", "Jordan Smith"]}'::jsonb,
+    now() - interval '31 days',
+    now() - interval '31 days'
+  ),
+  (
+    'c4c4c4c4-c4c4-c4c4-c4c4-c4c4c4c4c4c4',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    NULL,
+    'fc4c4c4c-4c4c-4c4c-4c4c-4c4c4c4c4c4c',
+    'LegalLens',
+    'A legal research tool that searches case law and statutes using natural language. Ask a legal question and get relevant precedents, organized by jurisdiction and recency, with plain-English explanations.',
+    'https://github.com/example/legal-lens',
+    NULL,
+    'https://youtube.com/watch?v=search4',
+    'submitted',
+    '{"tools": ["Tavily API", "GPT-4", "Elasticsearch"], "team_members": ["Hannah White"]}'::jsonb,
+    now() - interval '32 days',
+    now() - interval '31 days'
+  )
+ON CONFLICT (id) DO NOTHING;
