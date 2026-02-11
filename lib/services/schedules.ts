@@ -205,9 +205,8 @@ export async function markScheduleRun(scheduleId: string): Promise<Schedule | nu
 export function calculateNextRun(
   frequency: ScheduleFrequency,
   cronExpression?: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _timezone: string = "UTC",
-  runTime?: string // HH:MM format
+  runTime?: string
 ): Date | null {
   const now = new Date()
 

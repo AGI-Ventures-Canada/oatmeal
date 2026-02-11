@@ -74,9 +74,7 @@ export const Reasoning = memo(
           setStartTime(Date.now());
         }
       } else if (startTime !== null) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDuration(Math.ceil((Date.now() - startTime) / MS_IN_S));
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setStartTime(null);
       }
     }, [isStreaming, startTime, setDuration]);

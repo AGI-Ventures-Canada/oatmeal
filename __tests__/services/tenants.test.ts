@@ -5,8 +5,6 @@ import {
   resetSupabaseMocks,
   setMockFromImplementation,
   resetClerkMocks,
-  mockAuth,
-  mockClerkClient,
 } from "../lib/supabase-mock"
 
 const {
