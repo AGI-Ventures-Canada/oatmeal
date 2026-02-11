@@ -1476,9 +1476,7 @@ VALUES
   ('30143014-3014-3014-3014-301430143014', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', NULL, '200d200d-200d-200d-200d-200d200d200d',
    'SonicForge', 'AI music composition tool that generates full arrangements from hummed melodies with customizable genre and instrumentation.',
    'https://github.com/seed/sonicforge', NULL, 'https://youtube.com/watch?v=seed_sonicforge',
-   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
-
-  ('30153015-3015-3015-3015-301530153015', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', NULL, '200e200e-200e-200e-200e-200e200e200e',
+   'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),  ('30153015-3015-3015-3015-301530153015', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', NULL, '200e200e-200e-200e-200e-200e200e200e',
    'StoryWeaver', 'Interactive fiction engine where AI generates branching narratives with consistent characters and visual scene illustrations.',
    'https://github.com/seed/storyweaver', 'https://storyweaver.demo.dev', NULL,
    'submitted', '{}'::jsonb, now() - interval '62 days', now() - interval '60 days'),
@@ -2032,6 +2030,7 @@ VALUES
    'https://github.com/seed/landingai', NULL, NULL,
    'submitted', '{}'::jsonb, now() - interval '64 days', now() - interval '64 days')
 ON CONFLICT (id) DO NOTHING;
+
 -- TEAMS (For completed hackathon submissions)
 -- ============================================================================
 INSERT INTO teams (id, hackathon_id, name, captain_clerk_user_id, invite_code, status, created_at, updated_at)
