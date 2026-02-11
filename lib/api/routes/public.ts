@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia"
-import { auth } from "@clerk/nextjs/server"
+import { auth, clerkClient } from "@clerk/nextjs/server"
 import { exchangeCodeForTokens, saveIntegration, getProviderConfig } from "@/lib/integrations/oauth"
 import { getPublicHackathon, listPublicHackathons } from "@/lib/services/public-hackathons"
 import { registerForHackathon, getParticipantCount, isUserRegistered } from "@/lib/services/hackathons"
@@ -151,7 +151,20 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
-    const result = await registerForHackathon(hackathon.id, userId)
+    let teamName: string | undefined
+    try {
+      const client = await clerkClient()
+      const user = await client.users.getUser(userId)
+      const displayName = user.firstName
+        ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
+        : user.username || user.emailAddresses?.[0]?.emailAddress?.split("@")[0]
+      if (displayName) {
+        teamName = `${displayName}'s Team`
+      }
+    } catch {
+    }
+
+    const result = await registerForHackathon(hackathon.id, userId, teamName)
 
     if (!result.success) {
       const statusCode = result.code === "already_registered" ? 409 : 400
@@ -161,7 +174,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
-    return { success: true, participantId: result.participantId }
+    return { success: true, participantId: result.participantId, teamId: result.teamId }
   })
   .get("/hackathons/:slug/submissions/me", async ({ params }) => {
     const { userId } = await auth()
@@ -507,4 +520,82 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         },
       })),
     }
+  })
+  .get("/invitations/:token", async ({ params }) => {
+    const { getInvitationByToken } = await import("@/lib/services/team-invitations")
+    const invitation = await getInvitationByToken(params.token)
+
+    if (!invitation) {
+      return new Response(
+        JSON.stringify({ error: "Invitation not found", code: "not_found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const now = new Date()
+    const isExpired = new Date(invitation.expires_at) < now
+
+    return {
+      id: invitation.id,
+      status: isExpired && invitation.status === "pending" ? "expired" : invitation.status,
+      teamName: invitation.team.name,
+      hackathonName: invitation.hackathon.name,
+      hackathonSlug: invitation.hackathon.slug,
+      hackathonStatus: invitation.hackathon.status,
+      email: invitation.email,
+      expiresAt: invitation.expires_at,
+    }
+  })
+  .post("/invitations/:token/accept", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { acceptTeamInvitation } = await import("@/lib/services/team-invitations")
+    const result = await acceptTeamInvitation(params.token, userId)
+
+    if (!result.success) {
+      const statusCode = result.code === "not_found" ? 404 : 400
+      return new Response(
+        JSON.stringify({ error: result.error, code: result.code }),
+        { status: statusCode, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getPublicHackathonById } = await import("@/lib/services/public-hackathons")
+    const hackathon = await getPublicHackathonById(result.hackathonId)
+
+    return { success: true, teamId: result.teamId, hackathonSlug: hackathon?.slug || null }
+  })
+  .post("/invitations/:token/decline", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const client = await clerkClient()
+    const user = await client.users.getUser(userId)
+    const userEmail = user.primaryEmailAddress?.emailAddress
+
+    const { declineTeamInvitation } = await import("@/lib/services/team-invitations")
+    const result = await declineTeamInvitation(params.token, userEmail)
+
+    if (!result.success) {
+      const statusCode = result.code === "not_found" ? 404 : 403
+      return new Response(
+        JSON.stringify({ error: result.error, code: result.code }),
+        { status: statusCode, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    return { success: result.success }
   })

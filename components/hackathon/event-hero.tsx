@@ -1,109 +1,147 @@
-import { OptimizedImage } from "@/components/ui/optimized-image"
-import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import { Clock, Moon, Sun, Calendar, CalendarDays, Zap } from "lucide-react"
-import type { HackathonStatus, TenantProfile, Submission } from "@/lib/db/hackathon-types"
-import { RegistrationButton } from "./registration-button"
-import { SubmissionButton } from "./submission-button"
-import { CountdownBadge } from "./countdown-badge"
-import { getTimelineState } from "@/lib/utils/timeline"
-import { formatDateRange } from "@/lib/utils/format"
+import { OptimizedImage } from "@/components/ui/optimized-image";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Clock, Moon, Sun, Calendar, CalendarDays, Zap } from "lucide-react";
+import type {
+  HackathonStatus,
+  TenantProfile,
+  Submission,
+} from "@/lib/db/hackathon-types";
+import { RegistrationButton } from "./registration-button";
+import { SubmissionButton } from "./submission-button";
+import { CountdownBadge } from "./countdown-badge";
+import { getTimelineState } from "@/lib/utils/timeline";
+import { formatDateRange } from "@/lib/utils/format";
 
 interface RegistrationProps {
-  hackathonSlug: string
-  status: HackathonStatus
-  endsAt: string | null
-  registrationOpensAt: string | null
-  registrationClosesAt: string | null
-  maxParticipants: number | null
-  participantCount: number
-  isRegistered: boolean
-  submission?: Submission | null
+  hackathonSlug: string;
+  status: HackathonStatus;
+  endsAt: string | null;
+  registrationOpensAt: string | null;
+  registrationClosesAt: string | null;
+  maxParticipants: number | null;
+  participantCount: number;
+  isRegistered: boolean;
+  submission?: Submission | null;
+  onRegistrationSuccess?: () => void;
 }
 
 interface EventHeroProps {
-  name: string
-  bannerUrl: string | null
-  status: HackathonStatus
-  startsAt: string | null
-  endsAt: string | null
-  registrationOpensAt?: string | null
-  registrationClosesAt?: string | null
-  organizer: Pick<TenantProfile, "name" | "slug" | "logo_url">
-  onDatesClick?: () => void
-  registrationProps?: RegistrationProps
-  isRegistered?: boolean
+  name: string;
+  bannerUrl: string | null;
+  status: HackathonStatus;
+  startsAt: string | null;
+  endsAt: string | null;
+  registrationOpensAt?: string | null;
+  registrationClosesAt?: string | null;
+  organizer: Pick<TenantProfile, "name" | "slug" | "logo_url">;
+  onDatesClick?: () => void;
+  registrationProps?: RegistrationProps;
+  isRegistered?: boolean;
+  hideRegistrationButton?: boolean;
+  tabsSlot?: React.ReactNode;
 }
 
-function formatTimeRange(startsAt: string | null, endsAt: string | null): string | null {
-  if (!startsAt || !endsAt) return null
+function formatTimeRange(
+  startsAt: string | null,
+  endsAt: string | null,
+): string | null {
+  if (!startsAt || !endsAt) return null;
 
-  const start = new Date(startsAt)
-  const end = new Date(endsAt)
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
 
   const timeFormat: Intl.DateTimeFormatOptions = {
     hour: "numeric",
     minute: "2-digit",
-  }
+  };
 
-  const startTime = start.toLocaleTimeString("en-US", timeFormat)
-  const endTime = end.toLocaleTimeString("en-US", timeFormat)
+  const startTime = start.toLocaleTimeString("en-US", timeFormat);
+  const endTime = end.toLocaleTimeString("en-US", timeFormat);
 
-  return `${startTime} - ${endTime}`
+  return `${startTime} - ${endTime}`;
 }
 
 interface DurationInfo {
-  label: string
-  icon: typeof Clock
-  description: string
+  label: string;
+  icon: typeof Clock;
+  description: string;
 }
 
-function getDurationInfo(startsAt: string | null, endsAt: string | null): DurationInfo | null {
-  if (!startsAt || !endsAt) return null
+function getDurationInfo(
+  startsAt: string | null,
+  endsAt: string | null,
+): DurationInfo | null {
+  if (!startsAt || !endsAt) return null;
 
-  const start = new Date(startsAt)
-  const end = new Date(endsAt)
-  const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+  const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
 
-  const startDay = start.getDate()
-  const endDay = end.getDate()
-  const crossesMidnight = endDay !== startDay || end.getMonth() !== start.getMonth()
+  const startDay = start.getDate();
+  const endDay = end.getDate();
+  const crossesMidnight =
+    endDay !== startDay || end.getMonth() !== start.getMonth();
 
-  if (hours <= 0) return null
+  if (hours <= 0) return null;
 
   if (hours < 3) {
-    return { label: "Quick Sprint", icon: Zap, description: "Under 3 hours" }
+    return { label: "Quick Sprint", icon: Zap, description: "Under 3 hours" };
   }
 
   if (hours < 6) {
-    return { label: "Half Day", icon: Sun, description: `${Math.round(hours)} hours` }
+    return {
+      label: "Half Day",
+      icon: Sun,
+      description: `${Math.round(hours)} hours`,
+    };
   }
 
   if (hours < 12) {
-    return { label: "Day Event", icon: Sun, description: `${Math.round(hours)} hours` }
+    return {
+      label: "Day Event",
+      icon: Sun,
+      description: `${Math.round(hours)} hours`,
+    };
   }
 
   if (hours < 24 && crossesMidnight) {
-    return { label: "Overnight", icon: Moon, description: `${Math.round(hours)} hours` }
+    return {
+      label: "Overnight",
+      icon: Moon,
+      description: `${Math.round(hours)} hours`,
+    };
   }
 
   if (hours < 24) {
-    return { label: "Full Day", icon: Sun, description: `${Math.round(hours)} hours` }
+    return {
+      label: "Full Day",
+      icon: Sun,
+      description: `${Math.round(hours)} hours`,
+    };
   }
 
   if (hours < 48) {
-    return { label: "Overnight", icon: Moon, description: "~1 day" }
+    return { label: "Overnight", icon: Moon, description: "~1 day" };
   }
 
   if (hours < 72) {
-    return { label: "Weekend", icon: Calendar, description: "2-3 days" }
+    return { label: "Weekend", icon: Calendar, description: "2-3 days" };
   }
 
   if (hours < 168) {
-    return { label: "Week Long", icon: CalendarDays, description: `${Math.round(hours / 24)} days` }
+    return {
+      label: "Week Long",
+      icon: CalendarDays,
+      description: `${Math.round(hours / 24)} days`,
+    };
   }
 
-  return { label: "Multi-Week", icon: CalendarDays, description: `${Math.round(hours / 24)} days` }
+  return {
+    label: "Multi-Week",
+    icon: CalendarDays,
+    description: `${Math.round(hours / 24)} days`,
+  };
 }
 
 export function EventHero({
@@ -118,18 +156,26 @@ export function EventHero({
   onDatesClick,
   registrationProps,
   isRegistered = false,
+  hideRegistrationButton = false,
+  tabsSlot,
 }: EventHeroProps) {
-  const durationInfo = getDurationInfo(startsAt, endsAt)
-  const timeRange = formatTimeRange(startsAt, endsAt)
+  const durationInfo = getDurationInfo(startsAt, endsAt);
+  const timeRange = formatTimeRange(startsAt, endsAt);
   const timelineState = getTimelineState({
     status,
     registration_opens_at: registrationOpensAt,
     registration_closes_at: registrationClosesAt,
     starts_at: startsAt,
     ends_at: endsAt,
-  })
+  });
 
-  const showCountdown = isRegistered && startsAt && new Date(startsAt) > new Date() && status !== "active" && status !== "completed" && status !== "judging"
+  const showCountdown =
+    isRegistered &&
+    startsAt &&
+    new Date(startsAt) > new Date() &&
+    status !== "active" &&
+    status !== "completed" &&
+    status !== "judging";
 
   const datesContent = (
     <div className="flex flex-col gap-1">
@@ -148,7 +194,7 @@ export function EventHero({
         </p>
       )}
     </div>
-  )
+  );
 
   return (
     <div className="relative">
@@ -189,8 +235,8 @@ export function EventHero({
               <button
                 type="button"
                 onClick={(e) => {
-                  e.stopPropagation()
-                  onDatesClick()
+                  e.stopPropagation();
+                  onDatesClick();
                 }}
                 className="group w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80"
               >
@@ -229,28 +275,32 @@ export function EventHero({
               </span>
             </div>
             {registrationProps && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <RegistrationButton
-                  hackathonSlug={registrationProps.hackathonSlug}
-                  status={status}
-                  endsAt={registrationProps.endsAt}
-                  registrationOpensAt={registrationProps.registrationOpensAt}
-                  registrationClosesAt={registrationProps.registrationClosesAt}
-                  maxParticipants={registrationProps.maxParticipants}
-                  participantCount={registrationProps.participantCount}
-                  isRegistered={registrationProps.isRegistered}
-                />
+              <div className="flex flex-wrap items-center gap-2">
+                {!hideRegistrationButton && !isRegistered && (
+                  <RegistrationButton
+                    hackathonSlug={registrationProps.hackathonSlug}
+                    status={status}
+                    endsAt={registrationProps.endsAt}
+                    registrationOpensAt={registrationProps.registrationOpensAt}
+                    registrationClosesAt={registrationProps.registrationClosesAt}
+                    maxParticipants={registrationProps.maxParticipants}
+                    participantCount={registrationProps.participantCount}
+                    isRegistered={registrationProps.isRegistered}
+                    onRegistrationSuccess={registrationProps.onRegistrationSuccess}
+                  />
+                )}
                 <SubmissionButton
                   hackathonSlug={registrationProps.hackathonSlug}
                   status={registrationProps.status}
                   isRegistered={registrationProps.isRegistered}
                   submission={registrationProps.submission ?? null}
                 />
+                {tabsSlot}
               </div>
             )}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

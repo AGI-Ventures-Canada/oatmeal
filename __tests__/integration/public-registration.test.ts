@@ -3,7 +3,7 @@ import { describe, expect, it, mock, beforeEach } from "bun:test"
 const mockAuth = mock(() => Promise.resolve({ userId: null }))
 const mockGetPublicHackathon = mock(() => Promise.resolve(null))
 const mockRegisterForHackathon = mock(() =>
-  Promise.resolve({ success: true, participantId: "p1" })
+  Promise.resolve({ success: true, participantId: "p1", teamId: "t1" })
 )
 const mockGetParticipantCount = mock(() => Promise.resolve(42))
 const mockIsUserRegistered = mock(() => Promise.resolve(false))
@@ -14,11 +14,22 @@ mock.module("@clerk/nextjs/server", () => ({
     organizations: {
       getOrganization: mock(() => Promise.resolve({ name: "Test Org" })),
     },
+    users: {
+      getUser: mock(() => Promise.resolve({
+        firstName: "Test",
+        lastName: "User",
+        username: null,
+        emailAddresses: [],
+      })),
+    },
   })),
 }))
 
+const mockGetPublicHackathonById = mock(() => Promise.resolve(null))
+
 mock.module("@/lib/services/public-hackathons", () => ({
   getPublicHackathon: mockGetPublicHackathon,
+  getPublicHackathonById: mockGetPublicHackathonById,
   listPublicHackathons: mock(() => Promise.resolve([])),
   getHackathonByIdForOrganizer: mock(() => Promise.resolve(null)),
   checkHackathonOrganizer: mock(() => Promise.resolve({ status: "not_found" })),
@@ -75,6 +86,7 @@ describe("Public Registration Routes", () => {
   beforeEach(() => {
     mockAuth.mockReset()
     mockGetPublicHackathon.mockReset()
+    mockGetPublicHackathonById.mockReset()
     mockRegisterForHackathon.mockReset()
     mockGetParticipantCount.mockReset()
     mockIsUserRegistered.mockReset()
@@ -117,6 +129,7 @@ describe("Public Registration Routes", () => {
       mockRegisterForHackathon.mockResolvedValue({
         success: true,
         participantId: "p123",
+        teamId: "t123",
       })
 
       const res = await app.handle(
@@ -129,6 +142,7 @@ describe("Public Registration Routes", () => {
       expect(res.status).toBe(200)
       expect(data.success).toBe(true)
       expect(data.participantId).toBe("p123")
+      expect(data.teamId).toBe("t123")
     })
 
     it("returns 409 when already registered", async () => {
@@ -237,6 +251,7 @@ describe("Public Registration Routes", () => {
       mockRegisterForHackathon.mockResolvedValue({
         success: true,
         participantId: "p789",
+        teamId: "t789",
       })
 
       await app.handle(
@@ -245,7 +260,7 @@ describe("Public Registration Routes", () => {
         })
       )
 
-      expect(mockRegisterForHackathon).toHaveBeenCalledWith("h1", "user_456")
+      expect(mockRegisterForHackathon).toHaveBeenCalledWith("h1", "user_456", "Test User's Team")
     })
   })
 

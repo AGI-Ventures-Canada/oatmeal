@@ -2,6 +2,7 @@ import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Hackathon, HackathonParticipant } from "@/lib/db/hackathon-types"
 import { sortByStartDate } from "@/lib/utils/format"
+import { clerkClient } from "@clerk/nextjs/server"
 
 type ParticipantWithHackathon = HackathonParticipant & {
   hackathons: Hackathon
@@ -253,18 +254,20 @@ export async function getRegistrationInfo(
 }
 
 type RegisterResult =
-  | { success: true; participantId: string }
+  | { success: true; participantId: string; teamId: string }
   | { success: false; error: string; code: string }
 
 export async function registerForHackathon(
   hackathonId: string,
-  clerkUserId: string
+  clerkUserId: string,
+  teamName?: string
 ): Promise<RegisterResult> {
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data, error } = await client.rpc("register_for_hackathon", {
     p_hackathon_id: hackathonId,
     p_clerk_user_id: clerkUserId,
+    p_team_name: teamName ?? null,
   })
 
   if (error) {
@@ -278,12 +281,129 @@ export async function registerForHackathon(
   }
 
   if (result.success) {
-    return { success: true, participantId: result.participant_id }
+    return { success: true, participantId: result.participant_id, teamId: result.team_id }
   }
 
   return {
     success: false,
     error: result.error_message || "Failed to register",
     code: result.error_code || "unknown",
+  }
+}
+
+export type TeamMember = {
+  clerkUserId: string
+  displayName: string | null
+  role: "participant" | "judge" | "mentor" | "organizer"
+  isCaptain: boolean
+  registeredAt: string
+}
+
+export type ParticipantTeamInfo = {
+  team: {
+    id: string
+    name: string
+    status: "forming" | "locked" | "disbanded"
+    inviteCode: string
+    captainClerkUserId: string
+  }
+  members: TeamMember[]
+  pendingInvitations: {
+    id: string
+    email: string
+    expiresAt: string
+    createdAt: string
+  }[]
+  isCaptain: boolean
+} | null
+
+export async function getParticipantTeamInfo(
+  hackathonId: string,
+  clerkUserId: string
+): Promise<ParticipantTeamInfo> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: participant } = await client
+    .from("hackathon_participants")
+    .select("team_id")
+    .eq("hackathon_id", hackathonId)
+    .eq("clerk_user_id", clerkUserId)
+    .maybeSingle()
+
+  if (!participant?.team_id) {
+    return null
+  }
+
+  const [teamResult, membersResult, invitationsResult] = await Promise.all([
+    client
+      .from("teams")
+      .select("id, name, status, invite_code, captain_clerk_user_id")
+      .eq("id", participant.team_id)
+      .single(),
+    client
+      .from("hackathon_participants")
+      .select("clerk_user_id, role, registered_at")
+      .eq("team_id", participant.team_id)
+      .order("registered_at", { ascending: true }),
+    client
+      .from("team_invitations")
+      .select("id, email, expires_at, created_at")
+      .eq("team_id", participant.team_id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false }),
+  ])
+
+  if (teamResult.error || !teamResult.data) {
+    console.error("Failed to get team:", teamResult.error)
+    return null
+  }
+
+  const team = teamResult.data
+  const memberData = membersResult.data ?? []
+
+  const memberUserIds = memberData.map((m) => m.clerk_user_id)
+  const userDisplayNames: Record<string, string | null> = {}
+
+  if (memberUserIds.length > 0) {
+    try {
+      const client = await clerkClient()
+      const users = await client.users.getUserList({ userId: memberUserIds })
+      for (const user of users.data) {
+        const displayName = user.firstName
+          ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
+          : user.username || null
+        userDisplayNames[user.id] = displayName
+      }
+    } catch {
+      // Silently fail - displayName will be null
+    }
+  }
+
+  const members = memberData.map((m) => ({
+    clerkUserId: m.clerk_user_id,
+    displayName: userDisplayNames[m.clerk_user_id] || null,
+    role: m.role as TeamMember["role"],
+    isCaptain: m.clerk_user_id === team.captain_clerk_user_id,
+    registeredAt: m.registered_at,
+  }))
+
+  const pendingInvitations = (invitationsResult.data ?? []).map((inv) => ({
+    id: inv.id,
+    email: inv.email,
+    expiresAt: inv.expires_at,
+    createdAt: inv.created_at,
+  }))
+
+  return {
+    team: {
+      id: team.id,
+      name: team.name,
+      status: team.status,
+      inviteCode: team.invite_code,
+      captainClerkUserId: team.captain_clerk_user_id,
+    },
+    members,
+    pendingInvitations,
+    isCaptain: team.captain_clerk_user_id === clerkUserId,
   }
 }

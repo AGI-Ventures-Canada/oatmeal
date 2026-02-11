@@ -294,6 +294,39 @@ Before making changes:
 3. Push to feature branch: `git push -u origin feature/your-feature-name`
 4. Create PR to merge into `staging`
 
+### All PRs Target Staging
+
+**All pull requests must target `staging`, never `main`.** The `main` branch is only updated via merges from `staging` after testing.
+
+```bash
+gh pr create --base staging --draft --title "feat: your feature" --body "Description"
+```
+
+### Rebase Feature Branches
+
+**Keep feature branches clean with only branch-specific commits.** Before creating a PR or pushing updates, rebase onto the latest `staging`:
+
+```bash
+git fetch origin
+git rebase origin/staging
+```
+
+This ensures:
+- PR only shows commits related to the feature
+- No merge commits cluttering history
+- Easy to review changes in isolation
+
+If conflicts occur during rebase, resolve them and continue:
+```bash
+git add .
+git rebase --continue
+```
+
+After rebasing, force-push to update the remote branch:
+```bash
+git push --force-with-lease
+```
+
 ### Check PR Status Before Pushing
 
 ```bash
@@ -305,7 +338,7 @@ If PR is `MERGED`, create a new feature branch for additional changes.
 ### Create PRs as Drafts
 
 ```bash
-gh pr create --draft --title "feat: your feature" --body "Description"
+gh pr create --base staging --draft --title "feat: your feature" --body "Description"
 gh pr ready  # When ready for review
 ```
 

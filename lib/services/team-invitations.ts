@@ -1,0 +1,315 @@
+import { supabase as getSupabase } from "@/lib/db/client"
+import type { TeamInvitation } from "@/lib/db/hackathon-types"
+import { randomBytes } from "crypto"
+
+const INVITATION_EXPIRY_DAYS = 7
+const INVITATION_EXPIRY_MS = INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000
+
+export type CreateInvitationInput = {
+  teamId: string
+  hackathonId: string
+  email: string
+  invitedByClerkUserId: string
+}
+
+export type CreateInvitationResult =
+  | { success: true; invitation: TeamInvitation }
+  | { success: false; error: string; code: string }
+
+export type AcceptInvitationResult =
+  | { success: true; teamId: string; hackathonId: string }
+  | { success: false; error: string; code: string }
+
+export type InvitationWithDetails = TeamInvitation & {
+  team: { name: string }
+  hackathon: { name: string; slug: string; status: string }
+}
+
+export async function createTeamInvitation(
+  input: CreateInvitationInput
+): Promise<CreateInvitationResult> {
+  const client = getSupabase()
+
+  const { data: team, error: teamError } = await client
+    .from("teams")
+    .select("id, hackathon_id, captain_clerk_user_id, status")
+    .eq("id", input.teamId)
+    .eq("hackathon_id", input.hackathonId)
+    .single()
+
+  if (teamError || !team) {
+    return { success: false, error: "Team not found", code: "team_not_found" }
+  }
+
+  if (team.captain_clerk_user_id !== input.invitedByClerkUserId) {
+    return { success: false, error: "Only team captain can invite members", code: "not_captain" }
+  }
+
+  if (team.status === "locked") {
+    return { success: false, error: "Team is locked", code: "team_locked" }
+  }
+
+  if (team.status === "disbanded") {
+    return { success: false, error: "Team has been disbanded", code: "team_disbanded" }
+  }
+
+  const { data: hackathon, error: hackathonError } = await client
+    .from("hackathons")
+    .select("id, status, ends_at, max_team_size")
+    .eq("id", input.hackathonId)
+    .single()
+
+  if (hackathonError || !hackathon) {
+    return { success: false, error: "Hackathon not found", code: "hackathon_not_found" }
+  }
+
+  if (hackathon.status === "completed" || hackathon.status === "archived") {
+    return { success: false, error: "Hackathon has ended", code: "hackathon_ended" }
+  }
+
+  const { count: memberCount } = await client
+    .from("hackathon_participants")
+    .select("*", { count: "exact", head: true })
+    .eq("team_id", input.teamId)
+
+  const { count: pendingCount } = await client
+    .from("team_invitations")
+    .select("*", { count: "exact", head: true })
+    .eq("team_id", input.teamId)
+    .eq("status", "pending")
+
+  const totalPotential = (memberCount ?? 0) + (pendingCount ?? 0) + 1
+  if (hackathon.max_team_size && totalPotential > hackathon.max_team_size) {
+    return { success: false, error: "Team would exceed maximum size", code: "team_full" }
+  }
+
+  const { data: existing } = await client
+    .from("team_invitations")
+    .select("id")
+    .eq("team_id", input.teamId)
+    .eq("email", input.email.toLowerCase())
+    .eq("status", "pending")
+    .maybeSingle()
+
+  if (existing) {
+    return { success: false, error: "Invitation already sent to this email", code: "already_invited" }
+  }
+
+  const token = randomBytes(32).toString("base64url")
+
+  const { data: invitation, error: insertError } = await client
+    .from("team_invitations")
+    .insert({
+      team_id: input.teamId,
+      hackathon_id: input.hackathonId,
+      email: input.email.toLowerCase(),
+      token,
+      invited_by_clerk_user_id: input.invitedByClerkUserId,
+      status: "pending",
+      expires_at: new Date(Date.now() + INVITATION_EXPIRY_MS).toISOString(),
+    })
+    .select()
+    .single()
+
+  if (insertError) {
+    console.error("Failed to create invitation:", insertError)
+    return { success: false, error: "Failed to create invitation", code: "insert_failed" }
+  }
+
+  return { success: true, invitation: invitation as TeamInvitation }
+}
+
+export async function getInvitationByToken(
+  token: string
+): Promise<InvitationWithDetails | null> {
+  const client = getSupabase()
+
+  const { data, error } = await client
+    .from("team_invitations")
+    .select(`
+      *,
+      teams!inner(name),
+      hackathons!inner(name, slug, status)
+    `)
+    .eq("token", token)
+    .single()
+
+  if (error || !data) {
+    return null
+  }
+
+  const team = data.teams as unknown as { name: string }
+  const hackathon = data.hackathons as unknown as { name: string; slug: string; status: string }
+
+  return {
+    ...data,
+    team: { name: team.name },
+    hackathon: {
+      name: hackathon.name,
+      slug: hackathon.slug,
+      status: hackathon.status,
+    },
+  } as InvitationWithDetails
+}
+
+export async function acceptTeamInvitation(
+  token: string,
+  clerkUserId: string
+): Promise<AcceptInvitationResult> {
+  const client = getSupabase()
+
+  const { data, error } = await client.rpc("accept_team_invitation", {
+    p_token: token,
+    p_clerk_user_id: clerkUserId,
+  })
+
+  if (error) {
+    console.error("Failed to accept invitation:", error)
+    return { success: false, error: "Failed to accept invitation", code: "rpc_failed" }
+  }
+
+  const result = data?.[0]
+  if (!result) {
+    return { success: false, error: "Failed to accept invitation", code: "no_result" }
+  }
+
+  if (result.success) {
+    return {
+      success: true,
+      teamId: result.team_id,
+      hackathonId: result.hackathon_id,
+    }
+  }
+
+  return {
+    success: false,
+    error: result.error_message || "Failed to accept invitation",
+    code: result.error_code || "unknown",
+  }
+}
+
+export async function declineTeamInvitation(
+  token: string,
+  userEmail?: string
+): Promise<{ success: boolean; error?: string; code?: string }> {
+  const client = getSupabase()
+
+  if (userEmail) {
+    const { data: invitation } = await client
+      .from("team_invitations")
+      .select("email")
+      .eq("token", token)
+      .eq("status", "pending")
+      .single()
+
+    if (!invitation) {
+      return { success: false, error: "Invitation not found", code: "not_found" }
+    }
+
+    if (invitation.email.toLowerCase() !== userEmail.toLowerCase()) {
+      return { success: false, error: "You can only decline invitations sent to your email", code: "email_mismatch" }
+    }
+  }
+
+  const { error } = await client
+    .from("team_invitations")
+    .update({
+      status: "declined",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("token", token)
+    .eq("status", "pending")
+
+  return { success: !error }
+}
+
+export async function cancelTeamInvitation(
+  invitationId: string,
+  clerkUserId: string
+): Promise<{ success: boolean; error?: string }> {
+  const client = getSupabase()
+
+  const { data: invitation } = await client
+    .from("team_invitations")
+    .select("team_id, status")
+    .eq("id", invitationId)
+    .single()
+
+  if (!invitation || invitation.status !== "pending") {
+    return { success: false, error: "Invitation not found or not pending" }
+  }
+
+  const { data: team } = await client
+    .from("teams")
+    .select("captain_clerk_user_id")
+    .eq("id", invitation.team_id)
+    .single()
+
+  if (!team || team.captain_clerk_user_id !== clerkUserId) {
+    return { success: false, error: "Only team captain can cancel invitations" }
+  }
+
+  const { error } = await client
+    .from("team_invitations")
+    .update({ status: "cancelled", updated_at: new Date().toISOString() })
+    .eq("id", invitationId)
+
+  return { success: !error }
+}
+
+type InvitationStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled"
+
+export async function listTeamInvitations(
+  teamId: string,
+  options?: { status?: InvitationStatus }
+): Promise<TeamInvitation[]> {
+  const client = getSupabase()
+
+  let query = client
+    .from("team_invitations")
+    .select("*")
+    .eq("team_id", teamId)
+    .order("created_at", { ascending: false })
+
+  if (options?.status) {
+    query = query.eq("status", options.status)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error("Failed to list invitations:", error)
+    return []
+  }
+
+  return data as TeamInvitation[]
+}
+
+export async function getTeamWithHackathon(
+  teamId: string
+): Promise<{ name: string; hackathon: { name: string; slug: string } } | null> {
+  const client = getSupabase()
+
+  const { data, error } = await client
+    .from("teams")
+    .select(`
+      name,
+      hackathons!inner(name, slug)
+    `)
+    .eq("id", teamId)
+    .single()
+
+  if (error || !data) {
+    return null
+  }
+
+  const hackathon = data.hackathons as unknown as { name: string; slug: string }
+
+  return {
+    name: data.name,
+    hackathon: {
+      name: hackathon.name,
+      slug: hackathon.slug,
+    },
+  }
+}
