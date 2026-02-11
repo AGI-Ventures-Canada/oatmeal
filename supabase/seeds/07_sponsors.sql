@@ -1,0 +1,370 @@
+-- ============================================================================
+-- HACKATHON SPONSORS
+-- Depends on: tenants, hackathons
+-- ============================================================================
+
+-- Base sponsors for demo hackathons
+INSERT INTO hackathon_sponsors (id, hackathon_id, sponsor_tenant_id, name, logo_url, website_url, tier, display_order, created_at)
+VALUES
+  (
+    'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '55555555-5555-5555-5555-555555555555',
+    'Tavily',
+    NULL,
+    'https://tavily.com',
+    'gold',
+    0,
+    now()
+  ),
+  (
+    'ffffffff-ffff-ffff-ffff-ffffffffffff',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '66666666-6666-6666-6666-666666666666',
+    'Anthropic',
+    NULL,
+    'https://anthropic.com',
+    'gold',
+    1,
+    now()
+  ),
+  (
+    '99999999-9999-9999-9999-999999999999',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    '77777777-7777-7777-7777-777777777777',
+    'OpenAI',
+    NULL,
+    'https://openai.com',
+    'silver',
+    0,
+    now()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- AGI Ventures Canada sponsoring other orgs' hackathons
+INSERT INTO hackathon_sponsors (id, hackathon_id, sponsor_tenant_id, name, logo_url, website_url, tier, display_order, created_at)
+VALUES
+  (
+    'a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a0a0',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'gold',
+    2,
+    now()
+  ),
+  (
+    'b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b0b0',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'gold',
+    1,
+    now()
+  ),
+  (
+    'c0c0c0c0-c0c0-c0c0-c0c0-c0c0c0c0c0c0',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'silver',
+    0,
+    now()
+  ),
+  (
+    'd0a0d0a0-d0a0-d0a0-d0a0-d0a0d0a0d0a0',
+    'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'gold',
+    0,
+    now()
+  ),
+  (
+    'e0a0e0a0-e0a0-e0a0-e0a0-e0a0e0a0e0a0',
+    'aa11aa11-aa11-aa11-aa11-aa11aa11aa11',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'gold',
+    0,
+    now()
+  ),
+  (
+    'f0a0f0a0-f0a0-f0a0-f0a0-f0a0f0a0f0a0',
+    'bb22bb22-bb22-bb22-bb22-bb22bb22bb22',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'silver',
+    0,
+    now()
+  ),
+  (
+    'a1b1a1b1-a1b1-a1b1-a1b1-a1b1a1b1a1b1',
+    'ee55ee55-ee55-ee55-ee55-ee55ee55ee55',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'gold',
+    0,
+    now()
+  ),
+  (
+    'b1c1b1c1-b1c1-b1c1-b1c1-b1c1b1c1b1c1',
+    'ff66ff66-ff66-ff66-ff66-ff66ff66ff66',
+    '12345678-1234-1234-1234-123456789012',
+    'AGI Ventures Canada',
+    NULL,
+    NULL,
+    'silver',
+    0,
+    now()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- AGI House sponsoring other orgs' hackathons
+INSERT INTO hackathon_sponsors (id, hackathon_id, sponsor_tenant_id, name, logo_url, website_url, tier, display_order, created_at)
+VALUES
+  (
+    'a9a90001-a9a9-a9a9-a9a9-a9a90001a9a9',
+    'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    '99990000-9999-9999-9999-999900009999',
+    'AGI House',
+    NULL,
+    'https://agihouse.org',
+    'gold',
+    1,
+    now()
+  ),
+  (
+    'a9a90002-a9a9-a9a9-a9a9-a9a90002a9a9',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    '99990000-9999-9999-9999-999900009999',
+    'AGI House',
+    NULL,
+    'https://agihouse.org',
+    'silver',
+    2,
+    now()
+  ),
+  (
+    'a9a90003-a9a9-a9a9-a9a9-a9a90003a9a9',
+    'aa11aa11-aa11-aa11-aa11-aa11aa11aa11',
+    '99990000-9999-9999-9999-999900009999',
+    'AGI House',
+    NULL,
+    'https://agihouse.org',
+    'gold',
+    1,
+    now()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- Tenant-backed sponsors on AGI House hackathons
+INSERT INTO hackathon_sponsors (id, hackathon_id, sponsor_tenant_id, name, logo_url, website_url, tier, display_order, created_at)
+VALUES
+  (
+    'a9b90001-a9b9-a9b9-a9b9-a9b90001a9b9',
+    'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1',
+    '66666666-6666-6666-6666-666666666666',
+    'Anthropic',
+    NULL,
+    'https://anthropic.com',
+    'gold',
+    0,
+    now()
+  ),
+  (
+    'a9b90002-a9b9-a9b9-a9b9-a9b90002a9b9',
+    'aaa50005-aaa5-aaa5-aaa5-aaa50005aaa5',
+    '77777777-7777-7777-7777-777777777777',
+    'OpenAI',
+    NULL,
+    'https://openai.com',
+    'silver',
+    1,
+    now()
+  ),
+  (
+    'a9b90003-a9b9-a9b9-a9b9-a9b90003a9b9',
+    'aaa40004-aaa4-aaa4-aaa4-aaa40004aaa4',
+    '55555555-5555-5555-5555-555555555555',
+    'Tavily',
+    NULL,
+    'https://tavily.com',
+    'silver',
+    1,
+    now()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- Manual sponsors on AGI House hackathons (no sponsor_tenant_id)
+INSERT INTO hackathon_sponsors (id, hackathon_id, sponsor_tenant_id, name, logo_url, website_url, tier, display_order, created_at)
+VALUES
+  (
+    'a9c90001-a9c9-a9c9-a9c9-a9c90001a9c9',
+    'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1',
+    NULL,
+    'Microsoft',
+    NULL,
+    'https://microsoft.com',
+    'title',
+    1,
+    now()
+  ),
+  (
+    'a9c90002-a9c9-a9c9-a9c9-a9c90002a9c9',
+    'aaa10001-aaa1-aaa1-aaa1-aaa10001aaa1',
+    NULL,
+    'Sequoia Capital',
+    NULL,
+    'https://sequoiacap.com',
+    'silver',
+    2,
+    now()
+  ),
+  (
+    'a9c90003-a9c9-a9c9-a9c9-a9c90003a9c9',
+    'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2',
+    NULL,
+    'NVIDIA',
+    NULL,
+    'https://nvidia.com',
+    'title',
+    0,
+    now()
+  ),
+  (
+    'a9c90004-a9c9-a9c9-a9c9-a9c90004a9c9',
+    'aaa20002-aaa2-aaa2-aaa2-aaa20002aaa2',
+    NULL,
+    'Intel',
+    NULL,
+    'https://intel.com',
+    'gold',
+    1,
+    now()
+  ),
+  (
+    'a9c90005-a9c9-a9c9-a9c9-a9c90005a9c9',
+    'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3',
+    NULL,
+    'Google',
+    NULL,
+    'https://google.com',
+    'title',
+    0,
+    now()
+  ),
+  (
+    'a9c90006-a9c9-a9c9-a9c9-a9c90006a9c9',
+    'aaa30003-aaa3-aaa3-aaa3-aaa30003aaa3',
+    NULL,
+    'Microsoft',
+    NULL,
+    'https://microsoft.com',
+    'silver',
+    1,
+    now()
+  ),
+  (
+    'a9c90007-a9c9-a9c9-a9c9-a9c90007a9c9',
+    'aaa40004-aaa4-aaa4-aaa4-aaa40004aaa4',
+    NULL,
+    'Google',
+    NULL,
+    'https://google.com',
+    'gold',
+    0,
+    now()
+  ),
+  (
+    'a9c90008-a9c9-a9c9-a9c9-a9c90008a9c9',
+    'aaa40004-aaa4-aaa4-aaa4-aaa40004aaa4',
+    NULL,
+    'Apple',
+    NULL,
+    'https://apple.com',
+    'silver',
+    2,
+    now()
+  ),
+  (
+    'a9c90009-a9c9-a9c9-a9c9-a9c90009a9c9',
+    'aaa50005-aaa5-aaa5-aaa5-aaa50005aaa5',
+    NULL,
+    'Microsoft',
+    NULL,
+    'https://microsoft.com',
+    'title',
+    0,
+    now()
+  ),
+  (
+    'a9c9000a-a9c9-a9c9-a9c9-a9c9000aa9c9',
+    'aaa50005-aaa5-aaa5-aaa5-aaa50005aaa5',
+    NULL,
+    'Sequoia Capital',
+    NULL,
+    'https://sequoiacap.com',
+    'gold',
+    2,
+    now()
+  ),
+  (
+    'a9c9000b-a9c9-a9c9-a9c9-a9c9000ba9c9',
+    'aaa50005-aaa5-aaa5-aaa5-aaa50005aaa5',
+    NULL,
+    'a16z',
+    NULL,
+    'https://a16z.com',
+    'silver',
+    3,
+    now()
+  ),
+  (
+    'a9c9000c-a9c9-a9c9-a9c9-a9c9000ca9c9',
+    'aaa60006-aaa6-aaa6-aaa6-aaa60006aaa6',
+    NULL,
+    'NVIDIA',
+    NULL,
+    'https://nvidia.com',
+    'title',
+    0,
+    now()
+  ),
+  (
+    'a9c9000d-a9c9-a9c9-a9c9-a9c9000da9c9',
+    'aaa60006-aaa6-aaa6-aaa6-aaa60006aaa6',
+    NULL,
+    'a16z',
+    NULL,
+    'https://a16z.com',
+    'gold',
+    1,
+    now()
+  ),
+  (
+    'a9c9000e-a9c9-a9c9-a9c9-a9c9000ea9c9',
+    'aaa60006-aaa6-aaa6-aaa6-aaa60006aaa6',
+    NULL,
+    'Boeing',
+    NULL,
+    'https://boeing.com',
+    'silver',
+    2,
+    now()
+  )
+ON CONFLICT (id) DO NOTHING;
