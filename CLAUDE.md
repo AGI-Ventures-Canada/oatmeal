@@ -286,13 +286,13 @@ For RPC calls, use `setMockRpcImplementation()` instead.
 
 ### Never Push to Main
 
-**NEVER develop on or push directly to `main`.** All changes go through feature branch → PR → merge.
+**NEVER develop on or push directly to `main` or `staging`.** All changes go through feature branch → PR → merge.
 
 Before making changes:
 1. Check current branch: `git branch`
-2. If on `main`, create feature branch: `git checkout -b feature/your-feature-name`
+2. If on `main` or `staging`, create feature branch: `git checkout -b feature/your-feature-name`
 3. Push to feature branch: `git push -u origin feature/your-feature-name`
-4. Create PR to merge into `main`
+4. Create PR to merge into `staging`
 
 ### Check PR Status Before Pushing
 
