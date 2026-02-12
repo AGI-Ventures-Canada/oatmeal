@@ -1,13 +1,15 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Hackathon, HackathonParticipant } from "@/lib/db/hackathon-types"
+import { sortByStartDate } from "@/lib/utils/format"
 
 type ParticipantWithHackathon = HackathonParticipant & {
   hackathons: Hackathon
 }
 
 export async function listParticipatingHackathons(
-  clerkUserId: string
+  clerkUserId: string,
+  options?: { search?: string }
 ): Promise<(Hackathon & { role: string })[]> {
   const client = getSupabase() as unknown as SupabaseClient
   const { data, error } = await client
@@ -20,20 +22,39 @@ export async function listParticipatingHackathons(
     return []
   }
 
-  return (data as unknown as ParticipantWithHackathon[])
+  let hackathons = (data as unknown as ParticipantWithHackathon[])
     .filter((r) => r.hackathons)
     .map((r) => ({ ...r.hackathons, role: r.role }))
+
+  if (options?.search && options.search.length >= 2) {
+    const q = options.search.toLowerCase()
+    hackathons = hackathons.filter(
+      (h) => h.name.toLowerCase().includes(q) || h.description?.toLowerCase().includes(q)
+    )
+  }
+
+  return sortByStartDate(hackathons)
 }
 
 export async function listOrganizedHackathons(
-  tenantId: string
+  tenantId: string,
+  options?: { search?: string }
 ): Promise<Hackathon[]> {
   const client = getSupabase() as unknown as SupabaseClient
-  const { data, error } = await client
+  let query = client
     .from("hackathons")
     .select("*")
     .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false })
+    .order("starts_at", { ascending: true, nullsFirst: false })
+
+  if (options?.search && options.search.length >= 2) {
+    const sanitized = options.search.replace(/[%_().,\\]/g, "")
+    if (sanitized.length >= 2) {
+      query = query.or(`name.ilike.%${sanitized}%,description.ilike.%${sanitized}%`)
+    }
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error("Failed to list organized hackathons:", error)
@@ -49,7 +70,8 @@ type SponsorWithHackathon = {
 }
 
 export async function listSponsoredHackathons(
-  tenantId: string
+  tenantId: string,
+  options?: { search?: string }
 ): Promise<Hackathon[]> {
   const client = getSupabase() as unknown as SupabaseClient
   const { data, error } = await client
@@ -62,9 +84,18 @@ export async function listSponsoredHackathons(
     return []
   }
 
-  return (data as unknown as SponsorWithHackathon[])
+  let hackathons = (data as unknown as SponsorWithHackathon[])
     .filter((r) => r.hackathons)
     .map((r) => r.hackathons)
+
+  if (options?.search && options.search.length >= 2) {
+    const q = options.search.toLowerCase()
+    hackathons = hackathons.filter(
+      (h) => h.name.toLowerCase().includes(q) || h.description?.toLowerCase().includes(q)
+    )
+  }
+
+  return sortByStartDate(hackathons)
 }
 
 function generateSlug(name: string): string {
@@ -145,4 +176,114 @@ export async function getHackathonById(
   }
 
   return data as unknown as Hackathon
+}
+
+export async function isUserRegistered(
+  hackathonId: string,
+  clerkUserId: string
+): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("hackathon_participants")
+    .select("id")
+    .eq("hackathon_id", hackathonId)
+    .eq("clerk_user_id", clerkUserId)
+    .maybeSingle()
+
+  if (error) {
+    console.error("Failed to check registration:", error)
+    return false
+  }
+
+  return data !== null
+}
+
+export async function getParticipantCount(hackathonId: string): Promise<number> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { count, error } = await client
+    .from("hackathon_participants")
+    .select("*", { count: "exact", head: true })
+    .eq("hackathon_id", hackathonId)
+    .eq("role", "participant")
+
+  if (error) {
+    console.error("Failed to get participant count:", error)
+    return 0
+  }
+
+  return count ?? 0
+}
+
+export type RegistrationInfo = {
+  isRegistered: boolean
+  participantCount: number
+}
+
+export async function getRegistrationInfo(
+  hackathonId: string,
+  clerkUserId: string
+): Promise<RegistrationInfo> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const [registrationResult, countResult] = await Promise.all([
+    client
+      .from("hackathon_participants")
+      .select("id")
+      .eq("hackathon_id", hackathonId)
+      .eq("clerk_user_id", clerkUserId)
+      .maybeSingle(),
+    client
+      .from("hackathon_participants")
+      .select("*", { count: "exact", head: true })
+      .eq("hackathon_id", hackathonId)
+      .eq("role", "participant"),
+  ])
+
+  if (registrationResult.error) {
+    console.error("Failed to check registration:", registrationResult.error)
+  }
+  if (countResult.error) {
+    console.error("Failed to get participant count:", countResult.error)
+  }
+
+  return {
+    isRegistered: registrationResult.data !== null,
+    participantCount: countResult.count ?? 0,
+  }
+}
+
+type RegisterResult =
+  | { success: true; participantId: string }
+  | { success: false; error: string; code: string }
+
+export async function registerForHackathon(
+  hackathonId: string,
+  clerkUserId: string
+): Promise<RegisterResult> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data, error } = await client.rpc("register_for_hackathon", {
+    p_hackathon_id: hackathonId,
+    p_clerk_user_id: clerkUserId,
+  })
+
+  if (error) {
+    console.error("Failed to register for hackathon:", error)
+    return { success: false, error: "Failed to register", code: "rpc_failed" }
+  }
+
+  const result = data?.[0]
+  if (!result) {
+    return { success: false, error: "Failed to register", code: "no_result" }
+  }
+
+  if (result.success) {
+    return { success: true, participantId: result.participant_id }
+  }
+
+  return {
+    success: false,
+    error: result.error_message || "Failed to register",
+    code: result.error_code || "unknown",
+  }
 }

@@ -2,22 +2,47 @@
 
 import { EditProvider, useEdit } from "./edit-context"
 import { EditableSection } from "./editable-section"
+import { EditModeToggle } from "./edit-mode-toggle"
 import { HackathonEditDrawer } from "@/components/hackathon/edit-drawer/hackathon-edit-drawer"
+import { OrganizerLogoPrompt } from "@/components/hackathon/organizer-logo-prompt"
 import { EventHero } from "@/components/hackathon/event-hero"
 import { SponsorSection } from "@/components/hackathon/sponsor-section"
+import { SubmissionGallery, type GallerySubmission } from "@/components/hackathon/submission-gallery"
+import { formatDateTimeDisplay } from "@/lib/utils/format"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
+import type { Submission } from "@/lib/db/hackathon-types"
 
 interface HackathonPreviewClientProps {
   hackathon: PublicHackathon
   isEditable: boolean
+  isRegistered?: boolean
+  participantCount?: number
+  showEditToggle?: boolean
+  submission?: Submission | null
+  submissions?: GallerySubmission[]
 }
 
-function HackathonPreviewContent({ hackathon, isEditable }: HackathonPreviewClientProps) {
-  const { openSection } = useEdit()
+function HackathonPreviewContent({
+  hackathon,
+  isRegistered = false,
+  participantCount = 0,
+  showEditToggle = false,
+  submission = null,
+  submissions = [],
+}: Omit<HackathonPreviewClientProps, "isEditable">) {
+  const { isEditable, editMode, openSection } = useEdit()
   const hasTimeline = hackathon.registration_opens_at || hackathon.registration_closes_at || hackathon.starts_at || hackathon.ends_at
 
   return (
     <>
+      {showEditToggle && <EditModeToggle />}
+      {editMode && (
+        <OrganizerLogoPrompt
+          organizerId={hackathon.organizer.id}
+          organizerClerkOrgId={hackathon.organizer.clerk_org_id}
+          organizerLogoUrl={hackathon.organizer.logo_url}
+        />
+      )}
       <div>
       <EditableSection section="hero">
         <EventHero
@@ -26,8 +51,22 @@ function HackathonPreviewContent({ hackathon, isEditable }: HackathonPreviewClie
           status={hackathon.status}
           startsAt={hackathon.starts_at}
           endsAt={hackathon.ends_at}
+          registrationOpensAt={hackathon.registration_opens_at}
+          registrationClosesAt={hackathon.registration_closes_at}
           organizer={hackathon.organizer}
-          onDatesClick={isEditable ? () => openSection("timeline") : undefined}
+          onDatesClick={isEditable && editMode ? () => openSection("timeline") : undefined}
+          isRegistered={isRegistered}
+          registrationProps={{
+            hackathonSlug: hackathon.slug,
+            status: hackathon.status,
+            endsAt: hackathon.ends_at,
+            registrationOpensAt: hackathon.registration_opens_at,
+            registrationClosesAt: hackathon.registration_closes_at,
+            maxParticipants: hackathon.max_participants,
+            participantCount,
+            isRegistered,
+            submission,
+          }}
         />
       </EditableSection>
 
@@ -41,8 +80,8 @@ function HackathonPreviewContent({ hackathon, isEditable }: HackathonPreviewClie
         </EditableSection>
 
         <section className="py-12 border-t">
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto space-y-8">
+          <div className="mx-auto max-w-4xl px-4">
+            <div className="space-y-8">
               <EditableSection
                 section="about"
                 isEmpty={!hackathon.description}
@@ -85,25 +124,25 @@ function HackathonPreviewContent({ hackathon, isEditable }: HackathonPreviewClie
                       {hackathon.registration_opens_at && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Registration Opens</span>
-                          <span>{new Date(hackathon.registration_opens_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                          <span>{formatDateTimeDisplay(hackathon.registration_opens_at)}</span>
                         </div>
                       )}
                       {hackathon.registration_closes_at && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Registration Closes</span>
-                          <span>{new Date(hackathon.registration_closes_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                          <span>{formatDateTimeDisplay(hackathon.registration_closes_at)}</span>
                         </div>
                       )}
                       {hackathon.starts_at && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Hackathon Starts</span>
-                          <span>{new Date(hackathon.starts_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                          <span>{formatDateTimeDisplay(hackathon.starts_at)}</span>
                         </div>
                       )}
                       {hackathon.ends_at && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Hackathon Ends</span>
-                          <span>{new Date(hackathon.ends_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                          <span>{formatDateTimeDisplay(hackathon.ends_at)}</span>
                         </div>
                       )}
                     </div>
@@ -113,17 +152,34 @@ function HackathonPreviewContent({ hackathon, isEditable }: HackathonPreviewClie
             </div>
           </div>
         </section>
+
+        <SubmissionGallery submissions={submissions} />
       </div>
 
-      {isEditable && <HackathonEditDrawer hackathon={hackathon} />}
+      {isEditable && editMode && <HackathonEditDrawer hackathon={hackathon} />}
     </>
   )
 }
 
-export function HackathonPreviewClient({ hackathon, isEditable }: HackathonPreviewClientProps) {
+export function HackathonPreviewClient({
+  hackathon,
+  isEditable,
+  isRegistered,
+  participantCount,
+  showEditToggle = false,
+  submission,
+  submissions,
+}: HackathonPreviewClientProps) {
   return (
-    <EditProvider isEditable={isEditable}>
-      <HackathonPreviewContent hackathon={hackathon} isEditable={isEditable} />
+    <EditProvider isEditable={isEditable} defaultEditMode={!showEditToggle}>
+      <HackathonPreviewContent
+        hackathon={hackathon}
+        isRegistered={isRegistered}
+        participantCount={participantCount}
+        showEditToggle={showEditToggle}
+        submission={submission}
+        submissions={submissions}
+      />
     </EditProvider>
   )
 }

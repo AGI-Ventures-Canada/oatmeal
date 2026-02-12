@@ -1,6 +1,7 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { TenantProfile, Hackathon } from "@/lib/db/hackathon-types"
+import { sortByStartDate } from "@/lib/utils/format"
 
 export async function getPublicTenantBySlug(
   slug: string
@@ -110,8 +111,19 @@ export async function isSlugAvailable(
   return data === null
 }
 
+export type OrganizedHackathon = Hackathon & { role: "organizer" }
+export type SponsoredHackathon = Hackathon & {
+  role: "sponsor"
+  organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark">
+}
+
 export type TenantWithHackathons = TenantProfile & {
   hackathons: Hackathon[]
+}
+
+export type TenantWithEvents = TenantProfile & {
+  organizedHackathons: OrganizedHackathon[]
+  sponsoredHackathons: SponsoredHackathon[]
 }
 
 export async function getPublicTenantWithHackathons(
@@ -144,5 +156,76 @@ export async function getPublicTenantWithHackathons(
   return {
     ...(tenant as unknown as TenantProfile),
     hackathons: (hackathons || []) as unknown as Hackathon[],
+  }
+}
+
+export async function getPublicTenantWithEvents(
+  slug: string
+): Promise<TenantWithEvents | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: tenant, error: tenantError } = await client
+    .from("tenants")
+    .select("id, clerk_org_id, clerk_user_id, name, slug, logo_url, logo_url_dark, description, website_url, created_at, updated_at")
+    .eq("slug", slug)
+    .single()
+
+  if (tenantError || !tenant) {
+    if (tenantError && tenantError.code !== "PGRST116") {
+      console.error("Failed to get public tenant:", tenantError)
+    }
+    return null
+  }
+
+  const { data: organizedHackathons, error: organizedError } = await client
+    .from("hackathons")
+    .select("*")
+    .eq("tenant_id", tenant.id)
+    .in("status", ["published", "registration_open", "active", "judging", "completed"])
+    .order("starts_at", { ascending: false })
+
+  if (organizedError) {
+    console.error("Failed to get organized hackathons:", organizedError)
+  }
+
+  const { data: sponsorships, error: sponsorshipsError } = await client
+    .from("hackathon_sponsors")
+    .select(`
+      hackathon_id,
+      hackathons!inner(
+        *,
+        organizer:tenants!tenant_id(id, name, slug, logo_url, logo_url_dark)
+      )
+    `)
+    .eq("sponsor_tenant_id", tenant.id)
+
+  if (sponsorshipsError) {
+    console.error("Failed to get sponsored hackathons:", sponsorshipsError)
+  }
+
+  const sponsoredHackathons = sortByStartDate(
+    (sponsorships || [])
+      .map((s) => {
+        const hackathon = s.hackathons as unknown as Hackathon & {
+          organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark">
+        }
+        return hackathon
+      })
+      .filter((h) =>
+        ["published", "registration_open", "active", "judging", "completed"].includes(h.status)
+      ),
+    true
+  )
+
+  return {
+    ...(tenant as unknown as TenantProfile),
+    organizedHackathons: (organizedHackathons || []).map((h) => ({
+      ...(h as unknown as Hackathon),
+      role: "organizer" as const,
+    })),
+    sponsoredHackathons: sponsoredHackathons.map((h) => ({
+      ...h,
+      role: "sponsor" as const,
+    })),
   }
 }

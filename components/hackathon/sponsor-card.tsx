@@ -48,7 +48,7 @@ export function SponsorCard({ sponsor, size = "md" }: SponsorCardProps) {
       ) : (
         <>
           <div className="absolute inset-0 bg-muted/50 rounded-lg" />
-          <span className="relative text-xs text-muted-foreground text-center truncate px-2">
+          <span className="relative text-xs text-muted-foreground text-center px-2 break-words line-clamp-2">
             {name}
           </span>
         </>

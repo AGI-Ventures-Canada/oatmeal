@@ -1,14 +1,12 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
-import { Plus } from "lucide-react"
 import { resolvePageTenant } from "@/lib/services/tenants"
 import {
   listParticipatingHackathons,
   listOrganizedHackathons,
   listSponsoredHackathons,
 } from "@/lib/services/hackathons"
-import { Button } from "@/components/ui/button"
-import { CreateHackathonDrawer } from "@/components/hackathon/create-hackathon-drawer"
+import { getSubmittedHackathonIds } from "@/lib/services/submissions"
 import { HackathonTabs } from "./hackathon-tabs"
 import { PageHeader } from "@/components/page-header"
 
@@ -21,10 +19,11 @@ export default async function DashboardPage() {
 
   const tenant = await resolvePageTenant()
 
-  const [myHackathons, organizedHackathons, sponsoredHackathons] = await Promise.all([
+  const [myHackathons, organizedHackathons, sponsoredHackathons, submittedHackathonIds] = await Promise.all([
     listParticipatingHackathons(userId),
     listOrganizedHackathons(tenant.id),
     listSponsoredHackathons(tenant.id),
+    getSubmittedHackathonIds(userId),
   ])
 
   return (
@@ -33,22 +32,13 @@ export default async function DashboardPage() {
         breadcrumbs={[{ label: "Dashboard" }]}
         title="Dashboard"
         description="Your hackathons at a glance"
-        actions={
-          <CreateHackathonDrawer
-            trigger={
-              <Button>
-                <Plus className="mr-2 size-4" />
-                Create Hackathon
-              </Button>
-            }
-          />
-        }
       />
 
       <HackathonTabs
         myHackathons={myHackathons}
         organizedHackathons={organizedHackathons}
         sponsoredHackathons={sponsoredHackathons}
+        submittedHackathonIds={Array.from(submittedHackathonIds)}
       />
     </div>
   )

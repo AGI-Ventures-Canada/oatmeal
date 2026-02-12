@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import {
   Trophy,
   Search,
@@ -19,9 +20,12 @@ import {
   Users,
   Star,
   Megaphone,
+  Globe,
+  ExternalLink,
+  Plus,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname, useSearchParams } from "next/navigation"
+import { usePathname, useSearchParams, useRouter } from "next/navigation"
 import {
   useUser,
   useClerk,
@@ -57,6 +61,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ThemeSwitcher } from "@/components/theme-switcher"
+import { CreateHackathonDrawer } from "@/components/hackathon/create-hackathon-drawer"
 
 const navItems = [
   { title: "Dashboard", href: "/home", icon: Home },
@@ -84,12 +89,36 @@ const settingsItems = [
 export function AppSidebar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const { user } = useUser()
   const { signOut, openUserProfile } = useClerk()
   const { organization } = useOrganization()
   const { userMemberships, setActive } = useOrganizationList({
     userMemberships: { infinite: true },
   })
+
+  const [tenantSlug, setTenantSlug] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (!organization) {
+      Promise.resolve().then(() => {
+        if (!cancelled) setTenantSlug(null)
+      })
+      return () => { cancelled = true }
+    }
+
+    fetch("/api/dashboard/org-profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setTenantSlug(data?.slug ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setTenantSlug(null)
+      })
+    return () => { cancelled = true }
+  }, [organization])
 
   const isSettingsView = pathname.startsWith("/settings")
   const currentTab = searchParams.get("tab")
@@ -126,7 +155,10 @@ export function AppSidebar() {
                 <DropdownMenuLabel>Organizations</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => setActive?.({ organization: null })}
+                  onClick={() => {
+                    setActive?.({ organization: null })
+                    router.push("/home")
+                  }}
                   className="gap-2"
                 >
                   <div className="flex size-5 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
@@ -137,7 +169,10 @@ export function AppSidebar() {
                 {userMemberships?.data?.map((mem) => (
                   <DropdownMenuItem
                     key={mem.organization.id}
-                    onClick={() => setActive?.({ organization: mem.organization.id })}
+                    onClick={() => {
+                      setActive?.({ organization: mem.organization.id })
+                      router.push("/home")
+                    }}
                     className="gap-2"
                   >
                     {mem.organization.imageUrl ? (
@@ -156,19 +191,24 @@ export function AppSidebar() {
                 ))}
                 <DropdownMenuSeparator />
                 {organization && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings/profile">
-                      <Settings className="size-4 mr-2" />
-                      Organization Settings
-                    </Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings/profile">
+                        <Settings className="size-4 mr-2" />
+                        Organization Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    {tenantSlug && (
+                      <DropdownMenuItem asChild>
+                        <Link href={`/o/${tenantSlug}`} target="_blank">
+                          <Globe className="size-4 mr-2" />
+                          Organization Page
+                          <ExternalLink className="size-3 ml-auto opacity-50" />
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                  </>
                 )}
-                <DropdownMenuItem asChild>
-                  <Link href="/onboarding" className="gap-2">
-                    <Building2 className="size-4" />
-                    Switch Organization
-                  </Link>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
@@ -245,6 +285,16 @@ export function AppSidebar() {
                               </SidebarMenuSubItem>
                             )
                           })}
+                          <SidebarMenuSubItem>
+                            <CreateHackathonDrawer
+                              trigger={
+                                <SidebarMenuSubButton>
+                                  <Plus />
+                                  <span>Create Hackathon</span>
+                                </SidebarMenuSubButton>
+                              }
+                            />
+                          </SidebarMenuSubItem>
                         </SidebarMenuSub>
                       </CollapsibleContent>
                     </SidebarMenuItem>

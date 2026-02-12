@@ -126,6 +126,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  [data-slot="button"] {
+    cursor: pointer;
+  }
 }
 
 /* Reset fumadocs styling for AI Elements CodeBlock */

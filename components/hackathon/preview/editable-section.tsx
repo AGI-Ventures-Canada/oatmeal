@@ -19,9 +19,9 @@ export function EditableSection({
   emptyLabel = "Click to add content",
   className,
 }: EditableSectionProps) {
-  const { isEditable, openSection } = useEdit()
+  const { isEditable, editMode, openSection } = useEdit()
 
-  if (!isEditable) {
+  if (!isEditable || !editMode) {
     if (isEmpty) return null
     return <>{children}</>
   }

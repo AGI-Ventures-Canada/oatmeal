@@ -1,11 +1,10 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach } from "bun:test"
 import type { TenantProfile } from "@/lib/db/hackathon-types"
-
-const mockFrom = mock(() => ({}))
-
-mock.module("@/lib/db/client", () => ({
-  supabase: () => ({ from: mockFrom }),
-}))
+import {
+  createChainableMock,
+  resetSupabaseMocks,
+  setMockFromImplementation,
+} from "../lib/supabase-mock"
 
 const {
   getPublicTenantBySlug,
@@ -14,6 +13,7 @@ const {
   generateSlug,
   isSlugAvailable,
   getPublicTenantWithHackathons,
+  getPublicTenantWithEvents,
 } = await import("@/lib/services/tenant-profiles")
 
 const mockTenant: TenantProfile = {
@@ -30,24 +30,9 @@ const mockTenant: TenantProfile = {
   updated_at: "2026-01-01T00:00:00Z",
 }
 
-function createChainableMock(resolvedValue: { data: unknown; error: unknown }) {
-  const chain: Record<string, unknown> = {
-    select: mock(() => chain),
-    update: mock(() => chain),
-    eq: mock(() => chain),
-    neq: mock(() => chain),
-    in: mock(() => chain),
-    order: mock(() => chain),
-    single: mock(() => chain),
-    maybeSingle: mock(() => chain),
-    then: (resolve: (v: unknown) => void) => resolve(resolvedValue),
-  }
-  return chain
-}
-
 describe("Tenant Profiles Service", () => {
   beforeEach(() => {
-    mockFrom.mockReset()
+    resetSupabaseMocks()
   })
 
   describe("getPublicTenantBySlug", () => {
@@ -56,7 +41,7 @@ describe("Tenant Profiles Service", () => {
         data: mockTenant,
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicTenantBySlug("test-org")
 
@@ -70,7 +55,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: { message: "Not found" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicTenantBySlug("nonexistent")
 
@@ -84,7 +69,7 @@ describe("Tenant Profiles Service", () => {
         data: mockTenant,
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicTenantById("t1")
 
@@ -97,7 +82,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: { message: "Not found" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicTenantById("nonexistent")
 
@@ -111,7 +96,7 @@ describe("Tenant Profiles Service", () => {
         data: { ...mockTenant, description: "Updated description" },
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await updateTenantProfile("t1", {
         description: "Updated description",
@@ -126,7 +111,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await updateTenantProfile("t1", { name: "New Name" })
 
@@ -162,7 +147,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await isSlugAvailable("available-slug")
 
@@ -174,7 +159,7 @@ describe("Tenant Profiles Service", () => {
         data: { id: "t2" },
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await isSlugAvailable("taken-slug")
 
@@ -186,7 +171,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await isSlugAvailable("my-slug", "t1")
 
@@ -198,7 +183,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await isSlugAvailable("any-slug")
 
@@ -218,7 +203,7 @@ describe("Tenant Profiles Service", () => {
       })
 
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) return tenantChain
         return hackathonsChain
@@ -236,7 +221,7 @@ describe("Tenant Profiles Service", () => {
         data: null,
         error: { message: "Not found" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicTenantWithHackathons("nonexistent")
 
@@ -254,7 +239,7 @@ describe("Tenant Profiles Service", () => {
       })
 
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) return tenantChain
         return hackathonsChain
@@ -264,6 +249,254 @@ describe("Tenant Profiles Service", () => {
 
       expect(result).not.toBeNull()
       expect(result?.hackathons).toEqual([])
+    })
+  })
+
+  describe("getPublicTenantWithEvents", () => {
+    const mockOrganizedHackathon = {
+      id: "h1",
+      name: "Organized Hackathon",
+      slug: "organized-hackathon",
+      status: "published",
+      starts_at: "2026-03-01T00:00:00Z",
+      ends_at: "2026-03-02T00:00:00Z",
+    }
+
+    const mockSponsoredHackathon = {
+      id: "h2",
+      name: "Sponsored Hackathon",
+      slug: "sponsored-hackathon",
+      status: "active",
+      starts_at: "2026-04-01T00:00:00Z",
+      ends_at: "2026-04-02T00:00:00Z",
+      organizer: {
+        id: "t2",
+        name: "Other Org",
+        slug: "other-org",
+        logo_url: null,
+        logo_url_dark: null,
+      },
+    }
+
+    it("returns tenant with organized and sponsored hackathons", async () => {
+      const tenantChain = createChainableMock({
+        data: mockTenant,
+        error: null,
+      })
+      const organizedChain = createChainableMock({
+        data: [mockOrganizedHackathon],
+        error: null,
+      })
+      const sponsoredChain = createChainableMock({
+        data: [{ hackathon_id: "h2", hackathons: mockSponsoredHackathon }],
+        error: null,
+      })
+
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) return tenantChain
+        if (callCount === 2) return organizedChain
+        return sponsoredChain
+      })
+
+      const result = await getPublicTenantWithEvents("test-org")
+
+      expect(result).not.toBeNull()
+      expect(result?.name).toBe("Test Org")
+      expect(result?.organizedHackathons).toHaveLength(1)
+      expect(result?.organizedHackathons[0].name).toBe("Organized Hackathon")
+      expect(result?.organizedHackathons[0].role).toBe("organizer")
+      expect(result?.sponsoredHackathons).toHaveLength(1)
+      expect(result?.sponsoredHackathons[0].name).toBe("Sponsored Hackathon")
+      expect(result?.sponsoredHackathons[0].role).toBe("sponsor")
+    })
+
+    it("returns null when tenant not found", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { code: "PGRST116", message: "Not found" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await getPublicTenantWithEvents("nonexistent")
+
+      expect(result).toBeNull()
+    })
+
+    it("returns tenant with empty arrays when no hackathons", async () => {
+      const tenantChain = createChainableMock({
+        data: mockTenant,
+        error: null,
+      })
+      const emptyChain = createChainableMock({
+        data: [],
+        error: null,
+      })
+
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) return tenantChain
+        return emptyChain
+      })
+
+      const result = await getPublicTenantWithEvents("test-org")
+
+      expect(result).not.toBeNull()
+      expect(result?.organizedHackathons).toEqual([])
+      expect(result?.sponsoredHackathons).toEqual([])
+    })
+
+    it("filters out draft hackathons from sponsored list", async () => {
+      const tenantChain = createChainableMock({
+        data: mockTenant,
+        error: null,
+      })
+      const organizedChain = createChainableMock({
+        data: [],
+        error: null,
+      })
+      const sponsoredChain = createChainableMock({
+        data: [
+          {
+            hackathon_id: "h3",
+            hackathons: { ...mockSponsoredHackathon, id: "h3", status: "draft" },
+          },
+          {
+            hackathon_id: "h4",
+            hackathons: { ...mockSponsoredHackathon, id: "h4", status: "published" },
+          },
+        ],
+        error: null,
+      })
+
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) return tenantChain
+        if (callCount === 2) return organizedChain
+        return sponsoredChain
+      })
+
+      const result = await getPublicTenantWithEvents("test-org")
+
+      expect(result).not.toBeNull()
+      expect(result?.sponsoredHackathons).toHaveLength(1)
+      expect(result?.sponsoredHackathons[0].id).toBe("h4")
+    })
+
+    it("handles errors gracefully for organized hackathons", async () => {
+      const tenantChain = createChainableMock({
+        data: mockTenant,
+        error: null,
+      })
+      const errorChain = createChainableMock({
+        data: null,
+        error: { message: "DB error" },
+      })
+      const sponsoredChain = createChainableMock({
+        data: [{ hackathon_id: "h2", hackathons: mockSponsoredHackathon }],
+        error: null,
+      })
+
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) return tenantChain
+        if (callCount === 2) return errorChain
+        return sponsoredChain
+      })
+
+      const result = await getPublicTenantWithEvents("test-org")
+
+      expect(result).not.toBeNull()
+      expect(result?.organizedHackathons).toEqual([])
+      expect(result?.sponsoredHackathons).toHaveLength(1)
+    })
+
+    it("handles errors gracefully for sponsored hackathons", async () => {
+      const tenantChain = createChainableMock({
+        data: mockTenant,
+        error: null,
+      })
+      const organizedChain = createChainableMock({
+        data: [mockOrganizedHackathon],
+        error: null,
+      })
+      const errorChain = createChainableMock({
+        data: null,
+        error: { message: "DB error" },
+      })
+
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) return tenantChain
+        if (callCount === 2) return organizedChain
+        return errorChain
+      })
+
+      const result = await getPublicTenantWithEvents("test-org")
+
+      expect(result).not.toBeNull()
+      expect(result?.organizedHackathons).toHaveLength(1)
+      expect(result?.sponsoredHackathons).toEqual([])
+    })
+
+    it("sorts sponsored hackathons by start date descending", async () => {
+      const tenantChain = createChainableMock({
+        data: mockTenant,
+        error: null,
+      })
+      const organizedChain = createChainableMock({
+        data: [],
+        error: null,
+      })
+      const sponsoredChain = createChainableMock({
+        data: [
+          {
+            hackathon_id: "h1",
+            hackathons: {
+              ...mockSponsoredHackathon,
+              id: "h1",
+              starts_at: "2026-01-01T00:00:00Z",
+            },
+          },
+          {
+            hackathon_id: "h2",
+            hackathons: {
+              ...mockSponsoredHackathon,
+              id: "h2",
+              starts_at: "2026-06-01T00:00:00Z",
+            },
+          },
+          {
+            hackathon_id: "h3",
+            hackathons: {
+              ...mockSponsoredHackathon,
+              id: "h3",
+              starts_at: "2026-03-01T00:00:00Z",
+            },
+          },
+        ],
+        error: null,
+      })
+
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) return tenantChain
+        if (callCount === 2) return organizedChain
+        return sponsoredChain
+      })
+
+      const result = await getPublicTenantWithEvents("test-org")
+
+      expect(result).not.toBeNull()
+      expect(result?.sponsoredHackathons[0].id).toBe("h2")
+      expect(result?.sponsoredHackathons[1].id).toBe("h3")
+      expect(result?.sponsoredHackathons[2].id).toBe("h1")
     })
   })
 })

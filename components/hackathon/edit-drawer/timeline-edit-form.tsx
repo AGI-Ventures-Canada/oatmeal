@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 import {
   Field,
   FieldLabel,
@@ -22,10 +22,9 @@ interface TimelineEditFormProps {
   }
 }
 
-function formatDateForInput(dateString: string | null): string {
-  if (!dateString) return ""
-  const date = new Date(dateString)
-  return date.toISOString().slice(0, 16)
+function parseDate(dateString: string | null): Date | null {
+  if (!dateString) return null
+  return new Date(dateString)
 }
 
 export function TimelineEditForm({ hackathonId, initialData }: TimelineEditFormProps) {
@@ -34,10 +33,10 @@ export function TimelineEditForm({ hackathonId, initialData }: TimelineEditFormP
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [registrationOpensAt, setRegistrationOpensAt] = useState(formatDateForInput(initialData.registrationOpensAt))
-  const [registrationClosesAt, setRegistrationClosesAt] = useState(formatDateForInput(initialData.registrationClosesAt))
-  const [startsAt, setStartsAt] = useState(formatDateForInput(initialData.startsAt))
-  const [endsAt, setEndsAt] = useState(formatDateForInput(initialData.endsAt))
+  const [registrationOpensAt, setRegistrationOpensAt] = useState<Date | null>(parseDate(initialData.registrationOpensAt))
+  const [registrationClosesAt, setRegistrationClosesAt] = useState<Date | null>(parseDate(initialData.registrationClosesAt))
+  const [startsAt, setStartsAt] = useState<Date | null>(parseDate(initialData.startsAt))
+  const [endsAt, setEndsAt] = useState<Date | null>(parseDate(initialData.endsAt))
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
@@ -79,67 +78,42 @@ export function TimelineEditForm({ hackathonId, initialData }: TimelineEditFormP
   return (
     <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6" autoComplete="off">
       <FieldGroup>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field>
-            <FieldLabel htmlFor="timeline-reg-opens">Registration Opens</FieldLabel>
-            <Input
-              id="timeline-reg-opens"
-              name="registrationOpensAt"
-              type="datetime-local"
-              value={registrationOpensAt}
-              onChange={(e) => setRegistrationOpensAt(e.target.value)}
-              autoComplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-form-type="other"
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="timeline-reg-closes">Registration Closes</FieldLabel>
-            <Input
-              id="timeline-reg-closes"
-              name="registrationClosesAt"
-              type="datetime-local"
-              value={registrationClosesAt}
-              onChange={(e) => setRegistrationClosesAt(e.target.value)}
-              autoComplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-form-type="other"
-            />
-          </Field>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field>
-            <FieldLabel htmlFor="timeline-starts">Hackathon Starts</FieldLabel>
-            <Input
-              id="timeline-starts"
-              name="startsAt"
-              type="datetime-local"
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
-              autoComplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-form-type="other"
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="timeline-ends">Hackathon Ends</FieldLabel>
-            <Input
-              id="timeline-ends"
-              name="endsAt"
-              type="datetime-local"
-              value={endsAt}
-              onChange={(e) => setEndsAt(e.target.value)}
-              autoComplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-form-type="other"
-            />
-          </Field>
-        </div>
+        <Field>
+          <FieldLabel htmlFor="timeline-reg-opens">Registration Opens</FieldLabel>
+          <DateTimePicker
+            id="timeline-reg-opens"
+            value={registrationOpensAt}
+            onChange={setRegistrationOpensAt}
+            placeholder="Select date and time"
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="timeline-reg-closes">Registration Closes</FieldLabel>
+          <DateTimePicker
+            id="timeline-reg-closes"
+            value={registrationClosesAt}
+            onChange={setRegistrationClosesAt}
+            placeholder="Select date and time"
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="timeline-starts">Hackathon Starts</FieldLabel>
+          <DateTimePicker
+            id="timeline-starts"
+            value={startsAt}
+            onChange={setStartsAt}
+            placeholder="Select date and time"
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="timeline-ends">Hackathon Ends</FieldLabel>
+          <DateTimePicker
+            id="timeline-ends"
+            value={endsAt}
+            onChange={setEndsAt}
+            placeholder="Select date and time"
+          />
+        </Field>
 
         <FieldDescription>
           Set the key dates for your hackathon timeline

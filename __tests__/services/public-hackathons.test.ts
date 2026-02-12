@@ -1,13 +1,12 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach } from "bun:test"
 import type { Hackathon } from "@/lib/db/hackathon-types"
+import {
+  createChainableMock,
+  resetSupabaseMocks,
+  setMockFromImplementation,
+} from "../lib/supabase-mock"
 
-const mockFrom = mock(() => ({}))
-
-mock.module("@/lib/db/client", () => ({
-  supabase: () => ({ from: mockFrom }),
-}))
-
-const { getPublicHackathon, listPublicHackathons, getHackathonByIdForOrganizer, updateHackathonSettings } = await import(
+const { getPublicHackathon, listPublicHackathons, getHackathonByIdForOrganizer, checkHackathonOrganizer, updateHackathonSettings } = await import(
   "@/lib/services/public-hackathons"
 )
 
@@ -40,23 +39,9 @@ const mockOrganizer = {
   logo_url: null,
 }
 
-function createChainableMock(resolvedValue: { data: unknown; error: unknown }) {
-  const chain: Record<string, unknown> = {
-    select: mock(() => chain),
-    insert: mock(() => chain),
-    update: mock(() => chain),
-    eq: mock(() => chain),
-    in: mock(() => chain),
-    order: mock(() => chain),
-    single: mock(() => chain),
-    then: (resolve: (v: unknown) => void) => resolve(resolvedValue),
-  }
-  return chain
-}
-
 describe("Public Hackathons Service", () => {
   beforeEach(() => {
-    mockFrom.mockReset()
+    resetSupabaseMocks()
   })
 
   describe("getPublicHackathon", () => {
@@ -71,7 +56,7 @@ describe("Public Hackathons Service", () => {
       })
 
       let callCount = 0
-      mockFrom.mockImplementation(() => {
+      setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) return hackathonChain
         return sponsorsChain
@@ -88,9 +73,9 @@ describe("Public Hackathons Service", () => {
     it("returns null when hackathon not found", async () => {
       const chain = createChainableMock({
         data: null,
-        error: { message: "Not found" },
+        error: { message: "Not found", code: "PGRST116" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getPublicHackathon("nonexistent")
 
@@ -104,7 +89,7 @@ describe("Public Hackathons Service", () => {
         data: [{ ...mockHackathon, organizer: mockOrganizer }],
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listPublicHackathons()
 
@@ -118,11 +103,50 @@ describe("Public Hackathons Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listPublicHackathons()
 
       expect(result).toEqual([])
+    })
+
+    it("applies search filter when search option provided", async () => {
+      const chain = createChainableMock({
+        data: [{ ...mockHackathon, organizer: mockOrganizer }],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listPublicHackathons({ search: "test" })
+
+      expect(result).toHaveLength(1)
+      expect(chain.or).toHaveBeenCalled()
+    })
+
+    it("skips search filter for short queries", async () => {
+      const chain = createChainableMock({
+        data: [{ ...mockHackathon, organizer: mockOrganizer }],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listPublicHackathons({ search: "a" })
+
+      expect(result).toHaveLength(1)
+      expect(chain.or).not.toHaveBeenCalled()
+    })
+
+    it("sanitizes special characters in search", async () => {
+      const chain = createChainableMock({
+        data: [],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listPublicHackathons({ search: "%()" })
+
+      expect(result).toEqual([])
+      expect(chain.or).not.toHaveBeenCalled()
     })
   })
 
@@ -132,7 +156,7 @@ describe("Public Hackathons Service", () => {
         data: mockHackathon,
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getHackathonByIdForOrganizer("h1", "t1")
 
@@ -145,11 +169,52 @@ describe("Public Hackathons Service", () => {
         data: null,
         error: { message: "Not found" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await getHackathonByIdForOrganizer("h1", "wrong-tenant")
 
       expect(result).toBeNull()
+    })
+  })
+
+  describe("checkHackathonOrganizer", () => {
+    it("returns ok with hackathon when tenant owns it", async () => {
+      const chain = createChainableMock({
+        data: mockHackathon,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await checkHackathonOrganizer("h1", "t1")
+
+      expect(result.status).toBe("ok")
+      if (result.status === "ok") {
+        expect(result.hackathon.name).toBe("Test Hackathon")
+      }
+    })
+
+    it("returns not_found when hackathon does not exist", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "Not found", code: "PGRST116" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await checkHackathonOrganizer("nonexistent", "t1")
+
+      expect(result.status).toBe("not_found")
+    })
+
+    it("returns not_authorized when tenant does not own hackathon", async () => {
+      const chain = createChainableMock({
+        data: mockHackathon,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await checkHackathonOrganizer("h1", "wrong-tenant")
+
+      expect(result.status).toBe("not_authorized")
     })
   })
 
@@ -159,7 +224,7 @@ describe("Public Hackathons Service", () => {
         data: { ...mockHackathon, name: "Updated Hackathon" },
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await updateHackathonSettings("h1", "t1", {
         name: "Updated Hackathon",
@@ -174,7 +239,7 @@ describe("Public Hackathons Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await updateHackathonSettings("h1", "t1", {
         name: "Test",
@@ -188,7 +253,7 @@ describe("Public Hackathons Service", () => {
         data: { ...mockHackathon, banner_url: "https://new.com/banner.png" },
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await updateHackathonSettings("h1", "t1", {
         bannerUrl: "https://new.com/banner.png",

@@ -1,11 +1,10 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach } from "bun:test"
 import type { HackathonSponsor, SponsorTier } from "@/lib/db/hackathon-types"
-
-const mockFrom = mock(() => ({}))
-
-mock.module("@/lib/db/client", () => ({
-  supabase: () => ({ from: mockFrom }),
-}))
+import {
+  createChainableMock,
+  resetSupabaseMocks,
+  setMockFromImplementation,
+} from "../lib/supabase-mock"
 
 const { addSponsor, removeSponsor, listHackathonSponsors, updateSponsor, reorderSponsors, listHackathonSponsorsWithTenants } = await import(
   "@/lib/services/sponsors"
@@ -23,23 +22,9 @@ const mockSponsor: HackathonSponsor = {
   created_at: "2026-01-01T00:00:00Z",
 }
 
-function createChainableMock(resolvedValue: { data: unknown; error: unknown }) {
-  const chain: Record<string, unknown> = {
-    select: mock(() => chain),
-    insert: mock(() => chain),
-    update: mock(() => chain),
-    delete: mock(() => chain),
-    eq: mock(() => chain),
-    order: mock(() => chain),
-    single: mock(() => chain),
-    then: (resolve: (v: unknown) => void) => resolve(resolvedValue),
-  }
-  return chain
-}
-
 describe("Sponsors Service", () => {
   beforeEach(() => {
-    mockFrom.mockReset()
+    resetSupabaseMocks()
   })
 
   describe("addSponsor", () => {
@@ -48,7 +33,7 @@ describe("Sponsors Service", () => {
         data: mockSponsor,
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await addSponsor({
         hackathonId: "h1",
@@ -68,7 +53,7 @@ describe("Sponsors Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await addSponsor({
         hackathonId: "h1",
@@ -83,7 +68,7 @@ describe("Sponsors Service", () => {
         data: { ...mockSponsor, tier: "partner" },
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await addSponsor({
         hackathonId: "h1",
@@ -97,9 +82,9 @@ describe("Sponsors Service", () => {
   describe("removeSponsor", () => {
     it("removes a sponsor successfully", async () => {
       const chain = createChainableMock({ data: null, error: null })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
-      const result = await removeSponsor("s1")
+      const result = await removeSponsor("s1", "h1")
 
       expect(result).toBe(true)
     })
@@ -109,9 +94,9 @@ describe("Sponsors Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
-      const result = await removeSponsor("s1")
+      const result = await removeSponsor("s1", "h1")
 
       expect(result).toBe(false)
     })
@@ -123,7 +108,7 @@ describe("Sponsors Service", () => {
         data: [mockSponsor],
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listHackathonSponsors("h1")
 
@@ -133,7 +118,7 @@ describe("Sponsors Service", () => {
 
     it("returns empty array when no sponsors", async () => {
       const chain = createChainableMock({ data: [], error: null })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listHackathonSponsors("h_empty")
 
@@ -145,7 +130,7 @@ describe("Sponsors Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listHackathonSponsors("h_err")
 
@@ -159,9 +144,9 @@ describe("Sponsors Service", () => {
         data: { ...mockSponsor, name: "Updated Sponsor" },
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
-      const result = await updateSponsor("s1", { name: "Updated Sponsor" })
+      const result = await updateSponsor("s1", { name: "Updated Sponsor" }, "h1")
 
       expect(result).not.toBeNull()
       expect(result?.name).toBe("Updated Sponsor")
@@ -172,9 +157,9 @@ describe("Sponsors Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
-      const result = await updateSponsor("s1", { name: "Updated Sponsor" })
+      const result = await updateSponsor("s1", { name: "Updated Sponsor" }, "h1")
 
       expect(result).toBeNull()
     })
@@ -183,7 +168,7 @@ describe("Sponsors Service", () => {
   describe("reorderSponsors", () => {
     it("reorders sponsors successfully", async () => {
       const chain = createChainableMock({ data: null, error: null })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await reorderSponsors("h1", ["s1", "s2", "s3"])
 
@@ -195,7 +180,7 @@ describe("Sponsors Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await reorderSponsors("h1", ["s1"])
 
@@ -214,7 +199,7 @@ describe("Sponsors Service", () => {
         ],
         error: null,
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listHackathonSponsorsWithTenants("h1")
 
@@ -227,7 +212,7 @@ describe("Sponsors Service", () => {
         data: null,
         error: { message: "DB error" },
       })
-      mockFrom.mockReturnValue(chain)
+      setMockFromImplementation(() => chain)
 
       const result = await listHackathonSponsorsWithTenants("h_err")
 

@@ -1,8 +1,25 @@
-import Image from "next/image"
+import { OptimizedImage } from "@/components/ui/optimized-image"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Clock, Moon, Sun, Calendar, CalendarDays, Zap } from "lucide-react"
-import type { HackathonStatus, TenantProfile } from "@/lib/db/hackathon-types"
+import type { HackathonStatus, TenantProfile, Submission } from "@/lib/db/hackathon-types"
+import { RegistrationButton } from "./registration-button"
+import { SubmissionButton } from "./submission-button"
+import { CountdownBadge } from "./countdown-badge"
+import { getTimelineState } from "@/lib/utils/timeline"
+import { formatDateRange } from "@/lib/utils/format"
+
+interface RegistrationProps {
+  hackathonSlug: string
+  status: HackathonStatus
+  endsAt: string | null
+  registrationOpensAt: string | null
+  registrationClosesAt: string | null
+  maxParticipants: number | null
+  participantCount: number
+  isRegistered: boolean
+  submission?: Submission | null
+}
 
 interface EventHeroProps {
   name: string
@@ -10,65 +27,12 @@ interface EventHeroProps {
   status: HackathonStatus
   startsAt: string | null
   endsAt: string | null
+  registrationOpensAt?: string | null
+  registrationClosesAt?: string | null
   organizer: Pick<TenantProfile, "name" | "slug" | "logo_url">
   onDatesClick?: () => void
-}
-
-function getStatusBadgeVariant(status: HackathonStatus): "default" | "secondary" | "outline" {
-  switch (status) {
-    case "active":
-      return "default"
-    case "registration_open":
-      return "default"
-    case "completed":
-      return "outline"
-    default:
-      return "secondary"
-  }
-}
-
-function getStatusLabel(status: HackathonStatus): string {
-  switch (status) {
-    case "draft":
-      return "Draft"
-    case "published":
-      return "Coming Soon"
-    case "registration_open":
-      return "Registration Open"
-    case "active":
-      return "Live"
-    case "judging":
-      return "Judging"
-    case "completed":
-      return "Completed"
-    case "archived":
-      return "Archived"
-    default:
-      return status
-  }
-}
-
-function formatDateRange(startsAt: string | null, endsAt: string | null): string {
-  if (!startsAt) return "Dates TBD"
-
-  const start = new Date(startsAt)
-  const formatOptions: Intl.DateTimeFormatOptions = {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }
-
-  if (!endsAt) {
-    return start.toLocaleDateString("en-US", formatOptions)
-  }
-
-  const end = new Date(endsAt)
-
-  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
-    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.getDate()}, ${end.getFullYear()}`
-  }
-
-  return `${start.toLocaleDateString("en-US", formatOptions)} - ${end.toLocaleDateString("en-US", formatOptions)}`
+  registrationProps?: RegistrationProps
+  isRegistered?: boolean
 }
 
 function formatTimeRange(startsAt: string | null, endsAt: string | null): string | null {
@@ -148,11 +112,24 @@ export function EventHero({
   status,
   startsAt,
   endsAt,
+  registrationOpensAt,
+  registrationClosesAt,
   organizer,
   onDatesClick,
+  registrationProps,
+  isRegistered = false,
 }: EventHeroProps) {
   const durationInfo = getDurationInfo(startsAt, endsAt)
   const timeRange = formatTimeRange(startsAt, endsAt)
+  const timelineState = getTimelineState({
+    status,
+    registration_opens_at: registrationOpensAt,
+    registration_closes_at: registrationClosesAt,
+    starts_at: startsAt,
+    ends_at: endsAt,
+  })
+
+  const showCountdown = isRegistered && startsAt && new Date(startsAt) > new Date() && status !== "active" && status !== "completed" && status !== "judging"
 
   const datesContent = (
     <div className="flex flex-col gap-1">
@@ -177,7 +154,7 @@ export function EventHero({
     <div className="relative">
       <div className="h-64 md:h-80 relative overflow-hidden bg-primary">
         {bannerUrl && (
-          <Image
+          <OptimizedImage
             src={bannerUrl}
             alt={`${name} banner`}
             fill
@@ -187,13 +164,17 @@ export function EventHero({
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
       </div>
-      <div className="container mx-auto px-4">
+      <div className="mx-auto max-w-4xl px-4">
         <div className="relative -mt-20 md:-mt-24">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={getStatusBadgeVariant(status)}>
-                {getStatusLabel(status)}
-              </Badge>
+              {showCountdown ? (
+                <CountdownBadge startsAt={startsAt!} />
+              ) : (
+                <Badge variant={timelineState.variant}>
+                  {timelineState.label}
+                </Badge>
+              )}
               {durationInfo && (
                 <Badge variant="outline" className="gap-1">
                   <durationInfo.icon className="size-3" />
@@ -225,12 +206,12 @@ export function EventHero({
             )}
             <div className="flex items-center gap-2">
               {organizer.logo_url && (
-                <Image
+                <OptimizedImage
                   src={organizer.logo_url}
                   alt={organizer.name}
                   width={24}
                   height={24}
-                  className="rounded-full"
+                  className="object-contain"
                 />
               )}
               <span className="text-sm text-muted-foreground">
@@ -247,6 +228,26 @@ export function EventHero({
                 )}
               </span>
             </div>
+            {registrationProps && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <RegistrationButton
+                  hackathonSlug={registrationProps.hackathonSlug}
+                  status={status}
+                  endsAt={registrationProps.endsAt}
+                  registrationOpensAt={registrationProps.registrationOpensAt}
+                  registrationClosesAt={registrationProps.registrationClosesAt}
+                  maxParticipants={registrationProps.maxParticipants}
+                  participantCount={registrationProps.participantCount}
+                  isRegistered={registrationProps.isRegistered}
+                />
+                <SubmissionButton
+                  hackathonSlug={registrationProps.hackathonSlug}
+                  status={registrationProps.status}
+                  isRegistered={registrationProps.isRegistered}
+                  submission={registrationProps.submission ?? null}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

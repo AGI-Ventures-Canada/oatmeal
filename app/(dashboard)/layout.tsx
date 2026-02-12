@@ -1,10 +1,9 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
-import { AppSidebar } from "@/components/app-sidebar"
+import { AppSidebarSimple } from "@/components/app-sidebar-simple"
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar"
 
 export default async function DashboardLayout({
@@ -20,14 +19,9 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebarSimple />
       <SidebarInset>
-        <header className="flex h-12 shrink-0 items-center gap-2">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-          </div>
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0 min-w-0 overflow-hidden">{children}</div>
+        <div className="flex flex-1 flex-col min-w-0 overflow-hidden p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   )

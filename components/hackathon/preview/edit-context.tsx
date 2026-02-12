@@ -13,6 +13,8 @@ export type EditSection =
 interface EditContextValue {
   activeSection: EditSection
   isEditable: boolean
+  editMode: boolean
+  setEditMode: (mode: boolean) => void
   openSection: (section: EditSection) => void
   closeDrawer: () => void
 }
@@ -22,10 +24,19 @@ const EditContext = createContext<EditContextValue | null>(null)
 interface EditProviderProps {
   children: React.ReactNode
   isEditable: boolean
+  defaultEditMode?: boolean
 }
 
-export function EditProvider({ children, isEditable }: EditProviderProps) {
+export function EditProvider({ children, isEditable, defaultEditMode = true }: EditProviderProps) {
   const [activeSection, setActiveSection] = useState<EditSection>(null)
+  const [editMode, setEditModeState] = useState(defaultEditMode)
+
+  const setEditMode = useCallback((mode: boolean) => {
+    setEditModeState(mode)
+    if (!mode) {
+      setActiveSection(null)
+    }
+  }, [])
 
   const openSection = useCallback((section: EditSection) => {
     setActiveSection(section)
@@ -40,6 +51,8 @@ export function EditProvider({ children, isEditable }: EditProviderProps) {
       value={{
         activeSection,
         isEditable,
+        editMode,
+        setEditMode,
         openSection,
         closeDrawer,
       }}

@@ -1,10 +1,10 @@
 "use client"
 
 import { useAuth } from "@clerk/nextjs"
-import Link from "next/link"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { ImageIcon } from "lucide-react"
+import { LogoUploadModal } from "@/components/org/logo-upload-modal"
 
 type OrganizerLogoPromptProps = {
   organizerId: string
@@ -31,7 +31,7 @@ export function OrganizerLogoPrompt({
   }
 
   return (
-    <div className="container mx-auto px-4 py-4">
+    <div className="mx-auto max-w-4xl px-4 py-4">
       <Alert>
         <ImageIcon className="size-4" />
         <AlertTitle>Add your organization logo</AlertTitle>
@@ -39,9 +39,13 @@ export function OrganizerLogoPrompt({
           Make your event stand out by adding an organization logo. It will appear on your event pages and sponsor cards.
         </AlertDescription>
         <div className="mt-2 col-start-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/settings/profile">Add Logo</Link>
-          </Button>
+          <LogoUploadModal
+            lightLogoUrl={null}
+            darkLogoUrl={null}
+            trigger={
+              <Button variant="outline" size="sm">Add Logo</Button>
+            }
+          />
         </div>
       </Alert>
     </div>

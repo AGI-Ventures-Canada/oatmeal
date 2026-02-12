@@ -11,15 +11,17 @@ This project uses **bun** as the package manager.
 ## Commands
 
 ```bash
-bun dev          # Start dev server (auto-starts local Supabase)
-bun dev:fresh    # Reset database + start dev server (clean slate)
-bun run build    # Production build
-bun start        # Start production server
-bun lint         # Run ESLint
-bun test         # Run tests
-bun db:sync      # Reset DB + regenerate types
-bun db:diff name # Capture Studio changes as migration
-bun update-types # Regenerate TypeScript types from DB
+bun dev              # Start dev server (auto-starts local Supabase)
+bun dev:fresh        # Reset database + start dev server (clean slate)
+bun run build        # Production build
+bun start            # Start production server
+bun lint             # Run ESLint
+bun test             # Run unit tests (api, lib, services)
+bun test:integration # Run integration tests separately
+bun test:all         # Run all tests (unit + integration)
+bun db:sync          # Reset DB + regenerate types
+bun db:diff name     # Capture Studio changes as migration
+bun update-types     # Regenerate TypeScript types from DB
 ```
 
 ## Architecture
@@ -123,6 +125,10 @@ bunx shadcn@latest add <component-name>
 
 Check existing components before creating new ones.
 
+### Sidebar
+
+The dashboard sidebar is `components/app-sidebar-simple.tsx` — a custom component, **not** the shadcn/ui sidebar primitives in `/components/ui`. Always modify `app-sidebar-simple.tsx` for sidebar changes.
+
 ### shadcn/ui Styling
 
 **CRITICAL: Use shadcn components as-is. Do not add custom styling.**
@@ -223,30 +229,70 @@ Exceptions (use Enter instead):
 
 **CRITICAL: All new code must have accompanying tests. Do not submit code without tests.**
 
-- Tests live in `__tests__/` directory mirroring source structure
-- Use `bun:test` for test runner
-- Run tests: `bun test`
-- Run with coverage: `bun test --coverage`
+#### Test Commands
 
-Test organization:
+```bash
+bun test              # Run unit tests (api, lib, services)
+bun test:integration  # Run integration tests separately
+bun test:all          # Run both sequentially
+bun test --coverage   # Run with coverage report
+```
+
+**IMPORTANT: Integration tests must run separately.** They use `mock.module` at the service layer, which conflicts with service tests that mock at the database layer. Running all tests together causes mock isolation failures.
+
+#### Test Organization
+
 ```
 __tests__/
-├── api/           # API endpoint tests
-├── lib/           # Utility/service tests
+├── api/           # API route tests
+├── integration/   # Integration tests (run separately)
+├── lib/           # Utility tests + shared mocks
+│   └── supabase-mock.ts  # Shared Supabase mock utilities
+├── services/      # Service layer tests with DB mocks
 └── workflows/     # Workflow tests
 ```
+
+#### Mocking Pattern
+
+Service tests use closure-based mock setters from `__tests__/lib/supabase-mock.ts`:
+
+```typescript
+import {
+  createChainableMock,
+  resetSupabaseMocks,
+  setMockFromImplementation,
+  setMockRpcImplementation,
+} from "../lib/supabase-mock"
+
+beforeEach(() => {
+  resetSupabaseMocks()
+})
+
+it("example test", async () => {
+  const chain = createChainableMock({
+    data: { id: "1", name: "Test" },
+    error: null,
+  })
+  setMockFromImplementation(() => chain)
+
+  const result = await someServiceFunction()
+  expect(result).not.toBeNull()
+})
+```
+
+For RPC calls, use `setMockRpcImplementation()` instead.
 
 ## Git Workflow
 
 ### Never Push to Main
 
-**NEVER develop on or push directly to `main`.** All changes go through feature branch → PR → merge.
+**NEVER develop on or push directly to `main` or `staging`.** All changes go through feature branch → PR → merge.
 
 Before making changes:
 1. Check current branch: `git branch`
-2. If on `main`, create feature branch: `git checkout -b feature/your-feature-name`
+2. If on `main` or `staging`, create feature branch: `git checkout -b feature/your-feature-name`
 3. Push to feature branch: `git push -u origin feature/your-feature-name`
-4. Create PR to merge into `main`
+4. Create PR to merge into `staging`
 
 ### Check PR Status Before Pushing
 
