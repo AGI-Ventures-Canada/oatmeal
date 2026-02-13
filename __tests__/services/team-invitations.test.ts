@@ -352,6 +352,7 @@ describe("Team Invitations Service", () => {
         invitedByClerkUserId: "user_captain",
       })
 
+      expect(capturedEmail).not.toBeNull()
       expect(capturedEmail).toBe("test@example.com")
     })
   })
@@ -455,14 +456,15 @@ describe("Team Invitations Service", () => {
   })
 
   describe("declineTeamInvitation", () => {
-    it("declines invitation without email verification", async () => {
+    it("returns error when invitation not found for email", async () => {
       setMockFromImplementation(() =>
         createChainableMock({ data: null, error: null })
       )
 
-      const result = await declineTeamInvitation("test_token")
+      const result = await declineTeamInvitation("test_token", "user@example.com")
 
-      expect(result.success).toBe(true)
+      expect(result.success).toBe(false)
+      expect(result.code).toBe("not_found")
     })
 
     it("declines invitation with matching email", async () => {

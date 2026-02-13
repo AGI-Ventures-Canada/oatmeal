@@ -1475,25 +1475,41 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }),
     }
   )
-  .get("/teams/:teamId/invitations", async ({ principal, params, query }) => {
-    requirePrincipal(principal, ["user"])
+  .get(
+    "/teams/:teamId/invitations",
+    async ({ principal, params, query }) => {
+      requirePrincipal(principal, ["user"])
 
-    const { listTeamInvitations } = await import("@/lib/services/team-invitations")
-    const status = (query as Record<string, string | undefined>).status as
-      | "pending" | "accepted" | "declined" | "expired" | "cancelled"
-      | undefined
-    const invitations = await listTeamInvitations(params.teamId, status ? { status } : undefined)
+      const { listTeamInvitations } = await import("@/lib/services/team-invitations")
+      const invitations = await listTeamInvitations(
+        params.teamId,
+        query.status ? { status: query.status } : undefined
+      )
 
-    return {
-      invitations: invitations.map((i) => ({
-        id: i.id,
-        email: i.email,
-        status: i.status,
-        expiresAt: i.expires_at,
-        createdAt: i.created_at,
-      })),
+      return {
+        invitations: invitations.map((i) => ({
+          id: i.id,
+          email: i.email,
+          status: i.status,
+          expiresAt: i.expires_at,
+          createdAt: i.created_at,
+        })),
+      }
+    },
+    {
+      query: t.Object({
+        status: t.Optional(
+          t.Union([
+            t.Literal("pending"),
+            t.Literal("accepted"),
+            t.Literal("declined"),
+            t.Literal("expired"),
+            t.Literal("cancelled"),
+          ])
+        ),
+      }),
     }
-  })
+  )
   .delete("/teams/:teamId/invitations/:invitationId", async ({ principal, params }) => {
     requirePrincipal(principal, ["user"])
 

@@ -190,25 +190,23 @@ export async function acceptTeamInvitation(
 
 export async function declineTeamInvitation(
   token: string,
-  userEmail?: string
+  userEmail: string
 ): Promise<{ success: boolean; error?: string; code?: string }> {
   const client = getSupabase()
 
-  if (userEmail) {
-    const { data: invitation } = await client
-      .from("team_invitations")
-      .select("email")
-      .eq("token", token)
-      .eq("status", "pending")
-      .single()
+  const { data: invitation } = await client
+    .from("team_invitations")
+    .select("email")
+    .eq("token", token)
+    .eq("status", "pending")
+    .single()
 
-    if (!invitation) {
-      return { success: false, error: "Invitation not found", code: "not_found" }
-    }
+  if (!invitation) {
+    return { success: false, error: "Invitation not found", code: "not_found" }
+  }
 
-    if (invitation.email.toLowerCase() !== userEmail.toLowerCase()) {
-      return { success: false, error: "You can only decline invitations sent to your email", code: "email_mismatch" }
-    }
+  if (invitation.email.toLowerCase() !== userEmail.toLowerCase()) {
+    return { success: false, error: "You can only decline invitations sent to your email", code: "email_mismatch" }
   }
 
   const { error } = await client
