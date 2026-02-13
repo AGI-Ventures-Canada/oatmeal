@@ -92,11 +92,7 @@ export async function uploadLogo(
 
   const { buffer, mimeType } = await optimizeImage(file, originalMimeType)
 
-  const extension = mimeType === "image/svg+xml"
-    ? "svg"
-    : mimeType === "image/png"
-      ? "png"
-      : "webp"
+  const extension = mimeType === "image/svg+xml" ? "svg" : "webp"
 
   const filename = variant === "light" ? `logo.${extension}` : `logo-dark.${extension}`
   const path = `${tenantId}/${filename}`
@@ -130,7 +126,7 @@ export async function deleteLogo(
 ): Promise<boolean> {
   const client = getSupabase()
 
-  const extensions = ["webp", "png", "svg"]
+  const extensions = ["webp", "svg"]
   const filename = variant === "light" ? "logo" : "logo-dark"
 
   const paths = extensions.map((ext) => `${tenantId}/${filename}.${ext}`)
@@ -153,16 +149,8 @@ export interface UploadBannerResult {
 }
 
 export async function optimizeBanner(
-  buffer: Buffer,
-  mimeType: string
+  buffer: Buffer
 ): Promise<{ buffer: Buffer; mimeType: string }> {
-  if (mimeType === "image/svg+xml") {
-    if (buffer.length > MAX_BANNER_SIZE) {
-      throw new ImageTooLargeError(buffer.length, MAX_BANNER_SIZE)
-    }
-    return { buffer, mimeType }
-  }
-
   const image = sharp(buffer)
   const metadata = await image.metadata()
 
@@ -199,15 +187,13 @@ export async function optimizeBanner(
 
 export async function uploadBanner(
   hackathonId: string,
-  file: Buffer,
-  originalMimeType: string
+  file: Buffer
 ): Promise<UploadBannerResult | null> {
   const client = getSupabase()
 
-  const { buffer, mimeType } = await optimizeBanner(file, originalMimeType)
+  const { buffer, mimeType } = await optimizeBanner(file)
 
-  const extension = mimeType === "image/svg+xml" ? "svg" : "webp"
-  const filename = `banner.${extension}`
+  const filename = "banner.webp"
   const path = `${hackathonId}/${filename}`
 
   const { error } = await client.storage
@@ -236,12 +222,11 @@ export async function uploadBanner(
 export async function deleteBanner(hackathonId: string): Promise<boolean> {
   const client = getSupabase()
 
-  const extensions = ["webp", "png", "jpg", "svg"]
-  const paths = extensions.map((ext) => `${hackathonId}/banner.${ext}`)
+  const path = `${hackathonId}/banner.webp`
 
   const { error } = await client.storage
     .from(BANNERS_BUCKET)
-    .remove(paths)
+    .remove([path])
 
   if (error) {
     console.error("Failed to delete banner:", error)
@@ -257,16 +242,8 @@ export interface UploadScreenshotResult {
 }
 
 export async function optimizeScreenshot(
-  buffer: Buffer,
-  mimeType: string
+  buffer: Buffer
 ): Promise<{ buffer: Buffer; mimeType: string }> {
-  if (mimeType === "image/svg+xml") {
-    if (buffer.length > MAX_SCREENSHOT_SIZE) {
-      throw new ImageTooLargeError(buffer.length, MAX_SCREENSHOT_SIZE)
-    }
-    return { buffer, mimeType }
-  }
-
   const image = sharp(buffer)
   const metadata = await image.metadata()
 
@@ -303,15 +280,13 @@ export async function optimizeScreenshot(
 
 export async function uploadScreenshot(
   submissionId: string,
-  file: Buffer,
-  originalMimeType: string
+  file: Buffer
 ): Promise<UploadScreenshotResult | null> {
   const client = getSupabase()
 
-  const { buffer, mimeType } = await optimizeScreenshot(file, originalMimeType)
+  const { buffer, mimeType } = await optimizeScreenshot(file)
 
-  const extension = mimeType === "image/svg+xml" ? "svg" : "webp"
-  const filename = `screenshot.${extension}`
+  const filename = "screenshot.webp"
   const path = `${submissionId}/${filename}`
 
   const { error } = await client.storage
@@ -340,12 +315,11 @@ export async function uploadScreenshot(
 export async function deleteScreenshot(submissionId: string): Promise<boolean> {
   const client = getSupabase()
 
-  const extensions = ["webp", "png", "jpg", "svg"]
-  const paths = extensions.map((ext) => `${submissionId}/screenshot.${ext}`)
+  const path = `${submissionId}/screenshot.webp`
 
   const { error } = await client.storage
     .from(SCREENSHOTS_BUCKET)
-    .remove(paths)
+    .remove([path])
 
   if (error) {
     console.error("Failed to delete screenshot:", error)

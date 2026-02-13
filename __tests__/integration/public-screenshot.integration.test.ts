@@ -394,8 +394,7 @@ describe("Public Screenshot Routes", () => {
 
       expect(mockUploadScreenshot).toHaveBeenCalledWith(
         "sub123",
-        expect.any(Buffer),
-        "image/jpeg"
+        expect.any(Buffer)
       )
     })
 

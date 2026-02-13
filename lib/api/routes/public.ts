@@ -504,7 +504,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
 
     const { uploadScreenshot } = await import("@/lib/services/storage")
     const buffer = Buffer.from(await file.arrayBuffer())
-    const uploadResult = await uploadScreenshot(existing.id, buffer, file.type)
+    const uploadResult = await uploadScreenshot(existing.id, buffer)
 
     if (!uploadResult) {
       return new Response(
