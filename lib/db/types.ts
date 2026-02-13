@@ -462,6 +462,7 @@ export type Database = {
           live_app_url: string | null
           metadata: Json | null
           participant_id: string | null
+          screenshot_url: string | null
           status: Database["public"]["Enums"]["submission_status"]
           team_id: string | null
           title: string
@@ -477,6 +478,7 @@ export type Database = {
           live_app_url?: string | null
           metadata?: Json | null
           participant_id?: string | null
+          screenshot_url?: string | null
           status?: Database["public"]["Enums"]["submission_status"]
           team_id?: string | null
           title: string
@@ -492,6 +494,7 @@ export type Database = {
           live_app_url?: string | null
           metadata?: Json | null
           participant_id?: string | null
+          screenshot_url?: string | null
           status?: Database["public"]["Enums"]["submission_status"]
           team_id?: string | null
           title?: string

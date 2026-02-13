@@ -165,7 +165,7 @@ export function SubmissionButton({
   }
 
   async function deleteScreenshot(): Promise<boolean> {
-    if (!submission?.screenshot_url || screenshotPreview) return true
+    if (!submission?.screenshot_url || screenshotPreview !== null) return true
 
     try {
       const response = await fetch(

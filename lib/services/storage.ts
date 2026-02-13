@@ -23,8 +23,8 @@ export interface UploadLogoResult {
 }
 
 export class ImageTooLargeError extends Error {
-  constructor(size: number) {
-    super(`Optimized image is ${Math.round(size / 1024)}KB, max is ${MAX_OPTIMIZED_SIZE / 1024}KB`)
+  constructor(size: number, maxSize: number = MAX_OPTIMIZED_SIZE) {
+    super(`Optimized image is ${Math.round(size / 1024)}KB, max is ${maxSize / 1024}KB`)
     this.name = "ImageTooLargeError"
   }
 }
@@ -158,7 +158,7 @@ export async function optimizeBanner(
 ): Promise<{ buffer: Buffer; mimeType: string }> {
   if (mimeType === "image/svg+xml") {
     if (buffer.length > MAX_BANNER_SIZE) {
-      throw new ImageTooLargeError(buffer.length)
+      throw new ImageTooLargeError(buffer.length, MAX_BANNER_SIZE)
     }
     return { buffer, mimeType }
   }
@@ -191,7 +191,7 @@ export async function optimizeBanner(
   }
 
   if (optimized.length > MAX_BANNER_SIZE) {
-    throw new ImageTooLargeError(optimized.length)
+    throw new ImageTooLargeError(optimized.length, MAX_BANNER_SIZE)
   }
 
   return { buffer: optimized, mimeType: outputMimeType }
@@ -262,7 +262,7 @@ export async function optimizeScreenshot(
 ): Promise<{ buffer: Buffer; mimeType: string }> {
   if (mimeType === "image/svg+xml") {
     if (buffer.length > MAX_SCREENSHOT_SIZE) {
-      throw new ImageTooLargeError(buffer.length)
+      throw new ImageTooLargeError(buffer.length, MAX_SCREENSHOT_SIZE)
     }
     return { buffer, mimeType }
   }
@@ -295,7 +295,7 @@ export async function optimizeScreenshot(
   }
 
   if (optimized.length > MAX_SCREENSHOT_SIZE) {
-    throw new ImageTooLargeError(optimized.length)
+    throw new ImageTooLargeError(optimized.length, MAX_SCREENSHOT_SIZE)
   }
 
   return { buffer: optimized, mimeType: outputMimeType }
