@@ -119,6 +119,7 @@ export interface Submission {
   github_url: string | null
   live_app_url: string | null
   demo_video_url: string | null
+  screenshot_url: string | null
   status: SubmissionStatus
   metadata: Json
   created_at: string

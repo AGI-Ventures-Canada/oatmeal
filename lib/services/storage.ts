@@ -3,13 +3,17 @@ import { supabase as getSupabase } from "@/lib/db/client"
 
 const LOGOS_BUCKET = "logos"
 const BANNERS_BUCKET = "banners"
+const SCREENSHOTS_BUCKET = "screenshots"
 const MAX_LOGO_WIDTH = 800
 const MAX_LOGO_HEIGHT = 400
 const MAX_BANNER_WIDTH = 1920
 const MAX_BANNER_HEIGHT = 480
+const MAX_SCREENSHOT_WIDTH = 1280
+const MAX_SCREENSHOT_HEIGHT = 800
 const QUALITY = 85
 const MAX_OPTIMIZED_SIZE = 200 * 1024 // 200KB
 const MAX_BANNER_SIZE = 500 * 1024 // 500KB
+const MAX_SCREENSHOT_SIZE = 500 * 1024 // 500KB
 
 export type LogoVariant = "light" | "dark"
 
@@ -241,6 +245,110 @@ export async function deleteBanner(hackathonId: string): Promise<boolean> {
 
   if (error) {
     console.error("Failed to delete banner:", error)
+    return false
+  }
+
+  return true
+}
+
+export interface UploadScreenshotResult {
+  url: string
+  path: string
+}
+
+export async function optimizeScreenshot(
+  buffer: Buffer,
+  mimeType: string
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  if (mimeType === "image/svg+xml") {
+    if (buffer.length > MAX_SCREENSHOT_SIZE) {
+      throw new ImageTooLargeError(buffer.length)
+    }
+    return { buffer, mimeType }
+  }
+
+  const image = sharp(buffer)
+  const metadata = await image.metadata()
+
+  const needsResize =
+    (metadata.width && metadata.width > MAX_SCREENSHOT_WIDTH) ||
+    (metadata.height && metadata.height > MAX_SCREENSHOT_HEIGHT)
+
+  let pipeline = image
+
+  if (needsResize) {
+    pipeline = pipeline.resize(MAX_SCREENSHOT_WIDTH, MAX_SCREENSHOT_HEIGHT, {
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+  }
+
+  let optimized = await pipeline.clone().webp({ quality: QUALITY }).toBuffer()
+  const outputMimeType = "image/webp"
+
+  if (optimized.length > MAX_SCREENSHOT_SIZE) {
+    optimized = await pipeline.clone().webp({ quality: 70 }).toBuffer()
+  }
+
+  if (optimized.length > MAX_SCREENSHOT_SIZE) {
+    optimized = await pipeline.clone().webp({ quality: 50 }).toBuffer()
+  }
+
+  if (optimized.length > MAX_SCREENSHOT_SIZE) {
+    throw new ImageTooLargeError(optimized.length)
+  }
+
+  return { buffer: optimized, mimeType: outputMimeType }
+}
+
+export async function uploadScreenshot(
+  submissionId: string,
+  file: Buffer,
+  originalMimeType: string
+): Promise<UploadScreenshotResult | null> {
+  const client = getSupabase()
+
+  const { buffer, mimeType } = await optimizeScreenshot(file, originalMimeType)
+
+  const extension = mimeType === "image/svg+xml" ? "svg" : "webp"
+  const filename = `screenshot.${extension}`
+  const path = `${submissionId}/${filename}`
+
+  const { error } = await client.storage
+    .from(SCREENSHOTS_BUCKET)
+    .upload(path, buffer, {
+      contentType: mimeType,
+      upsert: true,
+      cacheControl: "3600",
+    })
+
+  if (error) {
+    console.error("Failed to upload screenshot:", error)
+    return null
+  }
+
+  const { data: urlData } = client.storage
+    .from(SCREENSHOTS_BUCKET)
+    .getPublicUrl(path)
+
+  return {
+    url: urlData.publicUrl,
+    path,
+  }
+}
+
+export async function deleteScreenshot(submissionId: string): Promise<boolean> {
+  const client = getSupabase()
+
+  const extensions = ["webp", "png", "jpg", "svg"]
+  const paths = extensions.map((ext) => `${submissionId}/screenshot.${ext}`)
+
+  const { error } = await client.storage
+    .from(SCREENSHOTS_BUCKET)
+    .remove(paths)
+
+  if (error) {
+    console.error("Failed to delete screenshot:", error)
     return false
   }
 

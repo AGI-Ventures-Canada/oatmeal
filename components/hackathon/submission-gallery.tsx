@@ -21,6 +21,7 @@ export type GallerySubmission = {
   githubUrl: string | null
   liveAppUrl: string | null
   demoVideoUrl: string | null
+  screenshotUrl: string | null
   submitter: string
   createdAt: string
 }
@@ -140,6 +141,16 @@ function SubmissionExpandedContent({ submission }: { submission: GallerySubmissi
 
   return (
     <div className="pl-10 space-y-4">
+      {submission.screenshotUrl && (
+        <div className="rounded-lg overflow-hidden border bg-muted">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={submission.screenshotUrl}
+            alt={`Screenshot of ${submission.title}`}
+            className="w-full h-auto max-h-80 object-contain"
+          />
+        </div>
+      )}
       {submission.description && (
         <p className="text-sm text-muted-foreground whitespace-pre-wrap">
           {submission.description}
