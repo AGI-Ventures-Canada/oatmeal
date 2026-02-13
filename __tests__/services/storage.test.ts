@@ -224,12 +224,17 @@ describe("Storage Service", () => {
   })
 
   describe("deleteScreenshot", () => {
-    it("removes screenshot file from storage", async () => {
+    it("removes screenshot files in all formats from storage", async () => {
       const result = await deleteScreenshot("sub123")
 
       expect(result).toBe(true)
       expect(mockStorageFrom).toHaveBeenCalledWith("screenshots")
-      expect(mockRemove).toHaveBeenCalledWith(["sub123/screenshot.webp"])
+      expect(mockRemove).toHaveBeenCalledWith([
+        "sub123/screenshot.webp",
+        "sub123/screenshot.png",
+        "sub123/screenshot.jpg",
+        "sub123/screenshot.svg",
+      ])
     })
 
     it("returns false on error", async () => {
@@ -274,13 +279,14 @@ describe("Storage Service", () => {
   })
 
   describe("deleteLogo", () => {
-    it("removes logo files from storage", async () => {
+    it("removes logo files in all formats from storage", async () => {
       const result = await deleteLogo("tenant123", "light")
 
       expect(result).toBe(true)
       expect(mockStorageFrom).toHaveBeenCalledWith("logos")
       expect(mockRemove).toHaveBeenCalledWith([
         "tenant123/logo.webp",
+        "tenant123/logo.png",
         "tenant123/logo.svg",
       ])
     })
@@ -290,6 +296,7 @@ describe("Storage Service", () => {
 
       expect(mockRemove).toHaveBeenCalledWith([
         "tenant123/logo-dark.webp",
+        "tenant123/logo-dark.png",
         "tenant123/logo-dark.svg",
       ])
     })
@@ -325,12 +332,17 @@ describe("Storage Service", () => {
   })
 
   describe("deleteBanner", () => {
-    it("removes banner file from storage", async () => {
+    it("removes banner files in all formats from storage", async () => {
       const result = await deleteBanner("hackathon123")
 
       expect(result).toBe(true)
       expect(mockStorageFrom).toHaveBeenCalledWith("banners")
-      expect(mockRemove).toHaveBeenCalledWith(["hackathon123/banner.webp"])
+      expect(mockRemove).toHaveBeenCalledWith([
+        "hackathon123/banner.webp",
+        "hackathon123/banner.png",
+        "hackathon123/banner.jpg",
+        "hackathon123/banner.svg",
+      ])
     })
 
     it("returns false on error", async () => {

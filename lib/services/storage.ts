@@ -126,7 +126,7 @@ export async function deleteLogo(
 ): Promise<boolean> {
   const client = getSupabase()
 
-  const extensions = ["webp", "svg"]
+  const extensions = ["webp", "png", "svg"]
   const filename = variant === "light" ? "logo" : "logo-dark"
 
   const paths = extensions.map((ext) => `${tenantId}/${filename}.${ext}`)
@@ -222,11 +222,12 @@ export async function uploadBanner(
 export async function deleteBanner(hackathonId: string): Promise<boolean> {
   const client = getSupabase()
 
-  const path = `${hackathonId}/banner.webp`
+  const extensions = ["webp", "png", "jpg", "svg"]
+  const paths = extensions.map((ext) => `${hackathonId}/banner.${ext}`)
 
   const { error } = await client.storage
     .from(BANNERS_BUCKET)
-    .remove([path])
+    .remove(paths)
 
   if (error) {
     console.error("Failed to delete banner:", error)
@@ -315,11 +316,12 @@ export async function uploadScreenshot(
 export async function deleteScreenshot(submissionId: string): Promise<boolean> {
   const client = getSupabase()
 
-  const path = `${submissionId}/screenshot.webp`
+  const extensions = ["webp", "png", "jpg", "svg"]
+  const paths = extensions.map((ext) => `${submissionId}/screenshot.${ext}`)
 
   const { error } = await client.storage
     .from(SCREENSHOTS_BUCKET)
-    .remove([path])
+    .remove(paths)
 
   if (error) {
     console.error("Failed to delete screenshot:", error)
