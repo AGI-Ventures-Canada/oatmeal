@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -57,6 +57,14 @@ export function SubmissionButton({
 
   const canSubmit = status === "active"
 
+  useEffect(() => {
+    return () => {
+      if (screenshotPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(screenshotPreview)
+      }
+    }
+  }, [screenshotPreview])
+
   if (!isLoaded) {
     return (
       <Button disabled variant="outline" size="lg">
@@ -98,6 +106,9 @@ export function SubmissionButton({
     setLiveAppUrl(submission?.live_app_url || "")
     setDescription(submission?.description || "")
     setScreenshotFile(null)
+    if (screenshotPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(screenshotPreview)
+    }
     setScreenshotPreview(submission?.screenshot_url || null)
     setError(null)
     if (fileInputRef.current) {
@@ -121,11 +132,17 @@ export function SubmissionButton({
     }
 
     setError(null)
+    if (screenshotPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(screenshotPreview)
+    }
     setScreenshotFile(file)
     setScreenshotPreview(URL.createObjectURL(file))
   }
 
   function handleRemoveScreenshot() {
+    if (screenshotPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(screenshotPreview)
+    }
     setScreenshotFile(null)
     setScreenshotPreview(null)
     if (fileInputRef.current) {
@@ -165,7 +182,9 @@ export function SubmissionButton({
   }
 
   async function deleteScreenshot(): Promise<boolean> {
-    if (!submission?.screenshot_url || screenshotPreview !== null) return true
+    const hadOriginalScreenshot = !!submission?.screenshot_url
+    const userRemovedScreenshot = screenshotPreview === null
+    if (!hadOriginalScreenshot || !userRemovedScreenshot) return true
 
     try {
       const response = await fetch(
