@@ -10,6 +10,23 @@ export type PublicHackathon = Hackathon & {
   })[]
 }
 
+export async function getPublicHackathonById(
+  id: string
+): Promise<{ slug: string } | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("hackathons")
+    .select("slug")
+    .eq("id", id)
+    .single()
+
+  if (error || !data) {
+    return null
+  }
+
+  return { slug: data.slug }
+}
+
 export async function getPublicHackathon(
   slug: string,
   options?: { includeUnpublished?: boolean }

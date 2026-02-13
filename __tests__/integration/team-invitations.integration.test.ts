@@ -1,0 +1,596 @@
+import { describe, expect, it, mock, beforeEach } from "bun:test"
+
+const mockAuth = mock(() => Promise.resolve({ userId: null }))
+const mockClerkClient = mock(() =>
+  Promise.resolve({
+    organizations: {
+      getOrganization: mock(() => Promise.resolve({ name: "Test Org" })),
+    },
+    users: {
+      getUser: mock(() =>
+        Promise.resolve({
+          primaryEmailAddress: { emailAddress: "user@example.com" },
+        })
+      ),
+    },
+  })
+)
+
+mock.module("@clerk/nextjs/server", () => ({
+  auth: mockAuth,
+  clerkClient: mockClerkClient,
+}))
+
+const mockGetInvitationByToken = mock(() => Promise.resolve(null))
+const mockAcceptTeamInvitation = mock(() =>
+  Promise.resolve({ success: true, teamId: "team_1", hackathonId: "h1" })
+)
+const mockDeclineTeamInvitation = mock(() => Promise.resolve({ success: true }))
+const mockCreateTeamInvitation = mock(() =>
+  Promise.resolve({
+    success: true,
+    invitation: {
+      id: "inv_1",
+      email: "test@example.com",
+      token: "abc123",
+      expires_at: new Date().toISOString(),
+    },
+  })
+)
+const mockListTeamInvitations = mock(() => Promise.resolve([]))
+const mockCancelTeamInvitation = mock(() => Promise.resolve({ success: true }))
+const mockGetTeamWithHackathon = mock(() =>
+  Promise.resolve({
+    name: "Test Team",
+    hackathon: { name: "Test Hackathon", slug: "test-hackathon" },
+  })
+)
+
+mock.module("@/lib/services/team-invitations", () => ({
+  getInvitationByToken: mockGetInvitationByToken,
+  acceptTeamInvitation: mockAcceptTeamInvitation,
+  declineTeamInvitation: mockDeclineTeamInvitation,
+  createTeamInvitation: mockCreateTeamInvitation,
+  listTeamInvitations: mockListTeamInvitations,
+  cancelTeamInvitation: mockCancelTeamInvitation,
+  getTeamWithHackathon: mockGetTeamWithHackathon,
+}))
+
+const mockGetPublicHackathonById = mock(() => Promise.resolve({ slug: "test-hackathon" }))
+
+mock.module("@/lib/services/public-hackathons", () => ({
+  getPublicHackathon: mock(() => Promise.resolve(null)),
+  getPublicHackathonById: mockGetPublicHackathonById,
+  listPublicHackathons: mock(() => Promise.resolve([])),
+  getHackathonByIdForOrganizer: mock(() => Promise.resolve(null)),
+  checkHackathonOrganizer: mock(() => Promise.resolve({ status: "not_found" })),
+  getHackathonByIdWithFullData: mock(() => Promise.resolve(null)),
+  getHackathonByIdWithAccess: mock(() => Promise.resolve(null)),
+  updateHackathonSettings: mock(() => Promise.resolve(null)),
+}))
+
+const mockSendTeamInvitationEmail = mock(() => Promise.resolve({ success: true }))
+
+mock.module("@/lib/email/team-invitations", () => ({
+  sendTeamInvitationEmail: mockSendTeamInvitationEmail,
+}))
+
+const mockLogAudit = mock(() => Promise.resolve())
+
+mock.module("@/lib/services/audit", () => ({
+  logAudit: mockLogAudit,
+}))
+
+const mockCheckRateLimit = mock(() => ({ allowed: true, remaining: 9, resetAt: Date.now() + 60000 }))
+
+mock.module("@/lib/services/rate-limit", () => ({
+  checkRateLimit: mockCheckRateLimit,
+  getRateLimitHeaders: () => ({}),
+  RateLimitError: class RateLimitError extends Error {
+    remaining: number
+    resetAt: number
+    constructor(resetAt: number, remaining: number) {
+      super("Rate limit exceeded")
+      this.remaining = remaining
+      this.resetAt = resetAt
+    }
+  },
+}))
+
+mock.module("@/lib/services/hackathons", () => ({
+  registerForHackathon: mock(() => Promise.resolve({ success: true })),
+  getParticipantCount: mock(() => Promise.resolve(0)),
+  isUserRegistered: mock(() => Promise.resolve(false)),
+}))
+
+mock.module("@/lib/services/tenant-profiles", () => ({
+  getPublicTenantWithEvents: mock(() => Promise.resolve(null)),
+}))
+
+mock.module("@/lib/integrations/oauth", () => ({
+  exchangeCodeForTokens: mock(() => Promise.resolve(null)),
+  saveIntegration: mock(() => Promise.resolve()),
+  getProviderConfig: mock(() => null),
+}))
+
+const mockResolvePrincipal = mock(() =>
+  Promise.resolve({
+    kind: "user" as const,
+    tenantId: "tenant_1",
+    userId: "user_captain",
+    orgId: "org_1",
+    orgRole: "admin",
+    scopes: ["hackathons:read", "hackathons:write"],
+  })
+)
+
+mock.module("@/lib/auth/principal", () => ({
+  resolvePrincipal: mockResolvePrincipal,
+  requirePrincipal: (principal: unknown, kinds: string[]) => {
+    if (!principal || (principal as { kind: string }).kind === "anonymous") {
+      const error = new Error("Unauthorized")
+      ;(error as Error & { statusCode: number }).statusCode = 401
+      throw error
+    }
+  },
+  AuthError: class AuthError extends Error {
+    statusCode: number
+    constructor(message: string, statusCode: number) {
+      super(message)
+      this.statusCode = statusCode
+    }
+  },
+}))
+
+const { Elysia } = await import("elysia")
+const { publicRoutes } = await import("@/lib/api/routes/public")
+const { dashboardRoutes } = await import("@/lib/api/routes/dashboard")
+
+const publicApp = new Elysia({ prefix: "/api" }).use(publicRoutes)
+const dashboardApp = new Elysia({ prefix: "/api" }).use(dashboardRoutes)
+
+const mockInvitation = {
+  id: "inv_1",
+  status: "pending",
+  team: { name: "Test Team" },
+  hackathon: { name: "Test Hackathon", slug: "test-hackathon", status: "active" },
+  email: "invitee@example.com",
+  expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+}
+
+describe("Team Invitations API Routes", () => {
+  beforeEach(() => {
+    mockAuth.mockReset()
+    mockAuth.mockResolvedValue({ userId: null })
+    mockGetInvitationByToken.mockReset()
+    mockAcceptTeamInvitation.mockReset()
+    mockDeclineTeamInvitation.mockReset()
+    mockCreateTeamInvitation.mockReset()
+    mockListTeamInvitations.mockReset()
+    mockCancelTeamInvitation.mockReset()
+    mockGetTeamWithHackathon.mockReset()
+    mockGetPublicHackathonById.mockReset()
+    mockSendTeamInvitationEmail.mockReset()
+    mockLogAudit.mockReset()
+    mockCheckRateLimit.mockReset()
+    mockCheckRateLimit.mockReturnValue({ allowed: true, remaining: 9, resetAt: Date.now() + 60000 })
+  })
+
+  describe("GET /api/public/invitations/:token", () => {
+    it("returns 404 when invitation not found", async () => {
+      mockGetInvitationByToken.mockResolvedValue(null)
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/invalid_token")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(404)
+      expect(data.code).toBe("not_found")
+    })
+
+    it("returns invitation details when found", async () => {
+      mockGetInvitationByToken.mockResolvedValue(mockInvitation)
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/valid_token")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.teamName).toBe("Test Team")
+      expect(data.hackathonName).toBe("Test Hackathon")
+      expect(data.status).toBe("pending")
+    })
+
+    it("marks invitation as expired if past expiry", async () => {
+      const expiredInvitation = {
+        ...mockInvitation,
+        expires_at: new Date(Date.now() - 1000).toISOString(),
+      }
+      mockGetInvitationByToken.mockResolvedValue(expiredInvitation)
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/expired_token")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.status).toBe("expired")
+    })
+
+    it("returns already accepted status", async () => {
+      const acceptedInvitation = { ...mockInvitation, status: "accepted" }
+      mockGetInvitationByToken.mockResolvedValue(acceptedInvitation)
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/accepted_token")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.status).toBe("accepted")
+    })
+  })
+
+  describe("POST /api/public/invitations/:token/accept", () => {
+    it("returns 401 when not authenticated", async () => {
+      mockAuth.mockResolvedValue({ userId: null })
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/token123/accept", {
+          method: "POST",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(401)
+      expect(data.code).toBe("not_authenticated")
+    })
+
+    it("accepts invitation successfully", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_123" })
+      mockAcceptTeamInvitation.mockResolvedValue({
+        success: true,
+        teamId: "team_1",
+        hackathonId: "h1",
+      })
+      mockGetPublicHackathonById.mockResolvedValue({ slug: "test-hackathon" })
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/valid_token/accept", {
+          method: "POST",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.success).toBe(true)
+      expect(data.teamId).toBe("team_1")
+      expect(data.hackathonSlug).toBe("test-hackathon")
+    })
+
+    it("returns error when accept fails", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_123" })
+      mockAcceptTeamInvitation.mockResolvedValue({
+        success: false,
+        error: "Invitation expired",
+        code: "expired",
+      })
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/expired_token/accept", {
+          method: "POST",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.code).toBe("expired")
+    })
+
+    it("returns 404 when invitation not found", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_123" })
+      mockAcceptTeamInvitation.mockResolvedValue({
+        success: false,
+        error: "Not found",
+        code: "not_found",
+      })
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/nonexistent/accept", {
+          method: "POST",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(404)
+      expect(data.code).toBe("not_found")
+    })
+
+    it("calls acceptTeamInvitation with correct params", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_456" })
+      mockAcceptTeamInvitation.mockResolvedValue({
+        success: true,
+        teamId: "team_1",
+        hackathonId: "h1",
+      })
+      mockGetPublicHackathonById.mockResolvedValue({ slug: "test-hackathon" })
+
+      await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/my_token/accept", {
+          method: "POST",
+        })
+      )
+
+      expect(mockAcceptTeamInvitation).toHaveBeenCalledWith("my_token", "user_456")
+    })
+  })
+
+  describe("POST /api/public/invitations/:token/decline", () => {
+    it("returns 401 when not authenticated", async () => {
+      mockAuth.mockResolvedValue({ userId: null })
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/token123/decline", {
+          method: "POST",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(401)
+      expect(data.code).toBe("not_authenticated")
+    })
+
+    it("declines invitation successfully", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_123" })
+      mockDeclineTeamInvitation.mockResolvedValue({ success: true })
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/valid_token/decline", {
+          method: "POST",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.success).toBe(true)
+    })
+
+    it("returns error when email mismatch", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_123" })
+      mockDeclineTeamInvitation.mockResolvedValue({
+        success: false,
+        error: "Email mismatch",
+        code: "email_mismatch",
+      })
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/token/decline", {
+          method: "POST",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(403)
+      expect(data.code).toBe("email_mismatch")
+    })
+
+    it("returns 404 when invitation not found", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_123" })
+      mockDeclineTeamInvitation.mockResolvedValue({
+        success: false,
+        error: "Not found",
+        code: "not_found",
+      })
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/nonexistent/decline", {
+          method: "POST",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(404)
+      expect(data.code).toBe("not_found")
+    })
+
+    it("passes user email to declineTeamInvitation", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_123" })
+      mockDeclineTeamInvitation.mockResolvedValue({ success: true })
+
+      await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/token/decline", {
+          method: "POST",
+        })
+      )
+
+      expect(mockDeclineTeamInvitation).toHaveBeenCalledWith("token", "user@example.com")
+    })
+  })
+})
+
+describe("Dashboard Team Invitations Routes", () => {
+  beforeEach(async () => {
+    mockAuth.mockReset()
+    mockCreateTeamInvitation.mockReset()
+    mockListTeamInvitations.mockReset()
+    mockCancelTeamInvitation.mockReset()
+    mockGetTeamWithHackathon.mockReset()
+    mockSendTeamInvitationEmail.mockReset()
+    mockLogAudit.mockReset()
+    mockCheckRateLimit.mockReset()
+    mockCheckRateLimit.mockReturnValue({ allowed: true, remaining: 9, resetAt: Date.now() + 60000 })
+
+    mockGetTeamWithHackathon.mockResolvedValue({
+      name: "Test Team",
+      hackathon: { name: "Test Hackathon", slug: "test-hackathon" },
+    })
+
+    mockResolvePrincipal.mockResolvedValue({
+      kind: "user",
+      tenantId: "tenant_1",
+      userId: "user_captain",
+      orgId: "org_1",
+      orgRole: "admin",
+      scopes: ["hackathons:read", "hackathons:write"],
+    })
+  })
+
+  describe("POST /api/dashboard/teams/:teamId/invitations", () => {
+    it("creates invitation and sends email", async () => {
+      mockCreateTeamInvitation.mockResolvedValue({
+        success: true,
+        invitation: {
+          id: "inv_1",
+          email: "test@example.com",
+          token: "token123",
+          expires_at: new Date().toISOString(),
+        },
+      })
+
+      const res = await dashboardApp.handle(
+        new Request("http://localhost/api/dashboard/teams/team_1/invitations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            hackathonId: "h1",
+            email: "test@example.com",
+            inviterName: "John Doe",
+          }),
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.id).toBe("inv_1")
+      expect(data.email).toBe("test@example.com")
+      expect(mockSendTeamInvitationEmail).toHaveBeenCalled()
+      expect(mockLogAudit).toHaveBeenCalled()
+    })
+
+    it("returns error when creation fails", async () => {
+      mockCreateTeamInvitation.mockResolvedValue({
+        success: false,
+        error: "Team not found",
+        code: "team_not_found",
+      })
+
+      const res = await dashboardApp.handle(
+        new Request("http://localhost/api/dashboard/teams/team_1/invitations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            hackathonId: "h1",
+            email: "test@example.com",
+          }),
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.code).toBe("team_not_found")
+    })
+
+    it("uses default inviter name when not provided", async () => {
+      mockCreateTeamInvitation.mockResolvedValue({
+        success: true,
+        invitation: {
+          id: "inv_1",
+          email: "test@example.com",
+          token: "token123",
+          expires_at: new Date().toISOString(),
+        },
+      })
+
+      await dashboardApp.handle(
+        new Request("http://localhost/api/dashboard/teams/team_1/invitations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            hackathonId: "h1",
+            email: "test@example.com",
+          }),
+        })
+      )
+
+      expect(mockSendTeamInvitationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ inviterName: "A team captain" })
+      )
+    })
+  })
+
+  describe("GET /api/dashboard/teams/:teamId/invitations", () => {
+    it("returns list of invitations", async () => {
+      mockListTeamInvitations.mockResolvedValue([
+        {
+          id: "inv_1",
+          email: "test1@example.com",
+          status: "pending",
+          expires_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: "inv_2",
+          email: "test2@example.com",
+          status: "accepted",
+          expires_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        },
+      ])
+
+      const res = await dashboardApp.handle(
+        new Request("http://localhost/api/dashboard/teams/team_1/invitations")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.invitations).toHaveLength(2)
+      expect(data.invitations[0].email).toBe("test1@example.com")
+    })
+
+    it("filters by status when provided", async () => {
+      mockListTeamInvitations.mockResolvedValue([])
+
+      await dashboardApp.handle(
+        new Request("http://localhost/api/dashboard/teams/team_1/invitations?status=pending")
+      )
+
+      expect(mockListTeamInvitations).toHaveBeenCalledWith("team_1", { status: "pending" })
+    })
+  })
+
+  describe("DELETE /api/dashboard/teams/:teamId/invitations/:invitationId", () => {
+    it("cancels invitation successfully", async () => {
+      mockCancelTeamInvitation.mockResolvedValue({ success: true })
+
+      const res = await dashboardApp.handle(
+        new Request("http://localhost/api/dashboard/teams/team_1/invitations/inv_1", {
+          method: "DELETE",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.success).toBe(true)
+      expect(mockLogAudit).toHaveBeenCalled()
+    })
+
+    it("returns error when cancel fails", async () => {
+      mockCancelTeamInvitation.mockResolvedValue({
+        success: false,
+        error: "Only team captain can cancel",
+      })
+
+      const res = await dashboardApp.handle(
+        new Request("http://localhost/api/dashboard/teams/team_1/invitations/inv_1", {
+          method: "DELETE",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.error).toBe("Only team captain can cancel")
+    })
+  })
+})

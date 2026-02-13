@@ -55,16 +55,23 @@ export default async function EventPage({ params }: PageProps) {
   let isRegistered = false
   let participantCount = 0
   let submission = null
+  let teamInfo = null
 
   if (userId) {
-    const { getRegistrationInfo } = await import("@/lib/services/hackathons")
+    const { getRegistrationInfo, getParticipantTeamInfo } = await import("@/lib/services/hackathons")
     const registrationInfo = await getRegistrationInfo(hackathon.id, userId)
     isRegistered = registrationInfo.isRegistered
     participantCount = registrationInfo.participantCount
 
     if (isRegistered) {
-      const { getSubmissionForParticipant } = await import("@/lib/services/submissions")
-      submission = await getSubmissionForParticipant(hackathon.id, userId)
+      const [submissionResult, teamResult] = await Promise.all([
+        import("@/lib/services/submissions").then((m) =>
+          m.getSubmissionForParticipant(hackathon.id, userId)
+        ),
+        getParticipantTeamInfo(hackathon.id, userId),
+      ])
+      submission = submissionResult
+      teamInfo = teamResult
     }
   }
 
@@ -100,6 +107,7 @@ export default async function EventPage({ params }: PageProps) {
         showEditToggle={isOrganizer}
         submission={submission}
         submissions={gallerySubmissions}
+        teamInfo={teamInfo}
       />
     </div>
   )

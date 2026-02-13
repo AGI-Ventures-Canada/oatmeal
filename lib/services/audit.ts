@@ -41,6 +41,8 @@ export type AuditAction =
   | "org_profile.updated"
   | "logo.uploaded"
   | "logo.deleted"
+  | "team_invitation.sent"
+  | "team_invitation.cancelled"
 
 export type LogAuditInput = {
   principal: Exclude<Principal, { kind: "anon" }>

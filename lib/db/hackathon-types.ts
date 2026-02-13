@@ -21,6 +21,13 @@ export type SubmissionStatus =
 
 export type TeamStatus = "forming" | "locked" | "disbanded"
 
+export type InvitationStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "expired"
+  | "cancelled"
+
 export type WebhookEvent =
   | "hackathon.created"
   | "hackathon.updated"
@@ -74,6 +81,21 @@ export interface Team {
   captain_clerk_user_id: string
   invite_code: string
   status: TeamStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface TeamInvitation {
+  id: string
+  team_id: string
+  hackathon_id: string
+  email: string
+  token: string
+  invited_by_clerk_user_id: string
+  status: InvitationStatus
+  expires_at: string
+  accepted_at: string | null
+  accepted_by_clerk_user_id: string | null
   created_at: string
   updated_at: string
 }

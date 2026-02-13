@@ -17,6 +17,7 @@ interface RegistrationButtonProps {
   maxParticipants: number | null
   participantCount: number
   isRegistered: boolean
+  onRegistrationSuccess?: () => void
 }
 
 const blockedStatuses: HackathonStatus[] = ["draft", "archived", "completed", "judging"]
@@ -31,6 +32,7 @@ export function RegistrationButton({
   maxParticipants,
   participantCount,
   isRegistered: initialIsRegistered,
+  onRegistrationSuccess,
 }: RegistrationButtonProps) {
   const { isSignedIn, isLoaded } = useUser()
   const pathname = usePathname()
@@ -170,6 +172,7 @@ export function RegistrationButton({
       }
 
       setIsRegistered(true)
+      onRegistrationSuccess?.()
       router.refresh()
     } catch (err) {
       if (err instanceof TypeError && err.message.includes("fetch")) {

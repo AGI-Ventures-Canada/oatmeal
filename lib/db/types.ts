@@ -521,6 +521,66 @@ export type Database = {
           },
         ]
       }
+      team_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by_clerk_user_id: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          hackathon_id: string
+          id: string
+          invited_by_clerk_user_id: string
+          status: Database["public"]["Enums"]["invitation_status"]
+          team_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by_clerk_user_id?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          hackathon_id: string
+          id?: string
+          invited_by_clerk_user_id: string
+          status?: Database["public"]["Enums"]["invitation_status"]
+          team_id: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by_clerk_user_id?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          hackathon_id?: string
+          id?: string
+          invited_by_clerk_user_id?: string
+          status?: Database["public"]["Enums"]["invitation_status"]
+          team_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invitations_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invitations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           captain_clerk_user_id: string
@@ -706,15 +766,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      register_for_hackathon: {
-        Args: { p_clerk_user_id: string; p_hackathon_id: string }
+      accept_team_invitation: {
+        Args: { p_clerk_user_id: string; p_token: string }
         Returns: {
           error_code: string
           error_message: string
-          participant_id: string
+          hackathon_id: string
           success: boolean
+          team_id: string
         }[]
       }
+      register_for_hackathon:
+        | {
+            Args: { p_clerk_user_id: string; p_hackathon_id: string }
+            Returns: {
+              error_code: string
+              error_message: string
+              participant_id: string
+              success: boolean
+            }[]
+          }
+        | {
+            Args: {
+              p_clerk_user_id: string
+              p_hackathon_id: string
+              p_team_name?: string
+            }
+            Returns: {
+              error_code: string
+              error_message: string
+              participant_id: string
+              success: boolean
+              team_id: string
+            }[]
+          }
     }
     Enums: {
       actor_type: "user" | "api_key"
@@ -727,6 +812,12 @@ export type Database = {
         | "completed"
         | "archived"
       integration_provider: "gmail" | "google_calendar" | "notion" | "luma"
+      invitation_status:
+        | "pending"
+        | "accepted"
+        | "declined"
+        | "expired"
+        | "cancelled"
       participant_role: "participant" | "judge" | "mentor" | "organizer"
       schedule_frequency:
         | "once"
@@ -890,6 +981,13 @@ export const Constants = {
         "archived",
       ],
       integration_provider: ["gmail", "google_calendar", "notion", "luma"],
+      invitation_status: [
+        "pending",
+        "accepted",
+        "declined",
+        "expired",
+        "cancelled",
+      ],
       participant_role: ["participant", "judge", "mentor", "organizer"],
       schedule_frequency: [
         "once",

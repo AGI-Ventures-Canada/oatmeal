@@ -1408,3 +1408,127 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       return { success: true }
     }
   )
+  .post(
+    "/teams/:teamId/invitations",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user"])
+
+      const rateLimitResult = checkRateLimit(`team_invitation:${params.teamId}`, {
+        maxRequests: 10,
+        windowMs: 60_000,
+      })
+      if (!rateLimitResult.allowed) {
+        throw new RateLimitError(rateLimitResult.resetAt, rateLimitResult.remaining)
+      }
+
+      const { createTeamInvitation, getTeamWithHackathon } = await import(
+        "@/lib/services/team-invitations"
+      )
+      const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
+
+      const result = await createTeamInvitation({
+        teamId: params.teamId,
+        hackathonId: body.hackathonId,
+        email: body.email,
+        invitedByClerkUserId: principal.userId!,
+      })
+
+      if (!result.success) {
+        return new Response(JSON.stringify({ error: result.error, code: result.code }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const teamInfo = await getTeamWithHackathon(params.teamId)
+
+      if (teamInfo) {
+        await sendTeamInvitationEmail({
+          to: body.email,
+          teamName: teamInfo.name,
+          hackathonName: teamInfo.hackathon.name,
+          inviterName: body.inviterName || "A team captain",
+          inviteToken: result.invitation.token,
+          expiresAt: result.invitation.expires_at,
+        })
+      }
+
+      await logAudit({
+        principal,
+        action: "team_invitation.sent",
+        resourceType: "team_invitation",
+        resourceId: result.invitation.id,
+        metadata: { teamId: params.teamId, email: body.email },
+      })
+
+      return {
+        id: result.invitation.id,
+        email: result.invitation.email,
+        expiresAt: result.invitation.expires_at,
+      }
+    },
+    {
+      body: t.Object({
+        hackathonId: t.String(),
+        email: t.String({ format: "email" }),
+        inviterName: t.Optional(t.String()),
+      }),
+    }
+  )
+  .get(
+    "/teams/:teamId/invitations",
+    async ({ principal, params, query }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { listTeamInvitations } = await import("@/lib/services/team-invitations")
+      const invitations = await listTeamInvitations(
+        params.teamId,
+        query.status ? { status: query.status } : undefined
+      )
+
+      return {
+        invitations: invitations.map((i) => ({
+          id: i.id,
+          email: i.email,
+          status: i.status,
+          expiresAt: i.expires_at,
+          createdAt: i.created_at,
+        })),
+      }
+    },
+    {
+      query: t.Object({
+        status: t.Optional(
+          t.Union([
+            t.Literal("pending"),
+            t.Literal("accepted"),
+            t.Literal("declined"),
+            t.Literal("expired"),
+            t.Literal("cancelled"),
+          ])
+        ),
+      }),
+    }
+  )
+  .delete("/teams/:teamId/invitations/:invitationId", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user"])
+
+    const { cancelTeamInvitation } = await import("@/lib/services/team-invitations")
+    const result = await cancelTeamInvitation(params.invitationId, principal.userId!)
+
+    if (!result.success) {
+      return new Response(JSON.stringify({ error: result.error }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    await logAudit({
+      principal,
+      action: "team_invitation.cancelled",
+      resourceType: "team_invitation",
+      resourceId: params.invitationId,
+    })
+
+    return { success: true }
+  })
