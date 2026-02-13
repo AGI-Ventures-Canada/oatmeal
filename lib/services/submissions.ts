@@ -229,30 +229,26 @@ export async function getHackathonSubmissions(
     .map((s) => s.participant_id)
     .filter((id): id is string => id !== null)
 
-  let teamsMap: Record<string, string> = {}
-  let participantsMap: Record<string, string> = {}
+  const [teamsResult, participantsResult] = await Promise.all([
+    teamIds.length > 0
+      ? client.from("teams").select("id, name").in("id", teamIds)
+      : Promise.resolve({ data: null }),
+    participantIds.length > 0
+      ? client
+          .from("hackathon_participants")
+          .select("id, display_name")
+          .in("id", participantIds)
+      : Promise.resolve({ data: null }),
+  ])
 
-  if (teamIds.length > 0) {
-    const { data: teams } = await client
-      .from("teams")
-      .select("id, name")
-      .in("id", teamIds)
-    if (teams) {
-      teamsMap = Object.fromEntries(teams.map((t) => [t.id, t.name]))
-    }
-  }
-
-  if (participantIds.length > 0) {
-    const { data: participants } = await client
-      .from("hackathon_participants")
-      .select("id, display_name")
-      .in("id", participantIds)
-    if (participants) {
-      participantsMap = Object.fromEntries(
-        participants.map((p) => [p.id, p.display_name || "Anonymous"])
+  const teamsMap: Record<string, string> = teamsResult.data
+    ? Object.fromEntries(teamsResult.data.map((t) => [t.id, t.name]))
+    : {}
+  const participantsMap: Record<string, string> = participantsResult.data
+    ? Object.fromEntries(
+        participantsResult.data.map((p) => [p.id, p.display_name || "Anonymous"])
       )
-    }
-  }
+    : {}
 
   return (submissions as unknown as PublicSubmission[]).map((s) => ({
     ...s,
