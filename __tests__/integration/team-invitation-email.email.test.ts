@@ -1,18 +1,55 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
 
-const mockSendEmail = mock(() => Promise.resolve({ id: "email_123" }))
+type SendEmailInput = {
+  to: string | string[]
+  subject: string
+  html?: string
+  text?: string
+  from?: string
+  replyTo?: string
+  tags?: Array<{ name: string; value: string }>
+}
+
+type SendEmailResult = { id: string } | null
+
+let sendEmailImpl: (input: SendEmailInput) => Promise<SendEmailResult> = () =>
+  Promise.resolve({ id: "email_123" })
+
+const mockSendEmail = mock((input: SendEmailInput) => sendEmailImpl(input))
+
+function setSendEmailImplementation(impl: (input: SendEmailInput) => Promise<SendEmailResult>) {
+  sendEmailImpl = impl
+}
+
+function resetMocks() {
+  mockSendEmail.mockClear()
+  sendEmailImpl = () => Promise.resolve({ id: "email_123" })
+}
 
 mock.module("@/lib/email/resend", () => ({
   sendEmail: mockSendEmail,
+  getResendClient: mock(() => ({})),
+  getReceivedEmail: mock(() => Promise.resolve(null)),
+  verifyResendWebhook: mock(() => true),
+  sendAgentNotification: mock(() => Promise.resolve({ id: "notif_123" })),
 }))
 
 const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
 
+const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL
+
 describe("Team Invitation Email", () => {
   beforeEach(() => {
-    mockSendEmail.mockClear()
-    mockSendEmail.mockResolvedValue({ id: "email_123" })
+    resetMocks()
     process.env.NEXT_PUBLIC_APP_URL = "https://example.com"
+  })
+
+  afterEach(() => {
+    if (originalAppUrl === undefined) {
+      delete process.env.NEXT_PUBLIC_APP_URL
+    } else {
+      process.env.NEXT_PUBLIC_APP_URL = originalAppUrl
+    }
   })
 
   describe("sendTeamInvitationEmail", () => {
@@ -134,7 +171,7 @@ describe("Team Invitation Email", () => {
     })
 
     it("returns success false when sendEmail returns null", async () => {
-      mockSendEmail.mockResolvedValue(null)
+      setSendEmailImplementation(() => Promise.resolve(null))
 
       const result = await sendTeamInvitationEmail(validInput)
 

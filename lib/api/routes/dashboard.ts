@@ -1470,7 +1470,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     {
       body: t.Object({
         hackathonId: t.String(),
-        email: t.String(),
+        email: t.String({ format: "email" }),
         inviterName: t.Optional(t.String()),
       }),
     }

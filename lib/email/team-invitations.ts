@@ -1,5 +1,14 @@
 import { sendEmail } from "./resend"
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+}
+
 export type SendTeamInvitationInput = {
   to: string
   teamName: string
@@ -34,13 +43,13 @@ export async function sendTeamInvitationEmail(
 
       <div style="background: #ffffff; padding: 32px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
         <p style="font-size: 16px; margin-bottom: 24px;">
-          <strong>${input.inviterName}</strong> has invited you to join team <strong>"${input.teamName}"</strong>
-          for the <strong>${input.hackathonName}</strong> hackathon.
+          <strong>${escapeHtml(input.inviterName)}</strong> has invited you to join team <strong>"${escapeHtml(input.teamName)}"</strong>
+          for the <strong>${escapeHtml(input.hackathonName)}</strong> hackathon.
         </p>
 
         <div style="background: #f4f4f5; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
           <p style="margin: 0 0 8px 0; font-size: 14px; color: #71717a;">Team:</p>
-          <p style="margin: 0; font-size: 18px; font-weight: 600;">${input.teamName}</p>
+          <p style="margin: 0; font-size: 18px; font-weight: 600;">${escapeHtml(input.teamName)}</p>
         </div>
 
         <a href="${acceptUrl}"

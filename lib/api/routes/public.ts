@@ -587,6 +587,13 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     const user = await client.users.getUser(userId)
     const userEmail = user.primaryEmailAddress?.emailAddress
 
+    if (!userEmail) {
+      return new Response(
+        JSON.stringify({ error: "No email address found", code: "no_email" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
     const { declineTeamInvitation } = await import("@/lib/services/team-invitations")
     const result = await declineTeamInvitation(params.token, userEmail)
 
