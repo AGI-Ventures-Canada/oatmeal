@@ -61,7 +61,8 @@ export function InviteAcceptClient({
       setTimeout(() => {
         router.push(`/e/${invitation.hackathonSlug}`)
       }, 2000)
-    } catch {
+    } catch (err) {
+      console.error("Failed to accept invitation:", err)
       setError("Failed to accept invitation")
     } finally {
       setLoading(false)
@@ -84,7 +85,8 @@ export function InviteAcceptClient({
       }
 
       router.push("/")
-    } catch {
+    } catch (err) {
+      console.error("Failed to decline invitation:", err)
       setError("Failed to decline invitation")
     } finally {
       setLoading(false)

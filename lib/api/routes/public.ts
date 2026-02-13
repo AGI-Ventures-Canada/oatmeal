@@ -161,7 +161,8 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       if (displayName) {
         teamName = `${displayName}'s Team`
       }
-    } catch {
+    } catch (err) {
+      console.warn("Failed to fetch user for team name:", err)
     }
 
     const result = await registerForHackathon(hackathon.id, userId, teamName)
