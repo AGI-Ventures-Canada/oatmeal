@@ -171,20 +171,13 @@ export async function optimizeBanner(
   const qualityLevels = [QUALITY, 70, 50]
 
   for (const quality of qualityLevels) {
-    const optimized = await pipeline.webp({ quality }).toBuffer()
+    const optimized = await pipeline.clone().webp({ quality }).toBuffer()
     if (optimized.length <= MAX_BANNER_SIZE) {
       return { buffer: optimized, mimeType: outputMimeType }
     }
-    pipeline = sharp(buffer)
-    if (needsResize) {
-      pipeline = pipeline.resize(MAX_BANNER_WIDTH, MAX_BANNER_HEIGHT, {
-        fit: "cover",
-        position: "center",
-      })
-    }
   }
 
-  const finalBuffer = await pipeline.webp({ quality: 50 }).toBuffer()
+  const finalBuffer = await pipeline.clone().webp({ quality: 50 }).toBuffer()
   throw new ImageTooLargeError(finalBuffer.length, MAX_BANNER_SIZE)
 }
 
@@ -268,20 +261,13 @@ export async function optimizeScreenshot(
   const qualityLevels = [QUALITY, 70, 50]
 
   for (const quality of qualityLevels) {
-    const optimized = await pipeline.webp({ quality }).toBuffer()
+    const optimized = await pipeline.clone().webp({ quality }).toBuffer()
     if (optimized.length <= MAX_SCREENSHOT_SIZE) {
       return { buffer: optimized, mimeType: outputMimeType }
     }
-    pipeline = sharp(buffer)
-    if (needsResize) {
-      pipeline = pipeline.resize(MAX_SCREENSHOT_WIDTH, MAX_SCREENSHOT_HEIGHT, {
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-    }
   }
 
-  const finalBuffer = await pipeline.webp({ quality: 50 }).toBuffer()
+  const finalBuffer = await pipeline.clone().webp({ quality: 50 }).toBuffer()
   throw new ImageTooLargeError(finalBuffer.length, MAX_SCREENSHOT_SIZE)
 }
 

@@ -304,17 +304,7 @@ export function SubmissionButton({
         return
       }
 
-      const newSubmission = {
-        ...submission,
-        id: data.submissionId,
-        title: title.trim(),
-        description: description.trim(),
-        github_url: githubUrl.trim(),
-        live_app_url: liveAppUrl.trim() || null,
-        screenshot_url: submission?.screenshot_url || null,
-      } as Submission
-
-      setSubmission(newSubmission)
+      let finalScreenshotUrl = submission?.screenshot_url || null
 
       if (screenshotFile) {
         const uploadSuccess = await uploadScreenshot()
@@ -325,6 +315,7 @@ export function SubmissionButton({
           )
           return
         }
+        finalScreenshotUrl = screenshotPreview
       } else if (submission?.screenshot_url && !screenshotPreview) {
         const deleteSuccess = await deleteScreenshot()
         if (!deleteSuccess) {
@@ -334,7 +325,18 @@ export function SubmissionButton({
           )
           return
         }
+        finalScreenshotUrl = null
       }
+
+      setSubmission({
+        ...submission,
+        id: data.submissionId,
+        title: title.trim(),
+        description: description.trim(),
+        github_url: githubUrl.trim(),
+        live_app_url: liveAppUrl.trim() || null,
+        screenshot_url: finalScreenshotUrl,
+      } as Submission)
 
       setIsDialogOpen(false)
       router.refresh()
