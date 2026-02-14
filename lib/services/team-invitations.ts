@@ -257,11 +257,41 @@ export async function cancelTeamInvitation(
 
 type InvitationStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled"
 
+export type ListInvitationsResult =
+  | { success: true; invitations: TeamInvitation[] }
+  | { success: false; error: string; code: string }
+
 export async function listTeamInvitations(
   teamId: string,
+  clerkUserId: string,
   options?: { status?: InvitationStatus }
-): Promise<TeamInvitation[]> {
+): Promise<ListInvitationsResult> {
   const client = getSupabase()
+
+  const { data: team, error: teamError } = await client
+    .from("teams")
+    .select("captain_clerk_user_id")
+    .eq("id", teamId)
+    .single()
+
+  if (teamError || !team) {
+    return { success: false, error: "Team not found", code: "team_not_found" }
+  }
+
+  const isCaptain = team.captain_clerk_user_id === clerkUserId
+
+  if (!isCaptain) {
+    const { data: membership } = await client
+      .from("hackathon_participants")
+      .select("id")
+      .eq("team_id", teamId)
+      .eq("clerk_user_id", clerkUserId)
+      .maybeSingle()
+
+    if (!membership) {
+      return { success: false, error: "Not authorized to view team invitations", code: "not_team_member" }
+    }
+  }
 
   let query = client
     .from("team_invitations")
@@ -277,10 +307,10 @@ export async function listTeamInvitations(
 
   if (error) {
     console.error("Failed to list invitations:", error)
-    return []
+    return { success: false, error: "Failed to list invitations", code: "query_failed" }
   }
 
-  return data as TeamInvitation[]
+  return { success: true, invitations: data as TeamInvitation[] }
 }
 
 export async function getTeamWithHackathon(

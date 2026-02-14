@@ -606,37 +606,126 @@ describe("Team Invitations Service", () => {
   })
 
   describe("listTeamInvitations", () => {
-    it("returns all invitations for team", async () => {
+    it("returns all invitations for team when user is captain", async () => {
       const invitations = [
         { ...mockInvitation, id: "inv_1" },
         { ...mockInvitation, id: "inv_2", email: "other@example.com" },
       ]
+      setMockFromImplementation((table) => {
+        if (table === "teams") {
+          return createChainableMock({
+            data: { captain_clerk_user_id: "user_captain" },
+            error: null,
+          })
+        }
+        return createChainableMock({ data: invitations, error: null })
+      })
+
+      const result = await listTeamInvitations("team_1", "user_captain")
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.invitations).toHaveLength(2)
+      }
+    })
+
+    it("returns all invitations for team when user is team member", async () => {
+      const invitations = [{ ...mockInvitation, id: "inv_1" }]
+      setMockFromImplementation((table) => {
+        if (table === "teams") {
+          return createChainableMock({
+            data: { captain_clerk_user_id: "other_captain" },
+            error: null,
+          })
+        }
+        if (table === "hackathon_participants") {
+          return createChainableMock({ data: { id: "membership_1" }, error: null })
+        }
+        return createChainableMock({ data: invitations, error: null })
+      })
+
+      const result = await listTeamInvitations("team_1", "team_member")
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.invitations).toHaveLength(1)
+      }
+    })
+
+    it("returns error when user is not team member", async () => {
+      setMockFromImplementation((table) => {
+        if (table === "teams") {
+          return createChainableMock({
+            data: { captain_clerk_user_id: "other_captain" },
+            error: null,
+          })
+        }
+        if (table === "hackathon_participants") {
+          return createChainableMock({ data: null, error: null })
+        }
+        return createChainableMock({ data: [], error: null })
+      })
+
+      const result = await listTeamInvitations("team_1", "unauthorized_user")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("not_team_member")
+      }
+    })
+
+    it("returns error when team not found", async () => {
       setMockFromImplementation(() =>
-        createChainableMock({ data: invitations, error: null })
+        createChainableMock({ data: null, error: { message: "Not found" } })
       )
 
-      const result = await listTeamInvitations("team_1")
+      const result = await listTeamInvitations("nonexistent", "user_captain")
 
-      expect(result).toHaveLength(2)
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("team_not_found")
+      }
     })
 
     it("filters by status when provided", async () => {
       const chain = createChainableMock({ data: [mockInvitation], error: null })
-      setMockFromImplementation(() => chain)
+      let callCount = 0
+      setMockFromImplementation((table) => {
+        callCount++
+        if (table === "teams") {
+          return createChainableMock({
+            data: { captain_clerk_user_id: "user_captain" },
+            error: null,
+          })
+        }
+        return chain
+      })
 
-      await listTeamInvitations("team_1", { status: "pending" })
+      const result = await listTeamInvitations("team_1", "user_captain", { status: "pending" })
 
+      expect(result.success).toBe(true)
       expect(chain.eq).toHaveBeenCalled()
     })
 
-    it("returns empty array on error", async () => {
-      setMockFromImplementation(() =>
-        createChainableMock({ data: null, error: { message: "DB error" } })
-      )
+    it("returns error on database error", async () => {
+      let callCount = 0
+      setMockFromImplementation((table) => {
+        callCount++
+        if (table === "teams") {
+          return createChainableMock({
+            data: { captain_clerk_user_id: "user_captain" },
+            error: null,
+          })
+        }
+        return createChainableMock({ data: null, error: { message: "DB error" } })
+      })
 
-      const result = await listTeamInvitations("team_1")
+      const result = await listTeamInvitations("team_1", "user_captain")
 
-      expect(result).toEqual([])
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("query_failed")
+      }
     })
   })
 

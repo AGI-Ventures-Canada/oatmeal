@@ -1481,13 +1481,22 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       requirePrincipal(principal, ["user"])
 
       const { listTeamInvitations } = await import("@/lib/services/team-invitations")
-      const invitations = await listTeamInvitations(
+      const result = await listTeamInvitations(
         params.teamId,
+        principal.userId!,
         query.status ? { status: query.status } : undefined
       )
 
+      if (!result.success) {
+        const status = result.code === "team_not_found" ? 404 : 403
+        return new Response(JSON.stringify({ error: result.error }), {
+          status,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
       return {
-        invitations: invitations.map((i) => ({
+        invitations: result.invitations.map((i) => ({
           id: i.id,
           email: i.email,
           status: i.status,

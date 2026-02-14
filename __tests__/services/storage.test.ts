@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test"
+import { mockFrom, mockRpc } from "../lib/supabase-mock"
 
 const mockUpload = mock(() => Promise.resolve({ error: null }))
 const mockRemove = mock(() => Promise.resolve({ error: null }))
@@ -11,6 +12,8 @@ const mockStorageFrom = mock(() => ({
 
 mock.module("@/lib/db/client", () => ({
   supabase: () => ({
+    from: (table: string) => mockFrom(table),
+    rpc: (fn: string, params: unknown) => mockRpc(fn, params),
     storage: {
       from: mockStorageFrom,
     },
