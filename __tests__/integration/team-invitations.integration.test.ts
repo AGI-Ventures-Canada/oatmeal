@@ -86,6 +86,7 @@ const mockCheckRateLimit = mock(() => ({ allowed: true, remaining: 9, resetAt: D
 mock.module("@/lib/services/rate-limit", () => ({
   checkRateLimit: mockCheckRateLimit,
   getRateLimitHeaders: () => ({}),
+  defaultRateLimits: { "api_key:default": { maxRequests: 100, windowMs: 60000 } },
   RateLimitError: class RateLimitError extends Error {
     remaining: number
     resetAt: number
