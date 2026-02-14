@@ -71,6 +71,7 @@ export type CreateSubmissionInput = {
   description: string
   githubUrl: string
   liveAppUrl?: string | null
+  screenshotUrl?: string | null
 }
 
 export async function createSubmission(
@@ -91,6 +92,7 @@ export async function createSubmission(
       description: input.description,
       github_url: input.githubUrl,
       live_app_url: input.liveAppUrl ?? null,
+      screenshot_url: input.screenshotUrl ?? null,
       status: "submitted",
       metadata: {},
     })
@@ -110,6 +112,7 @@ export type UpdateSubmissionInput = {
   description?: string
   githubUrl?: string
   liveAppUrl?: string | null
+  screenshotUrl?: string | null
 }
 
 export async function updateSubmission(
@@ -125,6 +128,7 @@ export async function updateSubmission(
   if (input.description !== undefined) updates.description = input.description
   if (input.githubUrl !== undefined) updates.github_url = input.githubUrl
   if (input.liveAppUrl !== undefined) updates.live_app_url = input.liveAppUrl
+  if (input.screenshotUrl !== undefined) updates.screenshot_url = input.screenshotUrl
 
   let query = client
     .from("submissions")
@@ -182,6 +186,7 @@ export type PublicSubmission = {
   github_url: string | null
   live_app_url: string | null
   demo_video_url: string | null
+  screenshot_url: string | null
   status: string
   created_at: string
   participant_id: string | null
@@ -203,6 +208,7 @@ export async function getHackathonSubmissions(
       github_url,
       live_app_url,
       demo_video_url,
+      screenshot_url,
       status,
       created_at,
       participant_id,

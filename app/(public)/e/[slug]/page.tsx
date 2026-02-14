@@ -84,6 +84,7 @@ export default async function EventPage({ params }: PageProps) {
     githubUrl: s.github_url,
     liveAppUrl: s.live_app_url,
     demoVideoUrl: s.demo_video_url,
+    screenshotUrl: s.screenshot_url,
     submitter: s.submitter_name,
     createdAt: s.created_at,
   }))

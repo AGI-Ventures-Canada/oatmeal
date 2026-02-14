@@ -923,7 +923,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
       const { uploadBanner } = await import("@/lib/services/storage")
       const buffer = Buffer.from(await file.arrayBuffer())
-      const uploadResult = await uploadBanner(params.id, buffer, file.type)
+      const uploadResult = await uploadBanner(params.id, buffer)
 
       if (!uploadResult) {
         return new Response(JSON.stringify({ error: "Failed to upload banner" }), {

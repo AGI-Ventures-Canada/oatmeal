@@ -1,0 +1,356 @@
+import { describe, it, expect, beforeEach, mock } from "bun:test"
+
+const mockUpload = mock(() => Promise.resolve({ error: null }))
+const mockRemove = mock(() => Promise.resolve({ error: null }))
+const mockGetPublicUrl = mock(() => ({ data: { publicUrl: "https://storage.test/file.webp" } }))
+const mockStorageFrom = mock(() => ({
+  upload: mockUpload,
+  remove: mockRemove,
+  getPublicUrl: mockGetPublicUrl,
+}))
+
+mock.module("@/lib/db/client", () => ({
+  supabase: () => ({
+    storage: {
+      from: mockStorageFrom,
+    },
+  }),
+}))
+
+const mockSharpInstance = {
+  metadata: mock(() => Promise.resolve({ width: 800, height: 600 })),
+  resize: mock(() => mockSharpInstance),
+  webp: mock(() => mockSharpInstance),
+  clone: mock(() => mockSharpInstance),
+  toBuffer: mock(() => Promise.resolve(Buffer.alloc(100 * 1024))),
+}
+const mockSharp = mock(() => mockSharpInstance)
+
+mock.module("sharp", () => ({
+  default: mockSharp,
+}))
+
+const {
+  ImageTooLargeError,
+  optimizeImage,
+  optimizeBanner,
+  optimizeScreenshot,
+  uploadLogo,
+  deleteLogo,
+  uploadBanner,
+  deleteBanner,
+  uploadScreenshot,
+  deleteScreenshot,
+} = await import("@/lib/services/storage")
+
+describe("Storage Service", () => {
+  beforeEach(() => {
+    mockUpload.mockClear()
+    mockRemove.mockClear()
+    mockGetPublicUrl.mockClear()
+    mockStorageFrom.mockClear()
+    mockSharp.mockClear()
+    mockSharpInstance.metadata.mockClear()
+    mockSharpInstance.resize.mockClear()
+    mockSharpInstance.webp.mockClear()
+    mockSharpInstance.clone.mockClear()
+    mockSharpInstance.toBuffer.mockClear()
+
+    mockUpload.mockImplementation(() => Promise.resolve({ error: null }))
+    mockRemove.mockImplementation(() => Promise.resolve({ error: null }))
+    mockGetPublicUrl.mockImplementation(() => ({ data: { publicUrl: "https://storage.test/file.webp" } }))
+    mockSharpInstance.metadata.mockImplementation(() => Promise.resolve({ width: 800, height: 600 }))
+    mockSharpInstance.toBuffer.mockImplementation(() => Promise.resolve(Buffer.alloc(100 * 1024)))
+  })
+
+  describe("ImageTooLargeError", () => {
+    it("uses default max size in error message", () => {
+      const error = new ImageTooLargeError(300 * 1024)
+      expect(error.message).toBe("Optimized image is 300KB, max is 200KB")
+      expect(error.name).toBe("ImageTooLargeError")
+    })
+
+    it("uses custom max size in error message", () => {
+      const error = new ImageTooLargeError(600 * 1024, 500 * 1024)
+      expect(error.message).toBe("Optimized image is 600KB, max is 500KB")
+    })
+  })
+
+  describe("optimizeImage", () => {
+    it("passes through SVG unchanged if within size limit", async () => {
+      const svgBuffer = Buffer.from("<svg></svg>")
+      const result = await optimizeImage(svgBuffer, "image/svg+xml")
+
+      expect(result.buffer).toBe(svgBuffer)
+      expect(result.mimeType).toBe("image/svg+xml")
+      expect(mockSharp).not.toHaveBeenCalled()
+    })
+
+    it("throws error for SVG exceeding size limit", async () => {
+      const largeBuffer = Buffer.alloc(250 * 1024)
+
+      await expect(optimizeImage(largeBuffer, "image/svg+xml")).rejects.toThrow(ImageTooLargeError)
+    })
+
+    it("resizes large images", async () => {
+      mockSharpInstance.metadata.mockImplementation(() => Promise.resolve({ width: 1200, height: 800 }))
+
+      const buffer = Buffer.alloc(1024)
+      await optimizeImage(buffer, "image/png")
+
+      expect(mockSharpInstance.resize).toHaveBeenCalled()
+    })
+
+    it("converts to webp format", async () => {
+      const buffer = Buffer.alloc(1024)
+      const result = await optimizeImage(buffer, "image/png")
+
+      expect(result.mimeType).toBe("image/webp")
+      expect(mockSharpInstance.webp).toHaveBeenCalled()
+    })
+
+    it("throws error when optimized image is still too large", async () => {
+      mockSharpInstance.toBuffer.mockImplementation(() => Promise.resolve(Buffer.alloc(250 * 1024)))
+
+      const buffer = Buffer.alloc(1024)
+      await expect(optimizeImage(buffer, "image/png")).rejects.toThrow(ImageTooLargeError)
+    })
+  })
+
+  describe("optimizeScreenshot", () => {
+    it("resizes images exceeding max dimensions", async () => {
+      mockSharpInstance.metadata.mockImplementation(() => Promise.resolve({ width: 2000, height: 1000 }))
+
+      const buffer = Buffer.alloc(1024)
+      await optimizeScreenshot(buffer)
+
+      expect(mockSharpInstance.resize).toHaveBeenCalled()
+    })
+
+    it("converts to webp format", async () => {
+      const buffer = Buffer.alloc(1024)
+      const result = await optimizeScreenshot(buffer)
+
+      expect(result.mimeType).toBe("image/webp")
+    })
+
+    it("reduces quality progressively if image is too large", async () => {
+      let callCount = 0
+      mockSharpInstance.toBuffer.mockImplementation(() => {
+        callCount++
+        if (callCount < 3) {
+          return Promise.resolve(Buffer.alloc(600 * 1024))
+        }
+        return Promise.resolve(Buffer.alloc(400 * 1024))
+      })
+
+      const buffer = Buffer.alloc(1024)
+      const result = await optimizeScreenshot(buffer)
+
+      expect(result.buffer.length).toBeLessThanOrEqual(500 * 1024)
+    })
+
+    it("throws error with correct max size when optimization fails", async () => {
+      mockSharpInstance.toBuffer.mockImplementation(() => Promise.resolve(Buffer.alloc(600 * 1024)))
+
+      const buffer = Buffer.alloc(1024)
+      try {
+        await optimizeScreenshot(buffer)
+        expect(true).toBe(false)
+      } catch (error) {
+        expect(error).toBeInstanceOf(ImageTooLargeError)
+        expect((error as ImageTooLargeError).message).toContain("max is 500KB")
+      }
+    })
+  })
+
+  describe("optimizeBanner", () => {
+    it("converts to webp format", async () => {
+      const buffer = Buffer.alloc(1024)
+      const result = await optimizeBanner(buffer)
+
+      expect(result.mimeType).toBe("image/webp")
+    })
+
+    it("throws error for image exceeding banner size limit (500KB)", async () => {
+      mockSharpInstance.toBuffer.mockImplementation(() => Promise.resolve(Buffer.alloc(600 * 1024)))
+
+      const buffer = Buffer.alloc(1024)
+
+      try {
+        await optimizeBanner(buffer)
+        expect(true).toBe(false)
+      } catch (error) {
+        expect(error).toBeInstanceOf(ImageTooLargeError)
+        expect((error as ImageTooLargeError).message).toContain("max is 500KB")
+      }
+    })
+  })
+
+  describe("uploadScreenshot", () => {
+    it("uploads screenshot and returns URL", async () => {
+      const buffer = Buffer.alloc(1024)
+      const result = await uploadScreenshot("sub123", buffer)
+
+      expect(result).not.toBeNull()
+      expect(result?.url).toBe("https://storage.test/file.webp")
+      expect(result?.path).toBe("sub123/screenshot.webp")
+      expect(mockStorageFrom).toHaveBeenCalledWith("screenshots")
+    })
+
+    it("uploads with correct content type and options", async () => {
+      const buffer = Buffer.alloc(1024)
+      await uploadScreenshot("sub123", buffer)
+
+      expect(mockUpload).toHaveBeenCalledWith(
+        "sub123/screenshot.webp",
+        expect.any(Buffer),
+        expect.objectContaining({
+          contentType: "image/webp",
+          upsert: true,
+          cacheControl: "3600",
+        })
+      )
+    })
+
+    it("returns null on upload error", async () => {
+      mockUpload.mockImplementation(() => Promise.resolve({ error: { message: "Upload failed" } }))
+
+      const buffer = Buffer.alloc(1024)
+      const result = await uploadScreenshot("sub123", buffer)
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe("deleteScreenshot", () => {
+    it("removes screenshot files in all formats from storage", async () => {
+      const result = await deleteScreenshot("sub123")
+
+      expect(result).toBe(true)
+      expect(mockStorageFrom).toHaveBeenCalledWith("screenshots")
+      expect(mockRemove).toHaveBeenCalledWith([
+        "sub123/screenshot.webp",
+        "sub123/screenshot.png",
+        "sub123/screenshot.jpg",
+        "sub123/screenshot.svg",
+      ])
+    })
+
+    it("returns false on error", async () => {
+      mockRemove.mockImplementation(() => Promise.resolve({ error: { message: "Delete failed" } }))
+
+      const result = await deleteScreenshot("sub123")
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe("uploadLogo", () => {
+    it("uploads logo and returns URL", async () => {
+      const buffer = Buffer.alloc(1024)
+      const result = await uploadLogo("tenant123", buffer, "image/png", "light")
+
+      expect(result).not.toBeNull()
+      expect(result?.url).toBe("https://storage.test/file.webp")
+      expect(result?.path).toBe("tenant123/logo.webp")
+      expect(mockStorageFrom).toHaveBeenCalledWith("logos")
+    })
+
+    it("uses correct filename for dark variant", async () => {
+      const buffer = Buffer.alloc(1024)
+      await uploadLogo("tenant123", buffer, "image/png", "dark")
+
+      expect(mockUpload).toHaveBeenCalledWith(
+        "tenant123/logo-dark.webp",
+        expect.any(Buffer),
+        expect.any(Object)
+      )
+    })
+
+    it("returns null on upload error", async () => {
+      mockUpload.mockImplementation(() => Promise.resolve({ error: { message: "Upload failed" } }))
+
+      const buffer = Buffer.alloc(1024)
+      const result = await uploadLogo("tenant123", buffer, "image/png", "light")
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe("deleteLogo", () => {
+    it("removes logo files in all formats from storage", async () => {
+      const result = await deleteLogo("tenant123", "light")
+
+      expect(result).toBe(true)
+      expect(mockStorageFrom).toHaveBeenCalledWith("logos")
+      expect(mockRemove).toHaveBeenCalledWith([
+        "tenant123/logo.webp",
+        "tenant123/logo.png",
+        "tenant123/logo.svg",
+      ])
+    })
+
+    it("uses correct filename for dark variant", async () => {
+      await deleteLogo("tenant123", "dark")
+
+      expect(mockRemove).toHaveBeenCalledWith([
+        "tenant123/logo-dark.webp",
+        "tenant123/logo-dark.png",
+        "tenant123/logo-dark.svg",
+      ])
+    })
+
+    it("returns false on error", async () => {
+      mockRemove.mockImplementation(() => Promise.resolve({ error: { message: "Delete failed" } }))
+
+      const result = await deleteLogo("tenant123", "light")
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe("uploadBanner", () => {
+    it("uploads banner and returns URL", async () => {
+      const buffer = Buffer.alloc(1024)
+      const result = await uploadBanner("hackathon123", buffer)
+
+      expect(result).not.toBeNull()
+      expect(result?.url).toBe("https://storage.test/file.webp")
+      expect(result?.path).toBe("hackathon123/banner.webp")
+      expect(mockStorageFrom).toHaveBeenCalledWith("banners")
+    })
+
+    it("returns null on upload error", async () => {
+      mockUpload.mockImplementation(() => Promise.resolve({ error: { message: "Upload failed" } }))
+
+      const buffer = Buffer.alloc(1024)
+      const result = await uploadBanner("hackathon123", buffer)
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe("deleteBanner", () => {
+    it("removes banner files in all formats from storage", async () => {
+      const result = await deleteBanner("hackathon123")
+
+      expect(result).toBe(true)
+      expect(mockStorageFrom).toHaveBeenCalledWith("banners")
+      expect(mockRemove).toHaveBeenCalledWith([
+        "hackathon123/banner.webp",
+        "hackathon123/banner.png",
+        "hackathon123/banner.jpg",
+        "hackathon123/banner.svg",
+      ])
+    })
+
+    it("returns false on error", async () => {
+      mockRemove.mockImplementation(() => Promise.resolve({ error: { message: "Delete failed" } }))
+
+      const result = await deleteBanner("hackathon123")
+
+      expect(result).toBe(false)
+    })
+  })
+})
