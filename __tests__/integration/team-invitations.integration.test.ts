@@ -37,7 +37,7 @@ const mockCreateTeamInvitation = mock(() =>
     },
   })
 )
-const mockListTeamInvitations = mock(() => Promise.resolve([]))
+const mockListTeamInvitations = mock(() => Promise.resolve({ success: true, invitations: [] }))
 const mockCancelTeamInvitation = mock(() => Promise.resolve({ success: true }))
 const mockGetTeamWithHackathon = mock(() =>
   Promise.resolve({
@@ -522,22 +522,25 @@ describe("Dashboard Team Invitations Routes", () => {
 
   describe("GET /api/dashboard/teams/:teamId/invitations", () => {
     it("returns list of invitations", async () => {
-      mockListTeamInvitations.mockResolvedValue([
-        {
-          id: "inv_1",
-          email: "test1@example.com",
-          status: "pending",
-          expires_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: "inv_2",
-          email: "test2@example.com",
-          status: "accepted",
-          expires_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-        },
-      ])
+      mockListTeamInvitations.mockResolvedValue({
+        success: true,
+        invitations: [
+          {
+            id: "inv_1",
+            email: "test1@example.com",
+            status: "pending",
+            expires_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+          },
+          {
+            id: "inv_2",
+            email: "test2@example.com",
+            status: "accepted",
+            expires_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+          },
+        ],
+      })
 
       const res = await dashboardApp.handle(
         new Request("http://localhost/api/dashboard/teams/team_1/invitations")
@@ -550,13 +553,13 @@ describe("Dashboard Team Invitations Routes", () => {
     })
 
     it("filters by status when provided", async () => {
-      mockListTeamInvitations.mockResolvedValue([])
+      mockListTeamInvitations.mockResolvedValue({ success: true, invitations: [] })
 
       await dashboardApp.handle(
         new Request("http://localhost/api/dashboard/teams/team_1/invitations?status=pending")
       )
 
-      expect(mockListTeamInvitations).toHaveBeenCalledWith("team_1", { status: "pending" })
+      expect(mockListTeamInvitations).toHaveBeenCalledWith("team_1", "user_captain", { status: "pending" })
     })
   })
 
