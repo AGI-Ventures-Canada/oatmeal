@@ -167,22 +167,25 @@ export async function optimizeBanner(
     })
   }
 
-  let optimized = await pipeline.clone().webp({ quality: QUALITY }).toBuffer()
   const outputMimeType = "image/webp"
+  const qualityLevels = [QUALITY, 70, 50]
 
-  if (optimized.length > MAX_BANNER_SIZE) {
-    optimized = await pipeline.clone().webp({ quality: 70 }).toBuffer()
+  for (const quality of qualityLevels) {
+    const optimized = await pipeline.webp({ quality }).toBuffer()
+    if (optimized.length <= MAX_BANNER_SIZE) {
+      return { buffer: optimized, mimeType: outputMimeType }
+    }
+    pipeline = sharp(buffer)
+    if (needsResize) {
+      pipeline = pipeline.resize(MAX_BANNER_WIDTH, MAX_BANNER_HEIGHT, {
+        fit: "cover",
+        position: "center",
+      })
+    }
   }
 
-  if (optimized.length > MAX_BANNER_SIZE) {
-    optimized = await pipeline.clone().webp({ quality: 50 }).toBuffer()
-  }
-
-  if (optimized.length > MAX_BANNER_SIZE) {
-    throw new ImageTooLargeError(optimized.length, MAX_BANNER_SIZE)
-  }
-
-  return { buffer: optimized, mimeType: outputMimeType }
+  const finalBuffer = await pipeline.webp({ quality: 50 }).toBuffer()
+  throw new ImageTooLargeError(finalBuffer.length, MAX_BANNER_SIZE)
 }
 
 export async function uploadBanner(
@@ -261,22 +264,25 @@ export async function optimizeScreenshot(
     })
   }
 
-  let optimized = await pipeline.clone().webp({ quality: QUALITY }).toBuffer()
   const outputMimeType = "image/webp"
+  const qualityLevels = [QUALITY, 70, 50]
 
-  if (optimized.length > MAX_SCREENSHOT_SIZE) {
-    optimized = await pipeline.clone().webp({ quality: 70 }).toBuffer()
+  for (const quality of qualityLevels) {
+    const optimized = await pipeline.webp({ quality }).toBuffer()
+    if (optimized.length <= MAX_SCREENSHOT_SIZE) {
+      return { buffer: optimized, mimeType: outputMimeType }
+    }
+    pipeline = sharp(buffer)
+    if (needsResize) {
+      pipeline = pipeline.resize(MAX_SCREENSHOT_WIDTH, MAX_SCREENSHOT_HEIGHT, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+    }
   }
 
-  if (optimized.length > MAX_SCREENSHOT_SIZE) {
-    optimized = await pipeline.clone().webp({ quality: 50 }).toBuffer()
-  }
-
-  if (optimized.length > MAX_SCREENSHOT_SIZE) {
-    throw new ImageTooLargeError(optimized.length, MAX_SCREENSHOT_SIZE)
-  }
-
-  return { buffer: optimized, mimeType: outputMimeType }
+  const finalBuffer = await pipeline.webp({ quality: 50 }).toBuffer()
+  throw new ImageTooLargeError(finalBuffer.length, MAX_SCREENSHOT_SIZE)
 }
 
 export async function uploadScreenshot(

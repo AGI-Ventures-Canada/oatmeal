@@ -319,11 +319,19 @@ export function SubmissionButton({
       if (screenshotFile) {
         const uploadSuccess = await uploadScreenshot()
         if (!uploadSuccess) {
+          setError(
+            (prev) =>
+              `Your submission was saved, but the screenshot failed to upload. ${prev || "Please try again."}`
+          )
           return
         }
       } else if (submission?.screenshot_url && !screenshotPreview) {
         const deleteSuccess = await deleteScreenshot()
         if (!deleteSuccess) {
+          setError(
+            (prev) =>
+              `Your submission was saved, but the screenshot failed to remove. ${prev || "Please try again."}`
+          )
           return
         }
       }
