@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server"
 import { HeaderLogo } from "@/components/public/header-logo"
 import { HeaderAuth } from "@/components/public/header-auth"
 import { AppSidebarSimple } from "@/components/app-sidebar-simple"
+import { MobileHeader } from "@/components/mobile-header"
 import {
   SidebarInset,
   SidebarProvider,
@@ -39,6 +40,7 @@ export default async function PublicLayout({
     <SidebarProvider>
       <AppSidebarSimple />
       <SidebarInset>
+        <MobileHeader />
         <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
           {children}
         </div>

@@ -2,6 +2,7 @@ import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Hackathon, TenantProfile, HackathonSponsor, HackathonStatus } from "@/lib/db/hackathon-types"
 import { getEffectiveStatus } from "@/lib/utils/timeline"
+import { sortByStatusPriority } from "@/lib/utils/sort-hackathons"
 
 export type PublicHackathon = Hackathon & {
   organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark" | "clerk_org_id">
@@ -76,11 +77,13 @@ export async function getPublicHackathon(
   } as unknown as PublicHackathon
 }
 
+type HackathonWithOrganizer = Hackathon & {
+  organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark" | "clerk_org_id">
+}
+
 export async function listPublicHackathons(
-  options?: { search?: string }
-): Promise<
-  (Hackathon & { organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark" | "clerk_org_id"> })[]
-> {
+  options?: { search?: string; page?: number; limit?: number }
+): Promise<{ hackathons: HackathonWithOrganizer[]; total: number }> {
   const client = getSupabase() as unknown as SupabaseClient
 
   let query = client
@@ -103,12 +106,18 @@ export async function listPublicHackathons(
 
   if (error) {
     console.error("Failed to list public hackathons:", error)
-    return []
+    return { hackathons: [], total: 0 }
   }
 
-  return data as unknown as (Hackathon & {
-    organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark" | "clerk_org_id">
-  })[]
+  const sorted = sortByStatusPriority(data as unknown as HackathonWithOrganizer[])
+  const total = sorted.length
+
+  const page = options?.page ?? 1
+  const limit = options?.limit ?? total
+  const start = (page - 1) * limit
+  const hackathons = sorted.slice(start, start + limit)
+
+  return { hackathons, total }
 }
 
 export type OrganizerCheckResult =
@@ -252,6 +261,10 @@ export async function updateHackathonSettings(
     registrationOpensAt?: string | null
     registrationClosesAt?: string | null
     status?: HackathonStatus
+    anonymousJudging?: boolean
+    locationType?: "in_person" | "virtual" | null
+    locationName?: string | null
+    locationUrl?: string | null
   }
 ): Promise<Hackathon | null> {
   const client = getSupabase() as unknown as SupabaseClient
@@ -266,6 +279,10 @@ export async function updateHackathonSettings(
   if (updates.registrationOpensAt !== undefined) updateData.registration_opens_at = updates.registrationOpensAt
   if (updates.registrationClosesAt !== undefined) updateData.registration_closes_at = updates.registrationClosesAt
   if (updates.status !== undefined) updateData.status = updates.status
+  if (updates.anonymousJudging !== undefined) updateData.anonymous_judging = updates.anonymousJudging
+  if (updates.locationType !== undefined) updateData.location_type = updates.locationType
+  if (updates.locationName !== undefined) updateData.location_name = updates.locationName
+  if (updates.locationUrl !== undefined) updateData.location_url = updates.locationUrl
 
   const { data, error } = await client
     .from("hackathons")

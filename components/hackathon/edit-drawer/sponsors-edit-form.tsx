@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/field"
 import { useEdit } from "@/components/hackathon/preview/edit-context"
 import { Badge } from "@/components/ui/badge"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Trash2, Plus, Building2, Loader2, Undo2, ExternalLink } from "lucide-react"
 import type { HackathonSponsor, SponsorTier, TenantProfile } from "@/lib/db/hackathon-types"
 
@@ -30,6 +31,7 @@ type SponsorWithTenant = HackathonSponsor & {
 interface SponsorsEditFormProps {
   hackathonId: string
   initialSponsors: SponsorWithTenant[]
+  onSaveAndNext?: () => void
 }
 
 interface OrgSearchResult {
@@ -90,7 +92,7 @@ function useOrgSearch(excludeIdsString: string) {
   return { query, setQuery, results, loading, searched }
 }
 
-export function SponsorsEditForm({ hackathonId, initialSponsors }: SponsorsEditFormProps) {
+export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }: SponsorsEditFormProps) {
   const router = useRouter()
   const { closeDrawer } = useEdit()
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
@@ -242,11 +244,8 @@ export function SponsorsEditForm({ hackathonId, initialSponsors }: SponsorsEditF
     setPendingChanges([])
   }
 
-  async function handleSave() {
-    if (!hasChanges) {
-      closeDrawer()
-      return
-    }
+  async function saveChanges() {
+    if (!hasChanges) return true
 
     setSaving(true)
     setError(null)
@@ -291,12 +290,23 @@ export function SponsorsEditForm({ hackathonId, initialSponsors }: SponsorsEditF
       }
 
       router.refresh()
-      closeDrawer()
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save changes")
+      return false
     } finally {
       setSaving(false)
     }
+  }
+
+  async function handleSave() {
+    if (!hasChanges) {
+      closeDrawer()
+      return
+    }
+
+    const ok = await saveChanges()
+    if (ok) closeDrawer()
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -304,8 +314,10 @@ export function SponsorsEditForm({ hackathonId, initialSponsors }: SponsorsEditF
       e.preventDefault()
       if (query.trim() && !saving) {
         handleAddManual()
-      } else if (hasChanges && !saving) {
-        handleSave()
+      } else if (!saving) {
+        saveChanges().then(ok => {
+          if (ok) onSaveAndNext ? onSaveAndNext() : closeDrawer()
+        })
       }
     }
   }
@@ -522,22 +534,29 @@ export function SponsorsEditForm({ hackathonId, initialSponsors }: SponsorsEditF
         </div>
       )}
 
-      <div className="flex gap-2 pt-2">
-        {hasChanges ? (
-          <>
-            <Button type="button" variant="outline" onClick={() => { handleUndoAll(); closeDrawer() }}>
-              Discard
+      <div className="space-y-3 pt-2">
+        <div className="flex gap-2">
+          {hasChanges ? (
+            <>
+              <Button type="button" variant="outline" onClick={() => { handleUndoAll(); closeDrawer() }}>
+                Discard
+              </Button>
+              <Button type="button" onClick={handleSave} disabled={saving}>
+                {saving && <Loader2 className="size-4 mr-2 animate-spin" />}
+                Save changes
+              </Button>
+            </>
+          ) : (
+            <Button type="button" variant="outline" onClick={closeDrawer}>
+              Done
             </Button>
-            <Button type="button" onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 className="size-4 mr-2 animate-spin" />}
-              Save changes
-            </Button>
-          </>
-        ) : (
-          <Button type="button" variant="outline" onClick={closeDrawer}>
-            Done
-          </Button>
-        )}
+          )}
+        </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <KbdGroup><Kbd>⌘</Kbd><Kbd>↵</Kbd></KbdGroup> save & next
+          </span>
+        </div>
       </div>
     </div>
   )

@@ -19,6 +19,7 @@ import {
   Users,
   Star,
   Megaphone,
+  Scale,
   Globe,
   ExternalLink,
   Plus,
@@ -61,6 +62,7 @@ const mainItems = [
 
 const hackathonItems = [
   { title: "Participating", href: "/home?tab=participating", icon: Users },
+  { title: "Judging", href: "/home?tab=judging", icon: Scale },
   { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
   { title: "Sponsoring", href: "/home?tab=sponsored", icon: Star },
 ]

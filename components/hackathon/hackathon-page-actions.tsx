@@ -2,8 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ExternalLink } from "lucide-react"
-import { StatusBadge } from "./status-badge"
+import { ExternalLink, Gavel, Trophy, Medal } from "lucide-react"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
 interface HackathonPageActionsProps {
@@ -16,7 +15,6 @@ interface HackathonPageActionsProps {
 export function HackathonPageActions({
   hackathonId,
   slug,
-  status,
   isOrganizer,
 }: HackathonPageActionsProps) {
   return (
@@ -28,7 +26,26 @@ export function HackathonPageActions({
         </Link>
       </Button>
       {isOrganizer ? (
-        <StatusBadge hackathonId={hackathonId} status={status} />
+        <>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/hackathons/${hackathonId}/judging`}>
+              <Gavel className="mr-2 size-4" />
+              Judging
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/hackathons/${hackathonId}/prizes`}>
+              <Trophy className="mr-2 size-4" />
+              Prizes
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/hackathons/${hackathonId}/results`}>
+              <Medal className="mr-2 size-4" />
+              Results
+            </Link>
+          </Button>
+        </>
       ) : null}
     </>
   )

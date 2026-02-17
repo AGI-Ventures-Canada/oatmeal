@@ -24,6 +24,24 @@ bun db:diff name     # Capture Studio changes as migration
 bun update-types     # Regenerate TypeScript types from DB
 ```
 
+### Test Scenarios
+
+Seed the local database with a hackathon at a specific lifecycle stage. Useful for manual QA and UI work. Requires `bun dev` (or local Supabase) to be running.
+
+```bash
+bun run scripts/test-scenario.ts <scenario>
+```
+
+| Scenario | What it sets up |
+|----------|-----------------|
+| `pre-registration` | Hackathon not yet open for registration (opens tomorrow) |
+| `registered-no-team` | Dev user registered, no team yet, registration open |
+| `team-formed` | Dev user is captain with 2 members + 1 pending invite, hackathon active |
+| `submitted` | Dev user's team has a submitted project, hackathon ends in 2 days |
+| `judging` | 5 teams with submissions, 3 judges assigned, no scores yet |
+| `judging-in-progress` | Same as above but ~60% of assignments scored |
+| `results-ready` | All submissions scored, results calculated, 3 prizes defined (not yet assigned) |
+
 ## Architecture
 
 Next.js 16 App Router with:
@@ -176,6 +194,7 @@ This ensures consistent theming and proper dark mode support.
 - Handle auth and roles in the application layer, not RLS
 - Never apply migrations directly to production - use PR workflow
 - Test migrations locally with `supabase db reset` before pushing
+- **After creating or modifying migration files, always ask the user if they want to run `bun db:sync` to reset the database and regenerate types**
 
 ### Forms
 

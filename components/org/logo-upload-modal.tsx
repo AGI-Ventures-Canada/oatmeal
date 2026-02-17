@@ -23,6 +23,8 @@ type LogoUploadModalProps = {
   lightLogoUrl: string | null
   darkLogoUrl: string | null
   trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 type UploadState = {
@@ -34,9 +36,14 @@ export function LogoUploadModal({
   lightLogoUrl,
   darkLogoUrl,
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: LogoUploadModalProps) {
+  const isControlled = controlledOpen !== undefined
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? (controlledOnOpenChange ?? (() => {})) : setInternalOpen
   const [state, setState] = useState<UploadState>({
     light: { file: null, preview: lightLogoUrl, deleted: false },
     dark: { file: null, preview: darkLogoUrl, deleted: false },
@@ -144,9 +151,11 @@ export function LogoUploadModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {trigger || <Button variant="outline">Upload Logo</Button>}
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {trigger || <Button variant="outline">Upload Logo</Button>}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md" onKeyDown={handleKeyDown}>
         <DialogHeader>
           <DialogTitle>Organization Logo</DialogTitle>

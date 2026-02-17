@@ -4,7 +4,6 @@ import { HeaderLogo } from "@/components/public/header-logo"
 import { HeaderAuth } from "@/components/public/header-auth"
 import { HackathonCard } from "@/components/hackathon/hackathon-card"
 import { listPublicHackathons } from "@/lib/services/public-hackathons"
-import { sortByStatusPriority } from "@/lib/utils/sort-hackathons"
 
 export default async function Home() {
   const { userId } = await auth()
@@ -13,7 +12,7 @@ export default async function Home() {
     redirect("/home")
   }
 
-  const hackathons = sortByStatusPriority(await listPublicHackathons())
+  const { hackathons } = await listPublicHackathons()
 
   return (
     <div className="min-h-screen flex flex-col">

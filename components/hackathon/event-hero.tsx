@@ -1,7 +1,7 @@
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Moon, Sun, Calendar, CalendarDays, Zap } from "lucide-react";
+import { Clock, Moon, Sun, Calendar, CalendarDays, Zap, MapPin, Video } from "lucide-react";
 import type {
   HackathonStatus,
   TenantProfile,
@@ -35,11 +35,19 @@ interface EventHeroProps {
   registrationOpensAt?: string | null;
   registrationClosesAt?: string | null;
   organizer: Pick<TenantProfile, "name" | "slug" | "logo_url">;
+  locationType?: "in_person" | "virtual" | null;
+  locationName?: string | null;
+  locationUrl?: string | null;
+  onNameClick?: () => void;
   onDatesClick?: () => void;
+  onLocationClick?: () => void;
   registrationProps?: RegistrationProps;
   isRegistered?: boolean;
   hideRegistrationButton?: boolean;
   tabsSlot?: React.ReactNode;
+  statusSlot?: React.ReactNode;
+  bannerSlot?: React.ReactNode;
+  orgNameWrapper?: (orgName: React.ReactNode) => React.ReactNode;
 }
 
 function formatTimeRange(
@@ -152,12 +160,20 @@ export function EventHero({
   endsAt,
   registrationOpensAt,
   registrationClosesAt,
+  locationType,
+  locationName,
+  locationUrl,
   organizer,
+  onNameClick,
   onDatesClick,
+  onLocationClick,
   registrationProps,
   isRegistered = false,
   hideRegistrationButton = false,
   tabsSlot,
+  statusSlot,
+  bannerSlot,
+  orgNameWrapper,
 }: EventHeroProps) {
   const durationInfo = getDurationInfo(startsAt, endsAt);
   const timeRange = formatTimeRange(startsAt, endsAt);
@@ -196,111 +212,206 @@ export function EventHero({
     </div>
   );
 
-  return (
-    <div className="relative">
-      <div className="h-64 md:h-80 relative overflow-hidden bg-primary">
-        {bannerUrl && (
-          <OptimizedImage
-            src={bannerUrl}
-            alt={`${name} banner`}
-            fill
-            className="object-cover"
-            priority
-          />
+  const contentColumn = (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        {showCountdown ? (
+          <CountdownBadge startsAt={startsAt!} />
+        ) : (
+          <Badge variant={timelineState.variant}>
+            {timelineState.label}
+          </Badge>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+        {durationInfo && (
+          <Badge variant="outline" className="gap-1">
+            <durationInfo.icon className="size-3" />
+            {durationInfo.label}
+          </Badge>
+        )}
       </div>
-      <div className="mx-auto max-w-4xl px-4">
-        <div className="relative -mt-20 md:-mt-24">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              {showCountdown ? (
-                <CountdownBadge startsAt={startsAt!} />
-              ) : (
-                <Badge variant={timelineState.variant}>
-                  {timelineState.label}
-                </Badge>
-              )}
-              {durationInfo && (
-                <Badge variant="outline" className="gap-1">
-                  <durationInfo.icon className="size-3" />
-                  {durationInfo.label}
-                </Badge>
-              )}
-            </div>
+      {onNameClick ? (
+        <button
+          type="button"
+          onClick={onNameClick}
+          data-edit-section="name"
+          className="group w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 text-left scroll-mt-24"
+        >
+          <div className="flex items-center gap-2">
             <h1 className="text-3xl md:text-5xl font-bold text-foreground">
               {name}
             </h1>
-            {onDatesClick ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDatesClick();
-                }}
-                className="group w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80"
-              >
-                <div className="flex items-center gap-2">
-                  {datesContent}
-                  <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    Edit
-                  </span>
-                </div>
-              </button>
-            ) : (
-              datesContent
-            )}
+            <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-end mb-2">
+              Edit
+            </span>
+          </div>
+        </button>
+      ) : (
+        <h1 className="text-3xl md:text-5xl font-bold text-foreground">
+          {name}
+        </h1>
+      )}
+      {onDatesClick ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDatesClick();
+          }}
+          data-edit-section="timeline"
+          className="group w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 scroll-mt-24"
+        >
+          <div className="flex items-center gap-2">
+            {datesContent}
+            <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+              Edit
+            </span>
+          </div>
+        </button>
+      ) : (
+        datesContent
+      )}
+      {locationType ? (
+        onLocationClick ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onLocationClick();
+            }}
+            data-edit-section="location"
+            className="group w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 scroll-mt-24"
+          >
             <div className="flex items-center gap-2">
-              {organizer.logo_url && (
-                <OptimizedImage
-                  src={organizer.logo_url}
-                  alt={organizer.name}
-                  width={24}
-                  height={24}
-                  className="object-contain"
-                />
-              )}
-              <span className="text-sm text-muted-foreground">
-                Hosted by{" "}
-                {organizer.slug ? (
-                  <Link
-                    href={`/o/${organizer.slug}`}
-                    className="text-foreground hover:underline"
-                  >
-                    {organizer.name}
-                  </Link>
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                {locationType === "in_person" ? (
+                  <MapPin className="size-3.5" />
                 ) : (
-                  <span className="text-foreground">{organizer.name}</span>
+                  <Video className="size-3.5" />
                 )}
+                <span>
+                  {locationType === "in_person"
+                    ? locationName || "In Person"
+                    : locationName || locationUrl || "Virtual"}
+                </span>
+              </div>
+              <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                Edit
               </span>
             </div>
-            {registrationProps && (
-              <div className="flex flex-wrap items-center gap-2">
-                {!hideRegistrationButton && !isRegistered && (
-                  <RegistrationButton
-                    hackathonSlug={registrationProps.hackathonSlug}
-                    status={status}
-                    endsAt={registrationProps.endsAt}
-                    registrationOpensAt={registrationProps.registrationOpensAt}
-                    registrationClosesAt={registrationProps.registrationClosesAt}
-                    maxParticipants={registrationProps.maxParticipants}
-                    participantCount={registrationProps.participantCount}
-                    isRegistered={registrationProps.isRegistered}
-                    onRegistrationSuccess={registrationProps.onRegistrationSuccess}
-                  />
-                )}
-                <SubmissionButton
-                  hackathonSlug={registrationProps.hackathonSlug}
-                  status={registrationProps.status}
-                  isRegistered={registrationProps.isRegistered}
-                  submission={registrationProps.submission ?? null}
-                />
-                {tabsSlot}
-              </div>
+          </button>
+        ) : (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            {locationType === "in_person" ? (
+              <MapPin className="size-3.5" />
+            ) : (
+              <Video className="size-3.5" />
             )}
+            <span>
+              {locationType === "in_person"
+                ? locationName || "In Person"
+                : locationName || locationUrl || "Virtual"}
+            </span>
+          </div>
+        )
+      ) : onLocationClick ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onLocationClick();
+          }}
+          data-edit-section="location"
+          className="w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 scroll-mt-24"
+        >
+          <span className="text-xs text-muted-foreground">
+            + Add location
+          </span>
+        </button>
+      ) : null}
+      <div className="flex items-center gap-2">
+        {organizer.logo_url && (
+          <OptimizedImage
+            src={organizer.logo_url}
+            alt={organizer.name}
+            width={24}
+            height={24}
+            className="object-contain"
+          />
+        )}
+        {(() => {
+          const orgNameEl = organizer.slug ? (
+            <Link
+              href={`/o/${organizer.slug}`}
+              className="text-foreground hover:underline"
+            >
+              {organizer.name}
+            </Link>
+          ) : (
+            <span className="text-foreground">{organizer.name}</span>
+          )
+
+          return (
+            <span className="text-sm text-muted-foreground">
+              Hosted by{" "}
+              {orgNameWrapper ? orgNameWrapper(orgNameEl) : orgNameEl}
+            </span>
+          )
+        })()}
+      </div>
+      {statusSlot}
+      {registrationProps && (
+        <div className="flex flex-wrap items-center gap-2">
+          {!hideRegistrationButton && !isRegistered && (
+            <RegistrationButton
+              hackathonSlug={registrationProps.hackathonSlug}
+              status={status}
+              endsAt={registrationProps.endsAt}
+              registrationOpensAt={registrationProps.registrationOpensAt}
+              registrationClosesAt={registrationProps.registrationClosesAt}
+              maxParticipants={registrationProps.maxParticipants}
+              participantCount={registrationProps.participantCount}
+              isRegistered={registrationProps.isRegistered}
+              onRegistrationSuccess={registrationProps.onRegistrationSuccess}
+            />
+          )}
+          <SubmissionButton
+            hackathonSlug={registrationProps.hackathonSlug}
+            status={registrationProps.status}
+            isRegistered={registrationProps.isRegistered}
+            submission={registrationProps.submission ?? null}
+          />
+          {tabsSlot}
+        </div>
+      )}
+    </div>
+  );
+
+  const hasRightColumn = bannerUrl || bannerSlot;
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      {hasRightColumn ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          <div className="order-2 md:order-1">{contentColumn}</div>
+          <div className="order-1 md:order-2">
+            {bannerSlot ? (
+              bannerSlot
+            ) : bannerUrl ? (
+              <div className="aspect-square rounded-xl border bg-muted overflow-hidden relative">
+                <OptimizedImage
+                  src={bannerUrl}
+                  alt={`${name} banner`}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+            ) : null}
           </div>
         </div>
-      </div>
+      ) : (
+        contentColumn
+      )}
     </div>
   );
 }

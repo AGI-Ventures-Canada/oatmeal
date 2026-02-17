@@ -1,53 +1,48 @@
 "use client"
 
-import { useAuth } from "@clerk/nextjs"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ImageIcon } from "lucide-react"
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from "@/components/ui/hover-card"
+import { ImagePlus } from "lucide-react"
 import { LogoUploadModal } from "@/components/org/logo-upload-modal"
 
-type OrganizerLogoPromptProps = {
-  organizerId: string
-  organizerClerkOrgId: string | null
-  organizerLogoUrl: string | null
-}
-
-export function OrganizerLogoPrompt({
-  organizerClerkOrgId,
-  organizerLogoUrl,
-}: OrganizerLogoPromptProps) {
-  const { orgId } = useAuth()
-
-  if (!orgId || !organizerClerkOrgId) {
-    return null
-  }
-
-  if (orgId !== organizerClerkOrgId) {
-    return null
-  }
-
-  if (organizerLogoUrl) {
-    return null
-  }
+export function OrganizerLogoPrompt({ children }: { children: React.ReactNode }) {
+  const [modalOpen, setModalOpen] = useState(false)
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-4">
-      <Alert>
-        <ImageIcon className="size-4" />
-        <AlertTitle>Add your organization logo</AlertTitle>
-        <AlertDescription>
-          Make your event stand out by adding an organization logo. It will appear on your event pages and sponsor cards.
-        </AlertDescription>
-        <div className="mt-2 col-start-2">
-          <LogoUploadModal
-            lightLogoUrl={null}
-            darkLogoUrl={null}
-            trigger={
-              <Button variant="outline" size="sm">Add Logo</Button>
-            }
-          />
-        </div>
-      </Alert>
-    </div>
+    <>
+      <HoverCard openDelay={200} closeDelay={150}>
+        <HoverCardTrigger asChild>
+          <span className="inline-flex items-center gap-1 cursor-default">
+            {children}
+            <span className="inline-block size-1.5 rounded-full bg-primary/60" />
+          </span>
+        </HoverCardTrigger>
+        <HoverCardContent side="top" align="start" className="w-64 p-3">
+          <p className="text-xs text-muted-foreground mb-2">
+            No organization logo yet. Adding one makes your events more recognizable.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setModalOpen(true)}
+          >
+            <ImagePlus className="size-3 mr-1.5" />
+            Add Logo
+          </Button>
+        </HoverCardContent>
+      </HoverCard>
+      <LogoUploadModal
+        lightLogoUrl={null}
+        darkLogoUrl={null}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
+    </>
   )
 }

@@ -1,13 +1,17 @@
 import { PageHeader } from "@/components/page-header"
 import { listPublicHackathons } from "@/lib/services/public-hackathons"
-import { sortByStatusPriority } from "@/lib/utils/sort-hackathons"
 import { BrowseHackathonGrid } from "@/components/hackathon/browse-hackathon-grid"
 
-export default async function BrowsePage() {
-  const hackathons = await listPublicHackathons()
-  const sorted = sortByStatusPriority(hackathons)
+const PAGE_SIZE = 9
 
-  const initialHackathons = sorted.map((h) => ({
+export default async function BrowsePage(props: {
+  searchParams: Promise<{ page?: string }>
+}) {
+  const searchParams = await props.searchParams
+  const page = Math.max(1, parseInt(searchParams.page || "1", 10) || 1)
+  const { hackathons, total } = await listPublicHackathons({ page, limit: PAGE_SIZE })
+
+  const initialHackathons = hackathons.map((h) => ({
     id: h.id,
     slug: h.slug,
     name: h.name,
@@ -27,7 +31,11 @@ export default async function BrowsePage() {
         description="Discover and join published hackathons"
       />
 
-      <BrowseHackathonGrid initialHackathons={initialHackathons} />
+      <BrowseHackathonGrid
+        initialHackathons={initialHackathons}
+        initialPage={page}
+        initialTotalPages={Math.ceil(total / PAGE_SIZE)}
+      />
     </div>
   )
 }

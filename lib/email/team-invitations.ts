@@ -21,6 +21,11 @@ export type SendTeamInvitationInput = {
 export async function sendTeamInvitationEmail(
   input: SendTeamInvitationInput
 ): Promise<{ success: boolean }> {
+  if (!process.env.NEXT_PUBLIC_APP_URL) {
+    console.error("NEXT_PUBLIC_APP_URL not set, cannot send invitation email")
+    return { success: false }
+  }
+
   const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${input.inviteToken}`
   const expiresDate = new Date(input.expiresAt).toLocaleDateString("en-US", {
     weekday: "long",

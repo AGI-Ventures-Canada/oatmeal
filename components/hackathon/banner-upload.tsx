@@ -12,17 +12,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { Upload, Trash2, ZoomIn } from "lucide-react"
+import { Upload, Trash2, ZoomIn, ImagePlus } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface BannerUploadProps {
   hackathonId: string
   currentBannerUrl: string | null
   onUploadComplete?: (url: string) => void
+  className?: string
+  variant?: "default" | "hero"
 }
 
-const ASPECT_RATIO = 1920 / 480
+const ASPECT_RATIO = 1
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 async function getCroppedImg(
@@ -77,6 +91,8 @@ export function BannerUpload({
   hackathonId,
   currentBannerUrl,
   onUploadComplete,
+  className,
+  variant = "default",
 }: BannerUploadProps) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -88,17 +104,16 @@ export function BannerUpload({
   const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
 
   const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels)
   }, [])
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"]
 
-    const allowedTypes = ["image/png", "image/jpeg", "image/webp"]
-    if (!allowedTypes.includes(file.type)) {
+  function processFile(file: File) {
+    if (!ALLOWED_TYPES.includes(file.type)) {
       setError("Please upload a PNG, JPEG, or WebP image")
       return
     }
@@ -114,10 +129,35 @@ export function BannerUpload({
       setImageSrc(reader.result as string)
     })
     reader.readAsDataURL(file)
+  }
 
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    processFile(file)
     if (inputRef.current) {
       inputRef.current.value = ""
     }
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) processFile(file)
   }
 
   async function handleUpload() {
@@ -184,6 +224,14 @@ export function BannerUpload({
     setError(null)
   }
 
+  const isHero = variant === "hero"
+
+  const dropHandlers = {
+    onDragOver: handleDragOver,
+    onDragLeave: handleDragLeave,
+    onDrop: handleDrop,
+  }
+
   return (
     <>
       <input
@@ -194,10 +242,17 @@ export function BannerUpload({
         onChange={handleFileSelect}
       />
 
-      <div className="space-y-2">
+      <div className={cn("space-y-2", className)}>
         {currentBannerUrl ? (
-          <div className="relative group rounded-lg overflow-hidden border">
-            <div className="aspect-[4/1] w-full bg-muted">
+          <div
+            className={cn(
+              "relative group overflow-hidden border",
+              isHero ? "rounded-xl" : "rounded-lg",
+              isDragOver && "ring-2 ring-primary"
+            )}
+            {...dropHandlers}
+          >
+            <div className="aspect-square w-full bg-muted">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={currentBannerUrl}
@@ -205,35 +260,78 @@ export function BannerUpload({
                 className="h-full w-full object-cover"
               />
             </div>
-            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-background/80 opacity-0 transition-opacity group-hover:opacity-100">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => inputRef.current?.click()}
-              >
-                <Upload className="mr-1.5 size-4" />
-                Replace
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={handleDelete}
-                disabled={deleting}
-              >
-                <Trash2 className="mr-1.5 size-4" />
-                {deleting ? "Removing..." : "Remove"}
-              </Button>
+            <div className={cn(
+              "absolute inset-0 flex items-center justify-center gap-3 transition-opacity",
+              isDragOver
+                ? "bg-primary/20 opacity-100"
+                : "opacity-0 group-hover:opacity-100"
+            )}>
+              {isDragOver ? (
+                <div className="flex flex-col items-center gap-2 text-primary">
+                  <ImagePlus className="size-8" />
+                  <span className="text-sm font-medium">Drop to replace</span>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    size="icon"
+                    className="size-12 rounded-full shadow-lg"
+                    onClick={() => inputRef.current?.click()}
+                  >
+                    <Upload className="size-5" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="size-12 rounded-full shadow-lg"
+                        disabled={deleting}
+                      >
+                        <Trash2 className="size-5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove banner image?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently remove the current banner image. You can always upload a new one later.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction variant="destructive" onClick={handleDelete}>
+                          Remove
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              )}
             </div>
           </div>
         ) : (
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="aspect-[4/1] w-full flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className={cn(
+              "aspect-square w-full flex flex-col items-center justify-center gap-1.5 border border-dashed bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors",
+              isHero
+                ? "rounded-xl border-2 border-muted-foreground/25 hover:border-primary/50 gap-2"
+                : "rounded-lg",
+              isDragOver && "border-primary bg-primary/5 text-foreground"
+            )}
+            {...dropHandlers}
           >
-            <Upload className="size-5" />
-            <span className="text-xs font-medium">Upload banner image</span>
+            <ImagePlus className={isHero ? "size-8" : "size-5"} />
+            <span className={cn("font-medium", isHero ? "text-sm" : "text-xs")}>
+              {isDragOver ? "Drop image here" : isHero ? "Add event image" : "Upload banner image"}
+            </span>
+            {isHero && !isDragOver && (
+              <span className="text-xs text-muted-foreground">or drag & drop</span>
+            )}
           </button>
         )}
 
