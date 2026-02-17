@@ -65,10 +65,16 @@ export function RegistrationButton({
   const eventEndsAt = endsAt ? new Date(endsAt) : null
 
   if (blockedStatuses.includes(status)) {
+    const blockedMessage: Record<string, string> = {
+      draft: "Registration Not Open Yet",
+      judging: "Judging in Progress",
+      completed: "Event Completed",
+      archived: "Event Archived",
+    }
     return (
       <Button disabled variant="secondary" size="lg">
         <Lock className="size-4" />
-        Registration Not Available
+        {blockedMessage[status] ?? "Registration Not Available"}
       </Button>
     )
   }

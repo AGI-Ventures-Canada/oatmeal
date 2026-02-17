@@ -60,6 +60,7 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext }: NameEd
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!isDirty) return
     const ok = await save()
     if (ok) closeDrawer()
   }
@@ -67,6 +68,10 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext }: NameEd
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && name.trim() && !saving) {
       e.preventDefault()
+      if (!isDirty) {
+        onSaveAndNext ? onSaveAndNext() : closeDrawer()
+        return
+      }
       save().then(ok => {
         if (ok) onSaveAndNext ? onSaveAndNext() : closeDrawer()
       })
@@ -103,7 +108,7 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext }: NameEd
 
       <div className="space-y-3">
         <div className="flex gap-2">
-          <Button type="submit" disabled={saving || !name.trim()}>
+          <Button type="submit" disabled={saving || !isDirty || !name.trim()}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>

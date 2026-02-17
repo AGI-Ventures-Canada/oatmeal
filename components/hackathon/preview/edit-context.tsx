@@ -11,6 +11,15 @@ export type EditSection =
   | "sponsors"
   | null
 
+export const SECTION_ORDER: Exclude<EditSection, null>[] = [
+  "name",
+  "timeline",
+  "location",
+  "sponsors",
+  "about",
+  "rules",
+]
+
 interface EditContextValue {
   activeSection: EditSection
   isEditable: boolean
@@ -51,7 +60,7 @@ export function EditProvider({ children, isEditable, defaultEditMode = true }: E
     if (!activeSection) return
     const el = document.querySelector(`[data-edit-section="${activeSection}"]`)
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      el.scrollIntoView({ behavior: "smooth", block: "center" })
     }
   }, [activeSection])
 

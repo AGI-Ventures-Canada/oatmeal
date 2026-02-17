@@ -1,4 +1,4 @@
 {
-  "title": "SDK Reference",
-  "pages": ["agents", "jobs"]
+  "title": "API Reference",
+  "pages": ["jobs", "webhooks", "schedules"]
 }

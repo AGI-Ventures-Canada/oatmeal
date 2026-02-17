@@ -1,73 +1,23 @@
 ---
 title: Getting Started
-description: Install the SDK and make your first API call.
+description: Set up authentication and make your first API call.
 ---
 
-The official TypeScript SDK provides a type-safe client for interacting with the Oatmeal platform API.
+The Oatmeal platform exposes a REST API. All requests use standard `fetch()` with JSON payloads and API key authentication.
 
-**Features:**
-- Full TypeScript support with exported types
-- Promise-based API with error handling
-- Built-in polling helpers (`waitForResult`)
-- Zero external dependencies (uses native `fetch`)
+## Get Your API Key
 
-## Installation
-
-<Tabs items={['npm', 'pnpm', 'bun']} persist groupId="package-manager">
-  <Tab value="npm">
-  ```bash
-  npm install @oatmeal/sdk
-  ```
-  </Tab>
-  <Tab value="pnpm">
-  ```bash
-  pnpm add @oatmeal/sdk
-  ```
-  </Tab>
-  <Tab value="bun">
-  ```bash
-  bun add @oatmeal/sdk
-  ```
-  </Tab>
-</Tabs>
-
-## Create a Client
-
-Initialize the client with your API key:
-
-<CodeBlock language="typescript" code={"import { createClient } from \"@oatmeal/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>lib/agents.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
-
-The SDK automatically detects `NEXT_PUBLIC_APP_URL` for local development, or defaults to the production API.
+Create an API key from the dashboard at **Settings > API Keys**. Keys start with `sk_live_` and are shown only once.
 
 <Callout type="warn">
 Never expose your API key in client-side code. Use environment variables and server-side API routes.
 </Callout>
 
-## Verify Connection
-
-Test your connection with the `whoami` endpoint:
-
-<CodeBlock language="typescript" showLineNumbers code={"const { data, error } = await client.whoami()\n\nif (error) {\n  console.error(\"Authentication failed:\", error.error)\n  process.exit(1)\n}\n\nconsole.log(\"Connected as tenant:\", data.tenantId)\nconsole.log(\"Key ID:\", data.keyId)\nconsole.log(\"Scopes:\", data.scopes)"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>verify.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
-
 ## Environment Variables
 
-Store your API key in an environment variable:
+Store your API key and base URL in an environment variable:
 
-<CodeBlock language="bash" code="AGENTS_API_KEY=sk_live_...">
+<CodeBlock language="bash" code={"OATMEAL_API_KEY=sk_live_...\nOATMEAL_BASE_URL=https://your-app.com"}>
   <CodeBlockHeader>
     <CodeBlockFilename>.env.local</CodeBlockFilename>
     <CodeBlockActions>
@@ -76,31 +26,67 @@ Store your API key in an environment variable:
   </CodeBlockHeader>
 </CodeBlock>
 
-## Response Format
+## Authentication
 
-All SDK methods return an `ApiResponse<T>` object:
+All API requests require an `Authorization` header with your API key:
 
-<CodeBlock language="typescript" code={"interface ApiResponse<T> {\n  data: T | null       // Response data on success\n  error: { error: string } | null  // Error message on failure\n  status: number       // HTTP status code\n}"}>
+<CodeBlock language="typescript" showLineNumbers={false} code={"Authorization: Bearer sk_live_your_api_key_here"}>
   <CodeBlockHeader>
-    <CodeBlockFilename>types.ts</CodeBlockFilename>
+    <CodeBlockFilename>HTTP Header</CodeBlockFilename>
     <CodeBlockActions>
       <CodeBlockCopyButton />
     </CodeBlockActions>
   </CodeBlockHeader>
 </CodeBlock>
 
-This allows consistent error handling:
+## Verify Connection
 
-<CodeBlock language="typescript" showLineNumbers code={"const { data, error, status } = await client.agents.get(\"agent_123\")\n\nif (error) {\n  console.error(`Error ${status}: ${error.error}`)\n} else {\n  console.log(data)\n}"}>
+Test your API key with the `whoami` endpoint:
+
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${process.env.OATMEAL_BASE_URL}/api/v1/whoami`, {\n  headers: {\n    \"Authorization\": `Bearer ${process.env.OATMEAL_API_KEY}`,\n  },\n})\n\nif (!res.ok) {\n  console.error(\"Authentication failed:\", res.status)\n  process.exit(1)\n}\n\nconst data = await res.json()\nconsole.log(\"Connected as tenant:\", data.tenantId)\nconsole.log(\"Key ID:\", data.keyId)\nconsole.log(\"Scopes:\", data.scopes)"}>
   <CodeBlockHeader>
-    <CodeBlockFilename>example.ts</CodeBlockFilename>
+    <CodeBlockFilename>verify.ts</CodeBlockFilename>
     <CodeBlockActions>
       <CodeBlockCopyButton />
     </CodeBlockActions>
   </CodeBlockHeader>
 </CodeBlock>
+
+### Response
+
+<CodeBlock language="json" code={"{\n  \"tenantId\": \"org_abc123\",\n  \"keyId\": \"key_xyz\",\n  \"scopes\": [\"hackathons:read\", \"hackathons:write\", \"webhooks:read\", \"webhooks:write\"]\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>response.json</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Error Handling
+
+API errors return JSON with an `error` field. Use standard `fetch()` error handling:
+
+<CodeBlock language="typescript" showLineNumbers code={"async function apiCall(path: string, options?: RequestInit) {\n  const res = await fetch(`${process.env.OATMEAL_BASE_URL}${path}`, {\n    ...options,\n    headers: {\n      \"Authorization\": `Bearer ${process.env.OATMEAL_API_KEY}`,\n      \"Content-Type\": \"application/json\",\n      ...options?.headers,\n    },\n  })\n\n  const data = await res.json()\n\n  if (!res.ok) {\n    throw new Error(`API error ${res.status}: ${data.error}`)\n  }\n\n  return data\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>api-helper.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## API Endpoints
+
+The API is split across two namespaces:
+
+| Namespace | Auth | Description |
+|-----------|------|-------------|
+| `/api/v1/*` | API key only | Programmatic access for jobs, webhooks |
+| `/api/dashboard/*` | API key or session | Schedules, extended job details |
 
 ## Next Steps
 
-- [Agents API](/docs/sdk/agents) - Run AI agents with streaming support
 - [Jobs API](/docs/sdk/jobs) - Create and manage async jobs
+- [Webhooks API](/docs/sdk/webhooks) - Receive real-time event notifications
+- [Schedules API](/docs/sdk/schedules) - Create recurring jobs
