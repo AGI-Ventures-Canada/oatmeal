@@ -194,6 +194,7 @@ This ensures consistent theming and proper dark mode support.
 - Handle auth and roles in the application layer, not RLS
 - Never apply migrations directly to production - use PR workflow
 - Test migrations locally with `supabase db reset` before pushing
+- **After creating or modifying migration files, always ask the user if they want to run `bun db:sync` to reset the database and regenerate types**
 
 ### Forms
 
