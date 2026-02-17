@@ -1,0 +1,189 @@
+---
+title: Schedules API
+description: Create and manage recurring jobs via the REST API.
+---
+
+The Schedules API lets you create recurring jobs that execute on a defined frequency. Schedules are managed through the dashboard API namespace.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/dashboard/schedules` | List schedules |
+| `POST` | `/api/dashboard/schedules` | Create a schedule |
+| `GET` | `/api/dashboard/schedules/:id` | Get schedule details |
+| `PATCH` | `/api/dashboard/schedules/:id` | Update a schedule |
+| `DELETE` | `/api/dashboard/schedules/:id` | Delete a schedule |
+
+All endpoints require an API key with `schedules:read` or `schedules:write` scope.
+
+## Create a Schedule
+
+`POST /api/dashboard/schedules` — requires `schedules:write` scope.
+
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/dashboard/schedules`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    name: \"Daily report\",\n    frequency: \"daily\",\n    timezone: \"America/New_York\",\n    jobType: \"generate-report\",\n    input: { format: \"pdf\" },\n  }),\n})\n\nconst schedule = await res.json()\nconsole.log(\"Schedule ID:\", schedule.id)\nconsole.log(\"Next run:\", schedule.nextRunAt)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>create-schedule.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | Yes | Schedule name |
+| `frequency` | `string` | Yes | One of: `once`, `hourly`, `daily`, `weekly`, `monthly`, `cron` |
+| `cronExpression` | `string` | No | Cron expression (required when frequency is `cron`) |
+| `timezone` | `string` | No | IANA timezone (e.g. `America/New_York`) |
+| `runTime` | `string` | No | Time of day to run (e.g. `09:00`) |
+| `jobType` | `string` | No | Job type to execute on each run |
+| `input` | `object` | No | Input payload passed to each job |
+
+### Frequency Options
+
+| Frequency | Description |
+|-----------|-------------|
+| `once` | Run a single time |
+| `hourly` | Run every hour |
+| `daily` | Run once per day |
+| `weekly` | Run once per week |
+| `monthly` | Run once per month |
+| `cron` | Custom schedule using a cron expression |
+
+### Response
+
+<CodeBlock language="json" code={"{\n  \"id\": \"sched_abc123\",\n  \"name\": \"Daily report\",\n  \"nextRunAt\": \"2026-02-11T14:00:00Z\"\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>response.json</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## List Schedules
+
+`GET /api/dashboard/schedules` — requires `schedules:read` scope.
+
+Supports optional query parameters: `limit` (number) and `activeOnly` (`true`/`false`).
+
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/dashboard/schedules?activeOnly=true`, {\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst { schedules } = await res.json()\n\nfor (const s of schedules) {\n  console.log(`${s.name} (${s.frequency}) - next: ${s.nextRunAt}`)\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>list-schedules.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+### Response
+
+<CodeBlock language="json" code={"{\n  \"schedules\": [\n    {\n      \"id\": \"sched_abc123\",\n      \"name\": \"Daily report\",\n      \"frequency\": \"daily\",\n      \"cronExpression\": null,\n      \"timezone\": \"America/New_York\",\n      \"jobType\": \"generate-report\",\n      \"isActive\": true,\n      \"nextRunAt\": \"2026-02-11T14:00:00Z\",\n      \"lastRunAt\": \"2026-02-10T14:00:00Z\",\n      \"runCount\": 5,\n      \"createdAt\": \"2026-02-05T10:00:00Z\"\n    }\n  ]\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>response.json</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Get Schedule Details
+
+`GET /api/dashboard/schedules/:id` — requires `schedules:read` scope.
+
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst schedule = await res.json()\nconsole.log(schedule.name, schedule.isActive)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>get-schedule.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+### Response
+
+<CodeBlock language="json" code={"{\n  \"id\": \"sched_abc123\",\n  \"name\": \"Daily report\",\n  \"frequency\": \"daily\",\n  \"cronExpression\": null,\n  \"timezone\": \"America/New_York\",\n  \"jobType\": \"generate-report\",\n  \"input\": { \"format\": \"pdf\" },\n  \"isActive\": true,\n  \"nextRunAt\": \"2026-02-11T14:00:00Z\",\n  \"lastRunAt\": \"2026-02-10T14:00:00Z\",\n  \"runCount\": 5,\n  \"createdAt\": \"2026-02-05T10:00:00Z\",\n  \"updatedAt\": \"2026-02-10T14:00:00Z\"\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>response.json</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Update a Schedule
+
+`PATCH /api/dashboard/schedules/:id` — requires `schedules:write` scope.
+
+All fields are optional. Only provided fields are updated.
+
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {\n  method: \"PATCH\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    isActive: false,\n  }),\n})\n\nconst data = await res.json()\nconsole.log(\"Updated:\", data.updatedAt)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>update-schedule.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+### Updatable Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `string` | Schedule name |
+| `frequency` | `string` | Frequency preset or `cron` |
+| `cronExpression` | `string` | Cron expression |
+| `timezone` | `string` | IANA timezone |
+| `runTime` | `string` | Time of day |
+| `input` | `object` | Job input payload |
+| `isActive` | `boolean` | Enable or disable the schedule |
+
+### Response
+
+<CodeBlock language="json" code={"{\n  \"id\": \"sched_abc123\",\n  \"nextRunAt\": null,\n  \"updatedAt\": \"2026-02-10T16:00:00Z\"\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>response.json</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Delete a Schedule
+
+`DELETE /api/dashboard/schedules/:id` — requires `schedules:write` scope.
+
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {\n  method: \"DELETE\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst data = await res.json()\nif (data.success) {\n  console.log(\"Schedule deleted\")\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>delete-schedule.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Cron Expression Examples
+
+When using `frequency: "cron"`, provide a standard cron expression:
+
+| Expression | Description |
+|------------|-------------|
+| `0 9 * * 1-5` | Weekdays at 9:00 AM |
+| `0 */2 * * *` | Every 2 hours |
+| `0 0 1 * *` | First day of each month at midnight |
+| `30 14 * * 3` | Wednesdays at 2:30 PM |
+| `0 8 * * 1` | Mondays at 8:00 AM |
+
+## Common Timezones
+
+| Timezone | Offset |
+|----------|--------|
+| `America/New_York` | UTC-5 (EST) / UTC-4 (EDT) |
+| `America/Chicago` | UTC-6 (CST) / UTC-5 (CDT) |
+| `America/Denver` | UTC-7 (MST) / UTC-6 (MDT) |
+| `America/Los_Angeles` | UTC-8 (PST) / UTC-7 (PDT) |
+| `Europe/London` | UTC+0 (GMT) / UTC+1 (BST) |
+| `Asia/Tokyo` | UTC+9 |
