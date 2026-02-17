@@ -170,6 +170,9 @@ export async function addJudge(
 export type JudgeInfo = {
   participantId: string
   clerkUserId: string
+  displayName: string
+  email: string | null
+  imageUrl: string | null
   assignmentCount: number
   completedCount: number
 }
@@ -207,9 +210,30 @@ export async function listJudges(hackathonId: string): Promise<JudgeInfo[]> {
     if (a.is_complete) countMap[a.judge_participant_id].completed++
   }
 
+  let userMap: Record<string, { displayName: string; email: string | null; imageUrl: string | null }> = {}
+  try {
+    const { clerkClient } = await import("@clerk/nextjs/server")
+    const client = await clerkClient()
+    const clerkUserIds = judges.map((j) => j.clerk_user_id)
+    const clerkUsers = await client.users.getUserList({ userId: clerkUserIds, limit: 100 })
+    for (const u of clerkUsers.data) {
+      const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.id
+      userMap[u.id] = {
+        displayName: name,
+        email: u.primaryEmailAddress?.emailAddress ?? null,
+        imageUrl: u.imageUrl ?? null,
+      }
+    }
+  } catch (err) {
+    console.error("Failed to fetch Clerk users for judges:", err)
+  }
+
   return judges.map((j) => ({
     participantId: j.id,
     clerkUserId: j.clerk_user_id,
+    displayName: userMap[j.clerk_user_id]?.displayName ?? j.clerk_user_id,
+    email: userMap[j.clerk_user_id]?.email ?? null,
+    imageUrl: userMap[j.clerk_user_id]?.imageUrl ?? null,
     assignmentCount: countMap[j.id]?.total ?? 0,
     completedCount: countMap[j.id]?.completed ?? 0,
   }))

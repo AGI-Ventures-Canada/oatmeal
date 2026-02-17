@@ -6,8 +6,8 @@ const BANNERS_BUCKET = "banners"
 const SCREENSHOTS_BUCKET = "screenshots"
 const MAX_LOGO_WIDTH = 800
 const MAX_LOGO_HEIGHT = 400
-const MAX_BANNER_WIDTH = 1920
-const MAX_BANNER_HEIGHT = 480
+const MAX_BANNER_WIDTH = 1200
+const MAX_BANNER_HEIGHT = 1200
 const MAX_SCREENSHOT_WIDTH = 1280
 const MAX_SCREENSHOT_HEIGHT = 800
 const QUALITY = 85
@@ -162,8 +162,8 @@ export async function optimizeBanner(
 
   if (needsResize) {
     pipeline = pipeline.resize(MAX_BANNER_WIDTH, MAX_BANNER_HEIGHT, {
-      fit: "cover",
-      position: "center",
+      fit: "inside",
+      withoutEnlargement: true,
     })
   }
 
@@ -210,7 +210,7 @@ export async function uploadBanner(
     .getPublicUrl(path)
 
   return {
-    url: urlData.publicUrl,
+    url: `${urlData.publicUrl}?v=${Date.now()}`,
     path,
   }
 }

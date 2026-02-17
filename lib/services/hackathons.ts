@@ -99,6 +99,36 @@ export async function listSponsoredHackathons(
   return sortByStartDate(hackathons)
 }
 
+export async function listJudgingHackathons(
+  clerkUserId: string,
+  options?: { search?: string }
+): Promise<Hackathon[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("hackathon_participants")
+    .select("hackathon_id, role, hackathons(*)")
+    .eq("clerk_user_id", clerkUserId)
+    .eq("role", "judge")
+
+  if (error) {
+    console.error("Failed to list judging hackathons:", error)
+    return []
+  }
+
+  let hackathons = (data as unknown as ParticipantWithHackathon[])
+    .filter((r) => r.hackathons)
+    .map((r) => r.hackathons)
+
+  if (options?.search && options.search.length >= 2) {
+    const q = options.search.toLowerCase()
+    hackathons = hackathons.filter(
+      (h) => h.name.toLowerCase().includes(q) || h.description?.toLowerCase().includes(q)
+    )
+  }
+
+  return sortByStartDate(hackathons)
+}
+
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
@@ -217,6 +247,7 @@ export async function getParticipantCount(hackathonId: string): Promise<number> 
 
 export type RegistrationInfo = {
   isRegistered: boolean
+  participantRole: string | null
   participantCount: number
 }
 
@@ -229,7 +260,7 @@ export async function getRegistrationInfo(
   const [registrationResult, countResult] = await Promise.all([
     client
       .from("hackathon_participants")
-      .select("id")
+      .select("id, role")
       .eq("hackathon_id", hackathonId)
       .eq("clerk_user_id", clerkUserId)
       .maybeSingle(),
@@ -249,6 +280,7 @@ export async function getRegistrationInfo(
 
   return {
     isRegistered: registrationResult.data !== null,
+    participantRole: registrationResult.data?.role ?? null,
     participantCount: countResult.count ?? 0,
   }
 }

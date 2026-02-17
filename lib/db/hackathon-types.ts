@@ -28,6 +28,8 @@ export type InvitationStatus =
   | "expired"
   | "cancelled"
 
+export type JudgeInvitationStatus = "pending" | "accepted" | "cancelled"
+
 export type WebhookEvent =
   | "hackathon.created"
   | "hackathon.updated"
@@ -69,6 +71,9 @@ export interface Hackathon {
   allow_solo: boolean
   status: HackathonStatus
   banner_url: string | null
+  location_type: "in_person" | "virtual" | null
+  location_name: string | null
+  location_url: string | null
   anonymous_judging: boolean
   results_published_at: string | null
   winner_emails_sent_at: string | null
@@ -330,6 +335,19 @@ export interface HackathonResult {
   judge_count: number
   published_at: string | null
   created_at: string
+}
+
+export interface JudgeInvitation {
+  id: string
+  hackathon_id: string
+  email: string
+  token: string
+  invited_by_clerk_user_id: string
+  status: JudgeInvitationStatus
+  accepted_by_clerk_user_id: string | null
+  expires_at: string
+  created_at: string
+  updated_at: string
 }
 
 export interface TenantProfile {

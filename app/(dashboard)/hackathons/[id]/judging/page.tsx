@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation"
 import { resolvePageTenant } from "@/lib/services/tenants"
 import { checkHackathonOrganizer } from "@/lib/services/public-hackathons"
 import { listJudgingCriteria, listJudges, listJudgeAssignments, getJudgingProgress } from "@/lib/services/judging"
+import { listJudgeInvitations } from "@/lib/services/judge-invitations"
 import { getHackathonSubmissions } from "@/lib/services/submissions"
 import { PageHeader } from "@/components/page-header"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -25,12 +26,13 @@ export default async function JudgingPage({ params }: PageProps) {
   if (result.status !== "ok") notFound()
 
   const hackathon = result.hackathon
-  const [criteria, judges, assignments, progress, submissions] = await Promise.all([
+  const [criteria, judges, assignments, progress, submissions, pendingInvitations] = await Promise.all([
     listJudgingCriteria(id),
     listJudges(id),
     listJudgeAssignments(id),
     getJudgingProgress(id),
     getHackathonSubmissions(id),
+    listJudgeInvitations(id, "pending"),
   ])
 
   return (
@@ -52,7 +54,7 @@ export default async function JudgingPage({ params }: PageProps) {
           <TabsTrigger value="progress">Progress</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="criteria">
+        <TabsContent value="criteria" forceMount className="data-[state=inactive]:hidden">
           <CriteriaConfig
             hackathonId={id}
             initialCriteria={criteria.map((c) => ({
@@ -67,7 +69,7 @@ export default async function JudgingPage({ params }: PageProps) {
           />
         </TabsContent>
 
-        <TabsContent value="assignments">
+        <TabsContent value="assignments" forceMount className="data-[state=inactive]:hidden">
           <JudgeAssignments
             hackathonId={id}
             initialJudges={judges}
@@ -80,11 +82,18 @@ export default async function JudgingPage({ params }: PageProps) {
               isComplete: a.is_complete,
               assignedAt: a.assigned_at,
             }))}
+            initialInvitations={pendingInvitations.map((inv) => ({
+              id: inv.id,
+              email: inv.email,
+              status: inv.status,
+              expiresAt: inv.expires_at,
+              createdAt: inv.created_at,
+            }))}
             submissions={submissions.map((s) => ({ id: s.id, title: s.title }))}
           />
         </TabsContent>
 
-        <TabsContent value="progress">
+        <TabsContent value="progress" forceMount className="data-[state=inactive]:hidden">
           <ScoringProgress
             hackathonId={id}
             progress={progress}

@@ -33,6 +33,7 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [countdown, setCountdown] = useState(6)
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
@@ -41,6 +42,49 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
       setTimeout(() => emailInputRef.current?.focus(), 0)
     }
   }, [open, success])
+
+  useEffect(() => {
+    if (!success || !open) return
+    setCountdown(6)
+    const interval = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(interval)
+          return 0
+        }
+        return c - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [success, open])
+
+  useEffect(() => {
+    if (countdown === 0 && success) {
+      setOpen(false)
+      setEmail("")
+      setError(null)
+      setSuccess(false)
+      setCountdown(6)
+      router.refresh()
+    }
+  }, [countdown, success, router])
+
+  useEffect(() => {
+    if (!success || !open) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault()
+        setOpen(false)
+        setEmail("")
+        setError(null)
+        setSuccess(false)
+        setCountdown(6)
+        router.refresh()
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [success, open, router])
 
   async function handleInvite() {
     setLoading(true)
@@ -73,6 +117,7 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
     if (!isOpen) {
       setEmail("")
       setError(null)
+      setCountdown(6)
       if (success) {
         setSuccess(false)
         router.refresh()
@@ -96,75 +141,76 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {success ? "Invitation Sent!" : "Invite Team Member"}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {success
-              ? `We've sent an invitation email to ${email}.`
-              : `Send an email invitation to join "${teamName}".`}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
         {success ? (
-          <div className="flex flex-col items-center py-4">
-            <div className="rounded-full bg-primary/10 p-3 mb-4">
-              <Check className="size-6 text-primary" />
-            </div>
-            <p className="text-sm text-muted-foreground text-center">
-              The invitation will expire in 7 days if not accepted.
-            </p>
-          </div>
-        ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (isValidEmail && !loading) handleInvite()
-            }}
-            onKeyDown={handleKeyDown}
-            autoComplete="off"
-          >
-            <div className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="size-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  ref={emailInputRef}
-                  id="email"
-                  type="email"
-                  placeholder="teammate@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="off"
-                  data-1p-ignore
-                  data-lpignore="true"
-                  data-form-type="other"
-                />
+          <>
+            <AlertDialogTitle className="sr-only">Invitation sent</AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">
+              Invitation sent to {email}
+            </AlertDialogDescription>
+            <div className="flex flex-col items-center gap-3 py-6">
+              <div className="animate-in zoom-in-50 fade-in duration-300 rounded-full bg-primary/10 p-3">
+                <Check className="size-5 text-primary" strokeWidth={2.5} />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium">Invitation sent</p>
+                <p className="text-sm text-muted-foreground mt-1">{email}</p>
               </div>
             </div>
-
-            <AlertDialogFooter className="mt-4">
-              <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
-              <Button type="submit" disabled={!isValidEmail || loading}>
-                {loading ? "Sending..." : "Send Invitation"}
-              </Button>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => handleOpenChange(false)}>
+                Done · {countdown}
+              </AlertDialogAction>
             </AlertDialogFooter>
-          </form>
-        )}
+          </>
+        ) : (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Invite Team Member</AlertDialogTitle>
+              <AlertDialogDescription>
+                Send an email invitation to join &quot;{teamName}&quot;.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (isValidEmail && !loading) handleInvite()
+              }}
+              onKeyDown={handleKeyDown}
+              autoComplete="off"
+            >
+              <div className="space-y-4">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="size-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-        {success && (
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => handleOpenChange(false)}>
-              Done
-            </AlertDialogAction>
-          </AlertDialogFooter>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    ref={emailInputRef}
+                    id="email"
+                    type="email"
+                    placeholder="teammate@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="off"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    data-form-type="other"
+                  />
+                </div>
+              </div>
+
+              <AlertDialogFooter className="mt-4">
+                <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+                <Button type="submit" disabled={!isValidEmail || loading}>
+                  {loading ? "Sending..." : "Send Invitation"}
+                </Button>
+              </AlertDialogFooter>
+            </form>
+          </>
         )}
       </AlertDialogContent>
     </AlertDialog>

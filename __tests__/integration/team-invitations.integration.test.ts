@@ -61,7 +61,7 @@ const mockGetPublicHackathonById = mock(() => Promise.resolve({ slug: "test-hack
 mock.module("@/lib/services/public-hackathons", () => ({
   getPublicHackathon: mock(() => Promise.resolve(null)),
   getPublicHackathonById: mockGetPublicHackathonById,
-  listPublicHackathons: mock(() => Promise.resolve([])),
+  listPublicHackathons: mock(() => Promise.resolve({ hackathons: [], total: 0 })),
   getHackathonByIdForOrganizer: mock(() => Promise.resolve(null)),
   checkHackathonOrganizer: mock(() => Promise.resolve({ status: "not_found" })),
   getHackathonByIdWithFullData: mock(() => Promise.resolve(null)),
@@ -419,6 +419,7 @@ describe("Dashboard Team Invitations Routes", () => {
     mockCancelTeamInvitation.mockReset()
     mockGetTeamWithHackathon.mockReset()
     mockSendTeamInvitationEmail.mockReset()
+    mockSendTeamInvitationEmail.mockResolvedValue({ success: true })
     mockLogAudit.mockReset()
     mockCheckRateLimit.mockReset()
     mockCheckRateLimit.mockReturnValue({ allowed: true, remaining: 9, resetAt: Date.now() + 60000 })
@@ -466,6 +467,7 @@ describe("Dashboard Team Invitations Routes", () => {
       expect(res.status).toBe(200)
       expect(data.id).toBe("inv_1")
       expect(data.email).toBe("test@example.com")
+      expect(data.emailSent).toBe(true)
       expect(mockSendTeamInvitationEmail).toHaveBeenCalled()
       expect(mockLogAudit).toHaveBeenCalled()
     })

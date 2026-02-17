@@ -3,36 +3,33 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import {
   Field,
   FieldLabel,
-  FieldDescription,
   FieldGroup,
 } from "@/components/ui/field"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Undo2 } from "lucide-react"
 import { useEdit } from "@/components/hackathon/preview/edit-context"
 
-interface RulesEditFormProps {
+interface NameEditFormProps {
   hackathonId: string
-  initialData: {
-    rules: string | null
-  }
+  initialName: string
   onSaveAndNext?: () => void
 }
 
-export function RulesEditForm({ hackathonId, initialData, onSaveAndNext }: RulesEditFormProps) {
+export function NameEditForm({ hackathonId, initialName, onSaveAndNext }: NameEditFormProps) {
   const router = useRouter()
   const { closeDrawer } = useEdit()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [rules, setRules] = useState(initialData.rules || "")
-  const isDirty = rules !== (initialData.rules || "")
+  const [name, setName] = useState(initialName)
+  const isDirty = name !== initialName
 
   function handleReset() {
-    setRules(initialData.rules || "")
+    setName(initialName)
     setError(null)
   }
 
@@ -44,9 +41,7 @@ export function RulesEditForm({ hackathonId, initialData, onSaveAndNext }: Rules
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rules: rules || null,
-        }),
+        body: JSON.stringify({ name }),
       })
 
       if (!res.ok) {
@@ -70,7 +65,7 @@ export function RulesEditForm({ hackathonId, initialData, onSaveAndNext }: Rules
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && name.trim() && !saving) {
       e.preventDefault()
       save().then(ok => {
         if (ok) onSaveAndNext ? onSaveAndNext() : closeDrawer()
@@ -86,22 +81,19 @@ export function RulesEditForm({ hackathonId, initialData, onSaveAndNext }: Rules
     <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6" autoComplete="off">
       <FieldGroup>
         <Field>
-          <FieldLabel htmlFor="rules-content">Rules</FieldLabel>
-          <Textarea
-            id="rules-content"
-            name="rules"
-            rows={10}
-            placeholder="Enter the rules and guidelines for your hackathon..."
-            value={rules}
-            onChange={(e) => setRules(e.target.value)}
+          <FieldLabel htmlFor="hackathon-name">Hackathon Name</FieldLabel>
+          <Input
+            id="hackathon-name"
+            name="hackathon-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
             autoComplete="off"
             data-1p-ignore
             data-lpignore="true"
             data-form-type="other"
           />
-          <FieldDescription>
-            Set clear guidelines for participation, submission requirements, and judging criteria
-          </FieldDescription>
         </Field>
 
         {error && (
@@ -111,7 +103,7 @@ export function RulesEditForm({ hackathonId, initialData, onSaveAndNext }: Rules
 
       <div className="space-y-3">
         <div className="flex gap-2">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || !name.trim()}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
@@ -125,6 +117,9 @@ export function RulesEditForm({ hackathonId, initialData, onSaveAndNext }: Rules
           )}
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Kbd>↵</Kbd> save
+          </span>
           <span className="inline-flex items-center gap-1">
             <KbdGroup><Kbd>⌘</Kbd><Kbd>↵</Kbd></KbdGroup> save & next
           </span>

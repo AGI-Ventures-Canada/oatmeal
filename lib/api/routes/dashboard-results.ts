@@ -45,6 +45,11 @@ export const dashboardResultsRoutes = new Elysia()
     })
 
     return { success: true, count: calcResult.count }
+  }, {
+    detail: {
+      summary: "Calculate results",
+      description: "Calculates rankings from judging scores. Requires hackathons:write scope.",
+    },
   })
   .get("/hackathons/:id/results", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
@@ -83,6 +88,11 @@ export const dashboardResultsRoutes = new Elysia()
       })),
       isPublished: result.hackathon.results_published_at !== null,
     }
+  }, {
+    detail: {
+      summary: "Get results (organizer)",
+      description: "Returns detailed results with scores for organizers. Requires hackathons:read scope.",
+    },
   })
   .post("/hackathons/:id/results/publish", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
@@ -121,6 +131,11 @@ export const dashboardResultsRoutes = new Elysia()
     })
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Publish results",
+      description: "Makes results publicly visible and transitions hackathon to completed. Requires hackathons:write scope.",
+    },
   })
   .post("/hackathons/:id/results/unpublish", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
@@ -159,4 +174,9 @@ export const dashboardResultsRoutes = new Elysia()
     })
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Unpublish results",
+      description: "Hides published results from public view. Requires hackathons:write scope.",
+    },
   })

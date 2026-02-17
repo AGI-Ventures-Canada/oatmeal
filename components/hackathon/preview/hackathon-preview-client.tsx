@@ -1,22 +1,23 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import { EditProvider, useEdit } from "./edit-context"
 import { EditableSection } from "./editable-section"
-import { EditModeToggle } from "./edit-mode-toggle"
+import { FloatingActionBar } from "./floating-action-bar"
 import { HackathonEditDrawer } from "@/components/hackathon/edit-drawer/hackathon-edit-drawer"
 import { OrganizerLogoPrompt } from "@/components/hackathon/organizer-logo-prompt"
 import { EventHero } from "@/components/hackathon/event-hero"
+import { BannerUpload } from "@/components/hackathon/banner-upload"
 import { SponsorSection } from "@/components/hackathon/sponsor-section"
 import { SubmissionGallery, type GallerySubmission } from "@/components/hackathon/submission-gallery"
 import { TeamInviteDialog } from "@/components/hackathon/team-invite-dialog"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { CheckCircle2, Crown, Users, Clock, X, Lock } from "lucide-react"
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card"
+import { CheckCircle2, Crown, Clock, X, Lock, Scale, Mail, CalendarClock } from "lucide-react"
 import { formatDateTimeDisplay } from "@/lib/utils/format"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
 import type { Submission } from "@/lib/db/hackathon-types"
@@ -26,8 +27,10 @@ interface HackathonPreviewClientProps {
   hackathon: PublicHackathon
   isEditable: boolean
   isRegistered?: boolean
+  participantRole?: string | null
   participantCount?: number
-  showEditToggle?: boolean
+  showActionBar?: boolean
+  hasJudgeAssignments?: boolean
   submission?: Submission | null
   submissions?: GallerySubmission[]
   teamInfo?: ParticipantTeamInfo
@@ -36,8 +39,10 @@ interface HackathonPreviewClientProps {
 function HackathonPreviewContent({
   hackathon,
   isRegistered: initialIsRegistered = false,
+  participantRole = null,
   participantCount = 0,
-  showEditToggle = false,
+  showActionBar = false,
+  hasJudgeAssignments = false,
   submission = null,
   submissions = [],
   teamInfo = null,
@@ -48,6 +53,7 @@ function HackathonPreviewContent({
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [isRegistered, setIsRegistered] = useState(initialIsRegistered)
   const [justRegistered, setJustRegistered] = useState(false)
+  const [bannerUrl, setBannerUrl] = useState(hackathon.banner_url)
 
   const handleRegistrationSuccess = () => {
     setIsRegistered(true)
@@ -71,140 +77,144 @@ function HackathonPreviewContent({
     }
   }
 
-  function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    })
-  }
+  const isJudge = participantRole === "judge"
 
-  function getInitials(email: string) {
-    return email.substring(0, 2).toUpperCase()
-  }
-
-  const isExpiringSoon = (expiresAt: string) => {
-    const expiry = new Date(expiresAt)
-    const now = new Date()
-    const hoursUntilExpiry = (expiry.getTime() - now.getTime()) / (1000 * 60 * 60)
-    return hoursUntilExpiry < 48
-  }
-
-  const registrationCard = isRegistered && (
-    <section className={`pb-6 border-b ${justRegistered ? "animate-in fade-in duration-500" : ""}`}>
-      <div className="mx-auto max-w-4xl px-4">
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="rounded-full bg-primary/10 p-2">
-                  <CheckCircle2 className="size-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">You&apos;re registered!</span>
-                    <Badge variant="secondary">Confirmed</Badge>
-                  </div>
-                  {teamInfo ? (
-                    <div className="mt-1">
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Users className="size-3.5" />
-                        <span>{teamInfo.team.name}</span>
-                        {teamInfo.team.status === "locked" && (
-                          <Badge variant="outline" className="text-xs gap-1">
-                            <Lock className="size-3" />
-                            Locked
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-2">
-                        {teamInfo.members.map((member) => {
-                          const isCurrentUser = member.clerkUserId === user?.id
-                          const displayName = isCurrentUser
-                            ? (user?.firstName || "You")
-                            : "Member"
-                          const initials = isCurrentUser
-                            ? (user?.firstName?.[0] || "?")
-                            : "?"
-                          return (
-                            <div key={member.clerkUserId} className="flex items-center gap-1.5">
-                              <Avatar className="size-6">
-                                <AvatarFallback className="text-xs">
-                                  {initials}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm text-muted-foreground">
-                                {displayName}
-                              </span>
-                              {member.isCaptain && (
-                                <Crown className="size-3 text-primary" />
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                      {teamInfo.isCaptain && teamInfo.pendingInvitations.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-primary/10">
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-                            <Clock className="size-3" />
-                            <span>Pending invitations</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {teamInfo.pendingInvitations.map((invitation) => (
-                              <div
-                                key={invitation.id}
-                                className="flex items-center gap-2 bg-background/50 rounded-full pl-1 pr-2 py-1"
-                              >
-                                <Avatar className="size-5">
-                                  <AvatarFallback className="text-[10px]">
-                                    {getInitials(invitation.email)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-xs text-muted-foreground truncate max-w-32">
-                                  {invitation.email}
-                                </span>
-                                <span className={`text-[10px] ${isExpiringSoon(invitation.expiresAt) ? "text-destructive" : "text-muted-foreground/70"}`}>
-                                  {formatDate(invitation.expiresAt)}
-                                </span>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="size-4 hover:bg-destructive/10"
-                                  onClick={() => handleCancelInvitation(invitation.id)}
-                                  disabled={cancellingId === invitation.id}
-                                >
-                                  <X className="size-3" />
-                                  <span className="sr-only">Cancel</span>
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      No team yet
-                    </p>
-                  )}
-                </div>
-              </div>
-              {teamInfo && teamInfo.isCaptain && teamInfo.team.status === "forming" && (
-                <TeamInviteDialog
-                  teamId={teamInfo.team.id}
-                  hackathonId={hackathon.id}
-                  teamName={teamInfo.team.name}
-                />
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
+  const judgeStatus = isJudge && (
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-muted-foreground">You&apos;re assigned as a judge</span>
+      <Button asChild>
+        <Link href={`/hackathons/${hackathon.id}/judging`}>
+          <Scale className="size-4" />
+          Enter Judge Mode
+        </Link>
+      </Button>
+    </div>
   )
+
+  const registrationStatus = isRegistered && participantRole === "participant" && (
+    <div className={`space-y-2.5 ${justRegistered ? "animate-in fade-in duration-500" : ""}`}>
+      <div className="flex items-center gap-2.5 rounded-lg border bg-muted/50 px-3 py-2.5">
+        <CheckCircle2 className="size-4 text-primary shrink-0" />
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="text-sm font-medium">Registered</span>
+          {teamInfo && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-sm text-muted-foreground truncate">{teamInfo.team.name}</span>
+              {teamInfo.team.status === "locked" && (
+                <Lock className="size-3 text-muted-foreground shrink-0" />
+              )}
+            </>
+          )}
+        </div>
+        {teamInfo && teamInfo.isCaptain && teamInfo.team.status === "forming" && (
+          <TeamInviteDialog
+            teamId={teamInfo.team.id}
+            hackathonId={hackathon.id}
+            teamName={teamInfo.team.name}
+          />
+        )}
+      </div>
+      {teamInfo && (
+        <div className="flex items-center gap-1 pl-1">
+          <div className="flex -space-x-1.5">
+            {teamInfo.members.map((member) => {
+              const isCurrentUser = member.clerkUserId === user?.id
+              const initials = isCurrentUser
+                ? (user?.firstName?.[0] || "?")
+                : "?"
+              return (
+                <Avatar key={member.clerkUserId} className="size-6 border-2 border-background">
+                  <AvatarFallback className="text-[10px]">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              )
+            })}
+          </div>
+          <span className="text-xs text-muted-foreground ml-1.5">
+            {teamInfo.members.length} member{teamInfo.members.length !== 1 ? "s" : ""}
+            {teamInfo.members.some(m => m.isCaptain && m.clerkUserId === user?.id) && (
+              <> · <Crown className="size-3 text-primary inline" /> Captain</>
+            )}
+          </span>
+        </div>
+      )}
+      {teamInfo?.isCaptain && teamInfo.pendingInvitations.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 pl-1">
+          <Clock className="size-3 text-muted-foreground shrink-0" />
+          {teamInfo.pendingInvitations.map((invitation) => {
+            const sentAt = new Date(invitation.createdAt)
+            const expiresAt = new Date(invitation.expiresAt)
+            const now = new Date()
+            const isExpired = expiresAt < now
+            const hoursLeft = Math.max(0, (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60))
+
+            return (
+              <HoverCard key={invitation.id} openDelay={200} closeDelay={100}>
+                <HoverCardTrigger asChild>
+                  <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 cursor-default">
+                    <span className="text-xs text-muted-foreground truncate max-w-24">
+                      {invitation.email}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-4 hover:bg-destructive/10"
+                      onClick={() => handleCancelInvitation(invitation.id)}
+                      disabled={cancellingId === invitation.id}
+                    >
+                      <X className="size-3" />
+                      <span className="sr-only">Cancel</span>
+                    </Button>
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent side="top" align="start" className="w-56">
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Mail className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                      <span className="text-xs break-all">{invitation.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="size-3.5 shrink-0" />
+                      <span className="text-xs">
+                        Sent {sentAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CalendarClock className={`size-3.5 shrink-0 ${isExpired ? "text-destructive" : "text-muted-foreground"}`} />
+                      <span className={`text-xs ${isExpired ? "text-destructive" : "text-muted-foreground"}`}>
+                        {isExpired
+                          ? "Expired"
+                          : hoursLeft < 48
+                            ? `Expires in ${Math.ceil(hoursLeft)}h`
+                            : `Expires ${expiresAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+
+  const statusSlot = judgeStatus || registrationStatus || null
+
+  const bannerEditSlot = isEditable && editMode ? (
+    <BannerUpload
+      hackathonId={hackathon.id}
+      currentBannerUrl={bannerUrl}
+      variant="hero"
+      onUploadComplete={(url) => setBannerUrl(url || null)}
+    />
+  ) : null
 
   const eventContent = (
     <>
-      {registrationCard}
       <EditableSection
         section="sponsors"
         isEmpty={hackathon.sponsors.length === 0}
@@ -293,42 +303,52 @@ function HackathonPreviewContent({
   )
 
   const heroContent = (
-    <EditableSection section="hero">
-      <EventHero
-        name={hackathon.name}
-        bannerUrl={hackathon.banner_url}
-        status={hackathon.status}
-        startsAt={hackathon.starts_at}
-        endsAt={hackathon.ends_at}
-        registrationOpensAt={hackathon.registration_opens_at}
-        registrationClosesAt={hackathon.registration_closes_at}
-        organizer={hackathon.organizer}
-        onDatesClick={isEditable && editMode ? () => openSection("timeline") : undefined}
-        isRegistered={isRegistered}
-        registrationProps={{
-          hackathonSlug: hackathon.slug,
-          status: hackathon.status,
-          endsAt: hackathon.ends_at,
-          registrationOpensAt: hackathon.registration_opens_at,
-          registrationClosesAt: hackathon.registration_closes_at,
-          maxParticipants: hackathon.max_participants,
-          participantCount,
-          isRegistered,
-          submission,
-          onRegistrationSuccess: handleRegistrationSuccess,
-        }}
-      />
-    </EditableSection>
+    <EventHero
+      name={hackathon.name}
+      bannerUrl={bannerUrl}
+      status={hackathon.status}
+      startsAt={hackathon.starts_at}
+      endsAt={hackathon.ends_at}
+      registrationOpensAt={hackathon.registration_opens_at}
+      registrationClosesAt={hackathon.registration_closes_at}
+      organizer={hackathon.organizer}
+      locationType={hackathon.location_type}
+      locationName={hackathon.location_name}
+      locationUrl={hackathon.location_url}
+      onNameClick={isEditable && editMode ? () => openSection("name") : undefined}
+      onDatesClick={isEditable && editMode ? () => openSection("timeline") : undefined}
+      onLocationClick={isEditable && editMode ? () => openSection("location") : undefined}
+      isRegistered={isRegistered}
+      hideRegistrationButton={isJudge}
+      statusSlot={editMode ? undefined : statusSlot}
+      bannerSlot={bannerEditSlot}
+      orgNameWrapper={editMode && !hackathon.organizer.logo_url
+        ? (name) => <OrganizerLogoPrompt>{name}</OrganizerLogoPrompt>
+        : undefined
+      }
+      registrationProps={editMode ? undefined : isJudge ? undefined : {
+        hackathonSlug: hackathon.slug,
+        status: hackathon.status,
+        endsAt: hackathon.ends_at,
+        registrationOpensAt: hackathon.registration_opens_at,
+        registrationClosesAt: hackathon.registration_closes_at,
+        maxParticipants: hackathon.max_participants,
+        participantCount,
+        isRegistered,
+        submission,
+        onRegistrationSuccess: handleRegistrationSuccess,
+      }}
+    />
   )
 
   return (
     <>
-      {showEditToggle && <EditModeToggle />}
-      {editMode && (
-        <OrganizerLogoPrompt
-          organizerId={hackathon.organizer.id}
-          organizerClerkOrgId={hackathon.organizer.clerk_org_id}
-          organizerLogoUrl={hackathon.organizer.logo_url}
+      {showActionBar && (
+        <FloatingActionBar
+          hackathonId={hackathon.id}
+          isOrganizer={isEditable}
+          isJudge={participantRole === "judge"}
+          hasJudgeAssignments={hasJudgeAssignments}
         />
       )}
       <div>
@@ -345,19 +365,23 @@ export function HackathonPreviewClient({
   hackathon,
   isEditable,
   isRegistered,
+  participantRole,
   participantCount,
-  showEditToggle = false,
+  showActionBar = false,
+  hasJudgeAssignments = false,
   submission,
   submissions,
   teamInfo,
 }: HackathonPreviewClientProps) {
   return (
-    <EditProvider isEditable={isEditable} defaultEditMode={!showEditToggle}>
+    <EditProvider isEditable={isEditable} defaultEditMode={!showActionBar}>
       <HackathonPreviewContent
         hackathon={hackathon}
         isRegistered={isRegistered}
+        participantRole={participantRole}
         participantCount={participantCount}
-        showEditToggle={showEditToggle}
+        showActionBar={showActionBar}
+        hasJudgeAssignments={hasJudgeAssignments}
         submission={submission}
         submissions={submissions}
         teamInfo={teamInfo}

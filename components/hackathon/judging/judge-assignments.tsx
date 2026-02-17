@@ -1,14 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -46,13 +48,36 @@ import {
   CheckCircle2,
   Shuffle,
   UserPlus,
+  Search,
+  Mail,
+  X,
 } from "lucide-react"
 
 type Judge = {
   participantId: string
   clerkUserId: string
+  displayName: string
+  email: string | null
+  imageUrl: string | null
   assignmentCount: number
   completedCount: number
+}
+
+type PendingInvitation = {
+  id: string
+  email: string
+  status: string
+  expiresAt: string
+  createdAt: string
+}
+
+type SearchUser = {
+  id: string
+  email: string | null
+  firstName: string | null
+  lastName: string | null
+  username: string | null
+  imageUrl: string | null
 }
 
 type Assignment = {
@@ -74,6 +99,7 @@ interface JudgeAssignmentsProps {
   hackathonId: string
   initialJudges: Judge[]
   initialAssignments: Assignment[]
+  initialInvitations: PendingInvitation[]
   submissions: Submission[]
 }
 
@@ -81,19 +107,28 @@ export function JudgeAssignments({
   hackathonId,
   initialJudges,
   initialAssignments,
+  initialInvitations,
   submissions,
 }: JudgeAssignmentsProps) {
   const [judges, setJudges] = useState<Judge[]>(initialJudges)
   const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments)
+  const [invitations, setInvitations] = useState<PendingInvitation[]>(initialInvitations)
 
   const [addJudgeOpen, setAddJudgeOpen] = useState(false)
-  const [judgeEmail, setJudgeEmail] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([])
+  const [searching, setSearching] = useState(false)
   const [addingJudge, setAddingJudge] = useState(false)
   const [addJudgeError, setAddJudgeError] = useState<string | null>(null)
-  const [addJudgeSuccess, setAddJudgeSuccess] = useState(false)
+  const [addJudgeSuccess, setAddJudgeSuccess] = useState<string | null>(null)
+  const [showInviteForm, setShowInviteForm] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState("")
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [removingJudgeId, setRemovingJudgeId] = useState<string | null>(null)
   const [removeJudgeError, setRemoveJudgeError] = useState<string | null>(null)
+
+  const [cancellingInvitationId, setCancellingInvitationId] = useState<string | null>(null)
 
   const [selectedJudgeId, setSelectedJudgeId] = useState("")
   const [selectedSubmissionId, setSelectedSubmissionId] = useState("")
@@ -112,19 +147,97 @@ export function JudgeAssignments({
   const base = `/api/dashboard/hackathons/${hackathonId}/judging`
 
   function openAddJudge() {
-    setJudgeEmail("")
+    setSearchQuery("")
+    setSearchResults([])
     setAddJudgeError(null)
-    setAddJudgeSuccess(false)
+    setAddJudgeSuccess(null)
+    setShowInviteForm(false)
+    setInviteEmail("")
     setAddJudgeOpen(true)
   }
 
-  async function handleAddJudge(e: React.FormEvent) {
-    e.preventDefault()
-    const email = judgeEmail.trim()
-    if (!email) {
-      setAddJudgeError("Email is required")
-      return
+  const handleSearch = useCallback(
+    (query: string) => {
+      setSearchQuery(query)
+      setAddJudgeError(null)
+      setAddJudgeSuccess(null)
+
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+
+      if (query.trim().length < 2) {
+        setSearchResults([])
+        setSearching(false)
+        return
+      }
+
+      setSearching(true)
+      searchTimeoutRef.current = setTimeout(async () => {
+        try {
+          const res = await fetch(
+            `${base}/user-search?q=${encodeURIComponent(query.trim())}`
+          )
+          if (!res.ok) throw new Error("Search failed")
+          const data = await res.json()
+          setSearchResults(data.users ?? [])
+        } catch {
+          setSearchResults([])
+        } finally {
+          setSearching(false)
+        }
+      }, 300)
+    },
+    [base]
+  )
+
+  async function handleAddFromSearch(user: SearchUser) {
+    setAddingJudge(true)
+    setAddJudgeError(null)
+
+    try {
+      const res = await fetch(`${base}/judges`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clerkUserId: user.id }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to add judge")
+      }
+      const data = await res.json()
+      const displayName =
+        [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+        user.username ||
+        user.id
+      setJudges((prev) => [
+        ...prev,
+        {
+          participantId: data.participantId,
+          clerkUserId: data.clerkUserId,
+          displayName,
+          email: user.email,
+          imageUrl: user.imageUrl,
+          assignmentCount: 0,
+          completedCount: 0,
+        },
+      ])
+      setAddJudgeSuccess(`${displayName} added as judge`)
+      setSearchQuery("")
+      setSearchResults([])
+      setTimeout(() => setAddJudgeOpen(false), 1200)
+    } catch (err) {
+      setAddJudgeError(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setAddingJudge(false)
     }
+  }
+
+  async function handleInviteByEmail(e: React.FormEvent) {
+    e.preventDefault()
+    const email = inviteEmail.trim()
+    if (!email) return
+
     setAddingJudge(true)
     setAddJudgeError(null)
 
@@ -136,20 +249,41 @@ export function JudgeAssignments({
       })
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || "Failed to add judge")
+        throw new Error(data.error || "Failed to invite judge")
       }
       const data = await res.json()
-      setJudges((prev) => [
-        ...prev,
-        {
-          participantId: data.participantId,
-          clerkUserId: data.clerkUserId,
-          assignmentCount: 0,
-          completedCount: 0,
-        },
-      ])
-      setAddJudgeSuccess(true)
-      setTimeout(() => setAddJudgeOpen(false), 800)
+
+      if (data.invited) {
+        setInvitations((prev) => [
+          {
+            id: data.invitationId,
+            email,
+            status: "pending",
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            createdAt: new Date().toISOString(),
+          },
+          ...prev,
+        ])
+        setAddJudgeSuccess(`Invitation sent to ${email}`)
+      } else {
+        setJudges((prev) => [
+          ...prev,
+          {
+            participantId: data.participantId,
+            clerkUserId: data.clerkUserId,
+            displayName: email,
+            email,
+            imageUrl: null,
+            assignmentCount: 0,
+            completedCount: 0,
+          },
+        ])
+        setAddJudgeSuccess(`${email} added as judge`)
+      }
+
+      setInviteEmail("")
+      setShowInviteForm(false)
+      setTimeout(() => setAddJudgeOpen(false), 1200)
     } catch (err) {
       setAddJudgeError(err instanceof Error ? err.message : "Something went wrong")
     } finally {
@@ -157,10 +291,10 @@ export function JudgeAssignments({
     }
   }
 
-  function handleAddJudgeKeyDown(e: React.KeyboardEvent) {
+  function handleInviteKeyDown(e: React.KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !addingJudge) {
       e.preventDefault()
-      handleAddJudge(e as unknown as React.FormEvent)
+      handleInviteByEmail(e as unknown as React.FormEvent)
     }
   }
 
@@ -181,6 +315,22 @@ export function JudgeAssignments({
       setRemoveJudgeError("Failed to remove judge")
     } finally {
       setRemovingJudgeId(null)
+    }
+  }
+
+  async function handleCancelInvitation(invitationId: string) {
+    setCancellingInvitationId(invitationId)
+
+    try {
+      const res = await fetch(`${base}/invitations/${invitationId}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) throw new Error("Failed to cancel invitation")
+      setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId))
+    } catch {
+      // silently fail
+    } finally {
+      setCancellingInvitationId(null)
     }
   }
 
@@ -211,7 +361,7 @@ export function JudgeAssignments({
         {
           id: data.id,
           judgeParticipantId: selectedJudgeId,
-          judgeName: judge?.clerkUserId ?? selectedJudgeId,
+          judgeName: judge?.displayName ?? selectedJudgeId,
           submissionId: selectedSubmissionId,
           submissionTitle: submission?.title ?? selectedSubmissionId,
           isComplete: false,
@@ -312,6 +462,15 @@ export function JudgeAssignments({
     })
   }
 
+  function getInitials(name: string) {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
   return (
     <div className="space-y-8">
       <div className="space-y-4">
@@ -329,56 +488,155 @@ export function JudgeAssignments({
                 Add Judge
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Add Judge</DialogTitle>
+                <DialogDescription>
+                  Search for a user or invite by email
+                </DialogDescription>
               </DialogHeader>
+
               {addJudgeSuccess ? (
                 <div className="flex flex-col items-center gap-3 py-8">
                   <CheckCircle2 className="size-10 text-primary" />
-                  <p className="text-sm font-medium">Judge added</p>
+                  <p className="text-sm font-medium">{addJudgeSuccess}</p>
                 </div>
               ) : (
-                <form
-                  onSubmit={handleAddJudge}
-                  onKeyDown={handleAddJudgeKeyDown}
-                  autoComplete="off"
-                  className="space-y-4"
-                >
-                  <div className="space-y-2">
-                    <Label htmlFor="judge-email">Email</Label>
+                <div className="space-y-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
-                      id="judge-email"
-                      name="judge-email"
-                      type="email"
-                      value={judgeEmail}
-                      onChange={(e) => setJudgeEmail(e.target.value)}
-                      placeholder="judge@example.com"
+                      value={searchQuery}
+                      onChange={(e) => handleSearch(e.target.value)}
+                      placeholder="Search by name, email, or username..."
+                      className="pl-9"
                       autoComplete="off"
                       data-1p-ignore
                       data-lpignore="true"
                       data-form-type="other"
                     />
                   </div>
+
                   {addJudgeError && (
                     <p className="text-sm text-destructive">{addJudgeError}</p>
                   )}
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setAddJudgeOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={addingJudge}>
-                      {addingJudge && (
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                      )}
-                      Add Judge
-                    </Button>
+
+                  {searching && (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+
+                  {!searching && searchResults.length > 0 && (
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      {searchResults.map((user) => {
+                        const displayName =
+                          [user.firstName, user.lastName]
+                            .filter(Boolean)
+                            .join(" ") ||
+                          user.username ||
+                          user.email ||
+                          user.id
+                        return (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => handleAddFromSearch(user)}
+                            disabled={addingJudge}
+                            className="flex items-center gap-3 w-full rounded-lg p-2 text-left hover:bg-muted transition-colors disabled:opacity-50"
+                          >
+                            <Avatar size="sm">
+                              {user.imageUrl && (
+                                <AvatarImage src={user.imageUrl} alt={displayName} />
+                              )}
+                              <AvatarFallback>
+                                {getInitials(displayName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">
+                                {displayName}
+                              </p>
+                              {user.email && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {user.email}
+                                </p>
+                              )}
+                            </div>
+                            <UserPlus className="size-4 text-muted-foreground shrink-0" />
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {!searching &&
+                    searchQuery.length >= 2 &&
+                    searchResults.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-3">
+                        No users found
+                      </p>
+                    )}
+
+                  <div className="border-t pt-4">
+                    {!showInviteForm ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => setShowInviteForm(true)}
+                      >
+                        <Mail className="mr-2 size-4" />
+                        Invite by email
+                      </Button>
+                    ) : (
+                      <form
+                        onSubmit={handleInviteByEmail}
+                        onKeyDown={handleInviteKeyDown}
+                        autoComplete="off"
+                        className="space-y-3"
+                      >
+                        <div className="space-y-1.5">
+                          <Label htmlFor="invite-email" className="text-xs">
+                            Email address
+                          </Label>
+                          <Input
+                            id="invite-email"
+                            name="invite-email"
+                            type="email"
+                            value={inviteEmail}
+                            onChange={(e) => setInviteEmail(e.target.value)}
+                            placeholder="judge@example.com"
+                            autoComplete="off"
+                            data-1p-ignore
+                            data-lpignore="true"
+                            data-form-type="other"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowInviteForm(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="submit"
+                            size="sm"
+                            disabled={addingJudge || !inviteEmail.trim()}
+                          >
+                            {addingJudge && (
+                              <Loader2 className="mr-2 size-4 animate-spin" />
+                            )}
+                            Send Invitation
+                          </Button>
+                        </div>
+                      </form>
+                    )}
                   </div>
-                </form>
+                </div>
               )}
             </DialogContent>
           </Dialog>
@@ -388,7 +646,7 @@ export function JudgeAssignments({
           <p className="text-sm text-destructive">{removeJudgeError}</p>
         )}
 
-        {judges.length === 0 ? (
+        {judges.length === 0 && invitations.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-sm text-muted-foreground">
               No judges added yet. Add judges to begin assignment.
@@ -408,23 +666,38 @@ export function JudgeAssignments({
                   key={judge.participantId}
                   className="flex items-center justify-between rounded-lg border p-4"
                 >
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {judge.clerkUserId}
-                      </span>
-                      <Badge variant="secondary">
-                        {judge.assignmentCount} assigned
-                      </Badge>
-                      <Badge variant="outline">
-                        {judge.completedCount} completed
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Progress value={progress} className="max-w-48" />
-                      <span className="text-xs text-muted-foreground">
-                        {progress}%
-                      </span>
+                  <div className="flex items-center gap-3 flex-1">
+                    <Avatar size="sm">
+                      {judge.imageUrl && (
+                        <AvatarImage src={judge.imageUrl} alt={judge.displayName} />
+                      )}
+                      <AvatarFallback>
+                        {getInitials(judge.displayName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {judge.displayName}
+                        </span>
+                        {judge.email && (
+                          <span className="text-xs text-muted-foreground">
+                            {judge.email}
+                          </span>
+                        )}
+                        <Badge variant="secondary">
+                          {judge.assignmentCount} assigned
+                        </Badge>
+                        <Badge variant="outline">
+                          {judge.completedCount} completed
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Progress value={progress} className="max-w-48" />
+                        <span className="text-xs text-muted-foreground">
+                          {progress}%
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <AlertDialog>
@@ -446,8 +719,8 @@ export function JudgeAssignments({
                       <AlertDialogHeader>
                         <AlertDialogTitle>Remove judge?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will remove the judge and all their assignments.
-                          This action cannot be undone.
+                          This will remove {judge.displayName} and all their
+                          assignments. This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -466,6 +739,43 @@ export function JudgeAssignments({
                 </div>
               )
             })}
+
+            {invitations.map((inv) => (
+              <div
+                key={inv.id}
+                className="flex items-center justify-between rounded-lg border border-dashed p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar size="sm">
+                    <AvatarFallback>
+                      <Mail className="size-3" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{inv.email}</span>
+                      <Badge variant="outline">Pending</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Invited {formatDate(inv.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-muted-foreground"
+                  onClick={() => handleCancelInvitation(inv.id)}
+                  disabled={cancellingInvitationId === inv.id}
+                >
+                  {cancellingInvitationId === inv.id ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <X className="size-3.5" />
+                  )}
+                </Button>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -488,7 +798,7 @@ export function JudgeAssignments({
               <SelectContent>
                 {judges.map((j) => (
                   <SelectItem key={j.participantId} value={j.participantId}>
-                    {j.clerkUserId}
+                    {j.displayName}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -47,6 +47,8 @@ export type AuditAction =
   | "judging_criteria.deleted"
   | "judge.added"
   | "judge.removed"
+  | "judge.invited"
+  | "judge_invitation.cancelled"
   | "judging.auto_assigned"
   | "prize.created"
   | "prize.deleted"

@@ -9,6 +9,7 @@ import { ExternalLink } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
+import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -92,6 +93,11 @@ export default async function HackathonPage({ params }: PageProps) {
             isOrganizer={true}
           />
         }
+      />
+
+      <LifecycleStepper
+        hackathonId={hackathon!.id}
+        status={hackathon!.status}
       />
 
       <div className="rounded-lg border overflow-hidden">

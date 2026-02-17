@@ -52,6 +52,11 @@ export const dashboardPrizesRoutes = new Elysia()
         assignedAt: a.assigned_at,
       })),
     }
+  }, {
+    detail: {
+      summary: "List prizes and assignments",
+      description: "Lists all prizes and prize-submission assignments for a hackathon. Requires hackathons:read scope.",
+    },
   })
   .post(
     "/hackathons/:id/prizes",
@@ -100,6 +105,10 @@ export const dashboardPrizesRoutes = new Elysia()
       return { id: prize.id, name: prize.name }
     },
     {
+      detail: {
+        summary: "Create prize",
+        description: "Creates a new prize for a hackathon. Requires hackathons:write scope.",
+      },
       body: t.Object({
         name: t.String({ minLength: 1 }),
         description: t.Optional(t.Union([t.String(), t.Null()])),
@@ -147,6 +156,10 @@ export const dashboardPrizesRoutes = new Elysia()
       return { id: prize.id, updatedAt: prize.updated_at }
     },
     {
+      detail: {
+        summary: "Update prize",
+        description: "Updates a prize. Requires hackathons:write scope.",
+      },
       body: t.Object({
         name: t.Optional(t.String()),
         description: t.Optional(t.Union([t.String(), t.Null()])),
@@ -192,6 +205,11 @@ export const dashboardPrizesRoutes = new Elysia()
     })
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Delete prize",
+      description: "Deletes a prize. Requires hackathons:write scope.",
+    },
   })
   .post("/hackathons/:id/prizes/:prizeId/assign", async ({ principal, params, body }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
@@ -231,6 +249,11 @@ export const dashboardPrizesRoutes = new Elysia()
     })
 
     return { id: assignment.id }
+  }, {
+    detail: {
+      summary: "Assign prize to submission",
+      description: "Assigns a prize to a submission. Requires hackathons:write scope.",
+    },
   })
   .delete("/hackathons/:id/prizes/:prizeId/assign/:submissionId", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
@@ -262,4 +285,9 @@ export const dashboardPrizesRoutes = new Elysia()
     }
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Unassign prize from submission",
+      description: "Removes a prize assignment from a submission. Requires hackathons:write scope.",
+    },
   })

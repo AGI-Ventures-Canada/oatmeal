@@ -55,6 +55,7 @@ export default async function EventPage({ params }: PageProps) {
   }
 
   let isRegistered = false
+  let participantRole: string | null = null
   let participantCount = 0
   let submission = null
   let teamInfo = null
@@ -75,9 +76,10 @@ export default async function EventPage({ params }: PageProps) {
     const { getRegistrationInfo, getParticipantTeamInfo } = await import("@/lib/services/hackathons")
     const registrationInfo = await getRegistrationInfo(hackathon.id, userId)
     isRegistered = registrationInfo.isRegistered
+    participantRole = registrationInfo.participantRole
     participantCount = registrationInfo.participantCount
 
-    if (isRegistered) {
+    if (isRegistered && participantRole === "participant") {
       const [submissionResult, teamResult] = await Promise.all([
         import("@/lib/services/submissions").then((m) =>
           m.getSubmissionForParticipant(hackathon.id, userId)
@@ -151,8 +153,10 @@ export default async function EventPage({ params }: PageProps) {
         hackathon={hackathon}
         isEditable={isOrganizer}
         isRegistered={isRegistered}
+        participantRole={participantRole}
         participantCount={participantCount}
-        showEditToggle={isOrganizer}
+        showActionBar={isOrganizer || participantRole === "judge"}
+        hasJudgeAssignments={judgeAssignments.length > 0}
         submission={submission}
         submissions={gallerySubmissions}
         teamInfo={teamInfo}
@@ -160,10 +164,12 @@ export default async function EventPage({ params }: PageProps) {
 
       <div className="max-w-5xl mx-auto px-4 space-y-8 py-8">
         {judgeAssignments.length > 0 && (
-          <JudgeAssignmentsCard
-            hackathonSlug={hackathon.slug}
-            assignments={judgeAssignments}
-          />
+          <div id="judge-assignments">
+            <JudgeAssignmentsCard
+              hackathonSlug={hackathon.slug}
+              assignments={judgeAssignments}
+            />
+          </div>
         )}
 
         {publicResults.length > 0 && (

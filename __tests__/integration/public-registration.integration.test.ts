@@ -30,7 +30,7 @@ const mockGetPublicHackathonById = mock(() => Promise.resolve(null))
 mock.module("@/lib/services/public-hackathons", () => ({
   getPublicHackathon: mockGetPublicHackathon,
   getPublicHackathonById: mockGetPublicHackathonById,
-  listPublicHackathons: mock(() => Promise.resolve([])),
+  listPublicHackathons: mock(() => Promise.resolve({ hackathons: [], total: 0 })),
   getHackathonByIdForOrganizer: mock(() => Promise.resolve(null)),
   checkHackathonOrganizer: mock(() => Promise.resolve({ status: "not_found" })),
   getHackathonByIdWithFullData: mock(() => Promise.resolve(null)),

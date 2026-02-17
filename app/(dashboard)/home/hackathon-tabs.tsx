@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Trophy, Search, Star, Check, Loader2 } from "lucide-react"
+import { Trophy, Search, Star, Check, Loader2, Scale } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -36,6 +36,7 @@ type Props = {
   myHackathons: HackathonWithRole[]
   organizedHackathons: Hackathon[]
   sponsoredHackathons: Hackathon[]
+  judgingHackathons: Hackathon[]
   submittedHackathonIds: string[]
 }
 
@@ -70,12 +71,14 @@ const API_PATHS: Record<string, string> = {
   participating: "/api/dashboard/hackathons/participating",
   organized: "/api/dashboard/hackathons",
   sponsored: "/api/dashboard/hackathons/sponsored",
+  judging: "/api/dashboard/hackathons/judging",
 }
 
 export function HackathonTabs({
   myHackathons,
   organizedHackathons,
   sponsoredHackathons,
+  judgingHackathons,
   submittedHackathonIds,
 }: Props) {
   const submittedSet = new Set(submittedHackathonIds)
@@ -83,13 +86,15 @@ export function HackathonTabs({
   const router = useRouter()
 
   const tabFromUrl = searchParams.get("tab")
-  const validTabs = ["participating", "organized", "sponsored"]
+  const validTabs = ["participating", "organized", "sponsored", "judging"]
 
   const defaultTab = organizedHackathons.length > 0
     ? "organized"
-    : sponsoredHackathons.length > 0
-      ? "sponsored"
-      : "participating"
+    : judgingHackathons.length > 0
+      ? "judging"
+      : sponsoredHackathons.length > 0
+        ? "sponsored"
+        : "participating"
 
   const activeTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : defaultTab
 
@@ -157,6 +162,10 @@ export function HackathonTabs({
     ? (searchResults.sponsored ?? [])
     : sortByStatusPriority(sponsoredHackathons)
 
+  const judgingList = isSearching
+    ? (searchResults.judging ?? [])
+    : sortByStatusPriority(judgingHackathons)
+
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
       <div className="flex items-center justify-between gap-4">
@@ -192,6 +201,14 @@ export function HackathonTabs({
             {organizedHackathons.length > 0 && (
               <Badge variant="secondary" className="ml-2">
                 {organizedHackathons.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="judging">
+            Judging
+            {judgingHackathons.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {judgingHackathons.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -275,6 +292,40 @@ export function HackathonTabs({
                   key={h.id}
                   hackathon={h}
                   href={`/hackathons/${h.id}`}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="judging">
+          {judgingList.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Scale className="size-10 text-muted-foreground mb-4" />
+                <CardTitle className="mb-2">
+                  {isSearching ? "No results found" : "Not judging any hackathons"}
+                </CardTitle>
+                <CardDescription className="mb-4">
+                  {isSearching
+                    ? "Try a different search term"
+                    : "When you're invited to judge a hackathon, it will appear here"}
+                </CardDescription>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {judgingList.map((h) => (
+                <HackathonCard
+                  key={h.id}
+                  hackathon={h}
+                  href={`/e/${h.slug}`}
+                  extras={
+                    <Badge variant="outline">
+                      <Scale className="mr-1 size-3" />
+                      Judge
+                    </Badge>
+                  }
                 />
               ))}
             </div>

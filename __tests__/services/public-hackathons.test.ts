@@ -93,9 +93,10 @@ describe("Public Hackathons Service", () => {
 
       const result = await listPublicHackathons()
 
-      expect(result).toHaveLength(1)
-      expect(result[0].name).toBe("Test Hackathon")
-      expect(result[0].organizer.name).toBe("Test Org")
+      expect(result.hackathons).toHaveLength(1)
+      expect(result.total).toBe(1)
+      expect(result.hackathons[0].name).toBe("Test Hackathon")
+      expect(result.hackathons[0].organizer.name).toBe("Test Org")
     })
 
     it("returns empty array on error", async () => {
@@ -107,7 +108,7 @@ describe("Public Hackathons Service", () => {
 
       const result = await listPublicHackathons()
 
-      expect(result).toEqual([])
+      expect(result).toEqual({ hackathons: [], total: 0 })
     })
 
     it("applies search filter when search option provided", async () => {
@@ -119,7 +120,7 @@ describe("Public Hackathons Service", () => {
 
       const result = await listPublicHackathons({ search: "test" })
 
-      expect(result).toHaveLength(1)
+      expect(result.hackathons).toHaveLength(1)
       expect(chain.or).toHaveBeenCalled()
     })
 
@@ -132,7 +133,7 @@ describe("Public Hackathons Service", () => {
 
       const result = await listPublicHackathons({ search: "a" })
 
-      expect(result).toHaveLength(1)
+      expect(result.hackathons).toHaveLength(1)
       expect(chain.or).not.toHaveBeenCalled()
     })
 
@@ -145,8 +146,24 @@ describe("Public Hackathons Service", () => {
 
       const result = await listPublicHackathons({ search: "%()" })
 
-      expect(result).toEqual([])
+      expect(result).toEqual({ hackathons: [], total: 0 })
       expect(chain.or).not.toHaveBeenCalled()
+    })
+
+    it("paginates results", async () => {
+      const items = Array.from({ length: 15 }, (_, i) => ({
+        ...mockHackathon,
+        id: `id-${i}`,
+        name: `Hackathon ${i}`,
+        organizer: mockOrganizer,
+      }))
+      const chain = createChainableMock({ data: items, error: null })
+      setMockFromImplementation(() => chain)
+
+      const result = await listPublicHackathons({ page: 2, limit: 9 })
+
+      expect(result.total).toBe(15)
+      expect(result.hackathons).toHaveLength(6)
     })
   })
 

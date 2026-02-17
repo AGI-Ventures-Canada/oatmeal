@@ -17,7 +17,7 @@ export const api = new Elysia({ prefix: "/api" })
 ## Authentication
 
 - **Public endpoints** (\`/api/public/*\`): No authentication required
-- **Dashboard endpoints** (\`/api/dashboard/*\`): Requires Clerk session (browser only)
+- **Dashboard endpoints** (\`/api/dashboard/*\`): Requires Clerk session **or** API key (dual-auth)
 - **Integration endpoints** (\`/api/v1/*\`): Requires API key in Authorization header
 
 ## API Key Authentication
