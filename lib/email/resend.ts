@@ -29,8 +29,13 @@ export interface SendEmailResult {
 
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult | null> {
   const client = getResendClient()
-  const fromEmail =
-    input.from ?? process.env.RESEND_FROM_EMAIL ?? "noreply@agents.example.com"
+  const fromEmail = input.from ?? process.env.RESEND_FROM_EMAIL
+  if (!fromEmail) {
+    console.error(
+      "RESEND_FROM_EMAIL environment variable is not set. Add it to .env.local (e.g. RESEND_FROM_EMAIL=noreply@getoatmeal.com)"
+    )
+    return null
+  }
 
   try {
     // Build email options - Resend SDK has complex union types requiring html, text, or template
