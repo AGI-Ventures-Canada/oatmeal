@@ -4,6 +4,9 @@ import { createApiKey, listApiKeys, revokeApiKey, getApiKeyById } from "@/lib/se
 import { listJobs, getJobById } from "@/lib/services/jobs"
 import { logAudit } from "@/lib/services/audit"
 import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
+import { dashboardJudgingRoutes } from "./dashboard-judging"
+import { dashboardPrizesRoutes } from "./dashboard-prizes"
+import { dashboardResultsRoutes } from "./dashboard-results"
 import type { Scope } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
 
@@ -812,6 +815,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       minTeamSize: hackathon.min_team_size,
       maxTeamSize: hackathon.max_team_size,
       allowSolo: hackathon.allow_solo,
+      anonymousJudging: hackathon.anonymous_judging,
+      resultsPublishedAt: hackathon.results_published_at,
       createdAt: hackathon.created_at,
       updatedAt: hackathon.updated_at,
     }
@@ -832,6 +837,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         registrationOpensAt: body.registrationOpensAt,
         registrationClosesAt: body.registrationClosesAt,
         status: body.status as "draft" | "published" | "registration_open" | "active" | "judging" | "completed" | "archived" | undefined,
+        anonymousJudging: body.anonymousJudging,
       })
 
       if (!hackathon) {
@@ -872,6 +878,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
           t.Literal("completed"),
           t.Literal("archived"),
         ])),
+        anonymousJudging: t.Optional(t.Boolean()),
       }),
     }
   )
@@ -1541,3 +1548,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
     return { success: true }
   })
+  .use(dashboardJudgingRoutes)
+  .use(dashboardPrizesRoutes)
+  .use(dashboardResultsRoutes)

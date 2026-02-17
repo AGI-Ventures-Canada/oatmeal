@@ -252,6 +252,7 @@ export async function updateHackathonSettings(
     registrationOpensAt?: string | null
     registrationClosesAt?: string | null
     status?: HackathonStatus
+    anonymousJudging?: boolean
   }
 ): Promise<Hackathon | null> {
   const client = getSupabase() as unknown as SupabaseClient
@@ -266,6 +267,7 @@ export async function updateHackathonSettings(
   if (updates.registrationOpensAt !== undefined) updateData.registration_opens_at = updates.registrationOpensAt
   if (updates.registrationClosesAt !== undefined) updateData.registration_closes_at = updates.registrationClosesAt
   if (updates.status !== undefined) updateData.status = updates.status
+  if (updates.anonymousJudging !== undefined) updateData.anonymous_judging = updates.anonymousJudging
 
   const { data, error } = await client
     .from("hackathons")
