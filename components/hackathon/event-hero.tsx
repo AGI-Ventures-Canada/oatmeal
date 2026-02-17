@@ -258,7 +258,7 @@ export function EventHero({
             onDatesClick();
           }}
           data-edit-section="timeline"
-          className="group w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 scroll-mt-24"
+          className="group w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 text-left scroll-mt-24"
         >
           <div className="flex items-center gap-2">
             {datesContent}
