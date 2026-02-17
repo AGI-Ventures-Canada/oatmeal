@@ -128,26 +128,30 @@ export function LifecycleStepper({ hackathonId, status }: LifecycleStepperProps)
   return (
     <>
       <div className="rounded-lg border bg-card">
-        <div className="flex items-center gap-4 px-5 py-3.5">
-          <div className="flex items-center flex-1 min-w-0">
+        <div className="px-5 py-4">
+          <div className="flex items-start">
             {phases.map((phase, index) => {
               const isCompleted = index < currentIndex
               const isCurrent = index === currentIndex
               const isFuture = index > currentIndex
               const Icon = phase.icon
               const isClickable = !isCurrent && !updating && Math.abs(index - currentIndex) === 1
+              const isConnectorWithCta = nextPhase && index === currentIndex
 
               return (
                 <div
                   key={phase.key}
-                  className="flex items-center flex-1 min-w-0 last:flex-none"
+                  className={cn(
+                    "flex items-start min-w-0",
+                    index < phases.length - 1 ? "flex-1" : "flex-none"
+                  )}
                 >
                   <button
                     type="button"
                     onClick={() => isClickable && requestTransition(phase.key)}
                     disabled={!isClickable}
                     className={cn(
-                      "group/phase flex items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors",
+                      "group/phase flex flex-col items-center gap-1.5 rounded-md px-2 pt-1 pb-1.5 transition-colors shrink-0",
                       isClickable && "hover:bg-muted cursor-pointer",
                       !isClickable && isCurrent && "cursor-default",
                       !isClickable && isFuture && "cursor-default opacity-40"
@@ -155,7 +159,7 @@ export function LifecycleStepper({ hackathonId, status }: LifecycleStepperProps)
                   >
                     <div
                       className={cn(
-                        "flex size-7 shrink-0 items-center justify-center rounded-full transition-colors",
+                        "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
                         isCompleted && "bg-primary text-primary-foreground",
                         isCurrent && "bg-primary text-primary-foreground",
                         isFuture && "border-2 border-muted-foreground/30"
@@ -169,7 +173,7 @@ export function LifecycleStepper({ hackathonId, status }: LifecycleStepperProps)
                     </div>
                     <span
                       className={cn(
-                        "hidden text-sm font-medium whitespace-nowrap sm:block",
+                        "text-xs font-medium whitespace-nowrap",
                         isCompleted && "text-muted-foreground",
                         isCurrent && "text-foreground",
                         isFuture && "text-muted-foreground"
@@ -180,35 +184,46 @@ export function LifecycleStepper({ hackathonId, status }: LifecycleStepperProps)
                   </button>
 
                   {index < phases.length - 1 && (
-                    <div
-                      className={cn(
-                        "h-px flex-1 mx-1",
-                        index < currentIndex ? "bg-primary" : "bg-border"
+                    <div className="flex-1 flex items-center self-stretch pt-1" style={{ height: "2.5rem" }}>
+                      {isConnectorWithCta ? (
+                        <div className="flex-1 flex items-center">
+                          <div
+                            className={cn(
+                              "h-px flex-1",
+                              index < currentIndex ? "bg-primary" : "bg-border"
+                            )}
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => requestTransition(nextPhase.key)}
+                            disabled={updating}
+                            className="shrink-0 gap-1.5 mx-2"
+                          >
+                            {updating ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <>
+                                {advanceCta[phases[currentIndex].key]}
+                                <ArrowRight className="size-3.5" />
+                              </>
+                            )}
+                          </Button>
+                          <div className="h-px flex-1 bg-border" />
+                        </div>
+                      ) : (
+                        <div
+                          className={cn(
+                            "h-px flex-1 mx-1",
+                            index < currentIndex ? "bg-primary" : "bg-border"
+                          )}
+                        />
                       )}
-                    />
+                    </div>
                   )}
                 </div>
               )
             })}
           </div>
-
-          {nextPhase && (
-            <Button
-              size="sm"
-              onClick={() => requestTransition(nextPhase.key)}
-              disabled={updating}
-              className="shrink-0 gap-1.5"
-            >
-              {updating ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <>
-                  {advanceCta[phases[currentIndex].key]}
-                  <ArrowRight className="size-3.5" />
-                </>
-              )}
-            </Button>
-          )}
         </div>
       </div>
 

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { ChevronUp, ChevronDown } from "lucide-react"
-import { useEdit, type EditSection } from "@/components/hackathon/preview/edit-context"
+import { useEdit, type EditSection, SECTION_ORDER } from "@/components/hackathon/preview/edit-context"
 import { NameEditForm } from "./name-edit-form"
 import { AboutEditForm } from "./about-edit-form"
 import { RulesEditForm } from "./rules-edit-form"
@@ -21,15 +21,6 @@ import type { PublicHackathon } from "@/lib/services/public-hackathons"
 interface HackathonEditDrawerProps {
   hackathon: PublicHackathon
 }
-
-const sectionOrder: Exclude<EditSection, null>[] = [
-  "name",
-  "timeline",
-  "location",
-  "about",
-  "rules",
-  "sponsors",
-]
 
 const sectionMeta: Record<Exclude<EditSection, null>, { title: string; description: string }> = {
   name: {
@@ -62,21 +53,21 @@ export function HackathonEditDrawer({ hackathon }: HackathonEditDrawerProps) {
   const { activeSection, openSection, closeDrawer } = useEdit()
 
   const isOpen = activeSection !== null
-  const currentIndex = activeSection ? sectionOrder.indexOf(activeSection) : -1
+  const currentIndex = activeSection ? SECTION_ORDER.indexOf(activeSection) : -1
   const hasPrev = currentIndex > 0
-  const hasNext = currentIndex >= 0 && currentIndex < sectionOrder.length - 1
+  const hasNext = currentIndex >= 0 && currentIndex < SECTION_ORDER.length - 1
 
   function goToPrev() {
-    if (hasPrev) openSection(sectionOrder[currentIndex - 1])
+    if (hasPrev) openSection(SECTION_ORDER[currentIndex - 1])
   }
 
   function goToNext() {
-    if (hasNext) openSection(sectionOrder[currentIndex + 1])
+    if (hasNext) openSection(SECTION_ORDER[currentIndex + 1])
   }
 
   function handleSaveAndNext() {
     if (hasNext) {
-      openSection(sectionOrder[currentIndex + 1])
+      openSection(SECTION_ORDER[currentIndex + 1])
     } else {
       closeDrawer()
     }

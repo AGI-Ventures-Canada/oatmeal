@@ -16,7 +16,7 @@ type BreadcrumbItemType = {
 
 type PageHeaderProps = {
   breadcrumbs: BreadcrumbItemType[]
-  title: string
+  title?: string
   description?: string
   actions?: React.ReactNode
 }
@@ -50,15 +50,17 @@ export function PageHeader({
         </Breadcrumb>
       )}
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{title}</h1>
-          {description && (
-            <p className="text-muted-foreground">{description}</p>
-          )}
+      {(title || description || actions) && (
+        <div className="flex items-center justify-between">
+          <div>
+            {title && <h1 className="text-2xl font-bold">{title}</h1>}
+            {description && (
+              <p className="text-muted-foreground">{description}</p>
+            )}
+          </div>
+          {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
-      </div>
+      )}
     </div>
   )
 }

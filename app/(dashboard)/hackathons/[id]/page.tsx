@@ -83,8 +83,6 @@ export default async function HackathonPage({ params }: PageProps) {
           { label: "Dashboard", href: "/home" },
           { label: hackathon!.name },
         ]}
-        title={hackathon!.name}
-        description="Click on any section below to edit"
         actions={
           <HackathonPageActions
             hackathonId={hackathon!.id}

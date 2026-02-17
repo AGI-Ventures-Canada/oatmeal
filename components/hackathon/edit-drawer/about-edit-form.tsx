@@ -65,6 +65,7 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext }: About
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!isDirty) return
     const ok = await save()
     if (ok) closeDrawer()
   }
@@ -72,6 +73,10 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext }: About
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
       e.preventDefault()
+      if (!isDirty) {
+        onSaveAndNext ? onSaveAndNext() : closeDrawer()
+        return
+      }
       save().then(ok => {
         if (ok) onSaveAndNext ? onSaveAndNext() : closeDrawer()
       })
@@ -111,7 +116,7 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext }: About
 
       <div className="space-y-3">
         <div className="flex gap-2">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || !isDirty}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>

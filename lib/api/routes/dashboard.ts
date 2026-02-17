@@ -1553,8 +1553,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         })
       }
 
-      if (file.size > 2 * 1024 * 1024) {
-        return new Response(JSON.stringify({ error: "File too large (max 2MB)" }), {
+      if (file.size > 30 * 1024 * 1024) {
+        return new Response(JSON.stringify({ error: "File too large (max 30MB)" }), {
           status: 400,
           headers: { "Content-Type": "application/json" },
         })
