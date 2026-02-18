@@ -89,11 +89,11 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext }: Lo
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
       e.preventDefault()
       if (!isDirty) {
-        onSaveAndNext ? onSaveAndNext() : closeDrawer()
+        if (onSaveAndNext) { onSaveAndNext() } else { closeDrawer() }
         return
       }
       save().then(ok => {
-        if (ok) onSaveAndNext ? onSaveAndNext() : closeDrawer()
+        if (ok) { if (onSaveAndNext) { onSaveAndNext() } else { closeDrawer() } }
       })
     }
     if (e.key === "Escape" && isDirty) {

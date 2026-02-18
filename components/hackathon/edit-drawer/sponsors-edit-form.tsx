@@ -316,7 +316,7 @@ export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }
         handleAddManual()
       } else if (!saving) {
         saveChanges().then(ok => {
-          if (ok) onSaveAndNext ? onSaveAndNext() : closeDrawer()
+          if (ok) { if (onSaveAndNext) { onSaveAndNext() } else { closeDrawer() } }
         })
       }
     }

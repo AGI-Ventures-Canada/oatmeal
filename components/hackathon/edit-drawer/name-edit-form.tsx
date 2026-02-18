@@ -69,11 +69,11 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext }: NameEd
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && name.trim() && !saving) {
       e.preventDefault()
       if (!isDirty) {
-        onSaveAndNext ? onSaveAndNext() : closeDrawer()
+        if (onSaveAndNext) { onSaveAndNext() } else { closeDrawer() }
         return
       }
       save().then(ok => {
-        if (ok) onSaveAndNext ? onSaveAndNext() : closeDrawer()
+        if (ok) { if (onSaveAndNext) { onSaveAndNext() } else { closeDrawer() } }
       })
     }
     if (e.key === "Escape" && isDirty) {

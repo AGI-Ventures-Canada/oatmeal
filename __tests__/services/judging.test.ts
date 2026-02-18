@@ -14,9 +14,7 @@ describe("Judging Service", () => {
 
   describe("getJudgingSetupStatus", () => {
     it("returns zero judges and no unassigned submissions when no data", async () => {
-      let callCount = 0
       setMockFromImplementation((table) => {
-        callCount++
         if (table === "hackathon_participants") {
           return createChainableMock({ data: [], error: null })
         }

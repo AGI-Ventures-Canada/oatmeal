@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,6 +16,7 @@ import {
   DrawerClose,
 } from "@/components/ui/drawer"
 import { Loader2, CheckCircle2, ExternalLink, Github } from "lucide-react"
+import Image from "next/image"
 
 type CriterionWithScore = {
   id: string
@@ -63,6 +64,7 @@ export function ScoringDrawer({
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savingNotes, setSavingNotes] = useState(false)
+  const notesTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
     if (!open || !assignmentId) return
@@ -87,29 +89,26 @@ export function ScoringDrawer({
   }, [open, assignmentId, hackathonSlug])
 
   const debouncedSaveNotes = useCallback(
-    (() => {
-      let timeout: ReturnType<typeof setTimeout>
-      return (value: string) => {
-        clearTimeout(timeout)
-        timeout = setTimeout(async () => {
-          setSavingNotes(true)
-          try {
-            await fetch(
-              `/api/public/hackathons/${hackathonSlug}/judging/assignments/${assignmentId}/notes`,
-              {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ notes: value }),
-              }
-            )
-          } catch {
-            // silent fail for auto-save
-          } finally {
-            setSavingNotes(false)
-          }
-        }, 1000)
-      }
-    })(),
+    (value: string) => {
+      clearTimeout(notesTimeoutRef.current)
+      notesTimeoutRef.current = setTimeout(async () => {
+        setSavingNotes(true)
+        try {
+          await fetch(
+            `/api/public/hackathons/${hackathonSlug}/judging/assignments/${assignmentId}/notes`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ notes: value }),
+            }
+          )
+        } catch {
+          // silent fail for auto-save
+        } finally {
+          setSavingNotes(false)
+        }
+      }, 1000)
+    },
     [hackathonSlug, assignmentId]
   )
 
@@ -217,11 +216,12 @@ export function ScoringDrawer({
               </div>
 
               {detail.submissionScreenshotUrl && (
-                <div className="rounded-lg border overflow-hidden">
-                  <img
+                <div className="relative rounded-lg border overflow-hidden h-[200px]">
+                  <Image
                     src={detail.submissionScreenshotUrl}
                     alt={detail.submissionTitle}
-                    className="w-full max-h-[200px] object-cover"
+                    fill
+                    className="object-cover"
                   />
                 </div>
               )}
