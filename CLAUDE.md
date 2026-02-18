@@ -53,6 +53,18 @@ Next.js 16 App Router with:
 - AI SDK 6
 - Shadcn/ui components
 
+### Route Structure
+
+The app has two main route groups:
+
+| Route | Purpose | Auth | URL Pattern |
+|-------|---------|------|-------------|
+| `/e/[slug]` | Public event pages for participants, judges, and visitors | Optional | Human-readable slugs |
+| `/hackathons/[id]` | Dashboard management for organizers and sponsors | Required | Database UUIDs |
+
+- `(public)` routes allow unauthenticated access with a simple header
+- `(dashboard)` routes require authentication and show the sidebar
+
 ### Path Aliases
 
 Use `@/*` to import from the project root.
@@ -67,6 +79,7 @@ See domain-specific CLAUDE.md files for detailed patterns:
 - `lib/integrations/CLAUDE.md` - OAuth flows, token management
 - `lib/email/CLAUDE.md` - Resend email sending and receiving
 - `supabase/CLAUDE.md` - Database development, migrations, branching
+- `scripts/CLAUDE.md` - Test scenario scripts for seeding dev database
 
 ### External Documentation Links
 

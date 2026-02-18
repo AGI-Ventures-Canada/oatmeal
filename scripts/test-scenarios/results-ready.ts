@@ -11,6 +11,7 @@ import {
   SEED_USERS,
   supabase,
   printReady,
+  promptForOptionalTenantId,
 } from "./_helpers"
 
 const SLUG = "test-results-ready"
@@ -18,7 +19,8 @@ const SLUG = "test-results-ready"
 async function run() {
   console.log("Setting up results-ready scenario...")
 
-  const tenantId = await getOrCreateTenant()
+  const overrideTenantId = await promptForOptionalTenantId()
+  const tenantId = await getOrCreateTenant(overrideTenantId)
 
   const now = new Date()
   const hackathonId = await createTestHackathon({

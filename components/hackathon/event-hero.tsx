@@ -1,7 +1,8 @@
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Moon, Sun, Calendar, CalendarDays, Zap, MapPin, Video } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Clock, Moon, Sun, Calendar, CalendarDays, Zap, MapPin, Video, Settings } from "lucide-react";
 import type {
   HackathonStatus,
   TenantProfile,
@@ -44,6 +45,8 @@ interface EventHeroProps {
   registrationProps?: RegistrationProps;
   isRegistered?: boolean;
   hideRegistrationButton?: boolean;
+  isOrganizer?: boolean;
+  hackathonSlug?: string;
   tabsSlot?: React.ReactNode;
   statusSlot?: React.ReactNode;
   bannerSlot?: React.ReactNode;
@@ -170,6 +173,8 @@ export function EventHero({
   registrationProps,
   isRegistered = false,
   hideRegistrationButton = false,
+  isOrganizer = false,
+  hackathonSlug,
   tabsSlot,
   statusSlot,
   bannerSlot,
@@ -359,7 +364,16 @@ export function EventHero({
         })()}
       </div>
       {statusSlot}
-      {registrationProps && (
+      {isOrganizer && hackathonSlug ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild>
+            <Link href={`/e/${hackathonSlug}/manage`}>
+              <Settings className="size-4" />
+              Manage
+            </Link>
+          </Button>
+        </div>
+      ) : registrationProps && (
         <div className="flex flex-wrap items-center gap-2">
           {!hideRegistrationButton && !isRegistered && (
             <RegistrationButton

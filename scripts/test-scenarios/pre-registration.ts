@@ -1,11 +1,12 @@
-import { getOrCreateTenant, createTestHackathon, printReady } from "./_helpers"
+import { getOrCreateTenant, createTestHackathon, printReady, promptForOptionalTenantId } from "./_helpers"
 
 const SLUG = "test-pre-registration"
 
 async function run() {
   console.log("Setting up pre-registration scenario...")
 
-  const tenantId = await getOrCreateTenant()
+  const overrideTenantId = await promptForOptionalTenantId()
+  const tenantId = await getOrCreateTenant(overrideTenantId)
 
   const now = new Date()
   await createTestHackathon({

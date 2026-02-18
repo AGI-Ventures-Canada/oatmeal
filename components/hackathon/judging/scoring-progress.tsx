@@ -1,10 +1,7 @@
 "use client"
 
-import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -13,10 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Loader2, Users } from "lucide-react"
+import { Users } from "lucide-react"
 
 interface ScoringProgressProps {
-  hackathonId: string
   progress: {
     totalAssignments: number
     completedAssignments: number
@@ -27,47 +23,17 @@ interface ScoringProgressProps {
       total: number
     }[]
   }
-  anonymousJudging: boolean
 }
 
 export function ScoringProgress({
-  hackathonId,
   progress,
-  anonymousJudging: initialAnonymous,
 }: ScoringProgressProps) {
-  const [anonymous, setAnonymous] = useState(initialAnonymous)
-  const [toggling, setToggling] = useState(false)
-
   const overallPercent =
     progress.totalAssignments > 0
       ? Math.round(
           (progress.completedAssignments / progress.totalAssignments) * 100
         )
       : 0
-
-  async function handleToggleAnonymous(checked: boolean) {
-    setToggling(true)
-    const previous = anonymous
-    setAnonymous(checked)
-
-    try {
-      const res = await fetch(
-        `/api/dashboard/hackathons/${hackathonId}/settings`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ anonymousJudging: checked }),
-        }
-      )
-      if (!res.ok) {
-        setAnonymous(previous)
-      }
-    } catch {
-      setAnonymous(previous)
-    } finally {
-      setToggling(false)
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -84,28 +50,6 @@ export function ScoringProgress({
             <span className="font-medium">{overallPercent}%</span>
           </div>
           <Progress value={overallPercent} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="anonymous-judging">Anonymous judging</Label>
-              {toggling && (
-                <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
-              )}
-            </div>
-            <Switch
-              id="anonymous-judging"
-              checked={anonymous}
-              onCheckedChange={handleToggleAnonymous}
-              disabled={toggling}
-            />
-          </div>
         </CardContent>
       </Card>
 

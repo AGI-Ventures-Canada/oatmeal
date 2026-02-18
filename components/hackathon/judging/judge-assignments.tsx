@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Dialog,
   DialogContent,
@@ -51,7 +53,32 @@ import {
   Search,
   Mail,
   X,
+  AlertTriangle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react"
+
+type SortColumn = "judge" | "submission" | "status" | "assigned"
+
+function SortIcon({
+  column,
+  sortColumn,
+  sortDirection,
+}: {
+  column: SortColumn
+  sortColumn: SortColumn | null
+  sortDirection: "asc" | "desc"
+}) {
+  if (sortColumn !== column) {
+    return <ArrowUpDown className="ml-1 inline size-3.5 text-muted-foreground" />
+  }
+  return sortDirection === "asc" ? (
+    <ArrowUp className="ml-1 inline size-3.5" />
+  ) : (
+    <ArrowDown className="ml-1 inline size-3.5" />
+  )
+}
 
 type Judge = {
   participantId: string
@@ -84,6 +111,7 @@ type Assignment = {
   id: string
   judgeParticipantId: string
   judgeName: string
+  judgeEmail: string | null
   submissionId: string
   submissionTitle: string
   isComplete: boolean
@@ -101,6 +129,7 @@ interface JudgeAssignmentsProps {
   initialAssignments: Assignment[]
   initialInvitations: PendingInvitation[]
   submissions: Submission[]
+  anonymousJudging: boolean
 }
 
 export function JudgeAssignments({
@@ -109,10 +138,14 @@ export function JudgeAssignments({
   initialAssignments,
   initialInvitations,
   submissions,
+  anonymousJudging: initialAnonymous,
 }: JudgeAssignmentsProps) {
   const [judges, setJudges] = useState<Judge[]>(initialJudges)
   const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments)
   const [invitations, setInvitations] = useState<PendingInvitation[]>(initialInvitations)
+  const [anonymous, setAnonymous] = useState(initialAnonymous)
+  const [togglingAnonymous, setTogglingAnonymous] = useState(false)
+  const [anonymousError, setAnonymousError] = useState<string | null>(null)
 
   const [addJudgeOpen, setAddJudgeOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -144,7 +177,37 @@ export function JudgeAssignments({
   const [removingAssignmentId, setRemovingAssignmentId] = useState<string | null>(null)
   const [removeAssignmentError, setRemoveAssignmentError] = useState<string | null>(null)
 
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+
   const base = `/api/dashboard/hackathons/${hackathonId}/judging`
+
+  async function handleToggleAnonymous(checked: boolean) {
+    setTogglingAnonymous(true)
+    setAnonymousError(null)
+    const previous = anonymous
+    setAnonymous(checked)
+
+    try {
+      const res = await fetch(
+        `/api/dashboard/hackathons/${hackathonId}/settings`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ anonymousJudging: checked }),
+        }
+      )
+      if (!res.ok) {
+        setAnonymous(previous)
+        setAnonymousError("Failed to update setting")
+      }
+    } catch {
+      setAnonymous(previous)
+      setAnonymousError("Failed to update setting")
+    } finally {
+      setTogglingAnonymous(false)
+    }
+  }
 
   function openAddJudge() {
     setSearchQuery("")
@@ -362,6 +425,7 @@ export function JudgeAssignments({
           id: data.id,
           judgeParticipantId: selectedJudgeId,
           judgeName: judge?.displayName ?? selectedJudgeId,
+          judgeEmail: judge?.email ?? null,
           submissionId: selectedSubmissionId,
           submissionTitle: submission?.title ?? selectedSubmissionId,
           isComplete: false,
@@ -471,8 +535,60 @@ export function JudgeAssignments({
       .slice(0, 2)
   }
 
+  function handleSort(column: SortColumn) {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
+    } else {
+      setSortColumn(column)
+      setSortDirection("asc")
+    }
+  }
+
+  const assignedSubmissionIds = useMemo(
+    () => new Set(assignments.map((a) => a.submissionId)),
+    [assignments]
+  )
+
+  const sortedAssignments = useMemo(() => {
+    if (!sortColumn) return assignments
+
+    return [...assignments].sort((a, b) => {
+      let comparison = 0
+      if (sortColumn === "judge") {
+        comparison = a.judgeName.localeCompare(b.judgeName)
+      } else if (sortColumn === "submission") {
+        comparison = a.submissionTitle.localeCompare(b.submissionTitle)
+      } else if (sortColumn === "status") {
+        comparison = (a.isComplete ? 1 : 0) - (b.isComplete ? 1 : 0)
+      } else if (sortColumn === "assigned") {
+        comparison = new Date(a.assignedAt).getTime() - new Date(b.assignedAt).getTime()
+      }
+      return sortDirection === "asc" ? comparison : -comparison
+    })
+  }, [assignments, sortColumn, sortDirection])
+
   return (
     <div className="space-y-8">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="anonymous-judging">Anonymous judging</Label>
+            {togglingAnonymous && (
+              <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          <Switch
+            id="anonymous-judging"
+            checked={anonymous}
+            onCheckedChange={handleToggleAnonymous}
+            disabled={togglingAnonymous}
+          />
+        </div>
+        {anonymousError && (
+          <p className="text-sm text-destructive">{anonymousError}</p>
+        )}
+      </div>
+
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -788,6 +904,19 @@ export function JudgeAssignments({
           </p>
         </div>
 
+        {(() => {
+          const unassignedCount = submissions.filter((s) => !assignedSubmissionIds.has(s.id)).length
+          if (unassignedCount === 0) return null
+          return (
+            <Alert variant="destructive">
+              <AlertTriangle className="size-4" />
+              <AlertDescription>
+                {unassignedCount} submission{unassignedCount !== 1 ? "s" : ""} not assigned to any judge
+              </AlertDescription>
+            </Alert>
+          )
+        })()}
+
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-2">
             <Label>Judge</Label>
@@ -814,11 +943,19 @@ export function JudgeAssignments({
                 <SelectValue placeholder="Select submission" />
               </SelectTrigger>
               <SelectContent>
-                {submissions.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.title}
-                  </SelectItem>
-                ))}
+                {submissions.map((s) => {
+                  const isUnassigned = !assignedSubmissionIds.has(s.id)
+                  return (
+                    <SelectItem key={s.id} value={s.id}>
+                      <span className="flex items-center gap-2">
+                        {s.title}
+                        {isUnassigned && (
+                          <AlertTriangle className="size-3.5 text-muted-foreground" />
+                        )}
+                      </span>
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -905,18 +1042,59 @@ export function JudgeAssignments({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Judge</TableHead>
-                  <TableHead>Submission</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Assigned</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => handleSort("judge")}
+                      className="flex items-center hover:text-foreground transition-colors"
+                    >
+                      Judge
+                      <SortIcon column="judge" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => handleSort("submission")}
+                      className="flex items-center hover:text-foreground transition-colors"
+                    >
+                      Submission
+                      <SortIcon column="submission" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => handleSort("status")}
+                      className="flex items-center hover:text-foreground transition-colors"
+                    >
+                      Status
+                      <SortIcon column="status" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => handleSort("assigned")}
+                      className="flex items-center hover:text-foreground transition-colors"
+                    >
+                      Assigned
+                      <SortIcon column="assigned" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </button>
+                  </TableHead>
                   <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignments.map((a) => (
+                {sortedAssignments.map((a) => (
                   <TableRow key={a.id}>
-                    <TableCell className="font-medium">
-                      {a.judgeName}
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{a.judgeName}</div>
+                        {a.judgeEmail && (
+                          <div className="text-xs text-muted-foreground">{a.judgeEmail}</div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>{a.submissionTitle}</TableCell>
                     <TableCell>

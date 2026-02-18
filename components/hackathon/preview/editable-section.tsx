@@ -69,7 +69,7 @@ export function EditableSection({
       )}
     >
       {children}
-      <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-primary-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+      <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-accent-foreground opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
         <Pencil className="size-3" />
         <span className="text-xs font-medium">Edit</span>
       </div>

@@ -210,7 +210,7 @@ export async function listJudges(hackathonId: string): Promise<JudgeInfo[]> {
     if (a.is_complete) countMap[a.judge_participant_id].completed++
   }
 
-  let userMap: Record<string, { displayName: string; email: string | null; imageUrl: string | null }> = {}
+  const userMap: Record<string, { displayName: string; email: string | null; imageUrl: string | null }> = {}
   try {
     const { clerkClient } = await import("@clerk/nextjs/server")
     const client = await clerkClient()
@@ -289,6 +289,7 @@ export async function removeJudge(
 
 export type AssignmentWithDetails = JudgeAssignment & {
   judgeName: string
+  judgeEmail: string | null
   submissionTitle: string
 }
 
@@ -312,12 +313,43 @@ export async function listJudgeAssignments(
     return []
   }
 
+  const clerkUserIds = [
+    ...new Set(
+      assignments
+        .map((a: Record<string, unknown>) => {
+          const judge = a.judge as unknown as { clerk_user_id: string } | null
+          return judge?.clerk_user_id
+        })
+        .filter(Boolean) as string[]
+    ),
+  ]
+
+  const userMap: Record<string, { displayName: string; email: string | null }> = {}
+  if (clerkUserIds.length > 0) {
+    try {
+      const { clerkClient } = await import("@clerk/nextjs/server")
+      const clerk = await clerkClient()
+      const clerkUsers = await clerk.users.getUserList({ userId: clerkUserIds, limit: 100 })
+      for (const u of clerkUsers.data) {
+        const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.id
+        userMap[u.id] = {
+          displayName: name,
+          email: u.primaryEmailAddress?.emailAddress ?? null,
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch Clerk users for assignments:", err)
+    }
+  }
+
   return assignments.map((a: Record<string, unknown>) => {
     const judge = a.judge as unknown as { clerk_user_id: string } | null
     const submission = a.submission as unknown as { title: string } | null
+    const clerkUserId = judge?.clerk_user_id
     return {
       ...(a as unknown as JudgeAssignment),
-      judgeName: judge?.clerk_user_id ?? "Unknown",
+      judgeName: clerkUserId ? (userMap[clerkUserId]?.displayName ?? clerkUserId) : "Unknown",
+      judgeEmail: clerkUserId ? (userMap[clerkUserId]?.email ?? null) : null,
       submissionTitle: submission?.title ?? "Unknown",
     }
   })
@@ -787,4 +819,37 @@ export async function saveNotes(
   }
 
   return true
+}
+
+export type JudgingSetupStatus = {
+  judgeCount: number
+  hasUnassignedSubmissions: boolean
+}
+
+export async function getJudgingSetupStatus(hackathonId: string): Promise<JudgingSetupStatus> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: judges } = await client
+    .from("hackathon_participants")
+    .select("id")
+    .eq("hackathon_id", hackathonId)
+    .eq("role", "judge")
+
+  const judgeCount = judges?.length ?? 0
+
+  const { data: submissions } = await client
+    .from("submissions")
+    .select("id")
+    .eq("hackathon_id", hackathonId)
+    .eq("status", "submitted")
+
+  const { data: assignments } = await client
+    .from("judge_assignments")
+    .select("submission_id")
+    .eq("hackathon_id", hackathonId)
+
+  const assignedSubmissionIds = new Set((assignments ?? []).map(a => a.submission_id))
+  const hasUnassignedSubmissions = (submissions ?? []).some(s => !assignedSubmissionIds.has(s.id))
+
+  return { judgeCount, hasUnassignedSubmissions }
 }

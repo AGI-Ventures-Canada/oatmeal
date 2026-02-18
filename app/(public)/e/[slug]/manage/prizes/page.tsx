@@ -1,31 +1,28 @@
-import { auth } from "@clerk/nextjs/server"
-import { redirect, notFound } from "next/navigation"
-import { resolvePageTenant } from "@/lib/services/tenants"
-import { checkHackathonOrganizer } from "@/lib/services/public-hackathons"
+import { notFound } from "next/navigation"
+import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { listPrizes, listPrizeAssignments } from "@/lib/services/prizes"
 import { getHackathonSubmissions } from "@/lib/services/submissions"
 import { PageHeader } from "@/components/page-header"
 import { PrizesManager } from "@/components/hackathon/prizes/prizes-manager"
 
 type PageProps = {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
 }
 
 export default async function PrizesPage({ params }: PageProps) {
-  const { userId } = await auth()
-  if (!userId) redirect("/sign-in")
+  const { slug } = await params
+  const result = await getManageHackathon(slug)
 
-  const tenant = await resolvePageTenant()
-  const { id } = await params
+  if (!result) {
+    notFound()
+  }
 
-  const result = await checkHackathonOrganizer(id, tenant.id)
-  if (result.status !== "ok") notFound()
+  const { hackathon } = result
 
-  const hackathon = result.hackathon
   const [prizes, assignments, submissions] = await Promise.all([
-    listPrizes(id),
-    listPrizeAssignments(id),
-    getHackathonSubmissions(id),
+    listPrizes(hackathon.id),
+    listPrizeAssignments(hackathon.id),
+    getHackathonSubmissions(hackathon.id),
   ])
 
   return (
@@ -33,7 +30,7 @@ export default async function PrizesPage({ params }: PageProps) {
       <PageHeader
         breadcrumbs={[
           { label: "Dashboard", href: "/home" },
-          { label: hackathon.name, href: `/hackathons/${id}` },
+          { label: hackathon.name, href: `/e/${slug}/manage` },
           { label: "Prizes" },
         ]}
         title="Prizes"
@@ -41,7 +38,7 @@ export default async function PrizesPage({ params }: PageProps) {
       />
 
       <PrizesManager
-        hackathonId={id}
+        hackathonId={hackathon.id}
         initialPrizes={prizes.map((p) => ({
           id: p.id,
           name: p.name,

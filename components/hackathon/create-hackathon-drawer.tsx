@@ -71,7 +71,7 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
       const data = await res.json()
       setOpen(false)
       resetForm()
-      router.push(`/hackathons/${data.id}`)
+      router.push(`/e/${data.slug}/manage`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create hackathon")
       setCreating(false)

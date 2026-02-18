@@ -6,6 +6,7 @@ import {
   SEED_USERS,
   supabase,
   printReady,
+  promptForOptionalTenantId,
 } from "./_helpers"
 
 const SLUG = "test-team-formed"
@@ -13,7 +14,8 @@ const SLUG = "test-team-formed"
 async function run() {
   console.log("Setting up team-formed scenario...")
 
-  const tenantId = await getOrCreateTenant()
+  const overrideTenantId = await promptForOptionalTenantId()
+  const tenantId = await getOrCreateTenant(overrideTenantId)
 
   const now = new Date()
   const hackathonId = await createTestHackathon({

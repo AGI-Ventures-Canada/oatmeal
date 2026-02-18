@@ -1,30 +1,27 @@
-import { auth } from "@clerk/nextjs/server"
-import { redirect, notFound } from "next/navigation"
-import { resolvePageTenant } from "@/lib/services/tenants"
-import { checkHackathonOrganizer } from "@/lib/services/public-hackathons"
+import { notFound } from "next/navigation"
+import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { getResults } from "@/lib/services/results"
 import { getJudgingProgress } from "@/lib/services/judging"
 import { PageHeader } from "@/components/page-header"
 import { ResultsDashboard } from "@/components/hackathon/results/results-dashboard"
 
 type PageProps = {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
 }
 
 export default async function ResultsPage({ params }: PageProps) {
-  const { userId } = await auth()
-  if (!userId) redirect("/sign-in")
+  const { slug } = await params
+  const result = await getManageHackathon(slug)
 
-  const tenant = await resolvePageTenant()
-  const { id } = await params
+  if (!result) {
+    notFound()
+  }
 
-  const result = await checkHackathonOrganizer(id, tenant.id)
-  if (result.status !== "ok") notFound()
+  const { hackathon } = result
 
-  const hackathon = result.hackathon
   const [results, progress] = await Promise.all([
-    getResults(id),
-    getJudgingProgress(id),
+    getResults(hackathon.id),
+    getJudgingProgress(hackathon.id),
   ])
 
   const incompleteAssignments = progress.totalAssignments - progress.completedAssignments
@@ -34,7 +31,7 @@ export default async function ResultsPage({ params }: PageProps) {
       <PageHeader
         breadcrumbs={[
           { label: "Dashboard", href: "/home" },
-          { label: hackathon.name, href: `/hackathons/${id}` },
+          { label: hackathon.name, href: `/e/${slug}/manage` },
           { label: "Results" },
         ]}
         title="Results"
@@ -42,7 +39,7 @@ export default async function ResultsPage({ params }: PageProps) {
       />
 
       <ResultsDashboard
-        hackathonId={id}
+        hackathonId={hackathon.id}
         initialResults={results.map((r) => ({
           id: r.id,
           rank: r.rank,

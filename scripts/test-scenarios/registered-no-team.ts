@@ -1,11 +1,12 @@
-import { getOrCreateTenant, createTestHackathon, registerParticipant, DEV_USER_ID, printReady } from "./_helpers"
+import { getOrCreateTenant, createTestHackathon, registerParticipant, DEV_USER_ID, printReady, promptForOptionalTenantId } from "./_helpers"
 
 const SLUG = "test-registered-no-team"
 
 async function run() {
   console.log("Setting up registered-no-team scenario...")
 
-  const tenantId = await getOrCreateTenant()
+  const overrideTenantId = await promptForOptionalTenantId()
+  const tenantId = await getOrCreateTenant(overrideTenantId)
 
   const now = new Date()
   const hackathonId = await createTestHackathon({

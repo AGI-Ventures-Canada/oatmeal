@@ -1,7 +1,5 @@
-import { auth } from "@clerk/nextjs/server"
-import { redirect, notFound } from "next/navigation"
-import { resolvePageTenant } from "@/lib/services/tenants"
-import { getHackathonByIdForOrganizer } from "@/lib/services/public-hackathons"
+import { notFound } from "next/navigation"
+import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { listHackathonSponsorsWithTenants } from "@/lib/services/sponsors"
 import {
   Card,
@@ -17,7 +15,7 @@ import { SponsorForm } from "./sponsor-form"
 import { PageHeader } from "@/components/page-header"
 
 type PageProps = {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
 }
 
 const tierLabels: Record<string, string> = {
@@ -29,28 +27,23 @@ const tierLabels: Record<string, string> = {
 }
 
 export default async function SponsorsPage({ params }: PageProps) {
-  const { userId } = await auth()
+  const { slug } = await params
+  const result = await getManageHackathon(slug)
 
-  if (!userId) {
-    redirect("/sign-in")
-  }
-
-  const tenant = await resolvePageTenant()
-  const { id } = await params
-  const hackathon = await getHackathonByIdForOrganizer(id, tenant.id)
-
-  if (!hackathon) {
+  if (!result) {
     notFound()
   }
 
-  const sponsors = await listHackathonSponsorsWithTenants(id)
+  const { hackathon } = result
+
+  const sponsors = await listHackathonSponsorsWithTenants(hackathon.id)
 
   return (
     <div className="space-y-6">
       <PageHeader
         breadcrumbs={[
           { label: "Dashboard", href: "/home" },
-          { label: hackathon.name, href: `/hackathons/${hackathon.id}` },
+          { label: hackathon.name, href: `/e/${slug}/manage` },
           { label: "Sponsors" },
         ]}
         title="Sponsors"

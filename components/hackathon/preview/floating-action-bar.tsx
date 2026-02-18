@@ -1,19 +1,16 @@
 "use client"
 
-import Link from "next/link"
-import { Pencil, Settings, Scale } from "lucide-react"
+import { Pencil, Scale } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useEdit } from "./edit-context"
 
 interface FloatingActionBarProps {
-  hackathonId: string
   isOrganizer: boolean
   isJudge: boolean
   hasJudgeAssignments: boolean
 }
 
 export function FloatingActionBar({
-  hackathonId,
   isOrganizer,
   isJudge,
   hasJudgeAssignments,
@@ -22,9 +19,8 @@ export function FloatingActionBar({
 
   const showJudging = isJudge && hasJudgeAssignments
   const showEdit = isOrganizer
-  const showManage = isOrganizer
 
-  if (!showJudging && !showEdit && !showManage) return null
+  if (!showJudging && !showEdit) return null
 
   function scrollToAssignments() {
     const el = document.getElementById("judge-assignments")
@@ -34,12 +30,11 @@ export function FloatingActionBar({
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 rounded-full shadow-lg border bg-background/95 backdrop-blur px-2 py-1.5">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 rounded-full shadow-xl bg-background backdrop-blur">
       {showJudging && (
         <Button
           variant="ghost"
-          size="sm"
-          className="rounded-full"
+          className="rounded-full px-4 py-2"
           onClick={scrollToAssignments}
         >
           <Scale className="size-4" />
@@ -48,26 +43,12 @@ export function FloatingActionBar({
       )}
       {showEdit && (
         <Button
-          variant={editMode ? "default" : "ghost"}
-          size="sm"
-          className="rounded-full"
+          variant={editMode ? "default" : "outline"}
+          className="rounded-full px-4 py-2"
           onClick={() => setEditMode(!editMode)}
         >
           <Pencil className="size-4" />
-          {editMode ? "Exit Edit" : "Edit"}
-        </Button>
-      )}
-      {showManage && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="rounded-full"
-          asChild
-        >
-          <Link href={`/hackathons/${hackathonId}`}>
-            <Settings className="size-4" />
-            Manage
-          </Link>
+          {editMode ? "Exit Edit" : "Edit Page"}
         </Button>
       )}
     </div>

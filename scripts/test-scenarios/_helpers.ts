@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import * as readline from "readline"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -11,6 +12,21 @@ if (!supabaseUrl || !supabaseServiceKey) {
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseServiceKey)
 
 export const DEV_USER_ID = "user_38vEFI8UesKwM07qIuFNqEzFavS"
+
+export async function promptForOptionalTenantId(): Promise<string | undefined> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  })
+
+  return new Promise((resolve) => {
+    rl.question("Organizer tenant_id (press Enter to use default): ", (answer) => {
+      rl.close()
+      const trimmed = answer.trim()
+      resolve(trimmed || undefined)
+    })
+  })
+}
 
 export const SEED_USERS = [
   "seed_user_alice_001",
@@ -34,7 +50,22 @@ const CRITERIA_PRESETS = [
   { name: "Presentation", description: "Demo clarity, documentation, and communication", max_score: 10, weight: 0.5 },
 ]
 
-export async function getOrCreateTenant(): Promise<string> {
+export async function getOrCreateTenant(overrideTenantId?: string): Promise<string> {
+  if (overrideTenantId) {
+    const { data: existing } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("id", overrideTenantId)
+      .single()
+
+    if (!existing) {
+      console.error(`Tenant not found: ${overrideTenantId}`)
+      process.exit(1)
+    }
+
+    return overrideTenantId
+  }
+
   const { data: tenant } = await supabase
     .from("tenants")
     .select("id")
@@ -305,5 +336,6 @@ export async function submitRandomScores(
 
 export function printReady(slug: string) {
   console.log(`\nReady: http://localhost:3000/e/${slug}`)
-  console.log(`Dashboard: http://localhost:3000/hackathons/<id>/judging\n`)
+  console.log(`Manage: http://localhost:3000/e/${slug}/manage`)
+  console.log()
 }

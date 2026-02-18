@@ -164,15 +164,25 @@ export function ScoringDrawer({
     <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DrawerContent className="max-h-[90vh]" onKeyDown={handleKeyDown}>
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
-          </div>
+          <>
+            <DrawerHeader className="sr-only">
+              <DrawerTitle>Loading submission</DrawerTitle>
+            </DrawerHeader>
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            </div>
+          </>
         ) : submitted ? (
-          <div className="flex flex-col items-center gap-3 py-12">
-            <CheckCircle2 className="size-12 text-primary" />
-            <p className="text-lg font-semibold">Scores Submitted</p>
-            <p className="text-sm text-muted-foreground">Moving to next assignment...</p>
-          </div>
+          <>
+            <DrawerHeader className="sr-only">
+              <DrawerTitle>Scores submitted</DrawerTitle>
+            </DrawerHeader>
+            <div className="flex flex-col items-center gap-3 py-12">
+              <CheckCircle2 className="size-12 text-primary" />
+              <p className="text-lg font-semibold">Scores Submitted</p>
+              <p className="text-sm text-muted-foreground">Moving to next assignment...</p>
+            </div>
+          </>
         ) : detail ? (
           <div className="overflow-y-auto">
             <DrawerHeader>
@@ -294,9 +304,14 @@ export function ScoringDrawer({
             </DrawerFooter>
           </div>
         ) : (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-sm text-destructive">{error || "Failed to load"}</p>
-          </div>
+          <>
+            <DrawerHeader className="sr-only">
+              <DrawerTitle>Error loading submission</DrawerTitle>
+            </DrawerHeader>
+            <div className="flex items-center justify-center py-12">
+              <p className="text-sm text-destructive">{error || "Failed to load"}</p>
+            </div>
+          </>
         )}
       </DrawerContent>
     </Drawer>
