@@ -15,22 +15,24 @@ describe("Auth Types", () => {
       expect(scopes).toEqual(ALL_SCOPES)
     })
 
-    it("returns read-only scopes for org:member", () => {
+    it("returns member scopes for org:member", () => {
       const scopes = scopesForRole("org:member")
       expect(scopes).toContain("hackathons:read")
       expect(scopes).toContain("teams:read")
+      expect(scopes).toContain("keys:write")
       expect(scopes).not.toContain("hackathons:write")
-      expect(scopes).not.toContain("keys:write")
+      expect(scopes).not.toContain("schedules:write")
+      expect(scopes).not.toContain("org:write")
     })
 
-    it("returns read-only scopes for unknown roles", () => {
+    it("returns read-only scopes for unknown roles (fail-safe)", () => {
       const scopes = scopesForRole("unknown")
       expect(scopes).toEqual(["hackathons:read", "teams:read", "submissions:read"])
     })
 
-    it("returns read-only scopes for null role (personal account)", () => {
+    it("returns all scopes for null role (personal account)", () => {
       const scopes = scopesForRole(null)
-      expect(scopes).toEqual(["hackathons:read", "teams:read", "submissions:read"])
+      expect(scopes).toEqual(ALL_SCOPES)
     })
   })
 

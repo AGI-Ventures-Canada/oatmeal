@@ -76,6 +76,25 @@ export function scopesForRole(role: string | null): Scope[] {
   if (role === "org:admin") {
     return ALL_SCOPES
   }
+  if (role === "org:member") {
+    return [
+      "keys:read",
+      "keys:write",
+      "webhooks:read",
+      "webhooks:write",
+      "hackathons:read",
+      "teams:read",
+      "teams:write",
+      "submissions:read",
+      "submissions:write",
+      "analytics:read",
+      "schedules:read",
+      "org:read",
+    ]
+  }
+  if (role === null) {
+    return ALL_SCOPES
+  }
   return ["hackathons:read", "teams:read", "submissions:read"]
 }
 
