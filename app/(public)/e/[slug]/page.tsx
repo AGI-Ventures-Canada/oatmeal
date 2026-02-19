@@ -2,8 +2,6 @@ import { notFound } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
 import { getPublicHackathon } from "@/lib/services/public-hackathons"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
-import { JudgeAssignmentsCard } from "@/components/hackathon/judging/judge-assignments-card"
-import { PublicResults } from "@/components/hackathon/results/public-results"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye } from "lucide-react"
 import type { Metadata } from "next"
@@ -92,7 +90,7 @@ export default async function EventPage({ params }: PageProps) {
       teamInfo = teamResult
     }
 
-    if (hackathon.status === "judging") {
+    if (participantRole === "judge") {
       const { getJudgeAssignments } = await import("@/lib/services/judging")
       judgeAssignments = await getJudgeAssignments(hackathon.id, userId)
 
@@ -116,28 +114,11 @@ export default async function EventPage({ params }: PageProps) {
     createdAt: s.created_at,
   }))
 
-  let publicResults: {
-    rank: number
-    submissionTitle: string
-    teamName: string | null
-    weightedScore: number | null
-    judgeCount: number
-    prizes: { id: string; name: string; value: string | null }[]
-  }[] = []
+  let publicResults: import("@/lib/services/results").PublicResultWithDetails[] = []
 
   if (hackathon.results_published_at) {
-    const { getPublicResults } = await import("@/lib/services/results")
-    const results = await getPublicResults(hackathon.id)
-    if (results) {
-      publicResults = results.map((r) => ({
-        rank: r.rank,
-        submissionTitle: r.submissionTitle,
-        teamName: r.teamName,
-        weightedScore: r.weighted_score,
-        judgeCount: r.judge_count,
-        prizes: r.prizes,
-      }))
-    }
+    const { getPublicResultsWithDetails } = await import("@/lib/services/results")
+    publicResults = (await getPublicResultsWithDetails(hackathon.id)) ?? []
   }
 
   return (
@@ -157,27 +138,13 @@ export default async function EventPage({ params }: PageProps) {
         isRegistered={isRegistered}
         participantRole={participantRole}
         participantCount={participantCount}
-        showActionBar={isOrganizer || participantRole === "judge"}
+        showActionBar={isOrganizer}
         hasJudgeAssignments={judgeAssignments.length > 0}
         submission={submission}
         submissions={gallerySubmissions}
         teamInfo={teamInfo}
+        publicResults={publicResults}
       />
-
-      <div className="max-w-5xl mx-auto px-4 space-y-8 py-8">
-        {judgeAssignments.length > 0 && (
-          <div id="judge-assignments">
-            <JudgeAssignmentsCard
-              hackathonSlug={hackathon.slug}
-              assignments={judgeAssignments}
-            />
-          </div>
-        )}
-
-        {publicResults.length > 0 && (
-          <PublicResults results={publicResults} />
-        )}
-      </div>
     </div>
   )
 }

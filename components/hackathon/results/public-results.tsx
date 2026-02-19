@@ -1,40 +1,254 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Trophy } from "lucide-react"
-
-type PublicResult = {
-  rank: number
-  submissionTitle: string
-  teamName: string | null
-  weightedScore: number | null
-  judgeCount: number
-  prizes: { id: string; name: string; value: string | null }[]
-}
+import { Card, CardContent } from "@/components/ui/card"
+import { Trophy, Github, ExternalLink, ChevronDown } from "lucide-react"
+import type { PublicResultWithDetails } from "@/lib/services/results"
 
 interface PublicResultsProps {
-  results: PublicResult[]
+  results: PublicResultWithDetails[]
+}
+
+function WinnerCard({ result }: { result: PublicResultWithDetails }) {
+  return (
+    <Card className="border-primary overflow-hidden">
+      {result.submissionScreenshotUrl && (
+        <div className="w-full aspect-video bg-muted overflow-hidden">
+          <img
+            src={result.submissionScreenshotUrl}
+            alt={result.submissionTitle}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+      <CardContent className="p-6 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <Trophy className="size-5 text-primary shrink-0" />
+              <span className="text-sm font-medium text-primary">1st Place</span>
+            </div>
+            <h3 className="text-2xl font-bold leading-tight">{result.submissionTitle}</h3>
+            {result.teamName && (
+              <p className="text-muted-foreground font-medium">{result.teamName}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {result.submissionGithubUrl && (
+              <a
+                href={result.submissionGithubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Github className="size-4" />
+                GitHub
+              </a>
+            )}
+            {result.submissionLiveAppUrl && (
+              <a
+                href={result.submissionLiveAppUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink className="size-4" />
+                Live App
+              </a>
+            )}
+          </div>
+        </div>
+
+        {result.members.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {result.members.map((name) => (
+              <Badge key={name} variant="secondary">
+                {name}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {result.submissionDescription && (
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">
+            {result.submissionDescription}
+          </p>
+        )}
+
+        {result.prizes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {result.prizes.map((p) => (
+              <Badge key={p.id} variant="default">
+                {p.name}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function RunnerUpExpandedContent({ result }: { result: PublicResultWithDetails }) {
+  return (
+    <div className="space-y-4 p-6">
+      {result.submissionScreenshotUrl && (
+        <div className="w-full aspect-video bg-muted overflow-hidden rounded-md">
+          <img
+            src={result.submissionScreenshotUrl}
+            alt={result.submissionTitle}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
+      <div className="flex items-center gap-4">
+        {result.submissionGithubUrl && (
+          <a
+            href={result.submissionGithubUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Github className="size-4" />
+            GitHub
+          </a>
+        )}
+        {result.submissionLiveAppUrl && (
+          <a
+            href={result.submissionLiveAppUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ExternalLink className="size-4" />
+            Live App
+          </a>
+        )}
+      </div>
+
+      {result.members.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {result.members.map((name) => (
+            <Badge key={name} variant="secondary">
+              {name}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {result.submissionDescription && (
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {result.submissionDescription}
+        </p>
+      )}
+
+      {result.prizes.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {result.prizes.map((p) => (
+            <Badge key={p.id} variant="default">
+              {p.name}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface RunnerUpSectionProps {
+  second?: PublicResultWithDetails
+  third?: PublicResultWithDetails
+}
+
+function RunnerUpSection({ second, third }: RunnerUpSectionProps) {
+  const [open, setOpen] = useState<"second" | "third" | null>(null)
+  const [displayed, setDisplayed] = useState<"second" | "third" | null>(null)
+
+  function toggle(key: "second" | "third") {
+    const isClosing = open === key
+    if (!isClosing) setDisplayed(key)
+    setOpen(isClosing ? null : key)
+  }
+
+  const isOpen = open !== null
+  const displayedResult = displayed === "second" ? second : displayed === "third" ? third : null
+
+  return (
+    <Card className="overflow-hidden py-0 gap-0">
+      <div className="grid grid-cols-2">
+        {second && (
+          <button
+            onClick={() => toggle("second")}
+            className={`flex items-start justify-between gap-2 p-6 text-left transition-colors hover:bg-muted/50 ${
+              open === "second" ? "bg-muted/50" : ""
+            } ${third ? "border-r" : ""}`}
+          >
+            <div className="space-y-1 min-w-0">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                2nd Place
+              </span>
+              <p className="font-semibold text-lg leading-tight">{second.submissionTitle}</p>
+              {second.teamName && (
+                <p className="text-sm text-muted-foreground">{second.teamName}</p>
+              )}
+            </div>
+            <ChevronDown
+              className={`size-4 text-muted-foreground shrink-0 mt-1 transition-transform duration-200 ${
+                open === "second" ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+        )}
+        {third && (
+          <button
+            onClick={() => toggle("third")}
+            className={`flex items-start justify-between gap-2 p-6 text-left transition-colors hover:bg-muted/50 ${
+              open === "third" ? "bg-muted/50" : ""
+            }`}
+          >
+            <div className="space-y-1 min-w-0">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                3rd Place
+              </span>
+              <p className="font-semibold text-lg leading-tight">{third.submissionTitle}</p>
+              {third.teamName && (
+                <p className="text-sm text-muted-foreground">{third.teamName}</p>
+              )}
+            </div>
+            <ChevronDown
+              className={`size-4 text-muted-foreground shrink-0 mt-1 transition-transform duration-200 ${
+                open === "third" ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+        )}
+      </div>
+
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          {displayedResult && (
+            <div className="border-t">
+              <RunnerUpExpandedContent result={displayedResult} />
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  )
 }
 
 export function PublicResults({ results }: PublicResultsProps) {
   if (results.length === 0) return null
 
-  const top3 = results.filter((r) => r.rank <= 3)
-  const rest = results.filter((r) => r.rank > 3)
-
-  const sizeClass = (rank: number) => {
-    if (rank === 1) return "col-span-full sm:col-span-1"
-    return "col-span-full sm:col-span-1"
-  }
+  const first = results.find((r) => r.rank === 1)
+  const second = results.find((r) => r.rank === 2)
+  const third = results.find((r) => r.rank === 3)
 
   return (
     <div className="space-y-8">
@@ -43,74 +257,9 @@ export function PublicResults({ results }: PublicResultsProps) {
         <h2 className="text-2xl font-bold">Results</h2>
       </div>
 
-      {top3.length > 0 && (
-        <div className="grid sm:grid-cols-3 gap-4">
-          {top3.map((r) => (
-            <Card
-              key={`${r.rank}-${r.submissionTitle}`}
-              className={`${sizeClass(r.rank)} ${r.rank === 1 ? "border-primary" : ""}`}
-            >
-              <CardContent className="pt-6 text-center space-y-3">
-                <div className={`text-3xl font-bold ${r.rank === 1 ? "text-4xl" : ""}`}>
-                  #{r.rank}
-                </div>
-                <div>
-                  <p className={`font-semibold ${r.rank === 1 ? "text-lg" : "text-base"}`}>
-                    {r.submissionTitle}
-                  </p>
-                  {r.teamName && (
-                    <p className="text-sm text-muted-foreground">{r.teamName}</p>
-                  )}
-                </div>
-                {r.prizes.length > 0 && (
-                  <div className="flex flex-wrap justify-center gap-1">
-                    {r.prizes.map((p) => (
-                      <Badge key={p.id} variant="secondary">
-                        {p.name}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {first && <WinnerCard result={first} />}
 
-      {rest.length > 0 && (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[60px]">Rank</TableHead>
-                <TableHead>Submission</TableHead>
-                <TableHead>Team</TableHead>
-                <TableHead>Prizes</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rest.map((r) => (
-                <TableRow key={`${r.rank}-${r.submissionTitle}`}>
-                  <TableCell className="font-bold">#{r.rank}</TableCell>
-                  <TableCell className="font-medium">{r.submissionTitle}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {r.teamName || "—"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {r.prizes.map((p) => (
-                        <Badge key={p.id} variant="secondary">
-                          {p.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      {(second || third) && <RunnerUpSection second={second} third={third} />}
     </div>
   )
 }

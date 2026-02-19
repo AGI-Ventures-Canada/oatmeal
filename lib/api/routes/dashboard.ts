@@ -7,6 +7,7 @@ import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/servi
 import { dashboardJudgingRoutes } from "./dashboard-judging"
 import { dashboardPrizesRoutes } from "./dashboard-prizes"
 import { dashboardResultsRoutes } from "./dashboard-results"
+import { getEffectiveStatus } from "@/lib/utils/timeline"
 import type { Scope } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
 
@@ -827,7 +828,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         name: h.name,
         slug: h.slug,
         description: h.description,
-        status: h.status,
+        status: getEffectiveStatus(h),
         startsAt: h.starts_at,
         endsAt: h.ends_at,
         registrationOpensAt: h.registration_opens_at,
@@ -857,7 +858,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         name: h.name,
         slug: h.slug,
         description: h.description,
-        status: h.status,
+        status: getEffectiveStatus(h),
         startsAt: h.starts_at,
         endsAt: h.ends_at,
         registrationOpensAt: h.registration_opens_at,
@@ -887,7 +888,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         name: h.name,
         slug: h.slug,
         description: h.description,
-        status: h.status,
+        status: getEffectiveStatus(h),
         startsAt: h.starts_at,
         endsAt: h.ends_at,
         registrationOpensAt: h.registration_opens_at,
@@ -916,7 +917,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         name: h.name,
         slug: h.slug,
         description: h.description,
-        status: h.status,
+        status: getEffectiveStatus(h),
         startsAt: h.starts_at,
         endsAt: h.ends_at,
         registrationOpensAt: h.registration_opens_at,
@@ -999,7 +1000,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       description: hackathon.description,
       rules: hackathon.rules,
       bannerUrl: hackathon.banner_url,
-      status: hackathon.status,
+      status: getEffectiveStatus(hackathon),
       startsAt: hackathon.starts_at,
       endsAt: hackathon.ends_at,
       registrationOpensAt: hackathon.registration_opens_at,

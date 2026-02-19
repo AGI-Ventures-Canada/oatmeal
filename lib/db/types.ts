@@ -1227,6 +1227,7 @@ export type Database = {
           success: boolean
         }[]
       }
+      transition_hackathon_statuses: { Args: never; Returns: undefined }
     }
     Enums: {
       actor_type: "user" | "api_key"
