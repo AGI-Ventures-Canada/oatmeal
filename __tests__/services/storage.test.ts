@@ -44,6 +44,8 @@ const {
   deleteBanner,
   uploadScreenshot,
   deleteScreenshot,
+  uploadSponsorLogo,
+  deleteSponsorLogo,
 } = await import("@/lib/services/storage")
 
 describe("Storage Service", () => {
@@ -352,6 +354,64 @@ describe("Storage Service", () => {
       mockRemove.mockImplementation(() => Promise.resolve({ error: { message: "Delete failed" } }))
 
       const result = await deleteBanner("hackathon123")
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe("uploadSponsorLogo", () => {
+    it("uploads sponsor logo and returns URL with cache buster", async () => {
+      const buffer = Buffer.alloc(1024)
+      const result = await uploadSponsorLogo("hackathon123", "sponsor456", buffer, "image/png")
+
+      expect(result).not.toBeNull()
+      expect(result?.url).toMatch(/^https:\/\/storage\.test\/file\.webp\?v=\d+$/)
+      expect(result?.path).toBe("sponsors/hackathon123/sponsor456/logo.webp")
+      expect(mockStorageFrom).toHaveBeenCalledWith("logos")
+    })
+
+    it("uploads with correct content type and options", async () => {
+      const buffer = Buffer.alloc(1024)
+      await uploadSponsorLogo("hackathon123", "sponsor456", buffer, "image/png")
+
+      expect(mockUpload).toHaveBeenCalledWith(
+        "sponsors/hackathon123/sponsor456/logo.webp",
+        expect.any(Buffer),
+        expect.objectContaining({
+          contentType: "image/webp",
+          upsert: true,
+          cacheControl: "3600",
+        })
+      )
+    })
+
+    it("returns null on upload error", async () => {
+      mockUpload.mockImplementation(() => Promise.resolve({ error: { message: "Upload failed" } }))
+
+      const buffer = Buffer.alloc(1024)
+      const result = await uploadSponsorLogo("hackathon123", "sponsor456", buffer, "image/png")
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe("deleteSponsorLogo", () => {
+    it("removes sponsor logo files in all formats from storage", async () => {
+      const result = await deleteSponsorLogo("hackathon123", "sponsor456")
+
+      expect(result).toBe(true)
+      expect(mockStorageFrom).toHaveBeenCalledWith("logos")
+      expect(mockRemove).toHaveBeenCalledWith([
+        "sponsors/hackathon123/sponsor456/logo.webp",
+        "sponsors/hackathon123/sponsor456/logo.png",
+        "sponsors/hackathon123/sponsor456/logo.svg",
+      ])
+    })
+
+    it("returns false on error", async () => {
+      mockRemove.mockImplementation(() => Promise.resolve({ error: { message: "Delete failed" } }))
+
+      const result = await deleteSponsorLogo("hackathon123", "sponsor456")
 
       expect(result).toBe(false)
     })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useClerk } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
@@ -20,7 +20,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Sun, Moon, ImageIcon, ExternalLink, Users, CreditCard } from "lucide-react"
+import { Sun, Moon, ImageIcon, ExternalLink, Users, CreditCard, TriangleAlert, Check, X, Loader2 } from "lucide-react"
+
+function isValidSlugFormat(s: string): boolean {
+  return s.length >= 3 && /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(s)
+}
+
+type SlugStatus = "idle" | "checking" | "available" | "taken" | "invalid"
 
 type ProfileFormProps = {
   initialData: {
@@ -40,8 +46,55 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const [error, setError] = useState<string | null>(null)
 
   const [slug, setSlug] = useState(initialData.slug ?? "")
+  const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle")
   const [description, setDescription] = useState(initialData.description ?? "")
   const [websiteUrl, setWebsiteUrl] = useState(initialData.websiteUrl ?? "")
+
+  const lastSaved = useRef({
+    slug: initialData.slug ?? "",
+    description: initialData.description ?? "",
+    websiteUrl: initialData.websiteUrl ?? "",
+  })
+
+  const isDirty =
+    slug !== lastSaved.current.slug ||
+    description !== lastSaved.current.description ||
+    websiteUrl !== lastSaved.current.websiteUrl
+
+  useEffect(() => {
+    if (slug === lastSaved.current.slug) {
+      setSlugStatus("idle")
+      return
+    }
+    if (!isValidSlugFormat(slug)) {
+      setSlugStatus("invalid")
+      return
+    }
+    setSlugStatus("checking")
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/dashboard/organizations/slug-available?slug=${encodeURIComponent(slug)}`)
+        const data = await res.json()
+        setSlugStatus(data.available ? "available" : "taken")
+      } catch {
+        setSlugStatus("idle")
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [slug])
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [isDirty])
+
+  const slugBlocked = !slug || slugStatus === "invalid" || slugStatus === "taken" || slugStatus === "checking"
+  const canSave = isDirty && !saving && !slugBlocked
 
   async function handleSave() {
     setSaving(true)
@@ -52,7 +105,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          slug: slug || null,
+          slug,
           description: description || null,
           websiteUrl: websiteUrl || null,
         }),
@@ -63,6 +116,8 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         throw new Error(data.error || "Failed to save profile")
       }
 
+      lastSaved.current = { slug, description, websiteUrl }
+      setSlugStatus("idle")
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save profile")
@@ -163,9 +218,22 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
           placeholder="my-organization"
           value={slug}
           onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
+          data-form-type="other"
         />
         <FieldDescription>
-          Your public organization page URL: /o/{slug || "your-slug"}
+          <span>Your public organization page URL: /o/{slug || "your-slug"}</span>
+          {slug !== lastSaved.current.slug && (
+            <span className="flex items-center gap-1 mt-0.5">
+              {slugStatus === "checking" && <><Loader2 className="size-3 animate-spin" /><span>Checking availability...</span></>}
+              {slugStatus === "available" && <><Check className="size-3 text-primary" /><span className="text-primary">Available</span></>}
+              {slugStatus === "taken" && <><X className="size-3 text-destructive" /><span className="text-destructive">Already taken</span></>}
+              {slugStatus === "invalid" && <span className="text-destructive">Must be at least 3 characters, start and end with a letter or number</span>}
+            </span>
+          )}
+          {!slug && <span className="text-destructive mt-0.5 block">Slug is required</span>}
         </FieldDescription>
       </Field>
 
@@ -195,10 +263,16 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         <p className="text-destructive text-sm">{error}</p>
       )}
 
-      <div className="pt-2">
-        <Button onClick={handleSave} disabled={saving}>
+      <div className="pt-2 flex items-center gap-3">
+        <Button onClick={handleSave} disabled={!canSave}>
           {saving ? "Saving..." : "Save Changes"}
         </Button>
+        {isDirty && !saving && (
+          <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <TriangleAlert className="size-3.5" />
+            Unsaved changes
+          </span>
+        )}
       </div>
     </FieldGroup>
   )

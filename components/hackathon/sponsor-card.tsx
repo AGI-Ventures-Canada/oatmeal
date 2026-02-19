@@ -18,7 +18,7 @@ const sizeClasses = {
 
 export function SponsorCard({ sponsor, size = "md" }: SponsorCardProps) {
   const lightLogoUrl = sponsor.logo_url || sponsor.tenant?.logo_url
-  const darkLogoUrl = sponsor.tenant?.logo_url_dark
+  const darkLogoUrl = sponsor.logo_url_dark || sponsor.tenant?.logo_url_dark
   const name = sponsor.name
   const href = sponsor.tenant?.slug
     ? `/o/${sponsor.tenant.slug}`

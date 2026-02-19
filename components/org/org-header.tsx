@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react"
 import type { TenantProfile } from "@/lib/db/hackathon-types"
 
 interface OrgHeaderProps {
-  org: Pick<TenantProfile, "name" | "logo_url" | "description" | "website_url">
+  org: Pick<TenantProfile, "name" | "logo_url" | "logo_url_dark" | "description" | "website_url">
 }
 
 export function OrgHeader({ org }: OrgHeaderProps) {
@@ -14,12 +14,20 @@ export function OrgHeader({ org }: OrgHeaderProps) {
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6 max-w-3xl mx-auto">
           <div className="relative h-24 w-24 shrink-0 bg-muted flex items-center justify-center">
             {org.logo_url ? (
-              <OptimizedImage
-                src={org.logo_url}
-                alt={org.name}
-                fill
-                className="object-contain p-2"
-              />
+              <>
+                <OptimizedImage
+                  src={org.logo_url}
+                  alt={org.name}
+                  fill
+                  className="object-contain p-2 dark:hidden"
+                />
+                <OptimizedImage
+                  src={org.logo_url_dark || org.logo_url}
+                  alt={org.name}
+                  fill
+                  className="object-contain p-2 hidden dark:block"
+                />
+              </>
             ) : (
               <span className="text-2xl font-bold text-muted-foreground">
                 {org.name.charAt(0).toUpperCase()}
