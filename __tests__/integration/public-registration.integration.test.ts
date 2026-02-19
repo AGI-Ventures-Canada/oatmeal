@@ -48,6 +48,7 @@ const mockGetPublicTenantWithEvents = mock(() => Promise.resolve(null))
 
 mock.module("@/lib/services/tenant-profiles", () => ({
   getPublicTenantWithEvents: mockGetPublicTenantWithEvents,
+  isSlugAvailable: mock(() => Promise.resolve(true)),
 }))
 
 mock.module("@/lib/integrations/oauth", () => ({

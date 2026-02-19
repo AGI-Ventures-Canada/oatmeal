@@ -1579,8 +1579,17 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   )
   .delete(
     "/hackathons/:id/sponsors/:sponsorId/logo",
-    async ({ principal, params }) => {
+    async ({ principal, params, query }) => {
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const variant = (query.variant as string) || "light"
+
+      if (variant !== "light" && variant !== "dark") {
+        return new Response(JSON.stringify({ error: "Invalid variant. Must be 'light' or 'dark'" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
 
       const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
       const result = await checkHackathonOrganizer(params.id, principal.tenantId)
@@ -1599,10 +1608,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
 
       const { deleteSponsorLogo } = await import("@/lib/services/storage")
-      await deleteSponsorLogo(params.id, params.sponsorId)
+      await deleteSponsorLogo(params.id, params.sponsorId, variant)
 
       const { updateSponsor } = await import("@/lib/services/sponsors")
-      await updateSponsor(params.sponsorId, { logoUrl: null }, params.id)
+      const logoUpdate = variant === "dark" ? { logoUrlDark: null } : { logoUrl: null }
+      await updateSponsor(params.sponsorId, logoUpdate, params.id)
 
       await logAudit({
         principal,
@@ -1616,8 +1626,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     {
       detail: {
         summary: "Delete sponsor logo",
-        description: "Deletes a sponsor's logo. Requires hackathons:write scope.",
+        description: "Deletes a sponsor's logo. Use ?variant=dark to delete the dark logo. Requires hackathons:write scope.",
       },
+      query: t.Object({
+        variant: t.Optional(t.String()),
+      }),
     }
   )
   .get("/org-profile", async ({ principal }) => {

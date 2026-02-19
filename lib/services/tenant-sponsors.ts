@@ -101,7 +101,8 @@ export async function searchTenantSponsors(
     .limit(limit)
 
   if (excludeNames.length > 0) {
-    queryBuilder = queryBuilder.not("name", "in", `(${excludeNames.map((n) => `"${n}"`).join(",")})`)
+    const escaped = excludeNames.map((n) => `"${n.replace(/"/g, '""')}"`)
+    queryBuilder = queryBuilder.not("name", "in", `(${escaped.join(",")})`)
   }
 
   const { data, error } = await queryBuilder
