@@ -35,7 +35,7 @@ interface EventHeroProps {
   endsAt: string | null;
   registrationOpensAt?: string | null;
   registrationClosesAt?: string | null;
-  organizer: Pick<TenantProfile, "name" | "slug" | "logo_url">;
+  organizer: Pick<TenantProfile, "name" | "slug" | "logo_url" | "logo_url_dark">;
   locationType?: "in_person" | "virtual" | null;
   locationName?: string | null;
   locationUrl?: string | null;
@@ -335,13 +335,22 @@ export function EventHero({
       ) : null}
       <div className="flex items-center gap-2">
         {organizer.logo_url && (
-          <OptimizedImage
-            src={organizer.logo_url}
-            alt={organizer.name}
-            width={24}
-            height={24}
-            className="object-contain"
-          />
+          <>
+            <OptimizedImage
+              src={organizer.logo_url}
+              alt={organizer.name}
+              width={24}
+              height={24}
+              className="object-contain dark:hidden"
+            />
+            <OptimizedImage
+              src={organizer.logo_url_dark || organizer.logo_url}
+              alt={organizer.name}
+              width={24}
+              height={24}
+              className="object-contain hidden dark:block"
+            />
+          </>
         )}
         {(() => {
           const orgNameEl = organizer.slug ? (

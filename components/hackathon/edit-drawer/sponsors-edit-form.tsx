@@ -441,13 +441,22 @@ export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }
                   } ${deleted ? "opacity-50" : ""}`}
                 >
                   {sponsor.logo_url ? (
-                    <OptimizedImage
-                      src={sponsor.logo_url}
-                      alt={sponsor.name}
-                      width={32}
-                      height={32}
-                      className="rounded-md shrink-0"
-                    />
+                    <>
+                      <OptimizedImage
+                        src={sponsor.logo_url}
+                        alt={sponsor.name}
+                        width={32}
+                        height={32}
+                        className="rounded-md shrink-0 dark:hidden"
+                      />
+                      <OptimizedImage
+                        src={sponsor.tenant?.logo_url_dark || sponsor.logo_url}
+                        alt={sponsor.name}
+                        width={32}
+                        height={32}
+                        className="rounded-md shrink-0 hidden dark:block"
+                      />
+                    </>
                   ) : (
                     <div className="size-8 rounded-md bg-muted flex items-center justify-center shrink-0">
                       <Building2 className="size-4 text-muted-foreground" />
