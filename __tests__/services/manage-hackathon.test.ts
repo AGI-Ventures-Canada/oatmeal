@@ -32,17 +32,17 @@ describe("Manage Hackathon Service", () => {
   })
 
   describe("getManageHackathon", () => {
-    it("returns null when user is not authenticated", async () => {
+    it("returns unauthenticated error when user is not authenticated", async () => {
       mockAuth.mockImplementation(() =>
         Promise.resolve({ userId: null, orgId: null, orgRole: null })
       )
 
       const result = await getManageHackathon("test-hackathon")
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ ok: false, reason: "unauthenticated" })
     })
 
-    it("returns null when hackathon is not found", async () => {
+    it("returns not_found error when hackathon is not found", async () => {
       mockAuth.mockImplementation(() =>
         Promise.resolve({ userId: "user_123", orgId: "org_123", orgRole: "admin" })
       )
@@ -50,13 +50,13 @@ describe("Manage Hackathon Service", () => {
 
       const result = await getManageHackathon("nonexistent-hackathon")
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ ok: false, reason: "not_found" })
       expect(mockGetPublicHackathon).toHaveBeenCalledWith("nonexistent-hackathon", {
         includeUnpublished: true,
       })
     })
 
-    it("returns null when user is not the organizer", async () => {
+    it("returns not_organizer error when user is not the organizer", async () => {
       mockAuth.mockImplementation(() =>
         Promise.resolve({ userId: "user_123", orgId: "org_different", orgRole: "admin" })
       )
@@ -64,10 +64,10 @@ describe("Manage Hackathon Service", () => {
 
       const result = await getManageHackathon("test-hackathon")
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ ok: false, reason: "not_organizer" })
     })
 
-    it("returns null when user has no orgId", async () => {
+    it("returns not_organizer error when user has no orgId", async () => {
       mockAuth.mockImplementation(() =>
         Promise.resolve({ userId: "user_123", orgId: null, orgRole: null })
       )
@@ -75,7 +75,7 @@ describe("Manage Hackathon Service", () => {
 
       const result = await getManageHackathon("test-hackathon")
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ ok: false, reason: "not_organizer" })
     })
 
     it("returns hackathon when user is the organizer", async () => {
@@ -86,9 +86,10 @@ describe("Manage Hackathon Service", () => {
 
       const result = await getManageHackathon("test-hackathon")
 
-      expect(result).not.toBeNull()
-      expect(result?.hackathon).toEqual(mockHackathon)
-      expect(result?.isOrganizer).toBe(true)
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.hackathon).toEqual(mockHackathon)
+      }
     })
 
     it("calls getPublicHackathon with includeUnpublished true", async () => {

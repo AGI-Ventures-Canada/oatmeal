@@ -30,7 +30,7 @@ export default async function SponsorsPage({ params }: PageProps) {
   const { slug } = await params
   const result = await getManageHackathon(slug)
 
-  if (!result) {
+  if (!result.ok) {
     notFound()
   }
 

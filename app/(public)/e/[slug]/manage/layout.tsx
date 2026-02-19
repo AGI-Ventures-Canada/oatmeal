@@ -10,10 +10,8 @@ export default async function ManageLayout({ children, params }: LayoutProps) {
   const { slug } = await params
   const result = await getManageHackathon(slug)
 
-  if (!result) {
-    const { auth } = await import("@clerk/nextjs/server")
-    const { userId } = await auth()
-    if (!userId) {
+  if (!result.ok) {
+    if (result.reason === "unauthenticated") {
       redirect("/sign-in")
     }
     notFound()

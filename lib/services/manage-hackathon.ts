@@ -2,31 +2,38 @@ import { cache } from "react"
 import { auth } from "@clerk/nextjs/server"
 import { getPublicHackathon } from "./public-hackathons"
 
-export type ManageHackathonResult = {
+export type ManageHackathonSuccess = {
+  ok: true
   hackathon: NonNullable<Awaited<ReturnType<typeof getPublicHackathon>>>
-  isOrganizer: true
 }
 
+export type ManageHackathonError =
+  | { ok: false; reason: "unauthenticated" }
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "not_organizer" }
+
+export type ManageHackathonResult = ManageHackathonSuccess | ManageHackathonError
+
 export const getManageHackathon = cache(
-  async (slug: string): Promise<ManageHackathonResult | null> => {
+  async (slug: string): Promise<ManageHackathonResult> => {
     const { userId, orgId } = await auth()
 
     if (!userId) {
-      return null
+      return { ok: false, reason: "unauthenticated" }
     }
 
     const hackathon = await getPublicHackathon(slug, { includeUnpublished: true })
 
     if (!hackathon) {
-      return null
+      return { ok: false, reason: "not_found" }
     }
 
     const isOrganizer = orgId !== null && hackathon.organizer.clerk_org_id === orgId
 
     if (!isOrganizer) {
-      return null
+      return { ok: false, reason: "not_organizer" }
     }
 
-    return { hackathon, isOrganizer: true }
+    return { ok: true, hackathon }
   }
 )

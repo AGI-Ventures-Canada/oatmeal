@@ -15,7 +15,7 @@ export default async function ManagePage({ params }: PageProps) {
   const { slug } = await params
   const result = await getManageHackathon(slug)
 
-  if (!result) {
+  if (!result.ok) {
     notFound()
   }
 

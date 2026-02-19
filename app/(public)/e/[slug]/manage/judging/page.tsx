@@ -21,7 +21,7 @@ export default async function JudgingPage({ params, searchParams }: PageProps) {
 
   const result = await getManageHackathon(slug)
 
-  if (!result) {
+  if (!result.ok) {
     notFound()
   }
 
