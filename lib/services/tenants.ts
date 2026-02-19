@@ -148,6 +148,7 @@ export interface TenantSearchResult {
   name: string
   slug: string | null
   logo_url: string | null
+  logo_url_dark: string | null
   website_url: string | null
 }
 
@@ -165,7 +166,7 @@ export async function searchTenants(
 
   let queryBuilder = getSupabase()
     .from("tenants")
-    .select("id, name, slug, logo_url, website_url")
+    .select("id, name, slug, logo_url, logo_url_dark, website_url")
     .or(`name.ilike.%${sanitized}%,slug.ilike.%${sanitized}%`)
     .not("slug", "is", null)
     .limit(limit)

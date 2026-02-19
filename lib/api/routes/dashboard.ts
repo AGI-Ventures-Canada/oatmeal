@@ -69,24 +69,66 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     },
   })
   .get(
+    "/organizations/slug-available",
+    async ({ principal, query }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { isSlugAvailable } = await import("@/lib/services/tenant-profiles")
+      const available = await isSlugAvailable(query.slug)
+
+      return { available }
+    },
+    {
+      detail: {
+        summary: "Check slug availability",
+        description: "Returns whether a slug is available for a new organization. Clerk-only.",
+      },
+      query: t.Object({
+        slug: t.String({ minLength: 1 }),
+      }),
+    }
+  )
+  .get(
     "/organizations/search",
     async ({ principal, query }) => {
       requirePrincipal(principal, ["user"])
 
+      const excludeIds = query.exclude?.split(",").filter(Boolean) ?? []
+
       const { searchTenants } = await import("@/lib/services/tenants")
-      const results = await searchTenants(query.q, {
-        excludeIds: query.exclude?.split(",").filter(Boolean),
-        limit: 10,
-      })
+      const { searchTenantSponsors } = await import("@/lib/services/tenant-sponsors")
+
+      const [platformResults, savedSponsors] = await Promise.all([
+        searchTenants(query.q, { excludeIds, limit: 10 }),
+        searchTenantSponsors(principal.tenantId, query.q, { limit: 5 }),
+      ])
+
+      const platformOrgs = platformResults.map((t) => ({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        logoUrl: t.logo_url,
+        logoUrlDark: t.logo_url_dark,
+        websiteUrl: t.website_url,
+        isSaved: false,
+      }))
+
+      const platformNames = new Set(platformOrgs.map((o) => o.name.toLowerCase()))
+
+      const savedOrgs = savedSponsors
+        .filter((s) => !platformNames.has(s.name.toLowerCase()))
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          slug: null,
+          logoUrl: s.logo_url,
+          logoUrlDark: s.logo_url_dark,
+          websiteUrl: s.website_url,
+          isSaved: true,
+        }))
 
       return {
-        organizations: results.map((t) => ({
-          id: t.id,
-          name: t.name,
-          slug: t.slug,
-          logoUrl: t.logo_url,
-          websiteUrl: t.website_url,
-        })),
+        organizations: [...savedOrgs, ...platformOrgs],
       }
     },
     {
@@ -1203,6 +1245,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
               slug: s.tenant.slug,
               name: s.tenant.name,
               logoUrl: s.tenant.logo_url,
+              logoUrlDark: s.tenant.logo_url_dark,
             }
           : null,
         createdAt: s.created_at,
@@ -1236,6 +1279,17 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
 
       const { addSponsor } = await import("@/lib/services/sponsors")
+
+      let tenantSponsorId: string | null = null
+      if (!body.sponsorTenantId) {
+        const { upsertTenantSponsor } = await import("@/lib/services/tenant-sponsors")
+        const tenantSponsor = await upsertTenantSponsor(principal.tenantId, {
+          name: body.name,
+          websiteUrl: body.websiteUrl,
+        })
+        tenantSponsorId = tenantSponsor?.id ?? null
+      }
+
       const sponsor = await addSponsor({
         hackathonId: params.id,
         name: body.name,
@@ -1243,6 +1297,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         websiteUrl: body.websiteUrl,
         tier: body.tier as "title" | "gold" | "silver" | "bronze" | "partner" | undefined,
         sponsorTenantId: body.sponsorTenantId,
+        tenantSponsorId,
         displayOrder: body.displayOrder,
       })
 
@@ -1434,6 +1489,150 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }),
     }
   )
+  .post(
+    "/hackathons/:id/sponsors/:sponsorId/logo",
+    async ({ principal, params, request }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized to manage this hackathon. You may need to switch to the correct organization." }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const formData = await request.formData()
+      const file = formData.get("file") as File | null
+      const variant = (formData.get("variant") as string) || "light"
+
+      if (!file) {
+        return new Response(JSON.stringify({ error: "No file provided" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      if (variant !== "light" && variant !== "dark") {
+        return new Response(JSON.stringify({ error: "Invalid variant. Must be 'light' or 'dark'" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"]
+      if (!allowedTypes.includes(file.type)) {
+        return new Response(JSON.stringify({ error: "Invalid file type. Allowed: PNG, JPEG, WebP, SVG" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { uploadSponsorLogo } = await import("@/lib/services/storage")
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const uploadResult = await uploadSponsorLogo(params.id, params.sponsorId, buffer, file.type, variant)
+
+      if (!uploadResult) {
+        return new Response(JSON.stringify({ error: "Failed to upload sponsor logo" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { updateSponsor, listHackathonSponsors } = await import("@/lib/services/sponsors")
+      const updateField = variant === "dark" ? { logoUrlDark: uploadResult.url } : { logoUrl: uploadResult.url }
+      await updateSponsor(params.sponsorId, updateField, params.id)
+
+      const sponsors = await listHackathonSponsors(params.id)
+      const updatedSponsor = sponsors.find((s) => s.id === params.sponsorId)
+      if (updatedSponsor?.tenant_sponsor_id) {
+        const { updateTenantSponsorLogos } = await import("@/lib/services/tenant-sponsors")
+        const logoUpdates = variant === "dark"
+          ? { logoUrlDark: uploadResult.url }
+          : { logoUrl: uploadResult.url }
+        await updateTenantSponsorLogos(updatedSponsor.tenant_sponsor_id, principal.tenantId, logoUpdates)
+      }
+
+      await logAudit({
+        principal,
+        action: "sponsor.logo_uploaded",
+        resourceType: "hackathon_sponsor",
+        resourceId: params.sponsorId,
+      })
+
+      return { url: uploadResult.url }
+    },
+    {
+      detail: {
+        summary: "Upload sponsor logo",
+        description: "Uploads a logo for a sponsor. Requires hackathons:write scope.",
+      },
+    }
+  )
+  .delete(
+    "/hackathons/:id/sponsors/:sponsorId/logo",
+    async ({ principal, params, query }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const variant = (query.variant as string) || "light"
+
+      if (variant !== "light" && variant !== "dark") {
+        return new Response(JSON.stringify({ error: "Invalid variant. Must be 'light' or 'dark'" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized to manage this hackathon. You may need to switch to the correct organization." }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { deleteSponsorLogo } = await import("@/lib/services/storage")
+      await deleteSponsorLogo(params.id, params.sponsorId, variant)
+
+      const { updateSponsor } = await import("@/lib/services/sponsors")
+      const logoUpdate = variant === "dark" ? { logoUrlDark: null } : { logoUrl: null }
+      await updateSponsor(params.sponsorId, logoUpdate, params.id)
+
+      await logAudit({
+        principal,
+        action: "sponsor.logo_deleted",
+        resourceType: "hackathon_sponsor",
+        resourceId: params.sponsorId,
+      })
+
+      return { success: true }
+    },
+    {
+      detail: {
+        summary: "Delete sponsor logo",
+        description: "Deletes a sponsor's logo. Use ?variant=dark to delete the dark logo. Requires hackathons:write scope.",
+      },
+      query: t.Object({
+        variant: t.Optional(t.String()),
+      }),
+    }
+  )
   .get("/org-profile", async ({ principal }) => {
     requirePrincipal(principal, ["user", "api_key"], ["org:read"])
 
@@ -1468,7 +1667,13 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
       const { updateTenantProfile, isSlugAvailable } = await import("@/lib/services/tenant-profiles")
 
-      if (body.slug) {
+      if (body.slug !== undefined) {
+        if (!body.slug || !/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(body.slug) || body.slug.length < 3) {
+          return new Response(JSON.stringify({ error: "Slug must be at least 3 characters and contain only lowercase letters, numbers, and hyphens" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          })
+        }
         const available = await isSlugAvailable(body.slug, principal.tenantId)
         if (!available) {
           return new Response(JSON.stringify({ error: "Slug already taken" }), {
@@ -1514,7 +1719,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       },
       body: t.Object({
         name: t.Optional(t.String()),
-        slug: t.Optional(t.Union([t.String(), t.Null()])),
+        slug: t.Optional(t.String({ minLength: 3 })),
         logoUrl: t.Optional(t.Union([t.String(), t.Null()])),
         logoUrlDark: t.Optional(t.Union([t.String(), t.Null()])),
         description: t.Optional(t.Union([t.String(), t.Null()])),

@@ -6,9 +6,11 @@ export interface AddSponsorInput {
   hackathonId: string
   name: string
   logoUrl?: string | null
+  logoUrlDark?: string | null
   websiteUrl?: string | null
   tier?: SponsorTier
   sponsorTenantId?: string | null
+  tenantSponsorId?: string | null
   displayOrder?: number
 }
 
@@ -20,9 +22,11 @@ export async function addSponsor(input: AddSponsorInput): Promise<HackathonSpons
       hackathon_id: input.hackathonId,
       name: input.name,
       logo_url: input.logoUrl ?? null,
+      logo_url_dark: input.logoUrlDark ?? null,
       website_url: input.websiteUrl ?? null,
       tier: input.tier ?? "none",
       sponsor_tenant_id: input.sponsorTenantId ?? null,
+      tenant_sponsor_id: input.tenantSponsorId ?? null,
       display_order: input.displayOrder ?? 0,
     })
     .select()
@@ -38,6 +42,15 @@ export async function addSponsor(input: AddSponsorInput): Promise<HackathonSpons
 
 export async function removeSponsor(sponsorId: string, hackathonId: string): Promise<boolean> {
   const client = getSupabase() as unknown as SupabaseClient
+
+  try {
+    const { deleteSponsorLogo } = await import("@/lib/services/storage")
+    await deleteSponsorLogo(hackathonId, sponsorId, "light")
+    await deleteSponsorLogo(hackathonId, sponsorId, "dark")
+  } catch {
+    // Logo cleanup is best-effort, don't fail sponsor removal
+  }
+
   const { error } = await client
     .from("hackathon_sponsors")
     .delete()
@@ -81,6 +94,7 @@ export async function updateSponsor(
   const updateData: Record<string, unknown> = {}
   if (updates.name !== undefined) updateData.name = updates.name
   if (updates.logoUrl !== undefined) updateData.logo_url = updates.logoUrl
+  if (updates.logoUrlDark !== undefined) updateData.logo_url_dark = updates.logoUrlDark
   if (updates.websiteUrl !== undefined) updateData.website_url = updates.websiteUrl
   if (updates.tier !== undefined) updateData.tier = updates.tier
   if (updates.sponsorTenantId !== undefined) updateData.sponsor_tenant_id = updates.sponsorTenantId
@@ -134,6 +148,7 @@ export type SponsorWithTenant = HackathonSponsor & {
     slug: string | null
     name: string
     logo_url: string | null
+    logo_url_dark: string | null
   } | null
 }
 
@@ -145,7 +160,7 @@ export async function listHackathonSponsorsWithTenants(
     .from("hackathon_sponsors")
     .select(`
       *,
-      tenant:tenants!sponsor_tenant_id(slug, name, logo_url)
+      tenant:tenants!sponsor_tenant_id(slug, name, logo_url, logo_url_dark)
     `)
     .eq("hackathon_id", hackathonId)
     .order("tier")

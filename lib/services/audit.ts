@@ -38,6 +38,8 @@ export type AuditAction =
   | "sponsor.added"
   | "sponsor.updated"
   | "sponsor.removed"
+  | "sponsor.logo_uploaded"
+  | "sponsor.logo_deleted"
   | "org_profile.updated"
   | "logo.uploaded"
   | "logo.deleted"

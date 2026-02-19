@@ -222,8 +222,10 @@ export type Database = {
           hackathon_id: string
           id: string
           logo_url: string | null
+          logo_url_dark: string | null
           name: string
           sponsor_tenant_id: string | null
+          tenant_sponsor_id: string | null
           tier: Database["public"]["Enums"]["sponsor_tier"]
           website_url: string | null
         }
@@ -233,8 +235,10 @@ export type Database = {
           hackathon_id: string
           id?: string
           logo_url?: string | null
+          logo_url_dark?: string | null
           name: string
           sponsor_tenant_id?: string | null
+          tenant_sponsor_id?: string | null
           tier?: Database["public"]["Enums"]["sponsor_tier"]
           website_url?: string | null
         }
@@ -244,8 +248,10 @@ export type Database = {
           hackathon_id?: string
           id?: string
           logo_url?: string | null
+          logo_url_dark?: string | null
           name?: string
           sponsor_tenant_id?: string | null
+          tenant_sponsor_id?: string | null
           tier?: Database["public"]["Enums"]["sponsor_tier"]
           website_url?: string | null
         }
@@ -262,6 +268,13 @@ export type Database = {
             columns: ["sponsor_tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathon_sponsors_tenant_sponsor_id_fkey"
+            columns: ["tenant_sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_sponsors"
             referencedColumns: ["id"]
           },
         ]
@@ -955,6 +968,47 @@ export type Database = {
             columns: ["hackathon_id"]
             isOneToOne: false
             referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_sponsors: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          logo_url_dark: string | null
+          name: string
+          tenant_id: string
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          logo_url_dark?: string | null
+          name: string
+          tenant_id: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          logo_url_dark?: string | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_sponsors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
