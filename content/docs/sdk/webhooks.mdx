@@ -1,0 +1,112 @@
+---
+title: Webhooks API
+description: Register and manage webhook endpoints via the REST API.
+---
+
+The Webhooks API allows you to register URLs that receive real-time event notifications.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/webhooks` | List all webhooks |
+| `POST` | `/api/v1/webhooks` | Create a webhook |
+| `DELETE` | `/api/v1/webhooks/:id` | Delete a webhook |
+
+All endpoints require an API key with `webhooks:read` or `webhooks:write` scope.
+
+## Available Events
+
+| Event | Description |
+|-------|-------------|
+| `hackathon.created` | A new hackathon was created |
+| `hackathon.updated` | A hackathon's settings were updated |
+| `submission.created` | A new submission draft was created |
+| `submission.submitted` | A submission was finalized and submitted |
+
+## Create a Webhook
+
+`POST /api/v1/webhooks` — requires `webhooks:write` scope.
+
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    url: \"https://your-app.com/webhooks/oatmeal\",\n    events: [\"hackathon.created\", \"submission.submitted\"],\n  }),\n})\n\nconst webhook = await res.json()\nconsole.log(\"Webhook ID:\", webhook.id)\nconsole.log(\"Secret:\", webhook.secret)"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>create-webhook.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+<Callout type="warn">
+The webhook `secret` is only returned once at creation time. Store it securely for signature verification.
+</Callout>
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | `string` | Yes | Webhook endpoint URL (must be a valid URI) |
+| `events` | `string[]` | Yes | Events to subscribe to |
+
+### Response
+
+<CodeBlock language="json" code={"{\n  \"id\": \"wh_abc123\",\n  \"url\": \"https://your-app.com/webhooks/oatmeal\",\n  \"events\": [\"hackathon.created\", \"submission.submitted\"],\n  \"secret\": \"whsec_...\",\n  \"createdAt\": \"2026-02-10T15:30:00Z\"\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>response.json</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## List Webhooks
+
+`GET /api/v1/webhooks` — requires `webhooks:read` scope.
+
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst { webhooks } = await res.json()\n\nfor (const wh of webhooks) {\n  console.log(`${wh.url} - ${wh.events.join(\", \")}`)\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>list-webhooks.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+### Response
+
+<CodeBlock language="json" code={"{\n  \"webhooks\": [\n    {\n      \"id\": \"wh_abc123\",\n      \"url\": \"https://your-app.com/webhooks/oatmeal\",\n      \"events\": [\"hackathon.created\", \"submission.submitted\"],\n      \"isActive\": true,\n      \"failureCount\": 0,\n      \"lastTriggeredAt\": \"2026-02-10T16:00:00Z\",\n      \"createdAt\": \"2026-02-10T15:30:00Z\"\n    }\n  ]\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>response.json</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Delete a Webhook
+
+`DELETE /api/v1/webhooks/:id` — requires `webhooks:write` scope.
+
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks/${webhookId}`, {\n  method: \"DELETE\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst data = await res.json()\nif (data.success) {\n  console.log(\"Webhook deleted\")\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>delete-webhook.ts</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Webhook Payload Format
+
+Webhook requests are sent as `POST` with a JSON body:
+
+<CodeBlock language="json" code={"{\n  \"event\": \"submission.submitted\",\n  \"data\": {\n    \"hackathonId\": \"hack_abc123\",\n    \"submissionId\": \"sub_xyz456\",\n    \"title\": \"AI Code Review Bot\",\n    \"teamName\": \"BuilderSquad\",\n    \"submittedAt\": \"2026-02-10T15:30:00Z\"\n  }\n}"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>payload.json</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+Requests include an `X-Webhook-Signature` header containing an HMAC-SHA256 hex digest of the request body, signed with your webhook secret. See the [Webhooks Guide](/docs/guides/webhooks) for verification examples.

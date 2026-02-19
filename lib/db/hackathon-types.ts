@@ -21,6 +21,15 @@ export type SubmissionStatus =
 
 export type TeamStatus = "forming" | "locked" | "disbanded"
 
+export type InvitationStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "expired"
+  | "cancelled"
+
+export type JudgeInvitationStatus = "pending" | "accepted" | "cancelled"
+
 export type WebhookEvent =
   | "hackathon.created"
   | "hackathon.updated"
@@ -62,6 +71,12 @@ export interface Hackathon {
   allow_solo: boolean
   status: HackathonStatus
   banner_url: string | null
+  location_type: "in_person" | "virtual" | null
+  location_name: string | null
+  location_url: string | null
+  anonymous_judging: boolean
+  results_published_at: string | null
+  winner_emails_sent_at: string | null
   metadata: Json
   created_at: string
   updated_at: string
@@ -74,6 +89,21 @@ export interface Team {
   captain_clerk_user_id: string
   invite_code: string
   status: TeamStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface TeamInvitation {
+  id: string
+  team_id: string
+  hackathon_id: string
+  email: string
+  token: string
+  invited_by_clerk_user_id: string
+  status: InvitationStatus
+  expires_at: string
+  accepted_at: string | null
+  accepted_by_clerk_user_id: string | null
   created_at: string
   updated_at: string
 }
@@ -97,6 +127,7 @@ export interface Submission {
   github_url: string | null
   live_app_url: string | null
   demo_video_url: string | null
+  screenshot_url: string | null
   status: SubmissionStatus
   metadata: Json
   created_at: string
@@ -242,6 +273,81 @@ export interface HackathonSponsor {
   tier: SponsorTier
   display_order: number
   created_at: string
+}
+
+export interface JudgingCriteria {
+  id: string
+  hackathon_id: string
+  name: string
+  description: string | null
+  max_score: number
+  weight: number
+  display_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface JudgeAssignment {
+  id: string
+  hackathon_id: string
+  judge_participant_id: string
+  submission_id: string
+  notes: string
+  is_complete: boolean
+  assigned_at: string
+  completed_at: string | null
+}
+
+export interface Score {
+  id: string
+  judge_assignment_id: string
+  criteria_id: string
+  score: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Prize {
+  id: string
+  hackathon_id: string
+  name: string
+  description: string | null
+  value: string | null
+  display_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface PrizeAssignment {
+  id: string
+  prize_id: string
+  submission_id: string
+  assigned_at: string
+}
+
+export interface HackathonResult {
+  id: string
+  hackathon_id: string
+  submission_id: string
+  rank: number
+  total_score: number | null
+  weighted_score: number | null
+  judge_count: number
+  published_at: string | null
+  created_at: string
+}
+
+export interface JudgeInvitation {
+  id: string
+  hackathon_id: string
+  email: string
+  token: string
+  invited_by_clerk_user_id: string
+  status: JudgeInvitationStatus
+  accepted_by_clerk_user_id: string | null
+  expires_at: string
+  created_at: string
+  updated_at: string
 }
 
 export interface TenantProfile {

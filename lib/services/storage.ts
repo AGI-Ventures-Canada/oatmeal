@@ -3,13 +3,17 @@ import { supabase as getSupabase } from "@/lib/db/client"
 
 const LOGOS_BUCKET = "logos"
 const BANNERS_BUCKET = "banners"
+const SCREENSHOTS_BUCKET = "screenshots"
 const MAX_LOGO_WIDTH = 800
 const MAX_LOGO_HEIGHT = 400
-const MAX_BANNER_WIDTH = 1920
-const MAX_BANNER_HEIGHT = 480
+const MAX_BANNER_WIDTH = 1200
+const MAX_BANNER_HEIGHT = 1200
+const MAX_SCREENSHOT_WIDTH = 1280
+const MAX_SCREENSHOT_HEIGHT = 800
 const QUALITY = 85
 const MAX_OPTIMIZED_SIZE = 200 * 1024 // 200KB
 const MAX_BANNER_SIZE = 500 * 1024 // 500KB
+const MAX_SCREENSHOT_SIZE = 500 * 1024 // 500KB
 
 export type LogoVariant = "light" | "dark"
 
@@ -19,8 +23,8 @@ export interface UploadLogoResult {
 }
 
 export class ImageTooLargeError extends Error {
-  constructor(size: number) {
-    super(`Optimized image is ${Math.round(size / 1024)}KB, max is ${MAX_OPTIMIZED_SIZE / 1024}KB`)
+  constructor(size: number, maxSize: number = MAX_OPTIMIZED_SIZE) {
+    super(`Optimized image is ${Math.round(size / 1024)}KB, max is ${maxSize / 1024}KB`)
     this.name = "ImageTooLargeError"
   }
 }
@@ -88,11 +92,7 @@ export async function uploadLogo(
 
   const { buffer, mimeType } = await optimizeImage(file, originalMimeType)
 
-  const extension = mimeType === "image/svg+xml"
-    ? "svg"
-    : mimeType === "image/png"
-      ? "png"
-      : "webp"
+  const extension = mimeType === "image/svg+xml" ? "svg" : "webp"
 
   const filename = variant === "light" ? `logo.${extension}` : `logo-dark.${extension}`
   const path = `${tenantId}/${filename}`
@@ -149,16 +149,8 @@ export interface UploadBannerResult {
 }
 
 export async function optimizeBanner(
-  buffer: Buffer,
-  mimeType: string
+  buffer: Buffer
 ): Promise<{ buffer: Buffer; mimeType: string }> {
-  if (mimeType === "image/svg+xml") {
-    if (buffer.length > MAX_BANNER_SIZE) {
-      throw new ImageTooLargeError(buffer.length)
-    }
-    return { buffer, mimeType }
-  }
-
   const image = sharp(buffer)
   const metadata = await image.metadata()
 
@@ -170,40 +162,34 @@ export async function optimizeBanner(
 
   if (needsResize) {
     pipeline = pipeline.resize(MAX_BANNER_WIDTH, MAX_BANNER_HEIGHT, {
-      fit: "cover",
-      position: "center",
+      fit: "inside",
+      withoutEnlargement: true,
     })
   }
 
-  let optimized = await pipeline.clone().webp({ quality: QUALITY }).toBuffer()
   const outputMimeType = "image/webp"
+  const qualityLevels = [QUALITY, 70, 50]
 
-  if (optimized.length > MAX_BANNER_SIZE) {
-    optimized = await pipeline.clone().webp({ quality: 70 }).toBuffer()
+  for (const quality of qualityLevels) {
+    const optimized = await pipeline.clone().webp({ quality }).toBuffer()
+    if (optimized.length <= MAX_BANNER_SIZE) {
+      return { buffer: optimized, mimeType: outputMimeType }
+    }
   }
 
-  if (optimized.length > MAX_BANNER_SIZE) {
-    optimized = await pipeline.clone().webp({ quality: 50 }).toBuffer()
-  }
-
-  if (optimized.length > MAX_BANNER_SIZE) {
-    throw new ImageTooLargeError(optimized.length)
-  }
-
-  return { buffer: optimized, mimeType: outputMimeType }
+  const finalBuffer = await pipeline.clone().webp({ quality: 50 }).toBuffer()
+  throw new ImageTooLargeError(finalBuffer.length, MAX_BANNER_SIZE)
 }
 
 export async function uploadBanner(
   hackathonId: string,
-  file: Buffer,
-  originalMimeType: string
+  file: Buffer
 ): Promise<UploadBannerResult | null> {
   const client = getSupabase()
 
-  const { buffer, mimeType } = await optimizeBanner(file, originalMimeType)
+  const { buffer, mimeType } = await optimizeBanner(file)
 
-  const extension = mimeType === "image/svg+xml" ? "svg" : "webp"
-  const filename = `banner.${extension}`
+  const filename = "banner.webp"
   const path = `${hackathonId}/${filename}`
 
   const { error } = await client.storage
@@ -224,7 +210,7 @@ export async function uploadBanner(
     .getPublicUrl(path)
 
   return {
-    url: urlData.publicUrl,
+    url: `${urlData.publicUrl}?v=${Date.now()}`,
     path,
   }
 }
@@ -241,6 +227,96 @@ export async function deleteBanner(hackathonId: string): Promise<boolean> {
 
   if (error) {
     console.error("Failed to delete banner:", error)
+    return false
+  }
+
+  return true
+}
+
+export interface UploadScreenshotResult {
+  url: string
+  path: string
+}
+
+export async function optimizeScreenshot(
+  buffer: Buffer
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  const image = sharp(buffer)
+  const metadata = await image.metadata()
+
+  const needsResize =
+    (metadata.width && metadata.width > MAX_SCREENSHOT_WIDTH) ||
+    (metadata.height && metadata.height > MAX_SCREENSHOT_HEIGHT)
+
+  let pipeline = image
+
+  if (needsResize) {
+    pipeline = pipeline.resize(MAX_SCREENSHOT_WIDTH, MAX_SCREENSHOT_HEIGHT, {
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+  }
+
+  const outputMimeType = "image/webp"
+  const qualityLevels = [QUALITY, 70, 50]
+
+  for (const quality of qualityLevels) {
+    const optimized = await pipeline.clone().webp({ quality }).toBuffer()
+    if (optimized.length <= MAX_SCREENSHOT_SIZE) {
+      return { buffer: optimized, mimeType: outputMimeType }
+    }
+  }
+
+  const finalBuffer = await pipeline.clone().webp({ quality: 50 }).toBuffer()
+  throw new ImageTooLargeError(finalBuffer.length, MAX_SCREENSHOT_SIZE)
+}
+
+export async function uploadScreenshot(
+  submissionId: string,
+  file: Buffer
+): Promise<UploadScreenshotResult | null> {
+  const client = getSupabase()
+
+  const { buffer, mimeType } = await optimizeScreenshot(file)
+
+  const filename = "screenshot.webp"
+  const path = `${submissionId}/${filename}`
+
+  const { error } = await client.storage
+    .from(SCREENSHOTS_BUCKET)
+    .upload(path, buffer, {
+      contentType: mimeType,
+      upsert: true,
+      cacheControl: "3600",
+    })
+
+  if (error) {
+    console.error("Failed to upload screenshot:", error)
+    return null
+  }
+
+  const { data: urlData } = client.storage
+    .from(SCREENSHOTS_BUCKET)
+    .getPublicUrl(path)
+
+  return {
+    url: urlData.publicUrl,
+    path,
+  }
+}
+
+export async function deleteScreenshot(submissionId: string): Promise<boolean> {
+  const client = getSupabase()
+
+  const extensions = ["webp", "png", "jpg", "svg"]
+  const paths = extensions.map((ext) => `${submissionId}/screenshot.${ext}`)
+
+  const { error } = await client.storage
+    .from(SCREENSHOTS_BUCKET)
+    .remove(paths)
+
+  if (error) {
+    console.error("Failed to delete screenshot:", error)
     return false
   }
 

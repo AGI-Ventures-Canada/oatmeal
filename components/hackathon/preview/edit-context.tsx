@@ -1,14 +1,24 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback } from "react"
+import { createContext, useContext, useState, useCallback, useEffect } from "react"
 
 export type EditSection =
-  | "hero"
+  | "name"
   | "about"
   | "rules"
   | "timeline"
+  | "location"
   | "sponsors"
   | null
+
+export const SECTION_ORDER: Exclude<EditSection, null>[] = [
+  "name",
+  "timeline",
+  "location",
+  "sponsors",
+  "about",
+  "rules",
+]
 
 interface EditContextValue {
   activeSection: EditSection
@@ -45,6 +55,14 @@ export function EditProvider({ children, isEditable, defaultEditMode = true }: E
   const closeDrawer = useCallback(() => {
     setActiveSection(null)
   }, [])
+
+  useEffect(() => {
+    if (!activeSection) return
+    const el = document.querySelector(`[data-edit-section="${activeSection}"]`)
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" })
+    }
+  }, [activeSection])
 
   return (
     <EditContext.Provider

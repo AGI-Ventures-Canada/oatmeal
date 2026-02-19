@@ -2,6 +2,8 @@ import { notFound } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
 import { getPublicHackathon } from "@/lib/services/public-hackathons"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
+import { JudgeAssignmentsCard } from "@/components/hackathon/judging/judge-assignments-card"
+import { PublicResults } from "@/components/hackathon/results/public-results"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye } from "lucide-react"
 import type { Metadata } from "next"
@@ -53,18 +55,50 @@ export default async function EventPage({ params }: PageProps) {
   }
 
   let isRegistered = false
+  let participantRole: string | null = null
   let participantCount = 0
   let submission = null
+  let teamInfo = null
+  let judgeAssignments: {
+    id: string
+    submissionId: string
+    submissionTitle: string
+    submissionDescription: string | null
+    submissionGithubUrl: string | null
+    submissionLiveAppUrl: string | null
+    submissionScreenshotUrl: string | null
+    teamName: string | null
+    isComplete: boolean
+    notes: string
+  }[] = []
 
-  if (userId) {
-    const { getRegistrationInfo } = await import("@/lib/services/hackathons")
+  const isViewingAsParticipant = !orgId || orgId !== hackathon.organizer.clerk_org_id
+
+  if (userId && isViewingAsParticipant) {
+    const { getRegistrationInfo, getParticipantTeamInfo } = await import("@/lib/services/hackathons")
     const registrationInfo = await getRegistrationInfo(hackathon.id, userId)
     isRegistered = registrationInfo.isRegistered
+    participantRole = registrationInfo.participantRole
     participantCount = registrationInfo.participantCount
 
-    if (isRegistered) {
-      const { getSubmissionForParticipant } = await import("@/lib/services/submissions")
-      submission = await getSubmissionForParticipant(hackathon.id, userId)
+    if (isRegistered && participantRole === "participant") {
+      const [submissionResult, teamResult] = await Promise.all([
+        import("@/lib/services/submissions").then((m) =>
+          m.getSubmissionForParticipant(hackathon.id, userId)
+        ),
+        getParticipantTeamInfo(hackathon.id, userId),
+      ])
+      submission = submissionResult
+      teamInfo = teamResult
+    }
+
+    if (hackathon.status === "judging") {
+      const { getJudgeAssignments } = await import("@/lib/services/judging")
+      judgeAssignments = await getJudgeAssignments(hackathon.id, userId)
+
+      if (hackathon.anonymous_judging) {
+        judgeAssignments = judgeAssignments.map((a) => ({ ...a, teamName: null }))
+      }
     }
   }
 
@@ -77,9 +111,34 @@ export default async function EventPage({ params }: PageProps) {
     githubUrl: s.github_url,
     liveAppUrl: s.live_app_url,
     demoVideoUrl: s.demo_video_url,
+    screenshotUrl: s.screenshot_url,
     submitter: s.submitter_name,
     createdAt: s.created_at,
   }))
+
+  let publicResults: {
+    rank: number
+    submissionTitle: string
+    teamName: string | null
+    weightedScore: number | null
+    judgeCount: number
+    prizes: { id: string; name: string; value: string | null }[]
+  }[] = []
+
+  if (hackathon.results_published_at) {
+    const { getPublicResults } = await import("@/lib/services/results")
+    const results = await getPublicResults(hackathon.id)
+    if (results) {
+      publicResults = results.map((r) => ({
+        rank: r.rank,
+        submissionTitle: r.submissionTitle,
+        teamName: r.teamName,
+        weightedScore: r.weighted_score,
+        judgeCount: r.judge_count,
+        prizes: r.prizes,
+      }))
+    }
+  }
 
   return (
     <div>
@@ -96,11 +155,29 @@ export default async function EventPage({ params }: PageProps) {
         hackathon={hackathon}
         isEditable={isOrganizer}
         isRegistered={isRegistered}
+        participantRole={participantRole}
         participantCount={participantCount}
-        showEditToggle={isOrganizer}
+        showActionBar={isOrganizer || participantRole === "judge"}
+        hasJudgeAssignments={judgeAssignments.length > 0}
         submission={submission}
         submissions={gallerySubmissions}
+        teamInfo={teamInfo}
       />
+
+      <div className="max-w-5xl mx-auto px-4 space-y-8 py-8">
+        {judgeAssignments.length > 0 && (
+          <div id="judge-assignments">
+            <JudgeAssignmentsCard
+              hackathonSlug={hackathon.slug}
+              assignments={judgeAssignments}
+            />
+          </div>
+        )}
+
+        {publicResults.length > 0 && (
+          <PublicResults results={publicResults} />
+        )}
+      </div>
     </div>
   )
 }

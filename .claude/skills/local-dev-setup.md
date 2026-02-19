@@ -1,12 +1,12 @@
 ---
 name: local-dev-setup
-description: Helps set up local development environment for the Agents Server project. Use when someone asks how to run the project locally, set up local database, start local Supabase, configure .env or environment variables, get env keys, run dev server, install dependencies, or troubleshoot local setup issues.
+description: Helps set up local development environment for the Oatmeal project. Use when someone asks how to run the project locally, set up local database, start local Supabase, configure .env or environment variables, get env keys, run dev server, install dependencies, or troubleshoot local setup issues.
 allowed-tools: Read, Glob, Bash(bun:*), Bash(bunx:*), Bash(supabase:*), Bash(git:*), Bash(which:*), Bash(brew:*), Bash(node:*), Bash(npx:*), Bash(docker:*), Bash(curl:*), Bash(open:*), Bash(cat:*), Bash(cp:*), Bash(ls:*), Bash(lsof:*), Bash(kill:*), Bash(rm:*)
 ---
 
 # Developer Onboarding
 
-Guide new developers through setting up the Agents Server project interactively. Work through each step, verify completion, and troubleshoot issues as they arise.
+Guide new developers through setting up the Oatmeal project interactively. Work through each step, verify completion, and troubleshoot issues as they arise.
 
 ## Automated Setup
 
@@ -55,8 +55,15 @@ Required environment variables:
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 
-# API Key hashing (auto-generated on first bun dev if missing)
-API_KEY_SECRET=<random-32-char-string>
+# API Key hashing (required for creating/verifying API keys)
+API_KEY_SECRET=<generate-with-openssl>
+
+# Resend (email sending)
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=noreply@getoatmeal.com
+
+# App URL (used for email links, invite URLs, etc.)
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 # Supabase (auto-filled by bun dev for local)
 # NEXT_PUBLIC_SUPABASE_URL=...
@@ -65,6 +72,12 @@ API_KEY_SECRET=<random-32-char-string>
 ```
 
 **Get Clerk keys from:** https://dashboard.clerk.com → API Keys
+
+**Generate API_KEY_SECRET:** This is a server-side secret used to securely hash API keys before storing them in the database. Generate a secure value with:
+
+```bash
+openssl rand -hex 32
+```
 
 **Supabase keys are auto-configured** when running `bun dev` (local Supabase).
 
@@ -89,7 +102,7 @@ Open these URLs to verify the setup:
 | URL | Expected Result |
 |-----|-----------------|
 | http://localhost:3000 | App loads (may redirect to sign-in) |
-| http://localhost:3000/docs | SDK documentation site |
+| http://localhost:3000/docs | API documentation site |
 | http://localhost:3000/api/swagger | API reference (Swagger UI) |
 | http://localhost:3000/api/public/health | `{"status":"ok","timestamp":"..."}` |
 | http://localhost:54423 | Supabase Studio |
@@ -142,7 +155,7 @@ git checkout -b feature/your-feature-name
 | Service | URL |
 |---------|-----|
 | App | http://localhost:3000 |
-| SDK Documentation | http://localhost:3000/docs |
+| API Documentation | http://localhost:3000/docs |
 | API Swagger | http://localhost:3000/api/swagger |
 | Health Check | http://localhost:3000/api/public/health |
 | LLMs.txt | http://localhost:3000/llms.txt |
@@ -170,56 +183,9 @@ lib/                    # Core libraries
 ├── services/           # Business logic services
 └── workflows/          # Workflow DevKit agents
 
-packages/sdk/           # TypeScript SDK
-content/docs/           # Documentation MDX files
+content/docs/           # API documentation MDX files
 supabase/               # Database migrations and config
 ```
-
-## TypeScript SDK
-
-The project includes a TypeScript SDK in `packages/sdk/` for integrating with the v1 API.
-
-### SDK Commands
-
-```bash
-cd packages/sdk
-bun run build    # Compile TypeScript
-bun run dev      # Watch mode
-bun test         # Run SDK tests
-```
-
-### Using the SDK
-
-```typescript
-import { createClient } from "@oatmeal/sdk"
-
-const client = createClient("sk_live_your_api_key", {
-  baseUrl: "http://localhost:3000"  // Use local for dev
-})
-
-// Check API key
-const { data } = await client.whoami()
-
-// Jobs API
-const { data: job } = await client.jobs.create({ type: "test", input: {} })
-const result = await client.jobs.waitForResult(job.id)
-
-// Agents API
-const { data: run } = await client.agents.run("agent_id", { prompt: "Hello" })
-const agentResult = await client.agents.waitForResult(run.runId)
-```
-
-### When Modifying v1 API
-
-If you add or modify v1 API endpoints, you **must** update the SDK:
-
-1. Update types in `packages/sdk/src/index.ts`
-2. Add/update client methods
-3. Add tests in `packages/sdk/__tests__/client.test.ts`
-4. Update `packages/sdk/README.md`
-5. Run `cd packages/sdk && bun run build && bun test`
-
-See `lib/api/CLAUDE.md` for detailed SDK maintenance guidelines.
 
 ## Documentation Development
 
@@ -294,6 +260,13 @@ CREATE POLICY "Deny all access" ON new_table FOR ALL USING (false);
 
 ## Troubleshooting
 
+### API key creation fails (500 error)
+If creating API keys fails with a 500 error, `API_KEY_SECRET` is likely missing from `.env.local`. Generate one:
+```bash
+openssl rand -hex 32
+```
+Add it to `.env.local` and restart the dev server.
+
 ### Port 3000 already in use
 ```bash
 lsof -i :3000
@@ -343,7 +316,7 @@ bunx tsc --noEmit  # TypeScript check only
 ## Next Steps After Setup
 
 1. Read `CLAUDE.md` for project conventions
-2. Browse `/docs` for SDK documentation
+2. Browse `/docs` for API documentation
 3. Explore `/api/swagger` for API reference
 4. Read domain docs in `lib/*/CLAUDE.md` for specific patterns
 5. Create a feature branch and start coding!

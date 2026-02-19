@@ -35,8 +35,9 @@ export function EditableSection({
       <button
         type="button"
         onClick={handleClick}
+        data-edit-section={section}
         className={cn(
-          "group relative w-full cursor-pointer rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 text-center transition-colors hover:border-primary/50 hover:bg-muted/50",
+          "group relative w-full cursor-pointer rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 text-center transition-colors hover:border-primary/50 hover:bg-muted/50 scroll-mt-24",
           className
         )}
       >
@@ -59,15 +60,16 @@ export function EditableSection({
           handleClick()
         }
       }}
+      data-edit-section={section}
       className={cn(
-        "group relative cursor-pointer rounded-lg transition-all",
+        "group relative cursor-pointer rounded-lg transition-all scroll-mt-24",
         "outline outline-2 outline-transparent hover:outline-primary/50",
         "ring-0 hover:ring-2 hover:ring-primary/20",
         className
       )}
     >
       {children}
-      <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-primary-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+      <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-accent-foreground opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
         <Pencil className="size-3" />
         <span className="text-xs font-medium">Edit</span>
       </div>

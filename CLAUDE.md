@@ -24,6 +24,24 @@ bun db:diff name     # Capture Studio changes as migration
 bun update-types     # Regenerate TypeScript types from DB
 ```
 
+### Test Scenarios
+
+Seed the local database with a hackathon at a specific lifecycle stage. Useful for manual QA and UI work. Requires `bun dev` (or local Supabase) to be running.
+
+```bash
+bun run scripts/test-scenario.ts <scenario>
+```
+
+| Scenario | What it sets up |
+|----------|-----------------|
+| `pre-registration` | Hackathon not yet open for registration (opens tomorrow) |
+| `registered-no-team` | Dev user registered, no team yet, registration open |
+| `team-formed` | Dev user is captain with 2 members + 1 pending invite, hackathon active |
+| `submitted` | Dev user's team has a submitted project, hackathon ends in 2 days |
+| `judging` | 5 teams with submissions, 3 judges assigned, no scores yet |
+| `judging-in-progress` | Same as above but ~60% of assignments scored |
+| `results-ready` | All submissions scored, results calculated, 3 prizes defined (not yet assigned) |
+
 ## Architecture
 
 Next.js 16 App Router with:
@@ -34,6 +52,18 @@ Next.js 16 App Router with:
 - Elysia (API routes)
 - AI SDK 6
 - Shadcn/ui components
+
+### Route Structure
+
+The app has two main route groups:
+
+| Route | Purpose | Auth | URL Pattern |
+|-------|---------|------|-------------|
+| `/e/[slug]` | Public event pages for participants, judges, and visitors | Optional | Human-readable slugs |
+| `/hackathons/[id]` | Dashboard management for organizers and sponsors | Required | Database UUIDs |
+
+- `(public)` routes allow unauthenticated access with a simple header
+- `(dashboard)` routes require authentication and show the sidebar
 
 ### Path Aliases
 
@@ -49,6 +79,7 @@ See domain-specific CLAUDE.md files for detailed patterns:
 - `lib/integrations/CLAUDE.md` - OAuth flows, token management
 - `lib/email/CLAUDE.md` - Resend email sending and receiving
 - `supabase/CLAUDE.md` - Database development, migrations, branching
+- `scripts/CLAUDE.md` - Test scenario scripts for seeding dev database
 
 ### External Documentation Links
 
@@ -176,6 +207,7 @@ This ensures consistent theming and proper dark mode support.
 - Handle auth and roles in the application layer, not RLS
 - Never apply migrations directly to production - use PR workflow
 - Test migrations locally with `supabase db reset` before pushing
+- **After creating or modifying migration files, always ask the user if they want to run `bun db:sync` to reset the database and regenerate types**
 
 ### Forms
 
@@ -294,6 +326,39 @@ Before making changes:
 3. Push to feature branch: `git push -u origin feature/your-feature-name`
 4. Create PR to merge into `staging`
 
+### All PRs Target Staging
+
+**All pull requests must target `staging`, never `main`.** The `main` branch is only updated via merges from `staging` after testing.
+
+```bash
+gh pr create --base staging --draft --title "feat: your feature" --body "Description"
+```
+
+### Rebase Feature Branches
+
+**Keep feature branches clean with only branch-specific commits.** Before creating a PR or pushing updates, rebase onto the latest `staging`:
+
+```bash
+git fetch origin
+git rebase origin/staging
+```
+
+This ensures:
+- PR only shows commits related to the feature
+- No merge commits cluttering history
+- Easy to review changes in isolation
+
+If conflicts occur during rebase, resolve them and continue:
+```bash
+git add .
+git rebase --continue
+```
+
+After rebasing, force-push to update the remote branch:
+```bash
+git push --force-with-lease
+```
+
 ### Check PR Status Before Pushing
 
 ```bash
@@ -305,7 +370,7 @@ If PR is `MERGED`, create a new feature branch for additional changes.
 ### Create PRs as Drafts
 
 ```bash
-gh pr create --draft --title "feat: your feature" --body "Description"
+gh pr create --base staging --draft --title "feat: your feature" --body "Description"
 gh pr ready  # When ready for review
 ```
 

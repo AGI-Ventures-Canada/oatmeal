@@ -71,7 +71,7 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
       const data = await res.json()
       setOpen(false)
       resetForm()
-      router.push(`/hackathons/${data.id}`)
+      router.push(`/e/${data.slug}/manage`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create hackathon")
       setCreating(false)
@@ -79,7 +79,7 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
   }
 
   return (
-    <Drawer direction="right" open={open} onOpenChange={setOpen}>
+    <Drawer direction="left" open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent>
         <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col h-full" autoComplete="off">

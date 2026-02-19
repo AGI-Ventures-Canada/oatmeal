@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Search, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
@@ -9,8 +9,16 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { HackathonCard } from "@/components/hackathon/hackathon-card"
-import { sortByStatusPriority } from "@/lib/utils/sort-hackathons"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
 type BrowseHackathon = {
@@ -27,6 +35,8 @@ type BrowseHackathon = {
 
 type Props = {
   initialHackathons: BrowseHackathon[]
+  initialPage: number
+  initialTotalPages: number
 }
 
 function toCardData(h: BrowseHackathon) {
@@ -43,11 +53,44 @@ function toCardData(h: BrowseHackathon) {
   }
 }
 
-export function BrowseHackathonGrid({ initialHackathons }: Props) {
+const PAGE_SIZE = 9
+
+export function BrowseHackathonGrid({
+  initialHackathons,
+  initialPage,
+  initialTotalPages,
+}: Props) {
   const [query, setQuery] = useState("")
-  const [results, setResults] = useState<BrowseHackathon[] | null>(null)
+  const [hackathons, setHackathons] = useState(initialHackathons)
+  const [page, setPage] = useState(initialPage)
+  const [totalPages, setTotalPages] = useState(initialTotalPages)
   const [loading, setLoading] = useState(false)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const isSearching = query.length >= 2
+
+  const fetchPage = useCallback(async (targetPage: number, search?: string) => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({
+        page: String(targetPage),
+        limit: String(PAGE_SIZE),
+      })
+      if (search && search.length >= 2) {
+        params.set("q", search)
+      }
+      const res = await fetch(`/api/public/hackathons?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        setHackathons(data.hackathons)
+        setPage(data.page)
+        setTotalPages(data.totalPages)
+      }
+    } catch {
+      // keep current state on error
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (debounceRef.current) {
@@ -55,24 +98,19 @@ export function BrowseHackathonGrid({ initialHackathons }: Props) {
     }
 
     if (query.length < 2) {
-      setResults(null)
+      if (query.length === 0 && page === initialPage) {
+        setHackathons(initialHackathons)
+        setTotalPages(initialTotalPages)
+      } else if (query.length === 0) {
+        fetchPage(1)
+      }
       setLoading(false)
       return
     }
 
     setLoading(true)
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/public/hackathons?q=${encodeURIComponent(query)}`)
-        if (res.ok) {
-          const data = await res.json()
-          setResults(data.hackathons)
-        }
-      } catch {
-        setResults(null)
-      } finally {
-        setLoading(false)
-      }
+    debounceRef.current = setTimeout(() => {
+      fetchPage(1, query)
     }, 300)
 
     return () => {
@@ -80,14 +118,28 @@ export function BrowseHackathonGrid({ initialHackathons }: Props) {
         clearTimeout(debounceRef.current)
       }
     }
-  }, [query])
+  }, [query, initialHackathons, initialPage, initialTotalPages, fetchPage, page])
 
-  const hackathons = results ?? initialHackathons
-  const sorted = results
-    ? hackathons
-    : sortByStatusPriority(
-        hackathons.map(toCardData)
-      ).map((c) => hackathons.find((h) => h.id === c.id)!)
+  function goToPage(targetPage: number) {
+    fetchPage(targetPage, isSearching ? query : undefined)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  function getPageNumbers() {
+    const pages: (number | "ellipsis")[] = []
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1)
+      if (page > 3) pages.push("ellipsis")
+      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+        pages.push(i)
+      }
+      if (page < totalPages - 2) pages.push("ellipsis")
+      pages.push(totalPages)
+    }
+    return pages
+  }
 
   return (
     <div className="space-y-4">
@@ -110,30 +162,81 @@ export function BrowseHackathonGrid({ initialHackathons }: Props) {
         />
       </div>
 
-      {sorted.length === 0 ? (
+      {hackathons.length === 0 && !loading ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Search className="size-10 text-muted-foreground mb-4" />
             <CardTitle className="mb-2">
-              {query.length >= 2 ? "No results found" : "No hackathons available"}
+              {isSearching ? "No results found" : "No hackathons available"}
             </CardTitle>
             <CardDescription>
-              {query.length >= 2
+              {isSearching
                 ? "Try a different search term"
                 : "Check back later for new hackathons"}
             </CardDescription>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {sorted.map((h) => (
-            <HackathonCard
-              key={h.id}
-              hackathon={toCardData(h)}
-              href={`/e/${h.slug}`}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {hackathons.map((h) => (
+              <HackathonCard
+                key={h.id}
+                hackathon={toCardData(h)}
+                href={`/e/${h.slug}`}
+              />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (page > 1) goToPage(page - 1)
+                    }}
+                    aria-disabled={page === 1}
+                    className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+                {getPageNumbers().map((p, i) =>
+                  p === "ellipsis" ? (
+                    <PaginationItem key={`ellipsis-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        href="#"
+                        isActive={p === page}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          goToPage(p)
+                        }}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (page < totalPages) goToPage(page + 1)
+                    }}
+                    aria-disabled={page === totalPages}
+                    className={page === totalPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
       )}
     </div>
   )

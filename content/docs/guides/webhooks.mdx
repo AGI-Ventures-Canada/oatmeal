@@ -1,20 +1,20 @@
 ---
 title: Webhooks
-description: Receive real-time notifications when agent runs complete.
+description: Receive real-time notifications for hackathon and submission events.
 ---
 
-Set up webhooks to get notified when agent runs start, complete, or fail.
+Set up webhooks to get notified when hackathons are created or updated, and when submissions are created or submitted.
 
 ## Overview
 
 Webhooks allow you to:
-- Receive real-time notifications for agent events
-- Avoid polling for run completion
+- Receive real-time notifications for hackathon and submission events
+- Avoid polling for status changes
 - Build event-driven integrations
 
 ## Creating a Webhook
 
-<CodeBlock language="typescript" showLineNumbers code={"import { createClient } from \"@oatmeal/sdk\"\n\nconst client = createClient(process.env.AGENTS_API_KEY!)\n\nconst { data: webhook } = await client.webhooks.create({\n  url: \"https://your-app.com/webhooks/agents\",\n  events: [\"agent_run.completed\", \"agent_run.failed\"]\n})\n\n// Save the secret for verifying signatures\nconsole.log(`Webhook secret: ${webhook.secret}`)"}>
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    url: \"https://your-app.com/webhooks/oatmeal\",\n    events: [\"hackathon.created\", \"submission.submitted\"],\n  }),\n})\n\nconst webhook = await res.json()\n\n// Save the secret for verifying signatures\nconsole.log(`Webhook secret: ${webhook.secret}`)"}>
   <CodeBlockHeader>
     <CodeBlockFilename>create-webhook.ts</CodeBlockFilename>
     <CodeBlockActions>
@@ -31,18 +31,18 @@ The webhook secret is only shown once. Store it securely for signature verificat
 
 | Event | Description |
 |-------|-------------|
-| `agent_run.started` | Agent run has started |
-| `agent_run.completed` | Agent run completed successfully |
-| `agent_run.failed` | Agent run failed |
-| `agent_run.step_completed` | A step within the run completed |
+| `hackathon.created` | A new hackathon was created |
+| `hackathon.updated` | A hackathon's settings were updated |
+| `submission.created` | A new submission draft was created |
+| `submission.submitted` | A submission was finalized and submitted |
 
 ## Webhook Payload
 
 Webhook requests include:
 - `event` - The event type
-- `data` - Event-specific data including `runId`, `agentId`, and results
+- `data` - Event-specific data including resource IDs and metadata
 
-<CodeBlock language="json" code={"{\n  \"event\": \"agent_run.completed\",\n  \"data\": {\n    \"runId\": \"run_abc123\",\n    \"agentId\": \"agent_xyz\",\n    \"status\": \"succeeded\",\n    \"result\": { ... }\n  }\n}"}>
+<CodeBlock language="json" code={"{\n  \"event\": \"submission.submitted\",\n  \"data\": {\n    \"hackathonId\": \"hack_abc123\",\n    \"submissionId\": \"sub_xyz456\",\n    \"title\": \"AI Code Review Bot\",\n    \"teamName\": \"BuilderSquad\",\n    \"submittedAt\": \"2026-02-10T15:30:00Z\"\n  }\n}"}>
   <CodeBlockHeader>
     <CodeBlockFilename>payload.json</CodeBlockFilename>
     <CodeBlockActions>
@@ -51,11 +51,13 @@ Webhook requests include:
   </CodeBlockHeader>
 </CodeBlock>
 
-## Handling Webhooks
+## Verifying Signatures
+
+Webhook requests include an `X-Webhook-Signature` header containing an HMAC-SHA256 hex digest of the request body, signed with your webhook secret.
 
 ### Express Example
 
-<CodeBlock language="typescript" showLineNumbers code={"import express from \"express\"\nimport crypto from \"crypto\"\n\nconst app = express()\napp.use(express.json())\n\nconst WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!\n\napp.post(\"/webhooks/agents\", (req, res) => {\n  // Verify signature\n  const signature = req.headers[\"x-webhook-signature\"] as string\n  const payload = JSON.stringify(req.body)\n  const expected = crypto\n    .createHmac(\"sha256\", WEBHOOK_SECRET)\n    .update(payload)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return res.status(401).send(\"Invalid signature\")\n  }\n\n  // Handle event\n  const { event, data } = req.body\n\n  switch (event) {\n    case \"agent_run.completed\":\n      console.log(`Run ${data.runId} completed:`, data.result)\n      break\n    case \"agent_run.failed\":\n      console.error(`Run ${data.runId} failed:`, data.error)\n      break\n  }\n\n  res.status(200).send(\"OK\")\n})"}>
+<CodeBlock language="typescript" showLineNumbers code={"import express from \"express\"\nimport crypto from \"crypto\"\n\nconst app = express()\napp.use(express.json())\n\nconst WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!\n\napp.post(\"/webhooks/oatmeal\", (req, res) => {\n  const signature = req.headers[\"x-webhook-signature\"] as string\n  const payload = JSON.stringify(req.body)\n  const expected = crypto\n    .createHmac(\"sha256\", WEBHOOK_SECRET)\n    .update(payload)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return res.status(401).send(\"Invalid signature\")\n  }\n\n  const { event, data } = req.body\n\n  switch (event) {\n    case \"hackathon.created\":\n      console.log(`Hackathon created: ${data.hackathonId}`)\n      break\n    case \"submission.submitted\":\n      console.log(`Submission received: ${data.submissionId}`)\n      break\n  }\n\n  res.status(200).send(\"OK\")\n})"}>
   <CodeBlockHeader>
     <CodeBlockFilename>express-webhook.ts</CodeBlockFilename>
     <CodeBlockActions>
@@ -66,7 +68,7 @@ Webhook requests include:
 
 ### Next.js API Route
 
-<CodeBlock language="typescript" showLineNumbers code={"import { NextRequest, NextResponse } from \"next/server\"\nimport crypto from \"crypto\"\n\nexport async function POST(req: NextRequest) {\n  const signature = req.headers.get(\"x-webhook-signature\")\n  const body = await req.text()\n\n  const expected = crypto\n    .createHmac(\"sha256\", process.env.WEBHOOK_SECRET!)\n    .update(body)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return NextResponse.json({ error: \"Invalid signature\" }, { status: 401 })\n  }\n\n  const { event, data } = JSON.parse(body)\n\n  if (event === \"agent_run.completed\") {\n    // Process completed run\n    await processResult(data.runId, data.result)\n  }\n\n  return NextResponse.json({ received: true })\n}"}>
+<CodeBlock language="typescript" showLineNumbers code={"import { NextRequest, NextResponse } from \"next/server\"\nimport crypto from \"crypto\"\n\nexport async function POST(req: NextRequest) {\n  const signature = req.headers.get(\"x-webhook-signature\")\n  const body = await req.text()\n\n  const expected = crypto\n    .createHmac(\"sha256\", process.env.WEBHOOK_SECRET!)\n    .update(body)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return NextResponse.json({ error: \"Invalid signature\" }, { status: 401 })\n  }\n\n  const { event, data } = JSON.parse(body)\n\n  if (event === \"submission.submitted\") {\n    await processSubmission(data.submissionId, data.title)\n  }\n\n  return NextResponse.json({ received: true })\n}"}>
   <CodeBlockHeader>
     <CodeBlockFilename>app/api/webhooks/route.ts</CodeBlockFilename>
     <CodeBlockActions>
@@ -79,7 +81,7 @@ Webhook requests include:
 
 ### List Webhooks
 
-<CodeBlock language="typescript" code={"const { data } = await client.webhooks.list()\n\nfor (const webhook of data.webhooks) {\n  console.log(`${webhook.url} - ${webhook.events.join(\", \")}`)\n}"}>
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst { webhooks } = await res.json()\n\nfor (const wh of webhooks) {\n  console.log(`${wh.url} - ${wh.events.join(\", \")}`)\n}"}>
   <CodeBlockHeader>
     <CodeBlockFilename>list-webhooks.ts</CodeBlockFilename>
     <CodeBlockActions>
@@ -90,7 +92,7 @@ Webhook requests include:
 
 ### Delete a Webhook
 
-<CodeBlock language="typescript" code={"await client.webhooks.delete(webhookId)"}>
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks/${webhookId}`, {\n  method: \"DELETE\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst data = await res.json()\nif (data.success) {\n  console.log(\"Webhook deleted\")\n}"}>
   <CodeBlockHeader>
     <CodeBlockFilename>delete-webhook.ts</CodeBlockFilename>
     <CodeBlockActions>

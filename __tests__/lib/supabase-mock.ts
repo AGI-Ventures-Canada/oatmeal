@@ -1,3 +1,45 @@
+/**
+ * Supabase Mock Utilities
+ *
+ * ## Mock Patterns
+ *
+ * ### Unit Tests (services, lib)
+ * Use closure-based mocks via `setMockFromImplementation` and `setMockRpcImplementation`.
+ * These work with the preloaded `mock.module("@/lib/db/client")` and allow per-test customization.
+ *
+ * ```typescript
+ * import { createChainableMock, resetSupabaseMocks, setMockFromImplementation } from "../lib/supabase-mock"
+ *
+ * beforeEach(() => resetSupabaseMocks())
+ *
+ * it("example", async () => {
+ *   setMockFromImplementation(() => createChainableMock({ data: {...}, error: null }))
+ *   const result = await myServiceFunction()
+ * })
+ * ```
+ *
+ * ### Integration Tests (*.integration.test.ts)
+ * Use `mock.module` at the service layer to mock entire services. This avoids
+ * database layer complexity and tests route handlers in isolation.
+ *
+ * ```typescript
+ * import { mock } from "bun:test"
+ *
+ * const mockListItems = mock(() => Promise.resolve([]))
+ * mock.module("@/lib/services/items", () => ({ listItems: mockListItems }))
+ *
+ * const { itemRoutes } = await import("@/lib/api/routes/items")
+ * ```
+ *
+ * ### Email Tests (*.email.test.ts)
+ * Use `mock.module` for email services. These are separated because they mock
+ * different modules and can conflict with integration test mocks.
+ *
+ * ## Why Separate Test Commands?
+ * Bun's `mock.module` persists across tests in the same run. Integration tests
+ * mock at the service layer while unit tests mock at the database layer - running
+ * them together causes mock isolation failures.
+ */
 import { mock } from "bun:test"
 
 export const mockAuth = mock(() =>
@@ -16,20 +58,43 @@ mock.module("@clerk/nextjs/server", () => ({
   clerkClient: mockClerkClient,
 }))
 
-type ChainableResult = {
-  data: unknown
-  error: unknown
+export type ChainableResult<T = unknown> = {
+  data: T | null
+  error: { message: string; code?: string } | null
   count?: number | null
 }
 
-let currentFromImpl: (table: string) => unknown = () => ({})
+type ChainMethod = ReturnType<typeof mock<() => ChainableMock>>
+
+export interface ChainableMock {
+  select: ChainMethod
+  insert: ChainMethod
+  update: ChainMethod
+  delete: ChainMethod
+  upsert: ChainMethod
+  eq: ChainMethod
+  neq: ChainMethod
+  in: ChainMethod
+  is: ChainMethod
+  or: ChainMethod
+  not: ChainMethod
+  contains: ChainMethod
+  order: ChainMethod
+  limit: ChainMethod
+  range: ChainMethod
+  single: ChainMethod
+  maybeSingle: ChainMethod
+  then: <TResult>(resolve: (value: ChainableResult) => TResult) => TResult
+}
+
+let currentFromImpl: (table: string) => ChainableMock = () => createChainableMock({ data: null, error: null })
 let currentRpcImpl: (fn: string, params: unknown) => Promise<ChainableResult> = () =>
   Promise.resolve({ data: null, error: null })
 
 export const mockFrom = mock((table: string) => currentFromImpl(table))
 export const mockRpc = mock((fn: string, params: unknown) => currentRpcImpl(fn, params))
 
-export function setMockFromImplementation(impl: (table: string) => unknown) {
+export function setMockFromImplementation(impl: (table: string) => ChainableMock) {
   currentFromImpl = impl
 }
 
@@ -39,8 +104,8 @@ export function setMockRpcImplementation(
   currentRpcImpl = impl
 }
 
-export function createChainableMock(resolvedValue: ChainableResult) {
-  const chain: Record<string, unknown> = {
+export function createChainableMock<T = unknown>(resolvedValue: ChainableResult<T>): ChainableMock {
+  const chain: ChainableMock = {
     select: mock(() => chain),
     insert: mock(() => chain),
     update: mock(() => chain),
@@ -58,7 +123,7 @@ export function createChainableMock(resolvedValue: ChainableResult) {
     range: mock(() => chain),
     single: mock(() => chain),
     maybeSingle: mock(() => chain),
-    then: (resolve: (v: unknown) => void) => resolve(resolvedValue),
+    then: (resolve) => resolve(resolvedValue as ChainableResult),
   }
   return chain
 }
@@ -66,8 +131,58 @@ export function createChainableMock(resolvedValue: ChainableResult) {
 export function resetSupabaseMocks() {
   mockFrom.mockClear()
   mockRpc.mockClear()
-  currentFromImpl = () => ({})
+  currentFromImpl = () => createChainableMock({ data: null, error: null })
   currentRpcImpl = () => Promise.resolve({ data: null, error: null })
+}
+
+/**
+ * Test Utilities - Common mock patterns for reducing boilerplate
+ */
+
+export function mockTableQuery<T>(
+  table: string,
+  result: ChainableResult<T>,
+  fallback: ChainableResult = { data: null, error: null }
+): void {
+  setMockFromImplementation((t) =>
+    t === table
+      ? createChainableMock(result)
+      : createChainableMock(fallback)
+  )
+}
+
+export function mockMultiTableQuery(
+  handlers: Record<string, ChainableResult>,
+  fallback: ChainableResult = { data: null, error: null }
+): void {
+  setMockFromImplementation((table) =>
+    handlers[table]
+      ? createChainableMock(handlers[table])
+      : createChainableMock(fallback)
+  )
+}
+
+export function mockRpcCall<T>(
+  fnName: string,
+  result: ChainableResult<T>
+): void {
+  setMockRpcImplementation((fn) =>
+    fn === fnName
+      ? Promise.resolve(result as ChainableResult)
+      : Promise.resolve({ data: null, error: null })
+  )
+}
+
+export function mockSuccess<T>(data: T): ChainableResult<T> {
+  return { data, error: null }
+}
+
+export function mockError(message: string, code?: string): ChainableResult<null> {
+  return { data: null, error: { message, code } }
+}
+
+export function mockCount(count: number): ChainableResult<null> {
+  return { data: null, error: null, count }
 }
 
 export function resetClerkMocks() {

@@ -4,6 +4,9 @@ import { createApiKey, listApiKeys, revokeApiKey, getApiKeyById } from "@/lib/se
 import { listJobs, getJobById } from "@/lib/services/jobs"
 import { logAudit } from "@/lib/services/audit"
 import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
+import { dashboardJudgingRoutes } from "./dashboard-judging"
+import { dashboardPrizesRoutes } from "./dashboard-prizes"
+import { dashboardResultsRoutes } from "./dashboard-results"
 import type { Scope } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
 
@@ -59,6 +62,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       orgRole: principal.orgRole,
       scopes: principal.scopes,
     }
+  }, {
+    detail: {
+      summary: "Get current principal",
+      description: "Returns info about the authenticated principal (user or API key).",
+    },
   })
   .get(
     "/organizations/search",
@@ -82,6 +90,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
     },
     {
+      detail: {
+        summary: "Search organizations",
+        description: "Searches tenants by name. Clerk-only.",
+      },
       query: t.Object({
         q: t.String({ minLength: 2 }),
         exclude: t.Optional(t.String()),
@@ -103,6 +115,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         revokedAt: k.revoked_at,
       })),
     }
+  }, {
+    detail: {
+      summary: "List API keys",
+      description: "Lists API keys for the tenant. Requires keys:read scope. Clerk-only.",
+    },
   })
   .post(
     "/keys",
@@ -137,6 +154,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
     },
     {
+      detail: {
+        summary: "Create API key",
+        description: "Creates a new API key and returns the raw key once. Requires keys:write scope. Clerk-only.",
+      },
       body: t.Object({
         name: t.String({ minLength: 1 }),
         scopes: t.Optional(t.Array(t.String())),
@@ -167,6 +188,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     })
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Revoke API key",
+      description: "Revokes an API key. Requires keys:write scope. Clerk-only.",
+    },
   })
   .get("/jobs", async ({ principal, query }) => {
     requirePrincipal(principal, ["user", "api_key"])
@@ -186,6 +212,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         completedAt: j.completed_at,
       })),
     }
+  }, {
+    detail: {
+      summary: "List jobs",
+      description: "Lists jobs for the tenant. Supports limit and offset pagination.",
+    },
   })
   .get("/jobs/:id", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"])
@@ -209,6 +240,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       updatedAt: job.updated_at,
       completedAt: job.completed_at,
     }
+  }, {
+    detail: {
+      summary: "Get job",
+      description: "Returns full job details including input, result, and error.",
+    },
   })
   .get("/webhooks", async ({ principal }) => {
     requirePrincipal(principal, ["user", "api_key"], ["webhooks:read"])
@@ -227,6 +263,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         createdAt: w.created_at,
       })),
     }
+  }, {
+    detail: {
+      summary: "List webhooks",
+      description: "Lists webhooks for the tenant. Requires webhooks:read scope.",
+    },
   })
   .post(
     "/webhooks",
@@ -259,6 +300,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
     },
     {
+      detail: {
+        summary: "Create webhook",
+        description: "Creates a webhook and returns the signing secret once. Requires webhooks:write scope.",
+      },
       body: t.Object({
         url: t.String({ format: "uri" }),
         events: t.Array(t.String()),
@@ -286,6 +331,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     })
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Delete webhook",
+      description: "Deletes a webhook. Requires webhooks:write scope.",
+    },
   })
   .get("/schedules", async ({ principal, query }) => {
     requirePrincipal(principal, ["user", "api_key"], ["schedules:read"])
@@ -311,6 +361,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         createdAt: s.created_at,
       })),
     }
+  }, {
+    detail: {
+      summary: "List schedules",
+      description: "Lists schedules for the tenant. Requires schedules:read scope.",
+    },
   })
   .post(
     "/schedules",
@@ -347,6 +402,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
     },
     {
+      detail: {
+        summary: "Create schedule",
+        description: "Creates a new schedule. Requires schedules:write scope.",
+      },
       body: t.Object({
         name: t.String({ minLength: 1 }),
         frequency: t.Union([
@@ -393,6 +452,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       createdAt: schedule.created_at,
       updatedAt: schedule.updated_at,
     }
+  }, {
+    detail: {
+      summary: "Get schedule",
+      description: "Returns full schedule details. Requires schedules:read scope.",
+    },
   })
   .patch(
     "/schedules/:id",
@@ -427,6 +491,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       return { id: schedule.id, nextRunAt: schedule.next_run_at, updatedAt: schedule.updated_at }
     },
     {
+      detail: {
+        summary: "Update schedule",
+        description: "Updates schedule settings. Requires schedules:write scope.",
+      },
       body: t.Object({
         name: t.Optional(t.String()),
         frequency: t.Optional(
@@ -468,6 +536,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     })
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Delete schedule",
+      description: "Deletes a schedule. Requires schedules:write scope.",
+    },
   })
   .get("/integrations", async ({ principal }) => {
     requirePrincipal(principal, ["user"])
@@ -486,6 +559,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         createdAt: i.created_at,
       })),
     }
+  }, {
+    detail: {
+      summary: "List integrations",
+      description: "Lists OAuth integrations for the tenant. Clerk-only.",
+    },
   })
   .get("/integrations/:provider/auth-url", async ({ principal, params }) => {
     requirePrincipal(principal, ["user"])
@@ -505,6 +583,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     }
 
     return { authUrl }
+  }, {
+    detail: {
+      summary: "Get OAuth auth URL",
+      description: "Returns the OAuth authorization URL for a provider. Clerk-only.",
+    },
   })
   .delete("/integrations/:provider", async ({ principal, params }) => {
     requirePrincipal(principal, ["user"])
@@ -530,6 +613,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     })
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Delete integration",
+      description: "Removes an OAuth integration. Clerk-only.",
+    },
   })
   .get("/credentials", async ({ principal }) => {
     requirePrincipal(principal, ["user"])
@@ -548,6 +636,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         createdAt: c.created_at,
       })),
     }
+  }, {
+    detail: {
+      summary: "List credentials",
+      description: "Lists stored API credentials for the tenant. Clerk-only.",
+    },
   })
   .post(
     "/credentials",
@@ -586,6 +679,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
     },
     {
+      detail: {
+        summary: "Save credential",
+        description: "Saves an API credential (e.g. Luma API key). Clerk-only.",
+      },
       body: t.Object({
         provider: t.String(),
         apiKey: t.String({ minLength: 1 }),
@@ -633,6 +730,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
     },
     {
+      detail: {
+        summary: "Update credential",
+        description: "Updates a stored credential. Clerk-only.",
+      },
       body: t.Object({
         apiKey: t.Optional(t.String({ minLength: 1 })),
         label: t.Optional(t.String()),
@@ -662,6 +763,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     })
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Delete credential",
+      description: "Deletes a stored credential. Clerk-only.",
+    },
   })
   .get("/hackathons", async ({ principal, query }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
@@ -687,6 +793,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         createdAt: h.created_at,
       })),
     }
+  }, {
+    detail: {
+      summary: "List organized hackathons",
+      description: "Lists hackathons organized by the tenant. Requires hackathons:read scope.",
+    },
   })
   .get("/hackathons/participating", async ({ principal, query }) => {
     requirePrincipal(principal, ["user"])
@@ -712,6 +823,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         role: h.role,
       })),
     }
+  }, {
+    detail: {
+      summary: "List participating hackathons",
+      description: "Lists hackathons the user is participating in. Clerk-only.",
+    },
   })
   .get("/hackathons/sponsored", async ({ principal, query }) => {
     requirePrincipal(principal, ["user"])
@@ -736,6 +852,40 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         registrationClosesAt: h.registration_closes_at,
       })),
     }
+  }, {
+    detail: {
+      summary: "List sponsored hackathons",
+      description: "Lists hackathons sponsored by the tenant. Clerk-only.",
+    },
+  })
+  .get("/hackathons/judging", async ({ principal, query }) => {
+    requirePrincipal(principal, ["user"])
+
+    const q = (query as Record<string, string | undefined>).q
+    const { listJudgingHackathons } = await import("@/lib/services/hackathons")
+    const hackathons = await listJudgingHackathons(principal.userId!, q ? { search: q } : undefined)
+
+    const { sortByStatusPriority } = await import("@/lib/utils/sort-hackathons")
+    const sorted = sortByStatusPriority(hackathons)
+
+    return {
+      hackathons: sorted.map((h) => ({
+        id: h.id,
+        name: h.name,
+        slug: h.slug,
+        description: h.description,
+        status: h.status,
+        startsAt: h.starts_at,
+        endsAt: h.ends_at,
+        registrationOpensAt: h.registration_opens_at,
+        registrationClosesAt: h.registration_closes_at,
+      })),
+    }
+  }, {
+    detail: {
+      summary: "List judging hackathons",
+      description: "Lists hackathons where the user is a judge. Clerk-only.",
+    },
   })
   .post(
     "/hackathons",
@@ -770,6 +920,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
     },
     {
+      detail: {
+        summary: "Create hackathon",
+        description: "Creates a new hackathon. Requires hackathons:write scope.",
+      },
       body: t.Object({
         name: t.String({ minLength: 1 }),
         description: t.Optional(t.Union([t.String(), t.Null()])),
@@ -812,9 +966,16 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       minTeamSize: hackathon.min_team_size,
       maxTeamSize: hackathon.max_team_size,
       allowSolo: hackathon.allow_solo,
+      anonymousJudging: hackathon.anonymous_judging,
+      resultsPublishedAt: hackathon.results_published_at,
       createdAt: hackathon.created_at,
       updatedAt: hackathon.updated_at,
     }
+  }, {
+    detail: {
+      summary: "Get hackathon",
+      description: "Returns full hackathon details for organizers. Requires hackathons:read scope.",
+    },
   })
   .patch(
     "/hackathons/:id/settings",
@@ -832,6 +993,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         registrationOpensAt: body.registrationOpensAt,
         registrationClosesAt: body.registrationClosesAt,
         status: body.status as "draft" | "published" | "registration_open" | "active" | "judging" | "completed" | "archived" | undefined,
+        anonymousJudging: body.anonymousJudging,
+        locationType: body.locationType as "in_person" | "virtual" | null | undefined,
+        locationName: body.locationName,
+        locationUrl: body.locationUrl,
       })
 
       if (!hackathon) {
@@ -854,6 +1019,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
     },
     {
+      detail: {
+        summary: "Update hackathon settings",
+        description: "Updates hackathon configuration. Requires hackathons:write scope.",
+      },
       body: t.Object({
         bannerUrl: t.Optional(t.Union([t.String(), t.Null()])),
         name: t.Optional(t.String()),
@@ -872,6 +1041,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
           t.Literal("completed"),
           t.Literal("archived"),
         ])),
+        anonymousJudging: t.Optional(t.Boolean()),
+        locationType: t.Optional(t.Union([t.Literal("in_person"), t.Literal("virtual"), t.Null()])),
+        locationName: t.Optional(t.Union([t.String(), t.Null()])),
+        locationUrl: t.Optional(t.Union([t.String(), t.Null()])),
       }),
     }
   )
@@ -923,7 +1096,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
       const { uploadBanner } = await import("@/lib/services/storage")
       const buffer = Buffer.from(await file.arrayBuffer())
-      const uploadResult = await uploadBanner(params.id, buffer, file.type)
+      const uploadResult = await uploadBanner(params.id, buffer)
 
       if (!uploadResult) {
         return new Response(JSON.stringify({ error: "Failed to upload banner" }), {
@@ -945,6 +1118,12 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       })
 
       return { url: uploadResult.url }
+    },
+    {
+      detail: {
+        summary: "Upload hackathon banner",
+        description: "Uploads a banner image. Accepts PNG, JPEG, or WebP (max 50MB). Requires hackathons:write scope.",
+      },
     }
   )
   .delete("/hackathons/:id/banner", async ({ principal, params }) => {
@@ -982,6 +1161,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     })
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Delete hackathon banner",
+      description: "Removes the hackathon banner image. Requires hackathons:write scope.",
+    },
   })
   .get("/hackathons/:id/sponsors", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
@@ -1024,6 +1208,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         createdAt: s.created_at,
       })),
     }
+  }, {
+    detail: {
+      summary: "List sponsors",
+      description: "Lists sponsors for a hackathon. Requires hackathons:read scope.",
+    },
   })
   .post(
     "/hackathons/:id/sponsors",
@@ -1080,6 +1269,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
     },
     {
+      detail: {
+        summary: "Add sponsor",
+        description: "Adds a sponsor to a hackathon. Requires hackathons:write scope.",
+      },
       body: t.Object({
         name: t.String({ minLength: 1 }),
         logoUrl: t.Optional(t.Union([t.String(), t.Null()])),
@@ -1141,6 +1334,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
     },
     {
+      detail: {
+        summary: "Update sponsor",
+        description: "Updates sponsor details. Requires hackathons:write scope.",
+      },
       body: t.Object({
         name: t.Optional(t.String()),
         logoUrl: t.Optional(t.Union([t.String(), t.Null()])),
@@ -1188,6 +1385,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     })
 
     return { success: true }
+  }, {
+    detail: {
+      summary: "Remove sponsor",
+      description: "Removes a sponsor from a hackathon. Requires hackathons:write scope.",
+    },
   })
   .patch(
     "/hackathons/:id/sponsors/reorder",
@@ -1223,6 +1425,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       return { success: true }
     },
     {
+      detail: {
+        summary: "Reorder sponsors",
+        description: "Updates sponsor display order. Requires hackathons:write scope.",
+      },
       body: t.Object({
         sponsorIds: t.Array(t.String()),
       }),
@@ -1249,6 +1455,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       description: tenant.description,
       websiteUrl: tenant.website_url,
     }
+  }, {
+    detail: {
+      summary: "Get organization profile",
+      description: "Returns the tenant's profile. Requires org:read scope.",
+    },
   })
   .patch(
     "/org-profile",
@@ -1297,6 +1508,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
     },
     {
+      detail: {
+        summary: "Update organization profile",
+        description: "Updates the tenant profile. Slug uniqueness is validated. Requires org:write scope.",
+      },
       body: t.Object({
         name: t.Optional(t.String()),
         slug: t.Optional(t.Union([t.String(), t.Null()])),
@@ -1338,8 +1553,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         })
       }
 
-      if (file.size > 2 * 1024 * 1024) {
-        return new Response(JSON.stringify({ error: "File too large (max 2MB)" }), {
+      if (file.size > 30 * 1024 * 1024) {
+        return new Response(JSON.stringify({ error: "File too large (max 30MB)" }), {
           status: 400,
           headers: { "Content-Type": "application/json" },
         })
@@ -1372,6 +1587,12 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       })
 
       return { url: result.url, variant }
+    },
+    {
+      detail: {
+        summary: "Upload organization logo",
+        description: "Uploads a logo image with light or dark variant. Requires org:write scope.",
+      },
     }
   )
   .delete(
@@ -1406,5 +1627,163 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       })
 
       return { success: true }
+    },
+    {
+      detail: {
+        summary: "Delete organization logo",
+        description: "Deletes a logo variant (light or dark). Requires org:write scope.",
+      },
     }
   )
+  .post(
+    "/teams/:teamId/invitations",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user"])
+
+      const rateLimitResult = checkRateLimit(`team_invitation:${params.teamId}`, {
+        maxRequests: 10,
+        windowMs: 60_000,
+      })
+      if (!rateLimitResult.allowed) {
+        throw new RateLimitError(rateLimitResult.resetAt, rateLimitResult.remaining)
+      }
+
+      const { createTeamInvitation, getTeamWithHackathon } = await import(
+        "@/lib/services/team-invitations"
+      )
+      const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
+
+      const result = await createTeamInvitation({
+        teamId: params.teamId,
+        hackathonId: body.hackathonId,
+        email: body.email,
+        invitedByClerkUserId: principal.userId!,
+      })
+
+      if (!result.success) {
+        return new Response(JSON.stringify({ error: result.error, code: result.code }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      let emailSent = false
+      const teamInfo = await getTeamWithHackathon(params.teamId)
+
+      if (teamInfo) {
+        const emailResult = await sendTeamInvitationEmail({
+          to: body.email,
+          teamName: teamInfo.name,
+          hackathonName: teamInfo.hackathon.name,
+          inviterName: body.inviterName || "A team captain",
+          inviteToken: result.invitation.token,
+          expiresAt: result.invitation.expires_at,
+        })
+        emailSent = emailResult.success
+      }
+
+      await logAudit({
+        principal,
+        action: "team_invitation.sent",
+        resourceType: "team_invitation",
+        resourceId: result.invitation.id,
+        metadata: { teamId: params.teamId, email: body.email },
+      })
+
+      return {
+        id: result.invitation.id,
+        email: result.invitation.email,
+        expiresAt: result.invitation.expires_at,
+        emailSent,
+      }
+    },
+    {
+      detail: {
+        summary: "Send team invitation",
+        description: "Sends an email invitation to join a team. Rate limited. Clerk-only.",
+      },
+      body: t.Object({
+        hackathonId: t.String(),
+        email: t.String({ format: "email" }),
+        inviterName: t.Optional(t.String()),
+      }),
+    }
+  )
+  .get(
+    "/teams/:teamId/invitations",
+    async ({ principal, params, query }) => {
+      requirePrincipal(principal, ["user"])
+
+      const { listTeamInvitations } = await import("@/lib/services/team-invitations")
+      const result = await listTeamInvitations(
+        params.teamId,
+        principal.userId!,
+        query.status ? { status: query.status } : undefined
+      )
+
+      if (!result.success) {
+        const status = result.code === "team_not_found" ? 404 : 403
+        return new Response(JSON.stringify({ error: result.error }), {
+          status,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      return {
+        invitations: result.invitations.map((i) => ({
+          id: i.id,
+          email: i.email,
+          status: i.status,
+          expiresAt: i.expires_at,
+          createdAt: i.created_at,
+        })),
+      }
+    },
+    {
+      detail: {
+        summary: "List team invitations",
+        description: "Lists invitations for a team. Clerk-only.",
+      },
+      query: t.Object({
+        status: t.Optional(
+          t.Union([
+            t.Literal("pending"),
+            t.Literal("accepted"),
+            t.Literal("declined"),
+            t.Literal("expired"),
+            t.Literal("cancelled"),
+          ])
+        ),
+      }),
+    }
+  )
+  .delete("/teams/:teamId/invitations/:invitationId", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user"])
+
+    const { cancelTeamInvitation } = await import("@/lib/services/team-invitations")
+    const result = await cancelTeamInvitation(params.invitationId, principal.userId!)
+
+    if (!result.success) {
+      return new Response(JSON.stringify({ error: result.error }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    await logAudit({
+      principal,
+      action: "team_invitation.cancelled",
+      resourceType: "team_invitation",
+      resourceId: params.invitationId,
+    })
+
+    return { success: true }
+  }, {
+    detail: {
+      summary: "Cancel team invitation",
+      description: "Cancels a pending team invitation. Clerk-only.",
+    },
+  })
+  .use(dashboardJudgingRoutes)
+  .use(dashboardPrizesRoutes)
+  .use(dashboardResultsRoutes)

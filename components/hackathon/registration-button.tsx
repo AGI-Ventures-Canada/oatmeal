@@ -17,6 +17,7 @@ interface RegistrationButtonProps {
   maxParticipants: number | null
   participantCount: number
   isRegistered: boolean
+  onRegistrationSuccess?: () => void
 }
 
 const blockedStatuses: HackathonStatus[] = ["draft", "archived", "completed", "judging"]
@@ -31,6 +32,7 @@ export function RegistrationButton({
   maxParticipants,
   participantCount,
   isRegistered: initialIsRegistered,
+  onRegistrationSuccess,
 }: RegistrationButtonProps) {
   const { isSignedIn, isLoaded } = useUser()
   const pathname = usePathname()
@@ -63,10 +65,16 @@ export function RegistrationButton({
   const eventEndsAt = endsAt ? new Date(endsAt) : null
 
   if (blockedStatuses.includes(status)) {
+    const blockedMessage: Record<string, string> = {
+      draft: "Registration Not Open Yet",
+      judging: "Judging in Progress",
+      completed: "Event Completed",
+      archived: "Event Archived",
+    }
     return (
       <Button disabled variant="secondary" size="lg">
         <Lock className="size-4" />
-        Registration Not Available
+        {blockedMessage[status] ?? "Registration Not Available"}
       </Button>
     )
   }
@@ -170,6 +178,7 @@ export function RegistrationButton({
       }
 
       setIsRegistered(true)
+      onRegistrationSuccess?.()
       router.refresh()
     } catch (err) {
       if (err instanceof TypeError && err.message.includes("fetch")) {

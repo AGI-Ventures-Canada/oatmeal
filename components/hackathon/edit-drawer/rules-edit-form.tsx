@@ -10,6 +10,8 @@ import {
   FieldDescription,
   FieldGroup,
 } from "@/components/ui/field"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
+import { Undo2 } from "lucide-react"
 import { useEdit } from "@/components/hackathon/preview/edit-context"
 
 interface RulesEditFormProps {
@@ -17,25 +19,24 @@ interface RulesEditFormProps {
   initialData: {
     rules: string | null
   }
+  onSaveAndNext?: () => void
 }
 
-export function RulesEditForm({ hackathonId, initialData }: RulesEditFormProps) {
+export function RulesEditForm({ hackathonId, initialData, onSaveAndNext }: RulesEditFormProps) {
   const router = useRouter()
   const { closeDrawer } = useEdit()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [rules, setRules] = useState(initialData.rules || "")
+  const isDirty = rules !== (initialData.rules || "")
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
-      e.preventDefault()
-      handleSubmit(e as unknown as React.FormEvent)
-    }
+  function handleReset() {
+    setRules(initialData.rules || "")
+    setError(null)
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function save() {
     setSaving(true)
     setError(null)
 
@@ -54,10 +55,35 @@ export function RulesEditForm({ hackathonId, initialData }: RulesEditFormProps) 
       }
 
       router.refresh()
-      closeDrawer()
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save")
       setSaving(false)
+      return false
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!isDirty) return
+    const ok = await save()
+    if (ok) closeDrawer()
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
+      e.preventDefault()
+      if (!isDirty) {
+        if (onSaveAndNext) { onSaveAndNext() } else { closeDrawer() }
+        return
+      }
+      save().then(ok => {
+        if (ok) { if (onSaveAndNext) { onSaveAndNext() } else { closeDrawer() } }
+      })
+    }
+    if (e.key === "Escape" && isDirty) {
+      e.preventDefault()
+      handleReset()
     }
   }
 
@@ -88,13 +114,31 @@ export function RulesEditForm({ hackathonId, initialData }: RulesEditFormProps) 
         )}
       </FieldGroup>
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={saving}>
-          {saving ? "Saving..." : "Save"}
-        </Button>
-        <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
-          Cancel
-        </Button>
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          <Button type="submit" disabled={saving || !isDirty}>
+            {saving ? "Saving..." : "Save"}
+          </Button>
+          <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
+            Cancel
+          </Button>
+          {isDirty && (
+            <Button type="button" variant="ghost" onClick={handleReset} disabled={saving}>
+              <Undo2 className="size-4 mr-1" />
+              Reset
+            </Button>
+          )}
+        </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <KbdGroup><Kbd>⌘</Kbd><Kbd>↵</Kbd></KbdGroup> save & next
+          </span>
+          {isDirty && (
+            <span className="inline-flex items-center gap-1">
+              <Kbd>Esc</Kbd> reset
+            </span>
+          )}
+        </div>
       </div>
     </form>
   )

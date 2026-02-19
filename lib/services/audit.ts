@@ -41,6 +41,21 @@ export type AuditAction =
   | "org_profile.updated"
   | "logo.uploaded"
   | "logo.deleted"
+  | "team_invitation.sent"
+  | "team_invitation.cancelled"
+  | "judging_criteria.created"
+  | "judging_criteria.deleted"
+  | "judge.added"
+  | "judge.removed"
+  | "judge.invited"
+  | "judge_invitation.cancelled"
+  | "judging.auto_assigned"
+  | "prize.created"
+  | "prize.deleted"
+  | "prize.assigned"
+  | "results.calculated"
+  | "results.published"
+  | "results.unpublished"
 
 export type LogAuditInput = {
   principal: Exclude<Principal, { kind: "anon" }>

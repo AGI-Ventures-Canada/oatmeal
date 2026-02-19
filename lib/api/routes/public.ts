@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia"
-import { auth } from "@clerk/nextjs/server"
+import { auth, clerkClient } from "@clerk/nextjs/server"
 import { exchangeCodeForTokens, saveIntegration, getProviderConfig } from "@/lib/integrations/oauth"
 import { getPublicHackathon, listPublicHackathons } from "@/lib/services/public-hackathons"
 import { registerForHackathon, getParticipantCount, isUserRegistered } from "@/lib/services/hackathons"
@@ -17,7 +17,12 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
   .get("/health", () => ({
     status: "ok",
     timestamp: new Date().toISOString(),
-  }))
+  }), {
+    detail: {
+      summary: "Health check",
+      description: "Returns service health status and current timestamp.",
+    },
+  })
   .get("/integrations/:provider/callback", async ({ params, query }) => {
     const { provider } = params
     const code = query.code as string | undefined
@@ -87,6 +92,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       `<html><body><h1>Success!</h1><p>${provider} connected successfully.</p><script>setTimeout(() => window.close(), 2000)</script></body></html>`,
       { headers: { "Content-Type": "text/html" } }
     )
+  }, {
+    detail: {
+      summary: "OAuth callback",
+      description: "Handles OAuth provider callback. Exchanges authorization code for tokens and saves the integration. Browser-only flow.",
+    },
   })
   .get("/hackathons/:slug", async ({ params }) => {
     const hackathon = await getPublicHackathon(params.slug)
@@ -131,6 +141,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
           : null,
       })),
     }
+  }, {
+    detail: {
+      summary: "Get hackathon by slug",
+      description: "Returns public hackathon details including sponsors.",
+    },
   })
   .post("/hackathons/:slug/register", async ({ params }) => {
     const { userId } = await auth()
@@ -151,7 +166,21 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
-    const result = await registerForHackathon(hackathon.id, userId)
+    let teamName: string | undefined
+    try {
+      const client = await clerkClient()
+      const user = await client.users.getUser(userId)
+      const displayName = user.firstName
+        ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
+        : user.username || user.emailAddresses?.[0]?.emailAddress?.split("@")[0]
+      if (displayName) {
+        teamName = `${displayName}'s Team`
+      }
+    } catch (err) {
+      console.warn("Failed to fetch user for team name:", err)
+    }
+
+    const result = await registerForHackathon(hackathon.id, userId, teamName)
 
     if (!result.success) {
       const statusCode = result.code === "already_registered" ? 409 : 400
@@ -161,7 +190,12 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
-    return { success: true, participantId: result.participantId }
+    return { success: true, participantId: result.participantId, teamId: result.teamId }
+  }, {
+    detail: {
+      summary: "Register for hackathon",
+      description: "Registers the authenticated user for a hackathon. Requires Clerk session.",
+    },
   })
   .get("/hackathons/:slug/submissions/me", async ({ params }) => {
     const { userId } = await auth()
@@ -189,11 +223,17 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         description: submission.description,
         githubUrl: submission.github_url,
         liveAppUrl: submission.live_app_url,
+        screenshotUrl: submission.screenshot_url,
         status: submission.status,
         createdAt: submission.created_at,
         updatedAt: submission.updated_at,
       },
     }
+  }, {
+    detail: {
+      summary: "Get my submission",
+      description: "Returns the authenticated user's submission for a hackathon.",
+    },
   })
   .get("/hackathons/:slug/submissions", async ({ params }) => {
     const hackathon = await getPublicHackathon(params.slug)
@@ -215,11 +255,17 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         githubUrl: s.github_url,
         liveAppUrl: s.live_app_url,
         demoVideoUrl: s.demo_video_url,
+        screenshotUrl: s.screenshot_url,
         status: s.status,
         createdAt: s.created_at,
         submitter: s.submitter_name,
       })),
     }
+  }, {
+    detail: {
+      summary: "List submissions",
+      description: "Lists all submissions for a hackathon.",
+    },
   })
   .post(
     "/hackathons/:slug/submissions",
@@ -308,6 +354,10 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       return { success: true, submissionId: submission.id }
     },
     {
+      detail: {
+        summary: "Create submission",
+        description: "Creates a new project submission. Requires registration and active hackathon.",
+      },
       body: t.Object({
         title: t.String({ minLength: 1, maxLength: 100 }),
         description: t.String({ minLength: 1, maxLength: 280 }),
@@ -405,6 +455,10 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       return { success: true, submissionId: submission.id }
     },
     {
+      detail: {
+        summary: "Update submission",
+        description: "Updates an existing submission. All fields optional.",
+      },
       body: t.Object({
         title: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
         description: t.Optional(t.String({ minLength: 1, maxLength: 280 })),
@@ -413,15 +467,190 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       }),
     }
   )
-  .get("/hackathons", async ({ query }) => {
-    const q = (query as Record<string, string | undefined>).q
-    const hackathons = await listPublicHackathons(q ? { search: q } : undefined)
+  .post("/hackathons/:slug/submissions/screenshot", async ({ params, request }) => {
+    const { userId } = await auth()
 
-    const { sortByStatusPriority } = await import("@/lib/utils/sort-hackathons")
-    const sorted = sortByStatusPriority(hackathons)
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const hackathon = await getPublicHackathon(params.slug)
+
+    if (!hackathon) {
+      return new Response(
+        JSON.stringify({ error: "Hackathon not found", code: "hackathon_not_found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (hackathon.status !== "active") {
+      return new Response(
+        JSON.stringify({ error: "Submissions are not currently open", code: "submissions_closed" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const participant = await getParticipantWithTeam(hackathon.id, userId)
+
+    if (!participant) {
+      return new Response(
+        JSON.stringify({ error: "You must register before uploading", code: "not_registered" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const existing = await getExistingSubmission(
+      hackathon.id,
+      participant.participantId,
+      participant.teamId
+    )
+
+    if (!existing) {
+      return new Response(
+        JSON.stringify({ error: "Create a submission first before uploading a screenshot", code: "no_submission" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const formData = await request.formData()
+    const file = formData.get("file") as File | null
+
+    if (!file) {
+      return new Response(
+        JSON.stringify({ error: "No file provided", code: "no_file" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid file type. Use PNG, JPEG, or WebP", code: "invalid_file_type" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      return new Response(
+        JSON.stringify({ error: "File too large (max 10MB)", code: "file_too_large" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { uploadScreenshot } = await import("@/lib/services/storage")
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const uploadResult = await uploadScreenshot(existing.id, buffer)
+
+    if (!uploadResult) {
+      return new Response(
+        JSON.stringify({ error: "Failed to upload screenshot", code: "upload_failed" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const updated = await updateSubmission(
+      existing.id,
+      participant.participantId,
+      participant.teamId,
+      { screenshotUrl: uploadResult.url }
+    )
+
+    if (!updated) {
+      return new Response(
+        JSON.stringify({ error: "Failed to save screenshot URL", code: "update_failed" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    return { success: true, screenshotUrl: uploadResult.url }
+  }, {
+    detail: {
+      summary: "Upload submission screenshot",
+      description: "Uploads a screenshot image for the user's submission. Accepts PNG, JPEG, or WebP (max 10MB).",
+    },
+  })
+  .delete("/hackathons/:slug/submissions/screenshot", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const hackathon = await getPublicHackathon(params.slug)
+
+    if (!hackathon) {
+      return new Response(
+        JSON.stringify({ error: "Hackathon not found", code: "hackathon_not_found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (hackathon.status !== "active") {
+      return new Response(
+        JSON.stringify({ error: "Submissions are not currently open", code: "submissions_closed" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const participant = await getParticipantWithTeam(hackathon.id, userId)
+
+    if (!participant) {
+      return new Response(
+        JSON.stringify({ error: "Not registered", code: "not_registered" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const existing = await getExistingSubmission(
+      hackathon.id,
+      participant.participantId,
+      participant.teamId
+    )
+
+    if (!existing) {
+      return new Response(
+        JSON.stringify({ error: "No submission found", code: "no_submission" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { deleteScreenshot } = await import("@/lib/services/storage")
+    await deleteScreenshot(existing.id)
+
+    await updateSubmission(
+      existing.id,
+      participant.participantId,
+      participant.teamId,
+      { screenshotUrl: null }
+    )
+
+    return { success: true }
+  }, {
+    detail: {
+      summary: "Delete submission screenshot",
+      description: "Removes the screenshot from the user's submission.",
+    },
+  })
+  .get("/hackathons", async ({ query }) => {
+    const params = query as Record<string, string | undefined>
+    const q = params.q
+    const page = Math.max(1, parseInt(params.page || "1", 10) || 1)
+    const limit = Math.min(50, Math.max(1, parseInt(params.limit || "9", 10) || 9))
+
+    const { hackathons, total } = await listPublicHackathons({
+      search: q,
+      page,
+      limit,
+    })
 
     return {
-      hackathons: sorted.map((h) => ({
+      hackathons: hackathons.map((h) => ({
         id: h.id,
         name: h.name,
         slug: h.slug,
@@ -439,7 +668,15 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
           logoUrl: h.organizer.logo_url,
         },
       })),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
     }
+  }, {
+    detail: {
+      summary: "List hackathons",
+      description: "Lists public hackathons with pagination. Supports ?q= for search, ?page= and ?limit= for pagination (default 9 per page).",
+    },
   })
   .get("/hackathons/:slug/registration", async ({ params }) => {
     const hackathon = await getPublicHackathon(params.slug)
@@ -461,6 +698,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       participantCount,
       isRegistered: userId ? registered : null,
     }
+  }, {
+    detail: {
+      summary: "Get registration info",
+      description: "Returns participant count and current user's registration status.",
+    },
   })
   .get("/orgs/:slug", async ({ params }) => {
     const tenant = await getPublicTenantWithEvents(params.slug)
@@ -507,4 +749,429 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         },
       })),
     }
+  }, {
+    detail: {
+      summary: "Get organization profile",
+      description: "Returns an organization's public profile with organized and sponsored hackathons.",
+    },
+  })
+  .get("/invitations/:token", async ({ params }) => {
+    const { getInvitationByToken } = await import("@/lib/services/team-invitations")
+    const invitation = await getInvitationByToken(params.token)
+
+    if (!invitation) {
+      return new Response(
+        JSON.stringify({ error: "Invitation not found", code: "not_found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const now = new Date()
+    const isExpired = new Date(invitation.expires_at) < now
+
+    return {
+      id: invitation.id,
+      status: isExpired && invitation.status === "pending" ? "expired" : invitation.status,
+      teamName: invitation.team.name,
+      hackathonName: invitation.hackathon.name,
+      hackathonSlug: invitation.hackathon.slug,
+      hackathonStatus: invitation.hackathon.status,
+      email: invitation.email,
+      expiresAt: invitation.expires_at,
+    }
+  }, {
+    detail: {
+      summary: "Get team invitation",
+      description: "Returns team invitation details by token.",
+    },
+  })
+  .post("/invitations/:token/accept", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const client = await clerkClient()
+    const user = await client.users.getUser(userId)
+    const userEmail = user.primaryEmailAddress?.emailAddress
+
+    if (!userEmail) {
+      return new Response(
+        JSON.stringify({ error: "No email address found", code: "no_email" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { acceptTeamInvitation } = await import("@/lib/services/team-invitations")
+    const result = await acceptTeamInvitation(params.token, userId, userEmail)
+
+    if (!result.success) {
+      const statusCode = result.code === "not_found" ? 404 : 400
+      return new Response(
+        JSON.stringify({ error: result.error, code: result.code }),
+        { status: statusCode, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getPublicHackathonById } = await import("@/lib/services/public-hackathons")
+    const hackathon = await getPublicHackathonById(result.hackathonId)
+
+    return { success: true, teamId: result.teamId, hackathonSlug: hackathon?.slug || null }
+  }, {
+    detail: {
+      summary: "Accept team invitation",
+      description: "Accepts a team invitation and joins the team. Requires Clerk session.",
+    },
+  })
+  .post("/invitations/:token/decline", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const client = await clerkClient()
+    const user = await client.users.getUser(userId)
+    const userEmail = user.primaryEmailAddress?.emailAddress
+
+    if (!userEmail) {
+      return new Response(
+        JSON.stringify({ error: "No email address found", code: "no_email" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { declineTeamInvitation } = await import("@/lib/services/team-invitations")
+    const result = await declineTeamInvitation(params.token, userEmail)
+
+    if (!result.success) {
+      const statusCode = result.code === "not_found" ? 404 : 403
+      return new Response(
+        JSON.stringify({ error: result.error, code: result.code }),
+        { status: statusCode, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    return { success: result.success }
+  }, {
+    detail: {
+      summary: "Decline team invitation",
+      description: "Declines a team invitation. Requires Clerk session.",
+    },
+  })
+  .get("/hackathons/:slug/judging/assignments", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const hackathon = await getPublicHackathon(params.slug)
+    if (!hackathon) {
+      return new Response(
+        JSON.stringify({ error: "Hackathon not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getJudgeAssignments } = await import("@/lib/services/judging")
+    const assignments = await getJudgeAssignments(hackathon.id, userId)
+
+    const anonymize = hackathon.anonymous_judging
+    return {
+      assignments: assignments.map((a) => ({
+        id: a.id,
+        submissionId: a.submissionId,
+        submissionTitle: a.submissionTitle,
+        submissionDescription: a.submissionDescription,
+        submissionGithubUrl: a.submissionGithubUrl,
+        submissionLiveAppUrl: a.submissionLiveAppUrl,
+        submissionScreenshotUrl: a.submissionScreenshotUrl,
+        teamName: anonymize ? null : a.teamName,
+        isComplete: a.isComplete,
+        notes: a.notes,
+      })),
+    }
+  }, {
+    detail: {
+      summary: "List my judging assignments",
+      description: "Returns the authenticated judge's assignments for a hackathon. Requires Clerk session.",
+    },
+  })
+  .get("/hackathons/:slug/judging/assignments/:assignmentId", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const hackathon = await getPublicHackathon(params.slug)
+    if (!hackathon) {
+      return new Response(
+        JSON.stringify({ error: "Hackathon not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getAssignmentDetail } = await import("@/lib/services/judging")
+    const detail = await getAssignmentDetail(params.assignmentId, userId)
+
+    if (!detail) {
+      return new Response(
+        JSON.stringify({ error: "Assignment not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const anonymize = hackathon.anonymous_judging
+    return {
+      ...detail,
+      teamName: anonymize ? null : detail.teamName,
+    }
+  }, {
+    detail: {
+      summary: "Get assignment detail",
+      description: "Returns full details for a specific judging assignment including criteria and scores.",
+    },
+  })
+  .post(
+    "/hackathons/:slug/judging/assignments/:assignmentId/scores",
+    async ({ params, body }) => {
+      const { userId } = await auth()
+
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const hackathon = await getPublicHackathon(params.slug)
+      if (!hackathon) {
+        return new Response(
+          JSON.stringify({ error: "Hackathon not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      if (hackathon.status !== "judging") {
+        return new Response(
+          JSON.stringify({ error: "Hackathon is not in judging phase", code: "not_judging" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const { submitScores } = await import("@/lib/services/judging")
+      const result = await submitScores(params.assignmentId, userId, {
+        scores: body.scores,
+        notes: body.notes,
+      })
+
+      if (!result.success) {
+        return new Response(
+          JSON.stringify({ error: result.error, code: result.code }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      return { success: true }
+    },
+    {
+      detail: {
+        summary: "Submit scores",
+        description: "Submits scores for a judging assignment. Hackathon must be in judging phase.",
+      },
+      body: t.Object({
+        scores: t.Array(
+          t.Object({
+            criteriaId: t.String(),
+            score: t.Number({ minimum: 0 }),
+          })
+        ),
+        notes: t.Optional(t.String()),
+      }),
+    }
+  )
+  .patch(
+    "/hackathons/:slug/judging/assignments/:assignmentId/notes",
+    async ({ params, body }) => {
+      const { userId } = await auth()
+
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const { saveNotes } = await import("@/lib/services/judging")
+      const success = await saveNotes(params.assignmentId, userId, (body as { notes: string }).notes)
+
+      if (!success) {
+        return new Response(
+          JSON.stringify({ error: "Failed to save notes" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      return { success: true }
+    },
+    {
+      detail: {
+        summary: "Save judge notes",
+        description: "Saves private notes for a judging assignment.",
+      },
+    }
+  )
+  .get("/judge-invitations/:token", async ({ params }) => {
+    const { getJudgeInvitationByToken } = await import("@/lib/services/judge-invitations")
+    const invitation = await getJudgeInvitationByToken(params.token)
+
+    if (!invitation) {
+      return new Response(
+        JSON.stringify({ error: "Invitation not found", code: "not_found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const now = new Date()
+    const isExpired = new Date(invitation.expires_at) < now
+
+    return {
+      id: invitation.id,
+      status: isExpired && invitation.status === "pending" ? "expired" : invitation.status,
+      hackathonName: invitation.hackathon.name,
+      hackathonSlug: invitation.hackathon.slug,
+      email: invitation.email,
+      expiresAt: invitation.expires_at,
+    }
+  }, {
+    detail: {
+      summary: "Get judge invitation",
+      description: "Returns judge invitation details by token.",
+    },
+  })
+  .post("/judge-invitations/:token/accept", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const client = await clerkClient()
+    const user = await client.users.getUser(userId)
+    const userEmail = user.primaryEmailAddress?.emailAddress
+
+    if (!userEmail) {
+      return new Response(
+        JSON.stringify({ error: "No email address found", code: "no_email" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { acceptJudgeInvitation } = await import("@/lib/services/judge-invitations")
+    const result = await acceptJudgeInvitation(params.token, userId, userEmail)
+
+    if (!result.success) {
+      const statusCode = result.code === "not_found" ? 404 : 400
+      return new Response(
+        JSON.stringify({ error: result.error, code: result.code }),
+        { status: statusCode, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    return { success: true, hackathonSlug: result.hackathonSlug }
+  }, {
+    detail: {
+      summary: "Accept judge invitation",
+      description: "Accepts a judge invitation and adds user as judge. Requires Clerk session.",
+    },
+  })
+  .post("/judge-invitations/:token/decline", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getJudgeInvitationByToken } = await import("@/lib/services/judge-invitations")
+    const { cancelJudgeInvitation } = await import("@/lib/services/judge-invitations")
+
+    const invitation = await getJudgeInvitationByToken(params.token)
+    if (!invitation) {
+      return new Response(
+        JSON.stringify({ error: "Invitation not found", code: "not_found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const result = await cancelJudgeInvitation(invitation.id, invitation.hackathon_id)
+    if (!result.success) {
+      return new Response(
+        JSON.stringify({ error: result.error }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    return { success: true }
+  }, {
+    detail: {
+      summary: "Decline judge invitation",
+      description: "Declines a judge invitation. Requires Clerk session.",
+    },
+  })
+  .get("/hackathons/:slug/results", async ({ params }) => {
+    const hackathon = await getPublicHackathon(params.slug)
+
+    if (!hackathon) {
+      return new Response(
+        JSON.stringify({ error: "Hackathon not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getPublicResults } = await import("@/lib/services/results")
+    const results = await getPublicResults(hackathon.id)
+
+    if (!results) {
+      return new Response(
+        JSON.stringify({ error: "Results not yet published" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    return {
+      results: results.map((r) => ({
+        rank: r.rank,
+        submissionTitle: r.submissionTitle,
+        teamName: r.teamName,
+        weightedScore: r.weighted_score,
+        judgeCount: r.judge_count,
+        prizes: r.prizes,
+      })),
+    }
+  }, {
+    detail: {
+      summary: "Get public results",
+      description: "Returns published results and rankings for a hackathon.",
+    },
   })
