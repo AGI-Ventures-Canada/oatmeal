@@ -96,7 +96,8 @@ export type AcceptJudgeInvitationResult =
 
 export async function acceptJudgeInvitation(
   token: string,
-  clerkUserId: string
+  clerkUserId: string,
+  userEmail: string
 ): Promise<AcceptJudgeInvitationResult> {
   const client = getSupabase() as unknown as SupabaseClient
 
@@ -112,6 +113,10 @@ export async function acceptJudgeInvitation(
 
   if (new Date(invitation.expires_at) < new Date()) {
     return { success: false, error: "Invitation has expired", code: "expired" }
+  }
+
+  if (invitation.email.toLowerCase() !== userEmail.toLowerCase()) {
+    return { success: false, error: "Your email does not match the invitation", code: "email_mismatch" }
   }
 
   const { addJudge } = await import("@/lib/services/judging")

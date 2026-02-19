@@ -795,8 +795,19 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
+    const client = await clerkClient()
+    const user = await client.users.getUser(userId)
+    const userEmail = user.primaryEmailAddress?.emailAddress
+
+    if (!userEmail) {
+      return new Response(
+        JSON.stringify({ error: "No email address found", code: "no_email" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
     const { acceptTeamInvitation } = await import("@/lib/services/team-invitations")
-    const result = await acceptTeamInvitation(params.token, userId)
+    const result = await acceptTeamInvitation(params.token, userId, userEmail)
 
     if (!result.success) {
       const statusCode = result.code === "not_found" ? 404 : 400
@@ -1063,8 +1074,19 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
+    const client = await clerkClient()
+    const user = await client.users.getUser(userId)
+    const userEmail = user.primaryEmailAddress?.emailAddress
+
+    if (!userEmail) {
+      return new Response(
+        JSON.stringify({ error: "No email address found", code: "no_email" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
     const { acceptJudgeInvitation } = await import("@/lib/services/judge-invitations")
-    const result = await acceptJudgeInvitation(params.token, userId)
+    const result = await acceptJudgeInvitation(params.token, userId, userEmail)
 
     if (!result.success) {
       const statusCode = result.code === "not_found" ? 404 : 400

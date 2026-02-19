@@ -386,7 +386,7 @@ describe("Team Invitations Service", () => {
         })
       )
 
-      const result = await acceptTeamInvitation("test_token", "user_123")
+      const result = await acceptTeamInvitation("test_token", "user_123", "user@example.com")
 
       expect(result.success).toBe(true)
       if (result.success) {
@@ -403,7 +403,7 @@ describe("Team Invitations Service", () => {
         })
       )
 
-      const result = await acceptTeamInvitation("test_token", "user_123")
+      const result = await acceptTeamInvitation("test_token", "user_123", "user@example.com")
 
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -419,7 +419,7 @@ describe("Team Invitations Service", () => {
         })
       )
 
-      const result = await acceptTeamInvitation("test_token", "user_123")
+      const result = await acceptTeamInvitation("test_token", "user_123", "user@example.com")
 
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -435,7 +435,7 @@ describe("Team Invitations Service", () => {
         })
       )
 
-      const result = await acceptTeamInvitation("expired_token", "user_123")
+      const result = await acceptTeamInvitation("expired_token", "user_123", "user@example.com")
 
       expect(result.success).toBe(false)
       if (!result.success) {

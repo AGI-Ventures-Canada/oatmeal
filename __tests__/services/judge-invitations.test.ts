@@ -9,6 +9,7 @@ import {
 const {
   createJudgeInvitation,
   getJudgeInvitationByToken,
+  acceptJudgeInvitation,
   cancelJudgeInvitation,
   listJudgeInvitations,
 } = await import("@/lib/services/judge-invitations")

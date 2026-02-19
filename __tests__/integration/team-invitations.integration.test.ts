@@ -324,7 +324,7 @@ describe("Team Invitations API Routes", () => {
         })
       )
 
-      expect(mockAcceptTeamInvitation).toHaveBeenCalledWith("my_token", "user_456")
+      expect(mockAcceptTeamInvitation).toHaveBeenCalledWith("my_token", "user_456", "user@example.com")
     })
   })
 
