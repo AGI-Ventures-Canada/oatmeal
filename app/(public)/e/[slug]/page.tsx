@@ -72,7 +72,9 @@ export default async function EventPage({ params }: PageProps) {
     notes: string
   }[] = []
 
-  if (userId) {
+  const isViewingAsParticipant = !orgId || orgId !== hackathon.organizer.clerk_org_id
+
+  if (userId && isViewingAsParticipant) {
     const { getRegistrationInfo, getParticipantTeamInfo } = await import("@/lib/services/hackathons")
     const registrationInfo = await getRegistrationInfo(hackathon.id, userId)
     isRegistered = registrationInfo.isRegistered

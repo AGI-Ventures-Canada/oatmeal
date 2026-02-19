@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Check, EyeOff, Globe, Gavel, Trophy, Loader2, ArrowRight } from "lucide-react"
+import { Check, EyeOff, Globe, Gavel, Trophy, Loader2, ArrowRight, AlertTriangle } from "lucide-react"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
 const phases = [
@@ -28,7 +28,6 @@ type PhaseKey = (typeof phases)[number]["key"]
 
 const advanceCta: Record<string, string> = {
   draft: "Publish",
-  published: "Start Judging",
   judging: "Complete Event",
 }
 
@@ -82,10 +81,20 @@ function resolvePhaseIndex(status: HackathonStatus): number {
 
 interface LifecycleStepperProps {
   hackathonId: string
+  hackathonSlug: string
   status: HackathonStatus
+  submissionCount?: number
+  judgingProgress?: {
+    totalAssignments: number
+    completedAssignments: number
+  }
+  judgingSetupStatus?: {
+    judgeCount: number
+    hasUnassignedSubmissions: boolean
+  }
 }
 
-export function LifecycleStepper({ hackathonId, status }: LifecycleStepperProps) {
+export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissionCount = 0, judgingProgress, judgingSetupStatus }: LifecycleStepperProps) {
   const router = useRouter()
   const [currentStatus, setCurrentStatus] = useState(status)
   const [updating, setUpdating] = useState(false)
@@ -124,6 +133,32 @@ export function LifecycleStepper({ hackathonId, status }: LifecycleStepperProps)
         description: `This will change the hackathon status to "${pendingTarget}".`,
       }
     : null
+
+  const isPublishedPhase = phases[currentIndex]?.key === "published"
+  const hasJudges = (judgingSetupStatus?.judgeCount ?? 0) > 0
+  const allSubmissionsAssigned = hasJudges && !judgingSetupStatus?.hasUnassignedSubmissions
+  const publishedCtaText = !hasJudges
+    ? "Assign Judges"
+    : judgingSetupStatus?.hasUnassignedSubmissions
+      ? "Assign Submissions"
+      : "Close Submissions"
+
+  function getCtaText() {
+    if (isPublishedPhase) return publishedCtaText
+    return advanceCta[phases[currentIndex].key]
+  }
+
+  function handleCtaClick() {
+    if (isPublishedPhase) {
+      if (allSubmissionsAssigned) {
+        requestTransition("judging")
+      } else {
+        router.push(`/e/${hackathonSlug}/manage/judging?tab=assignments`)
+      }
+    } else if (nextPhase) {
+      requestTransition(nextPhase.key)
+    }
+  }
 
   return (
     <>
@@ -195,7 +230,7 @@ export function LifecycleStepper({ hackathonId, status }: LifecycleStepperProps)
                           />
                           <Button
                             size="sm"
-                            onClick={() => requestTransition(nextPhase.key)}
+                            onClick={handleCtaClick}
                             disabled={updating}
                             className="shrink-0 gap-1.5 mx-2"
                           >
@@ -203,7 +238,7 @@ export function LifecycleStepper({ hackathonId, status }: LifecycleStepperProps)
                               <Loader2 className="size-3.5 animate-spin" />
                             ) : (
                               <>
-                                {advanceCta[phases[currentIndex].key]}
+                                {getCtaText()}
                                 <ArrowRight className="size-3.5" />
                               </>
                             )}
@@ -236,11 +271,33 @@ export function LifecycleStepper({ hackathonId, status }: LifecycleStepperProps)
             <AlertDialogTitle>{confirmation?.title}</AlertDialogTitle>
             <AlertDialogDescription>{confirmation?.description}</AlertDialogDescription>
           </AlertDialogHeader>
+          {pendingTarget === "judging" && submissionCount === 0 && (
+            <div className="flex items-start gap-3 rounded-md border border-destructive/50 bg-destructive/10 p-3">
+              <AlertTriangle className="size-5 shrink-0 text-destructive" />
+              <div className="text-sm text-destructive">
+                <p className="font-medium">No submissions yet</p>
+                <p className="text-destructive/80">
+                  There are currently no submitted projects. Starting judging now means there will be nothing to judge.
+                </p>
+              </div>
+            </div>
+          )}
+          {pendingTarget === "completed" && judgingProgress && judgingProgress.totalAssignments > 0 && judgingProgress.completedAssignments < judgingProgress.totalAssignments && (
+            <div className="flex items-start gap-3 rounded-md border border-destructive/50 bg-destructive/10 p-3">
+              <AlertTriangle className="size-5 shrink-0 text-destructive" />
+              <div className="text-sm text-destructive">
+                <p className="font-medium">Judging incomplete</p>
+                <p className="text-destructive/80">
+                  {judgingProgress.completedAssignments} of {judgingProgress.totalAssignments} assignments have been scored. All submissions must be judged before completing the event.
+                </p>
+              </div>
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={updating}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => pendingTarget && commitStatusChange(pendingTarget)}
-              disabled={updating}
+              disabled={updating || (pendingTarget === "completed" && judgingProgress && judgingProgress.totalAssignments > 0 && judgingProgress.completedAssignments < judgingProgress.totalAssignments)}
             >
               {updating && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
               Confirm

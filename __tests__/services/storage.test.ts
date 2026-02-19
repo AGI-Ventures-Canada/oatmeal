@@ -319,7 +319,7 @@ describe("Storage Service", () => {
       const result = await uploadBanner("hackathon123", buffer)
 
       expect(result).not.toBeNull()
-      expect(result?.url).toBe("https://storage.test/file.webp")
+      expect(result?.url).toMatch(/^https:\/\/storage\.test\/file\.webp(\?v=\d+)?$/)
       expect(result?.path).toBe("hackathon123/banner.webp")
       expect(mockStorageFrom).toHaveBeenCalledWith("banners")
     })

@@ -164,9 +164,7 @@ describe("Team Invitations Service", () => {
     })
 
     it("returns error when hackathon not found", async () => {
-      let callCount = 0
       setMockFromImplementation((table) => {
-        callCount++
         if (table === "teams") {
           return createChainableMock({ data: mockTeam, error: null })
         }
@@ -190,9 +188,7 @@ describe("Team Invitations Service", () => {
     })
 
     it("returns error when hackathon has ended", async () => {
-      let callCount = 0
       setMockFromImplementation((table) => {
-        callCount++
         if (table === "teams") {
           return createChainableMock({ data: mockTeam, error: null })
         }
@@ -219,9 +215,7 @@ describe("Team Invitations Service", () => {
     })
 
     it("returns error when hackathon is archived", async () => {
-      let callCount = 0
       setMockFromImplementation((table) => {
-        callCount++
         if (table === "teams") {
           return createChainableMock({ data: mockTeam, error: null })
         }
@@ -248,9 +242,7 @@ describe("Team Invitations Service", () => {
     })
 
     it("returns error when team would exceed max size", async () => {
-      let callCount = 0
       setMockFromImplementation((table) => {
-        callCount++
         if (table === "teams") {
           return createChainableMock({ data: mockTeam, error: null })
         }
@@ -319,9 +311,7 @@ describe("Team Invitations Service", () => {
 
     it("lowercases email address", async () => {
       let capturedEmail: string | null = null
-      let callCount = 0
       setMockFromImplementation((table) => {
-        callCount++
         if (table === "teams") {
           return createChainableMock({ data: mockTeam, error: null })
         }
@@ -689,9 +679,7 @@ describe("Team Invitations Service", () => {
 
     it("filters by status when provided", async () => {
       const chain = createChainableMock({ data: [mockInvitation], error: null })
-      let callCount = 0
       setMockFromImplementation((table) => {
-        callCount++
         if (table === "teams") {
           return createChainableMock({
             data: { captain_clerk_user_id: "user_captain" },
@@ -708,9 +696,7 @@ describe("Team Invitations Service", () => {
     })
 
     it("returns error on database error", async () => {
-      let callCount = 0
       setMockFromImplementation((table) => {
-        callCount++
         if (table === "teams") {
           return createChainableMock({
             data: { captain_clerk_user_id: "user_captain" },

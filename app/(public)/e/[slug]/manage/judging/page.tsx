@@ -1,7 +1,5 @@
-import { auth } from "@clerk/nextjs/server"
-import { redirect, notFound } from "next/navigation"
-import { resolvePageTenant } from "@/lib/services/tenants"
-import { checkHackathonOrganizer } from "@/lib/services/public-hackathons"
+import { notFound } from "next/navigation"
+import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { listJudgingCriteria, listJudges, listJudgeAssignments, getJudgingProgress } from "@/lib/services/judging"
 import { listJudgeInvitations } from "@/lib/services/judge-invitations"
 import { getHackathonSubmissions } from "@/lib/services/submissions"
@@ -12,27 +10,30 @@ import { JudgeAssignments } from "@/components/hackathon/judging/judge-assignmen
 import { ScoringProgress } from "@/components/hackathon/judging/scoring-progress"
 
 type PageProps = {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ tab?: string }>
 }
 
-export default async function JudgingPage({ params }: PageProps) {
-  const { userId } = await auth()
-  if (!userId) redirect("/sign-in")
+export default async function JudgingPage({ params, searchParams }: PageProps) {
+  const { slug } = await params
+  const { tab } = await searchParams
+  const defaultTab = tab === "assignments" || tab === "progress" ? tab : "criteria"
 
-  const tenant = await resolvePageTenant()
-  const { id } = await params
+  const result = await getManageHackathon(slug)
 
-  const result = await checkHackathonOrganizer(id, tenant.id)
-  if (result.status !== "ok") notFound()
+  if (!result.ok) {
+    notFound()
+  }
 
-  const hackathon = result.hackathon
+  const { hackathon } = result
+
   const [criteria, judges, assignments, progress, submissions, pendingInvitations] = await Promise.all([
-    listJudgingCriteria(id),
-    listJudges(id),
-    listJudgeAssignments(id),
-    getJudgingProgress(id),
-    getHackathonSubmissions(id),
-    listJudgeInvitations(id, "pending"),
+    listJudgingCriteria(hackathon.id),
+    listJudges(hackathon.id),
+    listJudgeAssignments(hackathon.id),
+    getJudgingProgress(hackathon.id),
+    getHackathonSubmissions(hackathon.id),
+    listJudgeInvitations(hackathon.id, "pending"),
   ])
 
   return (
@@ -40,14 +41,14 @@ export default async function JudgingPage({ params }: PageProps) {
       <PageHeader
         breadcrumbs={[
           { label: "Dashboard", href: "/home" },
-          { label: hackathon.name, href: `/hackathons/${id}` },
+          { label: hackathon.name, href: `/e/${slug}/manage` },
           { label: "Judging" },
         ]}
         title="Judging"
         description={`Manage judging for ${hackathon.name}`}
       />
 
-      <Tabs defaultValue="criteria" className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="criteria">Criteria</TabsTrigger>
           <TabsTrigger value="assignments">Judges & Assignments</TabsTrigger>
@@ -56,7 +57,7 @@ export default async function JudgingPage({ params }: PageProps) {
 
         <TabsContent value="criteria" forceMount className="data-[state=inactive]:hidden">
           <CriteriaConfig
-            hackathonId={id}
+            hackathonId={hackathon.id}
             initialCriteria={criteria.map((c) => ({
               id: c.id,
               name: c.name,
@@ -71,12 +72,13 @@ export default async function JudgingPage({ params }: PageProps) {
 
         <TabsContent value="assignments" forceMount className="data-[state=inactive]:hidden">
           <JudgeAssignments
-            hackathonId={id}
+            hackathonId={hackathon.id}
             initialJudges={judges}
             initialAssignments={assignments.map((a) => ({
               id: a.id,
               judgeParticipantId: a.judge_participant_id,
               judgeName: a.judgeName,
+              judgeEmail: a.judgeEmail,
               submissionId: a.submission_id,
               submissionTitle: a.submissionTitle,
               isComplete: a.is_complete,
@@ -90,14 +92,13 @@ export default async function JudgingPage({ params }: PageProps) {
               createdAt: inv.created_at,
             }))}
             submissions={submissions.map((s) => ({ id: s.id, title: s.title }))}
+            anonymousJudging={hackathon.anonymous_judging}
           />
         </TabsContent>
 
         <TabsContent value="progress" forceMount className="data-[state=inactive]:hidden">
           <ScoringProgress
-            hackathonId={id}
             progress={progress}
-            anonymousJudging={hackathon.anonymous_judging}
           />
         </TabsContent>
       </Tabs>

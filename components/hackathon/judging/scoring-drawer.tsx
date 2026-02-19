@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,6 +16,7 @@ import {
   DrawerClose,
 } from "@/components/ui/drawer"
 import { Loader2, CheckCircle2, ExternalLink, Github } from "lucide-react"
+import Image from "next/image"
 
 type CriterionWithScore = {
   id: string
@@ -63,6 +64,7 @@ export function ScoringDrawer({
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savingNotes, setSavingNotes] = useState(false)
+  const notesTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     if (!open || !assignmentId) return
@@ -87,29 +89,26 @@ export function ScoringDrawer({
   }, [open, assignmentId, hackathonSlug])
 
   const debouncedSaveNotes = useCallback(
-    (() => {
-      let timeout: ReturnType<typeof setTimeout>
-      return (value: string) => {
-        clearTimeout(timeout)
-        timeout = setTimeout(async () => {
-          setSavingNotes(true)
-          try {
-            await fetch(
-              `/api/public/hackathons/${hackathonSlug}/judging/assignments/${assignmentId}/notes`,
-              {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ notes: value }),
-              }
-            )
-          } catch {
-            // silent fail for auto-save
-          } finally {
-            setSavingNotes(false)
-          }
-        }, 1000)
-      }
-    })(),
+    (value: string) => {
+      clearTimeout(notesTimeoutRef.current)
+      notesTimeoutRef.current = setTimeout(async () => {
+        setSavingNotes(true)
+        try {
+          await fetch(
+            `/api/public/hackathons/${hackathonSlug}/judging/assignments/${assignmentId}/notes`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ notes: value }),
+            }
+          )
+        } catch {
+          // silent fail for auto-save
+        } finally {
+          setSavingNotes(false)
+        }
+      }, 1000)
+    },
     [hackathonSlug, assignmentId]
   )
 
@@ -164,15 +163,25 @@ export function ScoringDrawer({
     <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DrawerContent className="max-h-[90vh]" onKeyDown={handleKeyDown}>
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
-          </div>
+          <>
+            <DrawerHeader className="sr-only">
+              <DrawerTitle>Loading submission</DrawerTitle>
+            </DrawerHeader>
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            </div>
+          </>
         ) : submitted ? (
-          <div className="flex flex-col items-center gap-3 py-12">
-            <CheckCircle2 className="size-12 text-primary" />
-            <p className="text-lg font-semibold">Scores Submitted</p>
-            <p className="text-sm text-muted-foreground">Moving to next assignment...</p>
-          </div>
+          <>
+            <DrawerHeader className="sr-only">
+              <DrawerTitle>Scores submitted</DrawerTitle>
+            </DrawerHeader>
+            <div className="flex flex-col items-center gap-3 py-12">
+              <CheckCircle2 className="size-12 text-primary" />
+              <p className="text-lg font-semibold">Scores Submitted</p>
+              <p className="text-sm text-muted-foreground">Moving to next assignment...</p>
+            </div>
+          </>
         ) : detail ? (
           <div className="overflow-y-auto">
             <DrawerHeader>
@@ -207,11 +216,12 @@ export function ScoringDrawer({
               </div>
 
               {detail.submissionScreenshotUrl && (
-                <div className="rounded-lg border overflow-hidden">
-                  <img
+                <div className="relative rounded-lg border overflow-hidden h-[200px]">
+                  <Image
                     src={detail.submissionScreenshotUrl}
                     alt={detail.submissionTitle}
-                    className="w-full max-h-[200px] object-cover"
+                    fill
+                    className="object-cover"
                   />
                 </div>
               )}
@@ -294,9 +304,14 @@ export function ScoringDrawer({
             </DrawerFooter>
           </div>
         ) : (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-sm text-destructive">{error || "Failed to load"}</p>
-          </div>
+          <>
+            <DrawerHeader className="sr-only">
+              <DrawerTitle>Error loading submission</DrawerTitle>
+            </DrawerHeader>
+            <div className="flex items-center justify-center py-12">
+              <p className="text-sm text-destructive">{error || "Failed to load"}</p>
+            </div>
+          </>
         )}
       </DrawerContent>
     </Drawer>

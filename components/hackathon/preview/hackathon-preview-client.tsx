@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import { EditProvider, useEdit } from "./edit-context"
@@ -82,11 +81,11 @@ function HackathonPreviewContent({
   const judgeStatus = isJudge && (
     <div className="flex items-center gap-3">
       <span className="text-xs text-muted-foreground">You&apos;re assigned as a judge</span>
-      <Button asChild>
-        <Link href={`/hackathons/${hackathon.id}/judging`}>
-          <Scale className="size-4" />
-          Enter Judge Mode
-        </Link>
+      <Button
+        onClick={() => document.getElementById("judge-assignments")?.scrollIntoView({ behavior: "smooth" })}
+      >
+        <Scale className="size-4" />
+        Enter Judge Mode
       </Button>
     </div>
   )
@@ -320,13 +319,15 @@ function HackathonPreviewContent({
       onLocationClick={isEditable && editMode ? () => openSection("location") : undefined}
       isRegistered={isRegistered}
       hideRegistrationButton={isJudge}
-      statusSlot={editMode ? undefined : statusSlot}
+      isOrganizer={isEditable && !editMode}
+      hackathonSlug={hackathon.slug}
+      statusSlot={(isEditable && editMode) ? undefined : statusSlot}
       bannerSlot={bannerEditSlot}
-      orgNameWrapper={editMode && !hackathon.organizer.logo_url
+      orgNameWrapper={(isEditable && editMode) && !hackathon.organizer.logo_url
         ? (name) => <OrganizerLogoPrompt>{name}</OrganizerLogoPrompt>
         : undefined
       }
-      registrationProps={editMode ? undefined : isJudge ? undefined : {
+      registrationProps={(isEditable && editMode) ? undefined : isJudge ? undefined : {
         hackathonSlug: hackathon.slug,
         status: hackathon.status,
         endsAt: hackathon.ends_at,
@@ -345,7 +346,6 @@ function HackathonPreviewContent({
     <>
       {showActionBar && (
         <FloatingActionBar
-          hackathonId={hackathon.id}
           isOrganizer={isEditable}
           isJudge={participantRole === "judge"}
           hasJudgeAssignments={hasJudgeAssignments}

@@ -127,7 +127,7 @@ const mockResolvePrincipal = mock(() =>
 
 mock.module("@/lib/auth/principal", () => ({
   resolvePrincipal: mockResolvePrincipal,
-  requirePrincipal: (principal: unknown, kinds: string[]) => {
+  requirePrincipal: (principal: unknown, _kinds: string[]) => {
     if (!principal || (principal as { kind: string }).kind === "anonymous") {
       const error = new Error("Unauthorized")
       ;(error as Error & { statusCode: number }).statusCode = 401

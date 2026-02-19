@@ -291,7 +291,7 @@ export function HackathonTabs({
                 <HackathonCard
                   key={h.id}
                   hackathon={h}
-                  href={`/hackathons/${h.id}`}
+                  href={`/e/${h.slug}/manage`}
                 />
               ))}
             </div>

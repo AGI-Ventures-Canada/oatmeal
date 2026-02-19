@@ -7,6 +7,7 @@ import {
   DEV_USER_ID,
   SEED_USERS,
   printReady,
+  promptForOptionalTenantId,
 } from "./_helpers"
 
 const SLUG = "test-submitted"
@@ -14,7 +15,8 @@ const SLUG = "test-submitted"
 async function run() {
   console.log("Setting up submitted scenario...")
 
-  const tenantId = await getOrCreateTenant()
+  const overrideTenantId = await promptForOptionalTenantId()
+  const tenantId = await getOrCreateTenant(overrideTenantId)
 
   const now = new Date()
   const hackathonId = await createTestHackathon({

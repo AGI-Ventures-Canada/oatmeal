@@ -641,7 +641,7 @@ export const dashboardJudgingRoutes = new Elysia()
         })
       }
 
-      const { autoAssignJudges } = await import("@/lib/services/judging")
+      const { autoAssignJudges, listJudges, listJudgeAssignments } = await import("@/lib/services/judging")
       const { assignedCount } = await autoAssignJudges(params.id, body.submissionsPerJudge)
 
       await logAudit({
@@ -652,7 +652,23 @@ export const dashboardJudgingRoutes = new Elysia()
         metadata: { assignedCount, submissionsPerJudge: body.submissionsPerJudge },
       })
 
-      return { assignedCount }
+      const [judges, assignmentsRaw] = await Promise.all([
+        listJudges(params.id),
+        listJudgeAssignments(params.id),
+      ])
+
+      const assignments = assignmentsRaw.map((a) => ({
+        id: a.id,
+        judgeParticipantId: a.judge_participant_id,
+        judgeName: a.judgeName,
+        judgeEmail: a.judgeEmail,
+        submissionId: a.submission_id,
+        submissionTitle: a.submissionTitle,
+        isComplete: a.is_complete,
+        assignedAt: a.assigned_at,
+      }))
+
+      return { assignedCount, judges, assignments }
     },
     {
       detail: {

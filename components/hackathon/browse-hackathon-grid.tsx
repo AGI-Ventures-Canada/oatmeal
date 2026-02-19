@@ -118,7 +118,7 @@ export function BrowseHackathonGrid({
         clearTimeout(debounceRef.current)
       }
     }
-  }, [query, initialHackathons, initialPage, initialTotalPages, fetchPage])
+  }, [query, initialHackathons, initialPage, initialTotalPages, fetchPage, page])
 
   function goToPage(targetPage: number) {
     fetchPage(targetPage, isSearching ? query : undefined)

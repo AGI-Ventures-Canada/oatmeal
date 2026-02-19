@@ -71,7 +71,7 @@ export function ResultsDashboard({
         const data = await res.json()
         throw new Error(data.error || "Failed to calculate")
       }
-      const resData = await res.json()
+      await res.json()
 
       const resultsRes = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/results`

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import {
-  Trophy,
   Search,
   ChevronsUpDown,
   LogOut,
@@ -24,6 +23,7 @@ import {
   ExternalLink,
   Plus,
 } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useSearchParams, useRouter } from "next/navigation"
 import {
@@ -108,7 +108,7 @@ export function AppSidebarSimple() {
         if (!cancelled) setTenantSlug(null)
       })
     return () => { cancelled = true }
-  }, [organization?.id])
+  }, [organization])
 
   const isSettingsView = pathname.startsWith("/settings")
   const currentTab = searchParams.get("tab")
@@ -129,9 +129,11 @@ export function AppSidebarSimple() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="h-auto py-2.5">
                   {organization?.imageUrl ? (
-                    <img
+                    <Image
                       src={organization.imageUrl}
                       alt={organization.name || "Organization"}
+                      width={28}
+                      height={28}
                       className="size-7 rounded object-cover"
                     />
                   ) : (
@@ -173,9 +175,11 @@ export function AppSidebarSimple() {
                     className="gap-2"
                   >
                     {mem.organization.imageUrl ? (
-                      <img
+                      <Image
                         src={mem.organization.imageUrl}
                         alt={mem.organization.name}
+                        width={20}
+                        height={20}
                         className="size-5 rounded object-cover"
                       />
                     ) : (
@@ -313,9 +317,11 @@ export function AppSidebarSimple() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="h-auto py-2.5">
                   {user?.imageUrl ? (
-                    <img
+                    <Image
                       src={user.imageUrl}
                       alt={user.fullName || "User"}
+                      width={28}
+                      height={28}
                       className="size-7 rounded-full"
                     />
                   ) : (
