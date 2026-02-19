@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation"
 import { getManageHackathon } from "@/lib/services/manage-hackathon"
+import { getHackathonSubmissions } from "@/lib/services/submissions"
+import { getJudgingProgress, getJudgingSetupStatus } from "@/lib/services/judging"
 import { PageHeader } from "@/components/page-header"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
@@ -18,9 +20,6 @@ export default async function ManagePage({ params }: PageProps) {
   }
 
   const { hackathon } = result
-
-  const { getHackathonSubmissions } = await import("@/lib/services/submissions")
-  const { getJudgingProgress, getJudgingSetupStatus } = await import("@/lib/services/judging")
 
   const [submissions, judgingProgress, judgingSetupStatus] = await Promise.all([
     getHackathonSubmissions(hackathon.id),

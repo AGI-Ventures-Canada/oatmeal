@@ -64,7 +64,7 @@ export function ScoringDrawer({
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savingNotes, setSavingNotes] = useState(false)
-  const notesTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const notesTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     if (!open || !assignmentId) return
