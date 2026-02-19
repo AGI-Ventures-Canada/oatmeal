@@ -115,7 +115,9 @@ export async function listPublicHackathons(
   const page = options?.page ?? 1
   const limit = options?.limit ?? total
   const start = (page - 1) * limit
-  const hackathons = sorted.slice(start, start + limit)
+  const hackathons = sorted
+    .slice(start, start + limit)
+    .map((h) => ({ ...h, status: getEffectiveStatus(h) })) as unknown as HackathonWithOrganizer[]
 
   return { hackathons, total }
 }
