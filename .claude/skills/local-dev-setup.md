@@ -55,8 +55,8 @@ Required environment variables:
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 
-# API Key hashing (auto-generated on first bun dev if missing)
-API_KEY_SECRET=<random-32-char-string>
+# API Key hashing (required for creating/verifying API keys)
+API_KEY_SECRET=<generate-with-openssl>
 
 # Resend (email sending)
 RESEND_API_KEY=re_...
@@ -72,6 +72,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 **Get Clerk keys from:** https://dashboard.clerk.com → API Keys
+
+**Generate API_KEY_SECRET:** This is a server-side secret used to securely hash API keys before storing them in the database. Generate a secure value with:
+
+```bash
+openssl rand -hex 32
+```
 
 **Supabase keys are auto-configured** when running `bun dev` (local Supabase).
 
@@ -253,6 +259,13 @@ CREATE POLICY "Deny all access" ON new_table FOR ALL USING (false);
 ```
 
 ## Troubleshooting
+
+### API key creation fails (500 error)
+If creating API keys fails with a 500 error, `API_KEY_SECRET` is likely missing from `.env.local`. Generate one:
+```bash
+openssl rand -hex 32
+```
+Add it to `.env.local` and restart the dev server.
 
 ### Port 3000 already in use
 ```bash
