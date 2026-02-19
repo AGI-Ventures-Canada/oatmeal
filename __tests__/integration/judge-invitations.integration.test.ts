@@ -84,7 +84,7 @@ describe("Judge Invitations Integration - acceptJudgeInvitation", () => {
       return createIntegrationChainableMock({ data: null, error: null })
     })
 
-    const result = await acceptJudgeInvitation("test-token-123", "user_123")
+    const result = await acceptJudgeInvitation("test-token-123", "user_123", "judge@example.com")
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -94,12 +94,25 @@ describe("Judge Invitations Integration - acceptJudgeInvitation", () => {
     expect(mockAddJudge).toHaveBeenCalledWith("h1", "user_123")
   })
 
+  it("returns email_mismatch error when user email does not match invitation", async () => {
+    mockFrom.mockImplementation(() =>
+      createIntegrationChainableMock({ data: mockInvitation, error: null })
+    )
+
+    const result = await acceptJudgeInvitation("test-token-123", "user_123", "different@example.com")
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe("email_mismatch")
+    }
+  })
+
   it("returns not_found error when invitation does not exist", async () => {
     mockFrom.mockImplementation(() =>
       createIntegrationChainableMock({ data: null, error: null })
     )
 
-    const result = await acceptJudgeInvitation("invalid-token", "user_123")
+    const result = await acceptJudgeInvitation("invalid-token", "user_123", "judge@example.com")
 
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -115,7 +128,7 @@ describe("Judge Invitations Integration - acceptJudgeInvitation", () => {
       })
     )
 
-    const result = await acceptJudgeInvitation("test-token", "user_123")
+    const result = await acceptJudgeInvitation("test-token", "user_123", "judge@example.com")
 
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -134,7 +147,7 @@ describe("Judge Invitations Integration - acceptJudgeInvitation", () => {
       })
     )
 
-    const result = await acceptJudgeInvitation("test-token", "user_123")
+    const result = await acceptJudgeInvitation("test-token", "user_123", "judge@example.com")
 
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -156,7 +169,7 @@ describe("Judge Invitations Integration - acceptJudgeInvitation", () => {
       return createIntegrationChainableMock({ data: null, error: null })
     })
 
-    const result = await acceptJudgeInvitation("test-token", "user_123")
+    const result = await acceptJudgeInvitation("test-token", "user_123", "judge@example.com")
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -173,7 +186,7 @@ describe("Judge Invitations Integration - acceptJudgeInvitation", () => {
       createIntegrationChainableMock({ data: mockInvitation, error: null })
     )
 
-    const result = await acceptJudgeInvitation("test-token", "user_123")
+    const result = await acceptJudgeInvitation("test-token", "user_123", "judge@example.com")
 
     expect(result.success).toBe(false)
     if (!result.success) {

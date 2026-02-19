@@ -154,13 +154,15 @@ export async function getInvitationByToken(
 
 export async function acceptTeamInvitation(
   token: string,
-  clerkUserId: string
+  clerkUserId: string,
+  userEmail: string
 ): Promise<AcceptInvitationResult> {
   const client = getSupabase()
 
   const { data, error } = await client.rpc("accept_team_invitation", {
     p_token: token,
     p_clerk_user_id: clerkUserId,
+    p_user_email: userEmail.toLowerCase(),
   })
 
   if (error) {
