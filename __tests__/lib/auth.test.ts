@@ -25,9 +25,9 @@ describe("Auth Types", () => {
       expect(scopes).not.toContain("org:write")
     })
 
-    it("returns all scopes for unknown roles", () => {
+    it("returns read-only scopes for unknown roles (fail-safe)", () => {
       const scopes = scopesForRole("unknown")
-      expect(scopes).toEqual(ALL_SCOPES)
+      expect(scopes).toEqual(["hackathons:read", "teams:read", "submissions:read"])
     })
 
     it("returns all scopes for null role (personal account)", () => {

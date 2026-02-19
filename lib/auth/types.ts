@@ -92,7 +92,10 @@ export function scopesForRole(role: string | null): Scope[] {
       "org:read",
     ]
   }
-  return ALL_SCOPES
+  if (role === null) {
+    return ALL_SCOPES
+  }
+  return ["hackathons:read", "teams:read", "submissions:read"]
 }
 
 export function hasScope(principal: Principal, scope: Scope): boolean {
