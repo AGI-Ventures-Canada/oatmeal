@@ -31,7 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Loader2, CheckCircle2 } from "lucide-react"
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Loader2, CheckCircle2, AlertTriangle } from "lucide-react"
 
 type Criterion = {
   id: string
@@ -348,6 +348,18 @@ export function CriteriaConfig({ hackathonId, initialCriteria }: CriteriaConfigP
           </DialogContent>
         </Dialog>
       </div>
+
+      {criteria.length === 0 && (
+        <div className="flex items-start gap-3 rounded-md border border-destructive/50 bg-destructive/10 p-3">
+          <AlertTriangle className="size-5 shrink-0 text-destructive mt-0.5" />
+          <div className="text-sm text-destructive">
+            <p className="font-medium">No criteria defined</p>
+            <p className="text-destructive/80">
+              Judges won&apos;t be able to score submissions until you add at least one criterion.
+            </p>
+          </div>
+        </div>
+      )}
 
       {criteria.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">

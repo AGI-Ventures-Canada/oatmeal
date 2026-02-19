@@ -35,7 +35,7 @@ BEGIN
   FROM hackathons
   WHERE id = v_assignment.hackathon_id;
 
-  IF v_hackathon.status != 'judging' THEN
+  IF v_hackathon.status != 'judging' AND v_hackathon.status != 'active' THEN
     RETURN QUERY SELECT FALSE, 'not_judging'::TEXT, 'Hackathon is not in judging phase'::TEXT;
     RETURN;
   END IF;

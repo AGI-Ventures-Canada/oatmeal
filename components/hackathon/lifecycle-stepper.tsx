@@ -43,9 +43,9 @@ const confirmations: Record<string, { title: string; description: string }> = {
       "Submissions will close and the judging phase will begin. Make sure your judges and criteria are configured.",
   },
   "judging→completed": {
-    title: "Mark as completed?",
+    title: "Complete the event?",
     description:
-      "This will end judging and mark the hackathon as completed. You can still publish results afterward.",
+      "Judging will close and results will be published on the event page. Participants will be notified of the winner.",
   },
   "published→draft": {
     title: "Revert to draft?",
@@ -92,9 +92,13 @@ interface LifecycleStepperProps {
     judgeCount: number
     hasUnassignedSubmissions: boolean
   }
+  startsAt?: string | null
+  endsAt?: string | null
+  registrationOpensAt?: string | null
+  registrationClosesAt?: string | null
 }
 
-export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissionCount = 0, judgingProgress, judgingSetupStatus }: LifecycleStepperProps) {
+export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissionCount = 0, judgingProgress, judgingSetupStatus, startsAt, endsAt, registrationOpensAt, registrationClosesAt }: LifecycleStepperProps) {
   const router = useRouter()
   const [currentStatus, setCurrentStatus] = useState(status)
   const [updating, setUpdating] = useState(false)
@@ -104,12 +108,55 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
   const nextPhase = currentIndex < phases.length - 1 ? phases[currentIndex + 1] : null
 
   async function commitStatusChange(newStatus: PhaseKey) {
+    const now = new Date().toISOString()
+
     setUpdating(true)
     try {
+      if (newStatus === "completed") {
+        const calcRes = await fetch(`/api/dashboard/hackathons/${hackathonId}/results/calculate`, {
+          method: "POST",
+        })
+        if (calcRes.ok) {
+          const publishRes = await fetch(`/api/dashboard/hackathons/${hackathonId}/results/publish`, {
+            method: "POST",
+          })
+          if (publishRes.ok) {
+            setCurrentStatus(newStatus)
+            router.refresh()
+            return
+          }
+        }
+        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        })
+        if (!res.ok) throw new Error("Failed to update status")
+        setCurrentStatus(newStatus)
+        router.refresh()
+        return
+      }
+
+      if (newStatus === "judging" && phases[currentIndex]?.key === "completed") {
+        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/results/unpublish`, {
+          method: "POST",
+        })
+        if (!res.ok) throw new Error("Failed to revert status")
+        setCurrentStatus(newStatus)
+        router.refresh()
+        return
+      }
+
+      const body: Record<string, unknown> = { status: newStatus }
+      if (newStatus === "judging") {
+        if (!endsAt || new Date(endsAt) > new Date()) body.endsAt = now
+        if (!registrationClosesAt || new Date(registrationClosesAt) > new Date()) body.registrationClosesAt = now
+      }
+
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error("Failed to update status")
       setCurrentStatus(newStatus)
@@ -133,6 +180,14 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
         description: `This will change the hackathon status to "${pendingTarget}".`,
       }
     : null
+
+  const missingDates = [
+    !registrationOpensAt && "Registration opens",
+    !registrationClosesAt && "Registration closes",
+    !startsAt && "Event starts",
+    !endsAt && "Event ends",
+  ].filter(Boolean) as string[]
+  const hasAllDates = missingDates.length === 0
 
   const isPublishedPhase = phases[currentIndex]?.key === "published"
   const hasJudges = (judgingSetupStatus?.judgeCount ?? 0) > 0
@@ -172,6 +227,7 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
               const Icon = phase.icon
               const isClickable = !isCurrent && !updating && Math.abs(index - currentIndex) === 1
               const isConnectorWithCta = nextPhase && index === currentIndex
+              const isUnpublishConnector = isPublishedPhase && index === 0
 
               return (
                 <div
@@ -245,6 +301,27 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                           </Button>
                           <div className="h-px flex-1 bg-border" />
                         </div>
+                      ) : isUnpublishConnector ? (
+                        <div className="flex-1 flex items-center">
+                          <div className="h-px flex-1 bg-primary" />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => requestTransition("draft")}
+                            disabled={updating}
+                            className="shrink-0 gap-1.5 mx-2"
+                          >
+                            {updating ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <>
+                                <EyeOff className="size-3.5" />
+                                Unpublish
+                              </>
+                            )}
+                          </Button>
+                          <div className="h-px flex-1 bg-primary" />
+                        </div>
                       ) : (
                         <div
                           className={cn(
@@ -271,6 +348,17 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
             <AlertDialogTitle>{confirmation?.title}</AlertDialogTitle>
             <AlertDialogDescription>{confirmation?.description}</AlertDialogDescription>
           </AlertDialogHeader>
+          {pendingTarget === "published" && !hasAllDates && (
+            <div className="flex items-start gap-3 rounded-md border border-destructive/50 bg-destructive/10 p-3">
+              <AlertTriangle className="size-5 shrink-0 text-destructive" />
+              <div className="text-sm text-destructive">
+                <p className="font-medium">Timeline dates required</p>
+                <p className="text-destructive/80">
+                  Set the following dates before publishing: {missingDates.join(", ")}.
+                </p>
+              </div>
+            </div>
+          )}
           {pendingTarget === "judging" && submissionCount === 0 && (
             <div className="flex items-start gap-3 rounded-md border border-destructive/50 bg-destructive/10 p-3">
               <AlertTriangle className="size-5 shrink-0 text-destructive" />
@@ -297,7 +385,7 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
             <AlertDialogCancel disabled={updating}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => pendingTarget && commitStatusChange(pendingTarget)}
-              disabled={updating || (pendingTarget === "completed" && judgingProgress && judgingProgress.totalAssignments > 0 && judgingProgress.completedAssignments < judgingProgress.totalAssignments)}
+              disabled={updating || (pendingTarget === "published" && !hasAllDates) || (pendingTarget === "completed" && judgingProgress && judgingProgress.totalAssignments > 0 && judgingProgress.completedAssignments < judgingProgress.totalAssignments)}
             >
               {updating && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
               Confirm

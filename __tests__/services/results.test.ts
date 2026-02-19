@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach, mock } from "bun:test"
 import type { HackathonResult } from "@/lib/db/hackathon-types"
 import {
   createChainableMock,
   resetSupabaseMocks,
   setMockFromImplementation,
   setMockRpcImplementation,
+  mockClerkClient,
 } from "../lib/supabase-mock"
 
 const {
@@ -12,6 +13,7 @@ const {
   getResults,
   unpublishResults,
   getPublicResults,
+  getPublicResultsWithDetails,
 } = await import("@/lib/services/results")
 
 const mockResult: HackathonResult = {
@@ -102,16 +104,20 @@ describe("Results Service", () => {
   })
 
   describe("getResults", () => {
+    const fullSubmission = {
+      title: "Project 1",
+      description: "A cool project",
+      github_url: "https://github.com/test/repo",
+      live_app_url: "https://myapp.example.com",
+      screenshot_url: "https://storage.example.com/screenshot.webp",
+      team_id: "t1",
+    }
+
     it("returns results with submission and team details", async () => {
       setMockFromImplementation((table) => {
         if (table === "hackathon_results") {
           return createChainableMock({
-            data: [
-              {
-                ...mockResult,
-                submission: { title: "Project 1", team_id: "t1" },
-              },
-            ],
+            data: [{ ...mockResult, submission: fullSubmission }],
             error: null,
           })
         }
@@ -144,6 +150,71 @@ describe("Results Service", () => {
       expect(result[0].prizes[0].name).toBe("First Place")
     })
 
+    it("maps new submission fields correctly", async () => {
+      setMockFromImplementation((table) => {
+        if (table === "hackathon_results") {
+          return createChainableMock({
+            data: [{ ...mockResult, submission: fullSubmission }],
+            error: null,
+          })
+        }
+        if (table === "teams") {
+          return createChainableMock({
+            data: [{ id: "t1", name: "Team One" }],
+            error: null,
+          })
+        }
+        if (table === "prize_assignments") {
+          return createChainableMock({ data: [], error: null })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      const result = await getResults("h1")
+
+      expect(result).toHaveLength(1)
+      expect(result[0].submissionDescription).toBe("A cool project")
+      expect(result[0].submissionGithubUrl).toBe("https://github.com/test/repo")
+      expect(result[0].submissionLiveAppUrl).toBe("https://myapp.example.com")
+      expect(result[0].submissionScreenshotUrl).toBe("https://storage.example.com/screenshot.webp")
+      expect(result[0].submissionTeamId).toBe("t1")
+    })
+
+    it("maps null submission fields when not provided", async () => {
+      setMockFromImplementation((table) => {
+        if (table === "hackathon_results") {
+          return createChainableMock({
+            data: [
+              {
+                ...mockResult,
+                submission: {
+                  title: "Minimal Project",
+                  description: null,
+                  github_url: null,
+                  live_app_url: null,
+                  screenshot_url: null,
+                  team_id: null,
+                },
+              },
+            ],
+            error: null,
+          })
+        }
+        if (table === "prize_assignments") {
+          return createChainableMock({ data: [], error: null })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      const result = await getResults("h1")
+
+      expect(result[0].submissionDescription).toBeNull()
+      expect(result[0].submissionGithubUrl).toBeNull()
+      expect(result[0].submissionLiveAppUrl).toBeNull()
+      expect(result[0].submissionScreenshotUrl).toBeNull()
+      expect(result[0].submissionTeamId).toBeNull()
+    })
+
     it("returns empty array when database query fails", async () => {
       const chain = createChainableMock({
         data: null,
@@ -163,7 +234,14 @@ describe("Results Service", () => {
             data: [
               {
                 ...mockResult,
-                submission: { title: "Solo Project", team_id: null },
+                submission: {
+                  title: "Solo Project",
+                  description: null,
+                  github_url: null,
+                  live_app_url: null,
+                  screenshot_url: null,
+                  team_id: null,
+                },
               },
             ],
             error: null,
@@ -186,12 +264,7 @@ describe("Results Service", () => {
       setMockFromImplementation((table) => {
         if (table === "hackathon_results") {
           return createChainableMock({
-            data: [
-              {
-                ...mockResult,
-                submission: { title: "Project 1", team_id: "t1" },
-              },
-            ],
+            data: [{ ...mockResult, submission: fullSubmission }],
             error: null,
           })
         }
@@ -221,7 +294,14 @@ describe("Results Service", () => {
               {
                 ...mockResult,
                 rank: 1,
-                submission: { title: "First Place Project", team_id: null },
+                submission: {
+                  title: "First Place Project",
+                  description: null,
+                  github_url: null,
+                  live_app_url: null,
+                  screenshot_url: null,
+                  team_id: null,
+                },
               },
               {
                 ...mockResult,
@@ -229,7 +309,14 @@ describe("Results Service", () => {
                 submission_id: "s2",
                 rank: 2,
                 total_score: 80,
-                submission: { title: "Second Place Project", team_id: null },
+                submission: {
+                  title: "Second Place Project",
+                  description: null,
+                  github_url: null,
+                  live_app_url: null,
+                  screenshot_url: null,
+                  team_id: null,
+                },
               },
             ],
             error: null,
@@ -360,6 +447,276 @@ describe("Results Service", () => {
       const result = await getPublicResults("h1")
 
       expect(result).toBeNull()
+    })
+  })
+
+  describe("getPublicResultsWithDetails", () => {
+    const publishedSubmission = (overrides: Partial<{
+      team_id: string | null
+      rank: number
+      submission_id: string
+    }> = {}) => ({
+      ...mockResult,
+      submission_id: overrides.submission_id ?? "s1",
+      rank: overrides.rank ?? 1,
+      submission: {
+        title: "Top Project",
+        description: "An amazing project",
+        github_url: "https://github.com/test/repo",
+        live_app_url: "https://demo.example.com",
+        screenshot_url: "https://storage.example.com/shot.webp",
+        team_id: overrides.team_id ?? null,
+      },
+    })
+
+    function mockPublishedResults(results: unknown[]) {
+      let hackathonChecked = false
+      setMockFromImplementation((table) => {
+        if (table === "hackathons" && !hackathonChecked) {
+          hackathonChecked = true
+          return createChainableMock({
+            data: { results_published_at: "2026-01-01T00:00:00Z" },
+            error: null,
+          })
+        }
+        if (table === "hackathon_results") {
+          return createChainableMock({ data: results, error: null })
+        }
+        if (table === "teams") {
+          return createChainableMock({ data: [], error: null })
+        }
+        if (table === "prize_assignments") {
+          return createChainableMock({ data: [], error: null })
+        }
+        if (table === "hackathon_participants") {
+          return createChainableMock({ data: [], error: null })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+    }
+
+    it("returns null when results are not published", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: { results_published_at: null }, error: null })
+      )
+
+      const result = await getPublicResultsWithDetails("h1")
+
+      expect(result).toBeNull()
+    })
+
+    it("returns null when hackathon does not exist", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: null, error: null })
+      )
+
+      const result = await getPublicResultsWithDetails("h1")
+
+      expect(result).toBeNull()
+    })
+
+    it("returns results with empty members for solo submissions", async () => {
+      mockPublishedResults([publishedSubmission({ team_id: null })])
+
+      const result = await getPublicResultsWithDetails("h1")
+
+      expect(result).not.toBeNull()
+      expect(result).toHaveLength(1)
+      expect(result![0].members).toEqual([])
+    })
+
+    it("maps all PublicResultWithDetails fields correctly", async () => {
+      mockPublishedResults([publishedSubmission({ team_id: null })])
+
+      const result = await getPublicResultsWithDetails("h1")
+
+      expect(result).not.toBeNull()
+      const r = result![0]
+      expect(r.rank).toBe(1)
+      expect(r.submissionTitle).toBe("Top Project")
+      expect(r.submissionDescription).toBe("An amazing project")
+      expect(r.submissionGithubUrl).toBe("https://github.com/test/repo")
+      expect(r.submissionLiveAppUrl).toBe("https://demo.example.com")
+      expect(r.submissionScreenshotUrl).toBe("https://storage.example.com/shot.webp")
+      expect(r.weightedScore).toBe(85.0)
+      expect(r.judgeCount).toBe(3)
+      expect(r.prizes).toEqual([])
+    })
+
+    it("returns team member names for top-3 team submissions", async () => {
+      let hackathonChecked = false
+      setMockFromImplementation((table) => {
+        if (table === "hackathons" && !hackathonChecked) {
+          hackathonChecked = true
+          return createChainableMock({
+            data: { results_published_at: "2026-01-01T00:00:00Z" },
+            error: null,
+          })
+        }
+        if (table === "hackathon_results") {
+          return createChainableMock({
+            data: [publishedSubmission({ team_id: "t1" })],
+            error: null,
+          })
+        }
+        if (table === "teams") {
+          return createChainableMock({ data: [{ id: "t1", name: "Team Alpha" }], error: null })
+        }
+        if (table === "prize_assignments") {
+          return createChainableMock({ data: [], error: null })
+        }
+        if (table === "hackathon_participants") {
+          return createChainableMock({
+            data: [{ team_id: "t1", clerk_user_id: "user_1" }],
+            error: null,
+          })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      ;(mockClerkClient as unknown as { mockImplementation: (fn: () => unknown) => void }).mockImplementation(() =>
+        Promise.resolve({
+          organizations: { getOrganization: mock(() => Promise.resolve({ name: "Test Org" })) },
+          users: {
+            getUserList: mock(() =>
+              Promise.resolve({
+                data: [{ id: "user_1", firstName: "Alice", lastName: "Smith", username: null }],
+              })
+            ),
+          },
+        })
+      )
+
+      const result = await getPublicResultsWithDetails("h1")
+
+      expect(result).not.toBeNull()
+      expect(result![0].members).toEqual(["Alice Smith"])
+    })
+
+    it("uses username when firstName is not set", async () => {
+      let hackathonChecked = false
+      setMockFromImplementation((table) => {
+        if (table === "hackathons" && !hackathonChecked) {
+          hackathonChecked = true
+          return createChainableMock({
+            data: { results_published_at: "2026-01-01T00:00:00Z" },
+            error: null,
+          })
+        }
+        if (table === "hackathon_results") {
+          return createChainableMock({
+            data: [publishedSubmission({ team_id: "t1" })],
+            error: null,
+          })
+        }
+        if (table === "teams") {
+          return createChainableMock({ data: [{ id: "t1", name: "Team Alpha" }], error: null })
+        }
+        if (table === "prize_assignments") {
+          return createChainableMock({ data: [], error: null })
+        }
+        if (table === "hackathon_participants") {
+          return createChainableMock({
+            data: [{ team_id: "t1", clerk_user_id: "user_1" }],
+            error: null,
+          })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      ;(mockClerkClient as unknown as { mockImplementation: (fn: () => unknown) => void }).mockImplementation(() =>
+        Promise.resolve({
+          organizations: { getOrganization: mock(() => Promise.resolve({ name: "Test Org" })) },
+          users: {
+            getUserList: mock(() =>
+              Promise.resolve({
+                data: [{ id: "user_1", firstName: null, lastName: null, username: "alice42" }],
+              })
+            ),
+          },
+        })
+      )
+
+      const result = await getPublicResultsWithDetails("h1")
+
+      expect(result![0].members).toEqual(["alice42"])
+    })
+
+    it("falls back to empty members when Clerk API throws", async () => {
+      let hackathonChecked = false
+      setMockFromImplementation((table) => {
+        if (table === "hackathons" && !hackathonChecked) {
+          hackathonChecked = true
+          return createChainableMock({
+            data: { results_published_at: "2026-01-01T00:00:00Z" },
+            error: null,
+          })
+        }
+        if (table === "hackathon_results") {
+          return createChainableMock({
+            data: [publishedSubmission({ team_id: "t1" })],
+            error: null,
+          })
+        }
+        if (table === "teams") {
+          return createChainableMock({ data: [{ id: "t1", name: "Team Alpha" }], error: null })
+        }
+        if (table === "prize_assignments") {
+          return createChainableMock({ data: [], error: null })
+        }
+        if (table === "hackathon_participants") {
+          return createChainableMock({
+            data: [{ team_id: "t1", clerk_user_id: "user_1" }],
+            error: null,
+          })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      mockClerkClient.mockImplementation(() => Promise.reject(new Error("Clerk unavailable")))
+
+      const result = await getPublicResultsWithDetails("h1")
+
+      expect(result).not.toBeNull()
+      expect(result![0].members).toEqual([])
+    })
+
+    it("does not fetch participants for results ranked below 3", async () => {
+      let participantsQueried = false
+      let hackathonChecked = false
+      setMockFromImplementation((table) => {
+        if (table === "hackathons" && !hackathonChecked) {
+          hackathonChecked = true
+          return createChainableMock({
+            data: { results_published_at: "2026-01-01T00:00:00Z" },
+            error: null,
+          })
+        }
+        if (table === "hackathon_results") {
+          return createChainableMock({
+            data: [
+              publishedSubmission({ rank: 4, team_id: "t1", submission_id: "s4" }),
+            ],
+            error: null,
+          })
+        }
+        if (table === "teams") {
+          return createChainableMock({ data: [{ id: "t1", name: "Team D" }], error: null })
+        }
+        if (table === "prize_assignments") {
+          return createChainableMock({ data: [], error: null })
+        }
+        if (table === "hackathon_participants") {
+          participantsQueried = true
+          return createChainableMock({ data: [], error: null })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      const result = await getPublicResultsWithDetails("h1")
+
+      expect(participantsQueried).toBe(false)
+      expect(result![0].members).toEqual([])
     })
   })
 })

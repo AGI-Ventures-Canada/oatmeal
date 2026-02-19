@@ -4,11 +4,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ExternalLink, FolderOpen, Gavel, Trophy, Medal } from "lucide-react"
-import type { HackathonStatus } from "@/lib/db/hackathon-types"
-
 interface HackathonPageActionsProps {
   slug: string
-  status: HackathonStatus
   isOrganizer: boolean
   submissionCount?: number
 }
