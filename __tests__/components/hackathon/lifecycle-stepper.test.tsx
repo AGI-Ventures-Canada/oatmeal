@@ -13,6 +13,11 @@ mock.module("next/navigation", () => ({
   }),
 }))
 
+let mockIsMobile = false
+mock.module("@/hooks/use-mobile", () => ({
+  useIsMobile: () => mockIsMobile,
+}))
+
 const { LifecycleStepper } = await import(
   "@/components/hackathon/lifecycle-stepper"
 )
@@ -35,6 +40,7 @@ describe("LifecycleStepper", () => {
   beforeEach(() => {
     mockPush.mockClear()
     mockRefresh.mockClear()
+    mockIsMobile = false
   })
 
   afterEach(() => {
@@ -157,34 +163,39 @@ describe("LifecycleStepper", () => {
       expect(circle?.className).toContain("border-muted-foreground/30")
     })
 
-    it("applies opacity-40 to distant (non-adjacent) future nodes", () => {
+    it("applies opacity-50 to distant future nodes only", () => {
       render(<LifecycleStepper {...baseProps} />)
-      expect(findPhaseNode("Completed")?.className).toContain("opacity-40")
+      expect(findPhaseNode("Completed")?.className).toContain("opacity-50")
     })
 
-    it("does not apply opacity-40 to adjacent nodes", () => {
-      render(<LifecycleStepper {...baseProps} />)
-      expect(findPhaseNode("Go Live")?.className).not.toContain("opacity-40")
+    it("does not apply opacity to past nodes even when distant", () => {
+      render(<LifecycleStepper {...baseProps} status="judging" />)
+      expect(findPhaseNode("Draft")?.className).not.toContain("opacity")
     })
 
-    it("applies hover:bg-muted to adjacent nodes", () => {
+    it("does not apply opacity to adjacent nodes", () => {
+      render(<LifecycleStepper {...baseProps} />)
+      expect(findPhaseNode("Go Live")?.className).not.toContain("opacity")
+    })
+
+    it("applies hover:bg-muted to actionable nodes", () => {
       render(<LifecycleStepper {...baseProps} />)
       expect(findPhaseNode("Go Live")?.className).toContain("hover:bg-muted")
     })
   })
 
-  describe("action wrappers", () => {
-    it("wraps adjacent forward node in Popover trigger (draft → Go Live)", () => {
+  describe("action wrappers (desktop — HoverCard)", () => {
+    it("wraps adjacent forward node in HoverCard trigger (draft → Go Live)", () => {
       render(<LifecycleStepper {...baseProps} />)
-      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("popover-trigger")
+      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
 
-    it("wraps adjacent backward node in Popover trigger (published → Draft)", () => {
+    it("wraps adjacent backward node in HoverCard trigger (published → Draft)", () => {
       render(<LifecycleStepper {...baseProps} status="published" />)
-      expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("popover-trigger")
+      expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
 
-    it("wraps distant node in Tooltip trigger (draft → Completed)", () => {
+    it("wraps distant future node in Tooltip trigger (draft → Completed)", () => {
       render(<LifecycleStepper {...baseProps} />)
       expect(findPhaseNode("Completed")?.getAttribute("data-slot")).toBe("tooltip-trigger")
     })
@@ -194,25 +205,41 @@ describe("LifecycleStepper", () => {
       expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBeNull()
     })
 
-    it("wraps both adjacent nodes in Popover for judging phase", () => {
+    it("wraps all non-current nodes for judging phase", () => {
       render(<LifecycleStepper {...baseProps} status="judging" />)
-      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("popover-trigger")
-      expect(findPhaseNode("Completed")?.getAttribute("data-slot")).toBe("popover-trigger")
+      expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Completed")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
 
-    it("wraps distant nodes in Tooltip for judging phase", () => {
-      render(<LifecycleStepper {...baseProps} status="judging" />)
-      expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("tooltip-trigger")
-    })
-
-    it("wraps adjacent node in Popover for completed phase (backward)", () => {
+    it("wraps all past nodes in HoverCard for completed phase", () => {
       render(<LifecycleStepper {...baseProps} status="completed" />)
-      expect(findPhaseNode("Judging")?.getAttribute("data-slot")).toBe("popover-trigger")
+      expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Judging")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
 
     it("does not wrap current completed node", () => {
       render(<LifecycleStepper {...baseProps} status="completed" />)
       expect(findPhaseNode("Completed")?.getAttribute("data-slot")).toBeNull()
+    })
+  })
+
+  describe("action wrappers (mobile — Popover)", () => {
+    beforeEach(() => {
+      mockIsMobile = true
+    })
+
+    it("wraps actionable nodes in Popover trigger on mobile", () => {
+      render(<LifecycleStepper {...baseProps} />)
+      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("popover-trigger")
+    })
+
+    it("wraps all past nodes in Popover for judging phase on mobile", () => {
+      render(<LifecycleStepper {...baseProps} status="judging" />)
+      expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("popover-trigger")
+      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("popover-trigger")
+      expect(findPhaseNode("Completed")?.getAttribute("data-slot")).toBe("popover-trigger")
     })
   })
 

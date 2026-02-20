@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -14,6 +15,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
 import {
   Popover,
   PopoverContent,
@@ -60,9 +66,21 @@ const confirmations: Record<string, { title: string; description: string }> = {
     title: "Revert to published?",
     description: "This will reopen the hackathon for submissions.",
   },
+  "judging→draft": {
+    title: "Revert to draft?",
+    description: "The hackathon will be taken offline and hidden from the browse page.",
+  },
   "completed→judging": {
     title: "Revert to judging?",
     description: "This will reopen the judging phase.",
+  },
+  "completed→published": {
+    title: "Revert to published?",
+    description: "Results will be unpublished and the hackathon will reopen for submissions.",
+  },
+  "completed→draft": {
+    title: "Revert to draft?",
+    description: "Results will be unpublished and the hackathon will be taken offline.",
   },
 }
 
@@ -118,6 +136,7 @@ type HoverAction = {
 
 export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissionCount = 0, judgingProgress, judgingSetupStatus, startsAt, endsAt, registrationOpensAt, registrationClosesAt, description, bannerUrl, locationType, locationName, locationUrl, sponsorCount = 0 }: LifecycleStepperProps) {
   const router = useRouter()
+  const isMobile = useIsMobile()
   const [currentStatus, setCurrentStatus] = useState(status)
   const [updating, setUpdating] = useState(false)
   const [pendingTarget, setPendingTarget] = useState<PhaseKey | null>(null)
@@ -154,14 +173,10 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
         return
       }
 
-      if (newStatus === "judging" && phases[currentIndex]?.key === "completed") {
-        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/results/unpublish`, {
+      if (phases[currentIndex]?.key === "completed" && (newStatus === "judging" || newStatus === "published" || newStatus === "draft")) {
+        await fetch(`/api/dashboard/hackathons/${hackathonId}/results/unpublish`, {
           method: "POST",
         })
-        if (!res.ok) throw new Error("Failed to revert status")
-        setCurrentStatus(newStatus)
-        router.refresh()
-        return
       }
 
       const body: Record<string, unknown> = { status: newStatus }
@@ -191,10 +206,10 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
     setPendingTarget(target)
   }
 
-  function getHoverAction(phaseIndex: number): HoverAction | null {
+  function getNodeAction(phaseIndex: number): HoverAction | null {
     if (updating) return null
     const distance = phaseIndex - currentIndex
-    if (Math.abs(distance) !== 1) return null
+    if (distance === 0) return null
 
     const phaseKey = phases[phaseIndex].key
     const currentKey = phases[currentIndex].key
@@ -209,14 +224,17 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
       }
       if (currentKey === "judging" && phaseKey === "completed")
         return { title: "End Event", description: "End the event and publish results", buttonText: "End Event", onClick: () => requestTransition("completed") }
-    } else {
-      if (currentKey === "published" && phaseKey === "draft")
-        return { title: "Take Offline", description: "Hide the event from the browse page", buttonText: "Take Offline", onClick: () => requestTransition("draft") }
-      if (currentKey === "judging" && phaseKey === "published")
-        return { title: "Reopen Submissions", description: "Revert to published and allow new submissions", buttonText: "Reopen", onClick: () => requestTransition("published") }
-      if (currentKey === "completed" && phaseKey === "judging")
+    }
+
+    if (distance < 0) {
+      if (phaseKey === "draft")
+        return { title: "Revert to Draft", description: "Take the hackathon offline and hide it from the browse page", buttonText: "Revert to Draft", onClick: () => requestTransition("draft") }
+      if (phaseKey === "published")
+        return { title: "Revert to Published", description: "Reopen the hackathon for submissions", buttonText: "Revert", onClick: () => requestTransition("published") }
+      if (phaseKey === "judging")
         return { title: "Reopen Judging", description: "Revert to the judging phase", buttonText: "Reopen", onClick: () => requestTransition("judging") }
     }
+
     return null
   }
 
@@ -260,39 +278,33 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
               const isCurrent = index === currentIndex
               const isFuture = index > currentIndex
               const Icon = phase.icon
-              const isAdjacent = !isCurrent && !updating && Math.abs(index - currentIndex) === 1
-              const isDistant = !isCurrent && Math.abs(index - currentIndex) > 1
-              const hoverAction = getHoverAction(index)
+              const nodeAction = getNodeAction(index)
+              const isActionable = !!nodeAction
+              const isFutureDistant = isFuture && !isActionable
 
               const nodeElement = (
                 <button
                   type="button"
                   className={cn(
                     "group/phase flex flex-col items-center gap-1.5 rounded-md px-2 pt-1 pb-1.5 transition-colors shrink-0",
-                    isAdjacent && "hover:bg-muted cursor-pointer",
+                    isActionable && "hover:bg-muted cursor-pointer",
                     isCurrent && "cursor-default",
-                    isDistant && "cursor-default opacity-40"
+                    isFutureDistant && "cursor-default opacity-50"
                   )}
                 >
-                  <div className="relative">
-                    {isAdjacent && (
-                      <div className="absolute inset-0 rounded-full ring-2 ring-primary/30 animate-pulse" />
+                  <div
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
+                      isCompleted && "bg-muted-foreground text-background",
+                      isCurrent && "bg-primary text-primary-foreground",
+                      isFuture && "border-2 border-muted-foreground/30"
                     )}
-                    <div
-                      className={cn(
-                        "relative flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                        isCompleted && "bg-muted-foreground text-background",
-                        isCurrent && "bg-primary text-primary-foreground",
-                        isFuture && "border-2 border-muted-foreground/30",
-                        isAdjacent && "ring-2 ring-primary/40"
-                      )}
-                    >
-                      {isCompleted ? (
-                        <Check className="size-3.5" strokeWidth={2.5} />
-                      ) : (
-                        <Icon className="size-3.5" />
-                      )}
-                    </div>
+                  >
+                    {isCompleted ? (
+                      <Check className="size-3.5" strokeWidth={2.5} />
+                    ) : (
+                      <Icon className="size-3.5" />
+                    )}
                   </div>
                   <span
                     className={cn(
@@ -307,33 +319,55 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                 </button>
               )
 
-              const wrappedNode = hoverAction ? (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    {nodeElement}
-                  </PopoverTrigger>
-                  <PopoverContent side="top" align="center" className="w-auto max-w-64">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">{hoverAction.title}</p>
-                      <p className="text-muted-foreground">{hoverAction.description}</p>
-                      <Button size="sm" className="w-full" onClick={hoverAction.onClick}>
-                        {hoverAction.buttonText}
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              ) : isDistant ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    {nodeElement}
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    {phase.label}
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                nodeElement
+              const actionContent = nodeAction && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">{nodeAction.title}</p>
+                  <p className="text-muted-foreground">{nodeAction.description}</p>
+                  <Button size="sm" className="w-full" onClick={nodeAction.onClick}>
+                    {nodeAction.buttonText}
+                  </Button>
+                </div>
               )
+
+              let wrappedNode
+              if (nodeAction) {
+                if (isMobile) {
+                  wrappedNode = (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        {nodeElement}
+                      </PopoverTrigger>
+                      <PopoverContent side="top" align="center" className="w-auto max-w-64">
+                        {actionContent}
+                      </PopoverContent>
+                    </Popover>
+                  )
+                } else {
+                  wrappedNode = (
+                    <HoverCard openDelay={200}>
+                      <HoverCardTrigger asChild>
+                        {nodeElement}
+                      </HoverCardTrigger>
+                      <HoverCardContent side="top" align="center" className="w-auto max-w-64">
+                        {actionContent}
+                      </HoverCardContent>
+                    </HoverCard>
+                  )
+                }
+              } else if (isFutureDistant) {
+                wrappedNode = (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      {nodeElement}
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {phase.label}
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              } else {
+                wrappedNode = nodeElement
+              }
 
               return (
                 <div
