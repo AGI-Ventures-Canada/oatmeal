@@ -956,6 +956,13 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         metadata: { name: hackathon.name },
       })
 
+      const { triggerWebhooks } = await import("@/lib/services/webhooks")
+      triggerWebhooks(principal.tenantId, "hackathon.created", {
+        event: "hackathon.created",
+        timestamp: new Date().toISOString(),
+        data: { hackathonId: hackathon.id, name: hackathon.name, slug: hackathon.slug },
+      }).catch(console.error)
+
       return {
         id: hackathon.id,
         name: hackathon.name,
@@ -1055,6 +1062,13 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         resourceType: "hackathon",
         resourceId: params.id,
       })
+
+      const { triggerWebhooks } = await import("@/lib/services/webhooks")
+      triggerWebhooks(principal.tenantId, "hackathon.updated", {
+        event: "hackathon.updated",
+        timestamp: new Date().toISOString(),
+        data: { hackathonId: hackathon.id },
+      }).catch(console.error)
 
       return {
         id: hackathon.id,

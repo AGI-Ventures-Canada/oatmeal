@@ -19,10 +19,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 const eventTypes = [
-  { value: "agent_run.started", label: "Run Started", description: "When an agent run begins" },
-  { value: "agent_run.completed", label: "Run Completed", description: "When an agent run finishes successfully" },
-  { value: "agent_run.failed", label: "Run Failed", description: "When an agent run fails" },
-  { value: "agent_run.step_completed", label: "Step Completed", description: "When an agent completes a step" },
+  { value: "hackathon.created", label: "Hackathon Created", description: "When a new hackathon is created" },
+  { value: "hackathon.updated", label: "Hackathon Updated", description: "When hackathon settings are changed" },
+  { value: "participant.registered", label: "Participant Registered", description: "When a user registers for a hackathon" },
+  { value: "submission.created", label: "Submission Created", description: "When a team submits a project" },
+  { value: "submission.updated", label: "Submission Updated", description: "When a team updates their submission" },
+  { value: "results.published", label: "Results Published", description: "When hackathon results are published" },
 ]
 
 export function CreateWebhookButton() {

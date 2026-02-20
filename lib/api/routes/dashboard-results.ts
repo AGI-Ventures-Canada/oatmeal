@@ -130,6 +130,13 @@ export const dashboardResultsRoutes = new Elysia()
       resourceId: params.id,
     })
 
+    const { triggerWebhooks } = await import("@/lib/services/webhooks")
+    triggerWebhooks(principal.tenantId, "results.published", {
+      event: "results.published",
+      timestamp: new Date().toISOString(),
+      data: { hackathonId: params.id },
+    }).catch(console.error)
+
     return { success: true }
   }, {
     detail: {

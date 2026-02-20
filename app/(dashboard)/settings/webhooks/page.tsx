@@ -23,7 +23,7 @@ export default async function SettingsWebhooksPage() {
         <div>
           <h1 className="text-3xl font-bold">Webhooks</h1>
           <p className="text-muted-foreground">
-            Receive notifications when agent events occur
+            Receive notifications when hackathon events occur
           </p>
         </div>
         <CreateWebhookButton />

@@ -33,8 +33,11 @@ export type JudgeInvitationStatus = "pending" | "accepted" | "cancelled"
 export type WebhookEvent =
   | "hackathon.created"
   | "hackathon.updated"
+  | "participant.registered"
   | "submission.created"
   | "submission.submitted"
+  | "submission.updated"
+  | "results.published"
 
 export type ScheduleFrequency =
   | "once"

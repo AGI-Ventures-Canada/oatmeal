@@ -1191,6 +1191,14 @@ export type Database = {
           success: boolean
         }[]
       }
+      effective_hackathon_status: {
+        Args: {
+          ends_at: string
+          starts_at: string
+          status: Database["public"]["Enums"]["hackathon_status"]
+        }
+        Returns: Database["public"]["Enums"]["hackathon_status"]
+      }
       register_for_hackathon:
         | {
             Args: { p_clerk_user_id: string; p_hackathon_id: string }
@@ -1227,7 +1235,6 @@ export type Database = {
           success: boolean
         }[]
       }
-      transition_hackathon_statuses: { Args: never; Returns: undefined }
     }
     Enums: {
       actor_type: "user" | "api_key"
@@ -1269,6 +1276,9 @@ export type Database = {
         | "hackathon.updated"
         | "submission.created"
         | "submission.submitted"
+        | "participant.registered"
+        | "submission.updated"
+        | "results.published"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1442,6 +1452,9 @@ export const Constants = {
         "hackathon.updated",
         "submission.created",
         "submission.submitted",
+        "participant.registered",
+        "submission.updated",
+        "results.published",
       ],
     },
   },

@@ -517,8 +517,11 @@ describe("Webhook Events", () => {
   const validEvents: WebhookEvent[] = [
     "hackathon.created",
     "hackathon.updated",
+    "participant.registered",
     "submission.created",
     "submission.submitted",
+    "submission.updated",
+    "results.published",
   ]
 
   for (const event of validEvents) {
