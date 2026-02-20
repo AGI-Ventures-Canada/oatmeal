@@ -3,7 +3,8 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useUser, useClerk } from "@clerk/nextjs"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { useSidebar } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,15 +12,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { UserCog, LogOut } from "lucide-react"
+import { Menu, UserCog, LogOut } from "lucide-react"
 
 export function MobileHeader() {
   const { isSignedIn, user } = useUser()
   const { openUserProfile, signOut } = useClerk()
+  const { toggleSidebar } = useSidebar()
 
   return (
     <header className="flex md:hidden items-center gap-3 border-b px-4 py-3">
-      <SidebarTrigger />
+      <Button variant="ghost" size="icon-sm" onClick={toggleSidebar}>
+        <Menu className="size-5" />
+        <span className="sr-only">Toggle menu</span>
+      </Button>
       <Link href={isSignedIn ? "/home" : "/"} className="font-bold text-lg">
         Oatmeal
       </Link>

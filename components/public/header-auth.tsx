@@ -26,7 +26,7 @@ export function HeaderAuth() {
             {user?.firstName?.charAt(0) || "U"}
           </div>
         )}
-        Dashboard
+        <span className="hidden sm:inline">Dashboard</span>
       </Link>
     )
   }

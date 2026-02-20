@@ -187,7 +187,7 @@ export function HackathonTabs({
             data-form-type="other"
           />
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-hidden">
         <TabsList variant="line">
           <TabsTrigger value="participating">
             Participating
