@@ -230,7 +230,7 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
       if (phaseKey === "draft")
         return { title: "Revert to Draft", description: "Take the hackathon offline and hide it from the browse page", buttonText: "Revert to Draft", onClick: () => requestTransition("draft") }
       if (phaseKey === "published")
-        return { title: "Revert to Published", description: "Reopen the hackathon for submissions", buttonText: "Revert", onClick: () => requestTransition("published") }
+        return { title: "Reopen Submissions", description: "Reopen the hackathon for new submissions", buttonText: "Reopen", onClick: () => requestTransition("published") }
       if (phaseKey === "judging")
         return { title: "Reopen Judging", description: "Revert to the judging phase", buttonText: "Reopen", onClick: () => requestTransition("judging") }
     }
