@@ -57,11 +57,12 @@ export function FocusScoringView({
 
   function handleScoreSubmitted() {
     const assignmentId = current.id
-    setCompletedIds((prev) => new Set([...prev, assignmentId]))
+    const updatedIds = new Set([...completedIds, assignmentId])
+    setCompletedIds(updatedIds)
     onScoreSubmitted(assignmentId)
 
     const nextUnscored = assignments.findIndex(
-      (a, idx) => idx > currentIndex && !completedIds.has(a.id) && a.id !== assignmentId
+      (a, idx) => idx > currentIndex && !updatedIds.has(a.id)
     )
     if (nextUnscored >= 0) {
       setTimeout(() => setCurrentIndex(nextUnscored), 600)
