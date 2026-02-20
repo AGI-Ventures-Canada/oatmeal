@@ -123,23 +123,24 @@ describe("LifecycleStepper", () => {
   })
 
   describe("node coloring", () => {
+    function findCircle(label: string) {
+      return findPhaseNode(label)?.querySelector(".size-8")
+    }
+
     it("uses primary color only on current node in draft phase", () => {
       render(<LifecycleStepper {...baseProps} />)
-      const draftCircle = findPhaseNode("Draft")?.querySelector("div")
-      expect(draftCircle?.className).toContain("bg-primary")
+      expect(findCircle("Draft")?.className).toContain("bg-primary")
     })
 
     it("uses muted-foreground for past nodes in judging phase", () => {
       render(<LifecycleStepper {...baseProps} status="judging" />)
-      const draftCircle = findPhaseNode("Draft")?.querySelector("div")
-      expect(draftCircle?.className).toContain("bg-muted-foreground")
-      expect(draftCircle?.className).not.toContain("bg-primary")
+      expect(findCircle("Draft")?.className).toContain("bg-muted-foreground")
+      expect(findCircle("Draft")?.className).not.toContain("bg-primary")
     })
 
     it("uses outline for future nodes", () => {
       render(<LifecycleStepper {...baseProps} />)
-      const completedCircle = findPhaseNode("Completed")?.querySelector("div")
-      expect(completedCircle?.className).toContain("border-muted-foreground/30")
+      expect(findCircle("Completed")?.className).toContain("border-muted-foreground/30")
     })
 
     it("uses muted-foreground for judges circle when past Draft", () => {
@@ -172,15 +173,15 @@ describe("LifecycleStepper", () => {
     })
   })
 
-  describe("hover wrappers", () => {
-    it("wraps adjacent forward node in HoverCard trigger (draft → Go Live)", () => {
+  describe("action wrappers", () => {
+    it("wraps adjacent forward node in Popover trigger (draft → Go Live)", () => {
       render(<LifecycleStepper {...baseProps} />)
-      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("popover-trigger")
     })
 
-    it("wraps adjacent backward node in HoverCard trigger (published → Draft)", () => {
+    it("wraps adjacent backward node in Popover trigger (published → Draft)", () => {
       render(<LifecycleStepper {...baseProps} status="published" />)
-      expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("popover-trigger")
     })
 
     it("wraps distant node in Tooltip trigger (draft → Completed)", () => {
@@ -193,10 +194,10 @@ describe("LifecycleStepper", () => {
       expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBeNull()
     })
 
-    it("wraps both adjacent nodes in HoverCard for judging phase", () => {
+    it("wraps both adjacent nodes in Popover for judging phase", () => {
       render(<LifecycleStepper {...baseProps} status="judging" />)
-      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
-      expect(findPhaseNode("Completed")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("popover-trigger")
+      expect(findPhaseNode("Completed")?.getAttribute("data-slot")).toBe("popover-trigger")
     })
 
     it("wraps distant nodes in Tooltip for judging phase", () => {
@@ -204,9 +205,9 @@ describe("LifecycleStepper", () => {
       expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("tooltip-trigger")
     })
 
-    it("wraps adjacent node in HoverCard for completed phase (backward)", () => {
+    it("wraps adjacent node in Popover for completed phase (backward)", () => {
       render(<LifecycleStepper {...baseProps} status="completed" />)
-      expect(findPhaseNode("Judging")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Judging")?.getAttribute("data-slot")).toBe("popover-trigger")
     })
 
     it("does not wrap current completed node", () => {

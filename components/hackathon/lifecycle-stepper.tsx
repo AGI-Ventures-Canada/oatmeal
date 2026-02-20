@@ -15,10 +15,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Tooltip,
   TooltipContent,
@@ -274,19 +274,25 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                     isDistant && "cursor-default opacity-40"
                   )}
                 >
-                  <div
-                    className={cn(
-                      "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                      isCompleted && "bg-muted-foreground text-background",
-                      isCurrent && "bg-primary text-primary-foreground",
-                      isFuture && "border-2 border-muted-foreground/30"
+                  <div className="relative">
+                    {isAdjacent && (
+                      <div className="absolute inset-0 rounded-full ring-2 ring-primary/30 animate-pulse" />
                     )}
-                  >
-                    {isCompleted ? (
-                      <Check className="size-3.5" strokeWidth={2.5} />
-                    ) : (
-                      <Icon className="size-3.5" />
-                    )}
+                    <div
+                      className={cn(
+                        "relative flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
+                        isCompleted && "bg-muted-foreground text-background",
+                        isCurrent && "bg-primary text-primary-foreground",
+                        isFuture && "border-2 border-muted-foreground/30",
+                        isAdjacent && "ring-2 ring-primary/40"
+                      )}
+                    >
+                      {isCompleted ? (
+                        <Check className="size-3.5" strokeWidth={2.5} />
+                      ) : (
+                        <Icon className="size-3.5" />
+                      )}
+                    </div>
                   </div>
                   <span
                     className={cn(
@@ -302,11 +308,11 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
               )
 
               const wrappedNode = hoverAction ? (
-                <HoverCard openDelay={200}>
-                  <HoverCardTrigger asChild>
+                <Popover>
+                  <PopoverTrigger asChild>
                     {nodeElement}
-                  </HoverCardTrigger>
-                  <HoverCardContent side="top" align="center" className="w-auto">
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="center" className="w-auto max-w-64">
                     <div className="space-y-2">
                       <p className="text-sm font-medium">{hoverAction.title}</p>
                       <p className="text-muted-foreground">{hoverAction.description}</p>
@@ -314,8 +320,8 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                         {hoverAction.buttonText}
                       </Button>
                     </div>
-                  </HoverCardContent>
-                </HoverCard>
+                  </PopoverContent>
+                </Popover>
               ) : isDistant ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
