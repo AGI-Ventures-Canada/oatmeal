@@ -200,6 +200,24 @@ describe("Sponsor Logo API Integration Tests", () => {
       expect(data.error).toBe("No file provided")
     })
 
+    it("returns 400 when file exceeds 5MB limit", async () => {
+      mockResolvePrincipal.mockResolvedValue(mockUserPrincipal)
+      mockCheckHackathonOrganizer.mockResolvedValue({ status: "ok" })
+
+      const largeFile = new File([new ArrayBuffer(6 * 1024 * 1024)], "large.png", { type: "image/png" })
+      const fd = makeFormData({ file: largeFile, variant: "light" })
+      const res = await app.handle(
+        new Request("http://localhost/api/dashboard/hackathons/h1/sponsors/s1/logo", {
+          method: "POST",
+          body: fd,
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.error).toContain("File too large")
+    })
+
     it("returns 400 for invalid variant", async () => {
       mockResolvePrincipal.mockResolvedValue(mockUserPrincipal)
       mockCheckHackathonOrganizer.mockResolvedValue({ status: "ok" })

@@ -1539,6 +1539,14 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         })
       }
 
+      const MAX_LOGO_SIZE = 5 * 1024 * 1024
+      if (file.size > MAX_LOGO_SIZE) {
+        return new Response(JSON.stringify({ error: "File too large. Maximum size is 5MB" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
       if (variant !== "light" && variant !== "dark") {
         return new Response(JSON.stringify({ error: "Invalid variant. Must be 'light' or 'dark'" }), {
           status: 400,
