@@ -20,7 +20,7 @@ export function MobileHeader() {
   const { toggleSidebar } = useSidebar()
 
   return (
-    <header className="flex md:hidden items-center gap-3 border-b px-4 py-3">
+    <header className="flex lg:hidden items-center gap-3 border-b px-4 py-3">
       <Button variant="ghost" size="icon-sm" onClick={toggleSidebar}>
         <Menu className="size-5" />
         <span className="sr-only">Toggle menu</span>
