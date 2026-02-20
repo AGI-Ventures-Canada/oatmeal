@@ -266,6 +266,16 @@ Exceptions (use Enter instead):
 - **Tooltips**: Ensure the underlying action is accessible without the tooltip
 - **Hover states**: Visual hover effects are fine, but don't hide essential information behind hover-only interactions
 
+**Mobile navigation**: The mobile menu (`components/mobile-header.tsx`) is a full-screen overlay with drill-down navigation (Sierra-style), completely independent from the desktop sidebar. Key principles:
+- **Full-screen takeover**: Mobile menus use `fixed inset-0` overlays, never side-panel sheets that partially cover the screen
+- **Drill-down, not replicate**: Don't mirror the desktop sidebar. Show only top-level items; expandable sections slide to a sub-level with a back button
+- **Large touch targets**: Navigation items use `text-xl` with generous vertical padding (`py-5`). Minimum 44px tap target height
+- **Separate components**: Mobile and desktop navigation are independent components with their own state — never reuse the desktop sidebar on mobile
+- **Body scroll lock**: Lock `document.body.style.overflow = "hidden"` when the menu is open
+- **Auto-close on navigation**: Watch `pathname`/`searchParams` and close the menu when they change
+
+**Sidebar breakpoint**: The desktop sidebar uses `lg:` (1024px) as its visibility breakpoint, matching `MOBILE_BREAKPOINT = 1024` in `hooks/use-mobile.ts`. The mobile header shows below `lg:` (`flex lg:hidden`). Never use `md:` for sidebar-related visibility.
+
 ```typescript
 // GOOD - mobile-first
 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
