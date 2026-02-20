@@ -52,7 +52,7 @@ export function MobileHeader() {
   }, [])
 
   useEffect(() => {
-    close()
+    queueMicrotask(close)
   }, [pathname, searchParams, close])
 
   useEffect(() => {
