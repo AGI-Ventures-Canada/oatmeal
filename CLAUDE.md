@@ -250,6 +250,27 @@ Exceptions (use Enter instead):
 - Single-line forms with one field
 - Chat/message inputs
 
+### Mobile-First Responsive Design
+
+**All UI must work on mobile (375px+).** Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`) with mobile-first defaults:
+
+- **Layouts**: Use `p-4 md:p-6` for padding, stack elements vertically by default
+- **Flex containers with actions**: `flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`
+- **Fixed-width inputs**: `w-full sm:w-64` (full width on mobile, fixed on desktop)
+- **Tables**: Always wrap `<Table>` in `<div className="overflow-x-auto">`
+- **Button labels**: For action bars with multiple buttons, hide text on mobile: `<span className="hidden sm:inline">Label</span>` (keep icons visible)
+- **Tab bars**: Wrap in `<div className="overflow-x-auto">` for horizontal scrolling
+
+```typescript
+// GOOD - mobile-first
+<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+<div className="relative w-full sm:w-64">
+
+// BAD - desktop-only
+<div className="flex items-center justify-between">
+<div className="relative w-64">
+```
+
 ### Code Style
 
 - Do not write comments above code
