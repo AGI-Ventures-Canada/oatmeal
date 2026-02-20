@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Check, EyeOff, Globe, Gavel, Trophy, Loader2, ArrowRight, AlertTriangle } from "lucide-react"
+import { Check, EyeOff, Globe, Gavel, Trophy, Loader2, ArrowRight, AlertTriangle, Users } from "lucide-react"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
 const phases = [
@@ -205,13 +205,15 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
   ].filter(Boolean) as string[]
 
   const isPublishedPhase = phases[currentIndex]?.key === "published"
-  const hasJudges = (judgingSetupStatus?.judgeCount ?? 0) > 0
+  const judgeCount = judgingSetupStatus?.judgeCount ?? 0
+  const hasJudges = judgeCount > 0
   const allSubmissionsAssigned = hasJudges && !judgingSetupStatus?.hasUnassignedSubmissions
-  const publishedCtaText = !hasJudges
-    ? "Assign Judges"
-    : judgingSetupStatus?.hasUnassignedSubmissions
-      ? "Assign Submissions"
-      : "Close Submissions"
+  const judgesLabel = hasJudges
+    ? (judgeCount === 1 ? "1 judge" : `${judgeCount} judges`)
+    : "Assign Judges"
+  const publishedCtaText = judgingSetupStatus?.hasUnassignedSubmissions
+    ? "Assign Submissions"
+    : "Close Submissions"
 
   function getCtaText() {
     if (isPublishedPhase) return publishedCtaText
@@ -291,47 +293,97 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
 
                   {index < phases.length - 1 && (
                     <div className="flex-1 flex items-center self-stretch pt-1" style={{ height: "2.5rem" }}>
-                      {isConnectorWithCta ? (
-                        <div className="flex-1 flex flex-col items-center">
-                          <div className="flex-1 flex items-center w-full">
+                      {index === 0 ? (
+                        <div className="flex-1 flex items-center">
+                          <div
+                            className={cn(
+                              "h-px flex-1",
+                              index < currentIndex ? "bg-primary" : "bg-border"
+                            )}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/e/${hackathonSlug}/manage/judging`)}
+                            className="relative shrink-0 mx-1.5 hover:opacity-80 transition-opacity cursor-pointer"
+                          >
                             <div
                               className={cn(
-                                "h-px flex-1",
-                                index < currentIndex ? "bg-primary" : "bg-border"
+                                "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
+                                hasJudges
+                                  ? "bg-primary text-primary-foreground"
+                                  : "border-2 border-muted-foreground/30 text-muted-foreground"
                               )}
-                            />
-                            <Button
-                              size="sm"
-                              onClick={handleCtaClick}
-                              disabled={updating}
-                              className="shrink-0 gap-1.5 mx-2"
                             >
-                              {updating ? (
-                                <Loader2 className="size-3.5 animate-spin" />
-                              ) : (
-                                <>
-                                  {getCtaText()}
-                                  <ArrowRight className="size-3.5" />
-                                </>
-                              )}
-                            </Button>
-                            <div className="h-px flex-1 bg-border" />
-                          </div>
-                          {isPublishedPhase && (
-                            <span className="text-[11px] text-muted-foreground mt-0.5">
-                              {judgingSetupStatus?.judgeCount === 1
-                                ? "1 judge"
-                                : `${judgingSetupStatus?.judgeCount ?? 0} judges`}
+                              <Users className="size-3.5" />
+                            </div>
+                            <span className="absolute top-full mt-1 left-1/2 -translate-x-1/2 text-[11px] font-medium whitespace-nowrap text-muted-foreground">
+                              {judgesLabel}
                             </span>
+                          </button>
+                          <div
+                            className={cn(
+                              "h-px flex-1",
+                              index < currentIndex ? "bg-primary" : "bg-border"
+                            )}
+                          />
+                          {isConnectorWithCta && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={handleCtaClick}
+                                disabled={updating}
+                                className="shrink-0 gap-1.5 mx-2"
+                              >
+                                {updating ? (
+                                  <Loader2 className="size-3.5 animate-spin" />
+                                ) : (
+                                  <>
+                                    {getCtaText()}
+                                    <ArrowRight className="size-3.5" />
+                                  </>
+                                )}
+                              </Button>
+                              <div className="h-px flex-1 bg-border" />
+                            </>
+                          )}
+                          {isUnpublishConnector && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => requestTransition("draft")}
+                                disabled={updating}
+                                className="shrink-0 gap-1.5 mx-2"
+                              >
+                                {updating ? (
+                                  <Loader2 className="size-3.5 animate-spin" />
+                                ) : (
+                                  <>
+                                    <EyeOff className="size-3.5" />
+                                    Take Offline
+                                  </>
+                                )}
+                              </Button>
+                              <div
+                                className={cn(
+                                  "h-px flex-1",
+                                  index < currentIndex ? "bg-primary" : "bg-border"
+                                )}
+                              />
+                            </>
                           )}
                         </div>
-                      ) : isUnpublishConnector ? (
+                      ) : isConnectorWithCta && !(isPublishedPhase && !hasJudges) ? (
                         <div className="flex-1 flex items-center">
-                          <div className="h-px flex-1 bg-primary" />
+                          <div
+                            className={cn(
+                              "h-px flex-1",
+                              index < currentIndex ? "bg-primary" : "bg-border"
+                            )}
+                          />
                           <Button
-                            variant="outline"
                             size="sm"
-                            onClick={() => requestTransition("draft")}
+                            onClick={handleCtaClick}
                             disabled={updating}
                             className="shrink-0 gap-1.5 mx-2"
                           >
@@ -339,12 +391,12 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                               <Loader2 className="size-3.5 animate-spin" />
                             ) : (
                               <>
-                                <EyeOff className="size-3.5" />
-                                Take Offline
+                                {getCtaText()}
+                                <ArrowRight className="size-3.5" />
                               </>
                             )}
                           </Button>
-                          <div className="h-px flex-1 bg-primary" />
+                          <div className="h-px flex-1 bg-border" />
                         </div>
                       ) : (
                         <div
