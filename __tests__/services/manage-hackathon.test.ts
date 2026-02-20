@@ -2,33 +2,53 @@ import { describe, it, expect, beforeEach } from "bun:test"
 import {
   resetAllMocks,
   mockAuth,
+  mockMultiTableQuery,
+  createChainableMock,
+  setMockFromImplementation,
 } from "../lib/supabase-mock"
-import { mock } from "bun:test"
-
-const mockGetPublicHackathon = mock(() => Promise.resolve(null))
-
-mock.module("@/lib/services/public-hackathons", () => ({
-  getPublicHackathon: mockGetPublicHackathon,
-}))
 
 const { getManageHackathon } = await import("@/lib/services/manage-hackathon")
 
-const mockHackathon = {
+const mockHackathonRow = {
   id: "h1",
+  tenant_id: "t1",
   name: "Test Hackathon",
   slug: "test-hackathon",
+  description: null,
+  rules: null,
+  starts_at: "2026-02-15T09:00:00Z",
+  ends_at: "2026-02-17T18:00:00Z",
+  registration_opens_at: null,
+  registration_closes_at: null,
+  max_participants: null,
+  min_team_size: 1,
+  max_team_size: 5,
+  allow_solo: true,
+  status: "published",
+  banner_url: null,
+  metadata: {},
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   organizer: {
     id: "t1",
     name: "Test Org",
-    clerk_org_id: "org_123",
     slug: "test-org",
+    logo_url: null,
+    logo_url_dark: null,
+    clerk_org_id: "org_123",
   },
+}
+
+function setupHackathonMock() {
+  mockMultiTableQuery({
+    hackathons: { data: mockHackathonRow, error: null },
+    hackathon_sponsors: { data: [], error: null },
+  })
 }
 
 describe("Manage Hackathon Service", () => {
   beforeEach(() => {
     resetAllMocks()
-    mockGetPublicHackathon.mockClear()
   })
 
   describe("getManageHackathon", () => {
@@ -37,7 +57,7 @@ describe("Manage Hackathon Service", () => {
         Promise.resolve({ userId: null, orgId: null, orgRole: null })
       )
 
-      const result = await getManageHackathon("test-hackathon")
+      const result = await getManageHackathon("test-hackathon-unauth")
 
       expect(result).toEqual({ ok: false, reason: "unauthenticated" })
     })
@@ -46,23 +66,22 @@ describe("Manage Hackathon Service", () => {
       mockAuth.mockImplementation(() =>
         Promise.resolve({ userId: "user_123", orgId: "org_123", orgRole: "admin" })
       )
-      mockGetPublicHackathon.mockImplementation(() => Promise.resolve(null))
+      setMockFromImplementation(() =>
+        createChainableMock({ data: null, error: { message: "Not found", code: "PGRST116" } })
+      )
 
       const result = await getManageHackathon("nonexistent-hackathon")
 
       expect(result).toEqual({ ok: false, reason: "not_found" })
-      expect(mockGetPublicHackathon).toHaveBeenCalledWith("nonexistent-hackathon", {
-        includeUnpublished: true,
-      })
     })
 
     it("returns not_organizer error when user is not the organizer", async () => {
       mockAuth.mockImplementation(() =>
         Promise.resolve({ userId: "user_123", orgId: "org_different", orgRole: "admin" })
       )
-      mockGetPublicHackathon.mockImplementation(() => Promise.resolve(mockHackathon))
+      setupHackathonMock()
 
-      const result = await getManageHackathon("test-hackathon")
+      const result = await getManageHackathon("test-hackathon-notorg")
 
       expect(result).toEqual({ ok: false, reason: "not_organizer" })
     })
@@ -71,9 +90,9 @@ describe("Manage Hackathon Service", () => {
       mockAuth.mockImplementation(() =>
         Promise.resolve({ userId: "user_123", orgId: null, orgRole: null })
       )
-      mockGetPublicHackathon.mockImplementation(() => Promise.resolve(mockHackathon))
+      setupHackathonMock()
 
-      const result = await getManageHackathon("test-hackathon")
+      const result = await getManageHackathon("test-hackathon-noid")
 
       expect(result).toEqual({ ok: false, reason: "not_organizer" })
     })
@@ -82,27 +101,15 @@ describe("Manage Hackathon Service", () => {
       mockAuth.mockImplementation(() =>
         Promise.resolve({ userId: "user_123", orgId: "org_123", orgRole: "admin" })
       )
-      mockGetPublicHackathon.mockImplementation(() => Promise.resolve(mockHackathon))
+      setupHackathonMock()
 
-      const result = await getManageHackathon("test-hackathon")
+      const result = await getManageHackathon("test-hackathon-organizer")
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.hackathon).toEqual(mockHackathon)
+        expect(result.hackathon.name).toBe("Test Hackathon")
+        expect(result.hackathon.organizer.clerk_org_id).toBe("org_123")
       }
-    })
-
-    it("calls getPublicHackathon with includeUnpublished true", async () => {
-      mockAuth.mockImplementation(() =>
-        Promise.resolve({ userId: "user_123", orgId: "org_123", orgRole: "admin" })
-      )
-      mockGetPublicHackathon.mockImplementation(() => Promise.resolve(mockHackathon))
-
-      await getManageHackathon("my-hackathon")
-
-      expect(mockGetPublicHackathon).toHaveBeenCalledWith("my-hackathon", {
-        includeUnpublished: true,
-      })
     })
   })
 })
