@@ -1,10 +1,10 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "@/components/ui/button";
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,22 +14,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog"
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "@/components/ui/hover-card";
+} from "@/components/ui/hover-card"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/ui/popover"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/ui/tooltip"
 import {
   Check,
   EyeOff,
@@ -39,17 +39,17 @@ import {
   Loader2,
   AlertTriangle,
   Users,
-} from "lucide-react";
-import type { HackathonStatus } from "@/lib/db/hackathon-types";
+} from "lucide-react"
+import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
 const phases = [
   { key: "draft" as const, label: "Draft", icon: EyeOff },
   { key: "published" as const, label: "Go Live", icon: Globe },
   { key: "judging" as const, label: "Judging", icon: Gavel },
   { key: "completed" as const, label: "Completed", icon: Trophy },
-] as const;
+] as const
 
-type PhaseKey = (typeof phases)[number]["key"];
+type PhaseKey = (typeof phases)[number]["key"]
 
 const confirmations: Record<string, { title: string; description: string }> = {
   "draft→published": {
@@ -94,57 +94,57 @@ const confirmations: Record<string, { title: string; description: string }> = {
     description:
       "Results will be unpublished and the hackathon will be taken offline.",
   },
-};
+}
 
 function resolvePhaseIndex(status: HackathonStatus): number {
   switch (status) {
     case "draft":
-      return 0;
+      return 0
     case "published":
     case "registration_open":
     case "active":
-      return 1;
+      return 1
     case "judging":
-      return 2;
+      return 2
     case "completed":
     case "archived":
-      return 3;
+      return 3
     default:
-      return 0;
+      return 0
   }
 }
 
 interface LifecycleStepperProps {
-  hackathonId: string;
-  hackathonSlug: string;
-  status: HackathonStatus;
-  submissionCount?: number;
+  hackathonId: string
+  hackathonSlug: string
+  status: HackathonStatus
+  submissionCount?: number
   judgingProgress?: {
-    totalAssignments: number;
-    completedAssignments: number;
-  };
+    totalAssignments: number
+    completedAssignments: number
+  }
   judgingSetupStatus?: {
-    judgeCount: number;
-    hasUnassignedSubmissions: boolean;
-  };
-  startsAt?: string | null;
-  endsAt?: string | null;
-  registrationOpensAt?: string | null;
-  registrationClosesAt?: string | null;
-  description?: string | null;
-  bannerUrl?: string | null;
-  locationType?: "in_person" | "virtual" | null;
-  locationName?: string | null;
-  locationUrl?: string | null;
-  sponsorCount?: number;
+    judgeCount: number
+    hasUnassignedSubmissions: boolean
+  }
+  startsAt?: string | null
+  endsAt?: string | null
+  registrationOpensAt?: string | null
+  registrationClosesAt?: string | null
+  description?: string | null
+  bannerUrl?: string | null
+  locationType?: "in_person" | "virtual" | null
+  locationName?: string | null
+  locationUrl?: string | null
+  sponsorCount?: number
 }
 
 type HoverAction = {
-  title: string;
-  description: string;
-  buttonText: string;
-  onClick: () => void;
-};
+  title: string
+  description: string
+  buttonText: string
+  onClick: () => void
+}
 
 export function LifecycleStepper({
   hackathonId,
@@ -164,18 +164,18 @@ export function LifecycleStepper({
   locationUrl,
   sponsorCount = 0,
 }: LifecycleStepperProps) {
-  const router = useRouter();
-  const isMobile = useIsMobile();
-  const [currentStatus, setCurrentStatus] = useState(status);
-  const [updating, setUpdating] = useState(false);
-  const [pendingTarget, setPendingTarget] = useState<PhaseKey | null>(null);
+  const router = useRouter()
+  const isMobile = useIsMobile()
+  const [currentStatus, setCurrentStatus] = useState(status)
+  const [updating, setUpdating] = useState(false)
+  const [pendingTarget, setPendingTarget] = useState<PhaseKey | null>(null)
 
-  const currentIndex = resolvePhaseIndex(currentStatus);
+  const currentIndex = resolvePhaseIndex(currentStatus)
 
   async function commitStatusChange(newStatus: PhaseKey) {
-    const now = new Date().toISOString();
+    const now = new Date().toISOString()
 
-    setUpdating(true);
+    setUpdating(true)
     try {
       if (newStatus === "completed") {
         const calcRes = await fetch(
@@ -183,18 +183,18 @@ export function LifecycleStepper({
           {
             method: "POST",
           },
-        );
+        )
         if (calcRes.ok) {
           const publishRes = await fetch(
             `/api/dashboard/hackathons/${hackathonId}/results/publish`,
             {
               method: "POST",
             },
-          );
+          )
           if (publishRes.ok) {
-            setCurrentStatus(newStatus);
-            router.refresh();
-            return;
+            setCurrentStatus(newStatus)
+            router.refresh()
+            return
           }
         }
         const res = await fetch(
@@ -204,11 +204,11 @@ export function LifecycleStepper({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ status: newStatus }),
           },
-        );
-        if (!res.ok) throw new Error("Failed to update status");
-        setCurrentStatus(newStatus);
-        router.refresh();
-        return;
+        )
+        if (!res.ok) throw new Error("Failed to update status")
+        setCurrentStatus(newStatus)
+        router.refresh()
+        return
       }
 
       if (
@@ -222,17 +222,17 @@ export function LifecycleStepper({
           {
             method: "POST",
           },
-        );
+        )
       }
 
-      const body: Record<string, unknown> = { status: newStatus };
+      const body: Record<string, unknown> = { status: newStatus }
       if (newStatus === "judging") {
-        if (!endsAt || new Date(endsAt) > new Date()) body.endsAt = now;
+        if (!endsAt || new Date(endsAt) > new Date()) body.endsAt = now
         if (
           !registrationClosesAt ||
           new Date(registrationClosesAt) > new Date()
         )
-          body.registrationClosesAt = now;
+          body.registrationClosesAt = now
       }
 
       const res = await fetch(
@@ -242,30 +242,30 @@ export function LifecycleStepper({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
-      );
-      if (!res.ok) throw new Error("Failed to update status");
-      setCurrentStatus(newStatus);
-      router.refresh();
+      )
+      if (!res.ok) throw new Error("Failed to update status")
+      setCurrentStatus(newStatus)
+      router.refresh()
     } catch {
       // keep current status on failure
     } finally {
-      setUpdating(false);
-      setPendingTarget(null);
+      setUpdating(false)
+      setPendingTarget(null)
     }
   }
 
   function requestTransition(target: PhaseKey) {
-    if (target === phases[currentIndex]?.key || updating) return;
-    setPendingTarget(target);
+    if (target === phases[currentIndex]?.key || updating) return
+    setPendingTarget(target)
   }
 
   function getNodeAction(phaseIndex: number): HoverAction | null {
-    if (updating) return null;
-    const distance = phaseIndex - currentIndex;
-    if (distance === 0) return null;
+    if (updating) return null
+    const distance = phaseIndex - currentIndex
+    if (distance === 0) return null
 
-    const phaseKey = phases[phaseIndex].key;
-    const currentKey = phases[currentIndex].key;
+    const phaseKey = phases[phaseIndex].key
+    const currentKey = phases[currentIndex].key
 
     if (distance === 1) {
       if (currentKey === "draft" && phaseKey === "published")
@@ -274,7 +274,7 @@ export function LifecycleStepper({
           description: "Make the event open for registrations",
           buttonText: "Go Live",
           onClick: () => requestTransition("published"),
-        };
+        }
       if (currentKey === "published" && phaseKey === "judging") {
         if (judgingSetupStatus?.hasUnassignedSubmissions)
           return {
@@ -283,13 +283,13 @@ export function LifecycleStepper({
             buttonText: "Assign Submissions",
             onClick: () =>
               router.push(`/e/${hackathonSlug}/manage/judging?tab=assignments`),
-          };
+          }
         return {
           title: "Start Judging",
           description: "Close submissions and begin judging",
           buttonText: "Start Judging",
           onClick: () => requestTransition("judging"),
-        };
+        }
       }
       if (currentKey === "judging" && phaseKey === "completed")
         return {
@@ -297,7 +297,7 @@ export function LifecycleStepper({
           description: "End the event and publish results",
           buttonText: "End Event",
           onClick: () => requestTransition("completed"),
-        };
+        }
     }
 
     if (distance < 0) {
@@ -308,24 +308,24 @@ export function LifecycleStepper({
             "Take the hackathon offline and hide it from the browse page",
           buttonText: "Revert to Draft",
           onClick: () => requestTransition("draft"),
-        };
+        }
       if (phaseKey === "published")
         return {
           title: "Reopen Submissions",
           description: "Reopen the hackathon for new submissions",
           buttonText: "Reopen",
           onClick: () => requestTransition("published"),
-        };
+        }
       if (phaseKey === "judging")
         return {
           title: "Reopen Judging",
           description: "Revert to the judging phase",
           buttonText: "Reopen",
           onClick: () => requestTransition("judging"),
-        };
+        }
     }
 
-    return null;
+    return null
   }
 
   const confirmation = pendingTarget
@@ -333,15 +333,15 @@ export function LifecycleStepper({
         title: `Switch to ${pendingTarget}?`,
         description: `This will change the hackathon status to "${pendingTarget}".`,
       })
-    : null;
+    : null
 
   const missingDates = [
     !registrationOpensAt && "Registration opens",
     !registrationClosesAt && "Registration closes",
     !startsAt && "Event starts",
     !endsAt && "Event ends",
-  ].filter(Boolean) as string[];
-  const hasAllDates = missingDates.length === 0;
+  ].filter(Boolean) as string[]
+  const hasAllDates = missingDates.length === 0
 
   const goLiveWarnings = [
     !description && "No description",
@@ -350,15 +350,15 @@ export function LifecycleStepper({
     locationType === "in_person" && !locationName && "Venue details missing",
     locationType === "virtual" && !locationUrl && "Virtual link missing",
     sponsorCount === 0 && "No sponsors",
-  ].filter(Boolean) as string[];
+  ].filter(Boolean) as string[]
 
-  const judgeCount = judgingSetupStatus?.judgeCount ?? 0;
-  const hasJudges = judgeCount > 0;
+  const judgeCount = judgingSetupStatus?.judgeCount ?? 0
+  const hasJudges = judgeCount > 0
   const judgesLabel = hasJudges
     ? judgeCount === 1
       ? "1 judge"
       : `${judgeCount} judges`
-    : "Assign Judges";
+    : "Assign Judges"
 
   return (
     <>
@@ -366,13 +366,13 @@ export function LifecycleStepper({
         <div className="px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex items-start">
             {phases.map((phase, index) => {
-              const isCompleted = index < currentIndex;
-              const isCurrent = index === currentIndex;
-              const isFuture = index > currentIndex;
-              const Icon = phase.icon;
-              const nodeAction = getNodeAction(index);
-              const isActionable = !!nodeAction;
-              const isFutureDistant = isFuture && !isActionable;
+              const isCompleted = index < currentIndex
+              const isCurrent = index === currentIndex
+              const isFuture = index > currentIndex
+              const Icon = phase.icon
+              const nodeAction = getNodeAction(index)
+              const isActionable = !!nodeAction
+              const isFutureDistant = isFuture && !isActionable
 
               const nodeElement = (
                 <button
@@ -417,7 +417,7 @@ export function LifecycleStepper({
                         : phase.label}
                   </span>
                 </button>
-              );
+              )
 
               const actionContent = nodeAction && (
                 <div className="space-y-2">
@@ -433,9 +433,9 @@ export function LifecycleStepper({
                     {nodeAction.buttonText}
                   </Button>
                 </div>
-              );
+              )
 
-              let wrappedNode;
+              let wrappedNode
               if (nodeAction) {
                 if (isMobile) {
                   wrappedNode = (
@@ -449,7 +449,7 @@ export function LifecycleStepper({
                         {actionContent}
                       </PopoverContent>
                     </Popover>
-                  );
+                  )
                 } else {
                   wrappedNode = (
                     <HoverCard openDelay={200}>
@@ -462,7 +462,7 @@ export function LifecycleStepper({
                         {actionContent}
                       </HoverCardContent>
                     </HoverCard>
-                  );
+                  )
                 }
               } else if (isFutureDistant) {
                 wrappedNode = (
@@ -470,9 +470,9 @@ export function LifecycleStepper({
                     <TooltipTrigger asChild>{nodeElement}</TooltipTrigger>
                     <TooltipContent side="top">{phase.label}</TooltipContent>
                   </Tooltip>
-                );
+                )
               } else {
-                wrappedNode = nodeElement;
+                wrappedNode = nodeElement
               }
 
               return (
@@ -540,7 +540,7 @@ export function LifecycleStepper({
                     </div>
                   )}
                 </div>
-              );
+              )
             })}
           </div>
         </div>
@@ -633,5 +633,5 @@ export function LifecycleStepper({
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }
