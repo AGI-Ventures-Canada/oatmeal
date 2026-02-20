@@ -43,6 +43,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import {
   DropdownMenu,
@@ -92,8 +93,15 @@ export function AppSidebarSimple() {
     userMemberships: { infinite: true },
   })
 
+  const { setOpenMobile, isMobile } = useSidebar()
   const [tenantSlug, setTenantSlug] = useState<string | null>(null)
   const [createOrgOpen, setCreateOrgOpen] = useState(false)
+
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false)
+    }
+  }, [pathname, searchParams, isMobile, setOpenMobile])
 
   useEffect(() => {
     if (!organization) {
