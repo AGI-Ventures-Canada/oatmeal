@@ -261,6 +261,11 @@ Exceptions (use Enter instead):
 - **Button labels**: For action bars with multiple buttons, hide text on mobile: `<span className="hidden sm:inline">Label</span>` (keep icons visible)
 - **Tab bars**: Wrap in `<div className="overflow-x-auto">` for horizontal scrolling
 
+**Touch interactions**: Hover-based interactions (tooltips, hovercards, preview popups) don't work on touch devices. Every hover interaction must have a tap/click equivalent on mobile:
+- **Hovercards/popups**: Use click/tap to open on mobile (e.g., wrap in a clickable element or use Popover instead of HoverCard)
+- **Tooltips**: Ensure the underlying action is accessible without the tooltip
+- **Hover states**: Visual hover effects are fine, but don't hide essential information behind hover-only interactions
+
 ```typescript
 // GOOD - mobile-first
 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
