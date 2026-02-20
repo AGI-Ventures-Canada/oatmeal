@@ -41,10 +41,13 @@ interface WebhookListProps {
 }
 
 const eventLabels: Record<string, string> = {
-  "agent_run.started": "Run Started",
-  "agent_run.completed": "Run Completed",
-  "agent_run.failed": "Run Failed",
-  "agent_run.step_completed": "Step Completed",
+  "hackathon.created": "Hackathon Created",
+  "hackathon.updated": "Hackathon Updated",
+  "participant.registered": "Participant Registered",
+  "submission.created": "Submission Created",
+  "submission.submitted": "Submission Submitted",
+  "submission.updated": "Submission Updated",
+  "results.published": "Results Published",
 }
 
 export function WebhookList({ webhooks }: WebhookListProps) {
@@ -75,7 +78,7 @@ export function WebhookList({ webhooks }: WebhookListProps) {
         <Webhook className="size-12 text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold">No webhooks yet</h3>
         <p className="text-sm text-muted-foreground max-w-sm mt-1">
-          Create a webhook to receive notifications when agent events occur
+          Create a webhook to receive notifications when hackathon events occur
         </p>
       </div>
     )
@@ -83,6 +86,7 @@ export function WebhookList({ webhooks }: WebhookListProps) {
 
   return (
     <>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -164,6 +168,7 @@ export function WebhookList({ webhooks }: WebhookListProps) {
           ))}
         </TableBody>
       </Table>
+      </div>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>

@@ -43,6 +43,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import {
   DropdownMenu,
@@ -54,6 +55,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { CreateHackathonDrawer } from "@/components/hackathon/create-hackathon-drawer"
+import { CreateOrganizationDialog } from "@/components/create-organization-dialog"
 
 const mainItems = [
   { title: "Dashboard", href: "/home", icon: Home },
@@ -91,7 +93,15 @@ export function AppSidebarSimple() {
     userMemberships: { infinite: true },
   })
 
+  const { setOpenMobile, isMobile } = useSidebar()
   const [tenantSlug, setTenantSlug] = useState<string | null>(null)
+  const [createOrgOpen, setCreateOrgOpen] = useState(false)
+
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false)
+    }
+  }, [pathname, searchParams, isMobile, setOpenMobile])
 
   useEffect(() => {
     if (!organization) {
@@ -190,6 +200,15 @@ export function AppSidebarSimple() {
                     <span className="truncate">{mem.organization.name}</span>
                   </DropdownMenuItem>
                 ))}
+                <DropdownMenuItem
+                  onClick={() => setCreateOrgOpen(true)}
+                  className="gap-2"
+                >
+                  <div className="flex size-5 items-center justify-center rounded bg-muted text-muted-foreground">
+                    <Plus className="size-3" />
+                  </div>
+                  <span className="truncate">Create New Organization</span>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {organization && (
                   <>
@@ -373,6 +392,10 @@ export function AppSidebarSimple() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      <CreateOrganizationDialog
+        open={createOrgOpen}
+        onOpenChange={setCreateOrgOpen}
+      />
     </Sidebar>
   )
 }

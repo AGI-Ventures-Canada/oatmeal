@@ -19,6 +19,7 @@ interface ScoringProgressProps {
     judges: {
       participantId: string
       clerkUserId: string
+      displayName: string
       completed: number
       total: number
     }[]
@@ -86,7 +87,7 @@ export function ScoringProgress({
                     return (
                       <TableRow key={judge.participantId}>
                         <TableCell className="font-medium">
-                          {judge.clerkUserId}
+                          {judge.displayName}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
                           {judge.completed} / {judge.total}

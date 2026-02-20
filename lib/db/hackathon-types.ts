@@ -33,8 +33,11 @@ export type JudgeInvitationStatus = "pending" | "accepted" | "cancelled"
 export type WebhookEvent =
   | "hackathon.created"
   | "hackathon.updated"
+  | "participant.registered"
   | "submission.created"
   | "submission.submitted"
+  | "submission.updated"
+  | "results.published"
 
 export type ScheduleFrequency =
   | "once"
@@ -267,8 +270,10 @@ export interface HackathonSponsor {
   id: string
   hackathon_id: string
   sponsor_tenant_id: string | null
+  tenant_sponsor_id: string | null
   name: string
   logo_url: string | null
+  logo_url_dark: string | null
   website_url: string | null
   tier: SponsorTier
   display_order: number

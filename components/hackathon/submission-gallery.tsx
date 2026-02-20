@@ -1,15 +1,21 @@
 "use client"
 
 import { useState } from "react"
-import { Search, ChevronDown } from "lucide-react"
+import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { extractYouTubeVideoId } from "@/lib/utils/youtube"
 import { YouTubeEmbed } from "@/components/hackathon/youtube-embed"
 import { SubmissionLinks } from "@/components/hackathon/submission-links"
@@ -30,11 +36,11 @@ interface SubmissionGalleryProps {
   submissions: GallerySubmission[]
 }
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 5
 
 export function SubmissionGallery({ submissions }: SubmissionGalleryProps) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [page, setPage] = useState(1)
 
   const filteredSubmissions = submissions.filter((submission) => {
     const query = searchQuery.toLowerCase()
@@ -45,9 +51,9 @@ export function SubmissionGallery({ submissions }: SubmissionGalleryProps) {
     )
   })
 
-  const visibleSubmissions = filteredSubmissions.slice(0, visibleCount)
-  const hasMore = visibleCount < filteredSubmissions.length
-  const remainingCount = filteredSubmissions.length - visibleCount
+  const totalPages = Math.ceil(filteredSubmissions.length / PAGE_SIZE)
+  const safePage = Math.min(page, totalPages || 1)
+  const paged = filteredSubmissions.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
   if (submissions.length === 0) {
     return null
@@ -66,7 +72,7 @@ export function SubmissionGallery({ submissions }: SubmissionGalleryProps) {
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value)
-              setVisibleCount(PAGE_SIZE)
+              setPage(1)
             }}
             className="pl-10"
             autoComplete="off"
@@ -87,12 +93,12 @@ export function SubmissionGallery({ submissions }: SubmissionGalleryProps) {
         ) : (
           <div className="relative">
             <Accordion type="single" collapsible className="w-full">
-              {visibleSubmissions.map((submission, index) => (
+              {paged.map((submission, index) => (
                 <AccordionItem key={submission.id} value={submission.id} className="group/accordion">
                   <AccordionTrigger className="py-4 text-sm hover:no-underline">
                     <div className="flex items-center gap-4 text-left">
                       <span className="text-muted-foreground w-6 text-right shrink-0">
-                        {index + 1}
+                        {(safePage - 1) * PAGE_SIZE + index + 1}
                       </span>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                         <span className="font-semibold truncate">{submission.title}</span>
@@ -111,21 +117,32 @@ export function SubmissionGallery({ submissions }: SubmissionGalleryProps) {
               ))}
             </Accordion>
 
-            {hasMore && (
-              <div className="relative mt-[-4rem] pt-16">
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-t from-background to-transparent" />
-                <div className="flex justify-center pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
-                    className="gap-1.5"
-                  >
-                    <ChevronDown className="size-3.5" />
-                    Show more ({Math.min(remainingCount, PAGE_SIZE)} of {remainingCount} remaining)
-                  </Button>
-                </div>
-              </div>
+            {totalPages > 1 && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }}
+                      aria-disabled={safePage === 1}
+                      className={safePage === 1 ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <span className="px-4 text-sm text-muted-foreground">
+                      {safePage} / {totalPages}
+                    </span>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)) }}
+                      aria-disabled={safePage === totalPages}
+                      className={safePage === totalPages ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             )}
           </div>
         )}

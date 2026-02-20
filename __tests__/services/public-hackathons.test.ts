@@ -4,6 +4,7 @@ import {
   createChainableMock,
   resetSupabaseMocks,
   setMockFromImplementation,
+  mockMultiTableQuery,
 } from "../lib/supabase-mock"
 
 const { getPublicHackathon, listPublicHackathons, getHackathonByIdForOrganizer, checkHackathonOrganizer, updateHackathonSettings } = await import(
@@ -46,20 +47,9 @@ describe("Public Hackathons Service", () => {
 
   describe("getPublicHackathon", () => {
     it("returns hackathon with organizer and sponsors", async () => {
-      const hackathonChain = createChainableMock({
-        data: { ...mockHackathon, organizer: mockOrganizer },
-        error: null,
-      })
-      const sponsorsChain = createChainableMock({
-        data: [{ id: "s1", name: "Sponsor", tier: "gold", tenant: null }],
-        error: null,
-      })
-
-      let callCount = 0
-      setMockFromImplementation(() => {
-        callCount++
-        if (callCount === 1) return hackathonChain
-        return sponsorsChain
+      mockMultiTableQuery({
+        hackathons: { data: { ...mockHackathon, organizer: mockOrganizer }, error: null },
+        hackathon_sponsors: { data: [{ id: "s1", name: "Sponsor", tier: "gold", tenant: null }], error: null },
       })
 
       const result = await getPublicHackathon("test-hackathon")

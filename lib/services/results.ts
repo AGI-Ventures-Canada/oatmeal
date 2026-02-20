@@ -4,7 +4,26 @@ import type { HackathonResult } from "@/lib/db/hackathon-types"
 
 export type ResultWithDetails = HackathonResult & {
   submissionTitle: string
+  submissionDescription: string | null
+  submissionGithubUrl: string | null
+  submissionLiveAppUrl: string | null
+  submissionScreenshotUrl: string | null
+  submissionTeamId: string | null
   teamName: string | null
+  prizes: { id: string; name: string; value: string | null }[]
+}
+
+export type PublicResultWithDetails = {
+  rank: number
+  submissionTitle: string
+  submissionDescription: string | null
+  submissionGithubUrl: string | null
+  submissionLiveAppUrl: string | null
+  submissionScreenshotUrl: string | null
+  teamName: string | null
+  members: string[]
+  weightedScore: number | null
+  judgeCount: number
   prizes: { id: string; name: string; value: string | null }[]
 }
 
@@ -45,7 +64,7 @@ export async function getResults(hackathonId: string): Promise<ResultWithDetails
     .from("hackathon_results")
     .select(`
       *,
-      submission:submissions!submission_id(title, team_id)
+      submission:submissions!submission_id(title, description, github_url, live_app_url, screenshot_url, team_id)
     `)
     .eq("hackathon_id", hackathonId)
     .order("rank")
@@ -89,10 +108,22 @@ export async function getResults(hackathonId: string): Promise<ResultWithDetails
   }
 
   return results.map((r: Record<string, unknown>) => {
-    const sub = r.submission as unknown as { title: string; team_id: string | null }
+    const sub = r.submission as unknown as {
+      title: string
+      description: string | null
+      github_url: string | null
+      live_app_url: string | null
+      screenshot_url: string | null
+      team_id: string | null
+    }
     return {
       ...(r as unknown as HackathonResult),
       submissionTitle: sub.title,
+      submissionDescription: sub.description,
+      submissionGithubUrl: sub.github_url,
+      submissionLiveAppUrl: sub.live_app_url,
+      submissionScreenshotUrl: sub.screenshot_url,
+      submissionTeamId: sub.team_id,
       teamName: sub.team_id ? teamsMap[sub.team_id] ?? null : null,
       prizes: prizeMap[r.submission_id as string] ?? [],
     }
@@ -222,4 +253,69 @@ export async function getPublicResults(
   }
 
   return getResults(hackathonId)
+}
+
+export async function getPublicResultsWithDetails(
+  hackathonId: string
+): Promise<PublicResultWithDetails[] | null> {
+  const results = await getPublicResults(hackathonId)
+  if (!results) return null
+
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const top3TeamIds = [
+    ...new Set(
+      results
+        .filter((r) => r.rank <= 3 && r.submissionTeamId)
+        .map((r) => r.submissionTeamId as string)
+    ),
+  ]
+
+  const teamMembersMap: Record<string, string[]> = {}
+
+  if (top3TeamIds.length > 0) {
+    const { data: members } = await client
+      .from("hackathon_participants")
+      .select("team_id, clerk_user_id")
+      .in("team_id", top3TeamIds)
+      .eq("role", "participant")
+
+    if (members?.length) {
+      try {
+        const { clerkClient } = await import("@clerk/nextjs/server")
+        const clerk = await clerkClient()
+        const clerkUsers = await clerk.users.getUserList({
+          userId: members.map((m) => m.clerk_user_id),
+        })
+        const nameMap = Object.fromEntries(
+          clerkUsers.data.map((u) => [
+            u.id,
+            u.firstName
+              ? `${u.firstName}${u.lastName ? ` ${u.lastName}` : ""}`
+              : u.username || "Anonymous",
+          ])
+        )
+        for (const m of members) {
+          if (!teamMembersMap[m.team_id as string]) teamMembersMap[m.team_id as string] = []
+          teamMembersMap[m.team_id as string].push(nameMap[m.clerk_user_id] || "Anonymous")
+        }
+      } catch {
+        // Member names unavailable - continue without them
+      }
+    }
+  }
+
+  return results.map((r) => ({
+    rank: r.rank,
+    submissionTitle: r.submissionTitle,
+    submissionDescription: r.submissionDescription,
+    submissionGithubUrl: r.submissionGithubUrl,
+    submissionLiveAppUrl: r.submissionLiveAppUrl,
+    submissionScreenshotUrl: r.submissionScreenshotUrl,
+    teamName: r.teamName,
+    members: r.submissionTeamId ? (teamMembersMap[r.submissionTeamId] ?? []) : [],
+    weightedScore: r.weighted_score,
+    judgeCount: r.judge_count,
+    prizes: r.prizes,
+  }))
 }

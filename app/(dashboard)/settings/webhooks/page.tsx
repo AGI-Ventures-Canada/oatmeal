@@ -19,11 +19,11 @@ export default async function SettingsWebhooksPage() {
   return (
     <div className="space-y-6">
       <AutoRefresh />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Webhooks</h1>
           <p className="text-muted-foreground">
-            Receive notifications when agent events occur
+            Receive notifications when hackathon events occur
           </p>
         </div>
         <CreateWebhookButton />

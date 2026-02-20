@@ -12,7 +12,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "bun test __tests__/api __tests__/components __tests__/services __tests__/lib/*.test.ts",
-    "test:integration": "bun test --test-name-pattern '.*' __tests__/integration/*.integration.test.ts",
+    "test:integration": "bun scripts/run-integration-tests.ts",
     "test:email": "bun test --test-name-pattern '.*' __tests__/integration/*.email.test.ts",
     "test:all": "bun run test && bun run test:integration && bun run test:email",
     "db:sync": "supabase db reset && supabase gen types typescript --local > lib/db/types.ts",

@@ -39,7 +39,6 @@ export default async function ManagePage({ params }: PageProps) {
         actions={
           <HackathonPageActions
             slug={hackathon.slug}
-            status={hackathon.status}
             isOrganizer={true}
             submissionCount={submissionCount}
           />
@@ -53,6 +52,16 @@ export default async function ManagePage({ params }: PageProps) {
         submissionCount={submissionCount}
         judgingProgress={judgingProgress}
         judgingSetupStatus={judgingSetupStatus}
+        startsAt={hackathon.starts_at}
+        endsAt={hackathon.ends_at}
+        registrationOpensAt={hackathon.registration_opens_at}
+        registrationClosesAt={hackathon.registration_closes_at}
+        description={hackathon.description}
+        bannerUrl={hackathon.banner_url}
+        locationType={hackathon.location_type}
+        locationName={hackathon.location_name}
+        locationUrl={hackathon.location_url}
+        sponsorCount={hackathon.sponsors.length}
       />
 
       <div className="rounded-lg border overflow-hidden">

@@ -322,3 +322,71 @@ export async function deleteScreenshot(submissionId: string): Promise<boolean> {
 
   return true
 }
+
+export interface UploadSponsorLogoResult {
+  url: string
+  path: string
+}
+
+export type SponsorLogoVariant = "light" | "dark"
+
+export async function uploadSponsorLogo(
+  hackathonId: string,
+  sponsorId: string,
+  file: Buffer,
+  originalMimeType: string,
+  variant: SponsorLogoVariant = "light"
+): Promise<UploadSponsorLogoResult | null> {
+  const client = getSupabase()
+
+  const { buffer, mimeType } = await optimizeImage(file, originalMimeType)
+
+  const extension = mimeType === "image/svg+xml" ? "svg" : "webp"
+  const filename = variant === "dark" ? "logo-dark" : "logo"
+  const path = `sponsors/${hackathonId}/${sponsorId}/${filename}.${extension}`
+
+  const { error } = await client.storage
+    .from(LOGOS_BUCKET)
+    .upload(path, buffer, {
+      contentType: mimeType,
+      upsert: true,
+      cacheControl: "3600",
+    })
+
+  if (error) {
+    console.error("Failed to upload sponsor logo:", error)
+    return null
+  }
+
+  const { data: urlData } = client.storage
+    .from(LOGOS_BUCKET)
+    .getPublicUrl(path)
+
+  return {
+    url: `${urlData.publicUrl}?v=${Date.now()}`,
+    path,
+  }
+}
+
+export async function deleteSponsorLogo(
+  hackathonId: string,
+  sponsorId: string,
+  variant: SponsorLogoVariant = "light"
+): Promise<boolean> {
+  const client = getSupabase()
+
+  const extensions = ["webp", "png", "svg"]
+  const filename = variant === "dark" ? "logo-dark" : "logo"
+  const paths = extensions.map((ext) => `sponsors/${hackathonId}/${sponsorId}/${filename}.${ext}`)
+
+  const { error } = await client.storage
+    .from(LOGOS_BUCKET)
+    .remove(paths)
+
+  if (error) {
+    console.error("Failed to delete sponsor logo:", error)
+    return false
+  }
+
+  return true
+}

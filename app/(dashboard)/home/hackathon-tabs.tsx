@@ -168,8 +168,8 @@ export function HackathonTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative w-64">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="relative w-full sm:w-64">
           {loading ? (
             <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
           ) : (
@@ -187,6 +187,7 @@ export function HackathonTabs({
             data-form-type="other"
           />
         </div>
+        <div className="overflow-x-auto overflow-y-hidden">
         <TabsList variant="line">
           <TabsTrigger value="participating">
             Participating
@@ -221,6 +222,7 @@ export function HackathonTabs({
             )}
           </TabsTrigger>
         </TabsList>
+        </div>
       </div>
 
       <TabsContent value="participating">

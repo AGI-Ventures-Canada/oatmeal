@@ -53,6 +53,7 @@ export function ApiKeyTable({ keys }: Props) {
   }
 
   return (
+    <div className="overflow-x-auto">
     <Table>
       <TableHeader>
         <TableRow>
@@ -117,5 +118,6 @@ export function ApiKeyTable({ keys }: Props) {
         ))}
       </TableBody>
     </Table>
+    </div>
   )
 }

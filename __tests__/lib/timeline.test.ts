@@ -1,6 +1,117 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test"
-import { getTimelineState } from "@/lib/utils/timeline"
+import { getEffectiveStatus, getTimelineState } from "@/lib/utils/timeline"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
+
+function mockDateGlobal(originalDate: typeof Date, isoString: string) {
+  const mockNow = new Date(isoString).getTime()
+  globalThis.Date = class extends originalDate {
+    constructor(...args: Parameters<typeof Date>) {
+      if (args.length === 0) {
+        super(mockNow)
+      } else {
+        // @ts-expect-error - spreading args
+        super(...args)
+      }
+    }
+    static now() {
+      return mockNow
+    }
+  } as typeof Date
+}
+
+describe("getEffectiveStatus", () => {
+  let originalDate: typeof Date
+
+  beforeEach(() => {
+    originalDate = globalThis.Date
+  })
+
+  afterEach(() => {
+    globalThis.Date = originalDate
+  })
+
+  function mockDate(isoString: string) {
+    mockDateGlobal(originalDate, isoString)
+  }
+
+  it("returns draft unchanged regardless of dates", () => {
+    mockDate("2026-03-10T00:00:00Z")
+    expect(getEffectiveStatus({ status: "draft", starts_at: "2026-01-01T00:00:00Z", ends_at: "2026-01-02T00:00:00Z" })).toBe("draft")
+  })
+
+  it("returns archived unchanged regardless of dates", () => {
+    mockDate("2026-03-10T00:00:00Z")
+    expect(getEffectiveStatus({ status: "archived", starts_at: "2026-01-01T00:00:00Z", ends_at: "2026-01-02T00:00:00Z" })).toBe("archived")
+  })
+
+  it("returns active when published and starts_at has passed but not yet ended", () => {
+    mockDate("2026-03-02T12:00:00Z")
+    expect(getEffectiveStatus({
+      status: "published",
+      starts_at: "2026-03-01T00:00:00Z",
+      ends_at: "2026-03-05T00:00:00Z",
+    })).toBe("active")
+  })
+
+  it("returns active when registration_open and starts_at has passed but not yet ended", () => {
+    mockDate("2026-03-02T12:00:00Z")
+    expect(getEffectiveStatus({
+      status: "registration_open",
+      starts_at: "2026-03-01T00:00:00Z",
+      ends_at: "2026-03-05T00:00:00Z",
+    })).toBe("active")
+  })
+
+  it("returns completed when active and ends_at has passed", () => {
+    mockDate("2026-03-10T00:00:00Z")
+    expect(getEffectiveStatus({
+      status: "active",
+      starts_at: "2026-03-01T00:00:00Z",
+      ends_at: "2026-03-05T00:00:00Z",
+    })).toBe("completed")
+  })
+
+  it("returns completed when published and both starts_at and ends_at have passed", () => {
+    mockDate("2026-03-10T00:00:00Z")
+    expect(getEffectiveStatus({
+      status: "published",
+      starts_at: "2026-03-01T00:00:00Z",
+      ends_at: "2026-03-05T00:00:00Z",
+    })).toBe("completed")
+  })
+
+  it("preserves judging status even when ends_at has passed", () => {
+    mockDate("2026-03-10T00:00:00Z")
+    expect(getEffectiveStatus({
+      status: "judging",
+      starts_at: "2026-03-01T00:00:00Z",
+      ends_at: "2026-03-05T00:00:00Z",
+    })).toBe("judging")
+  })
+
+  it("returns published unchanged when starts_at is in the future", () => {
+    mockDate("2026-02-19T00:00:00Z")
+    expect(getEffectiveStatus({
+      status: "published",
+      starts_at: "2026-03-01T00:00:00Z",
+      ends_at: "2026-03-05T00:00:00Z",
+    })).toBe("published")
+  })
+
+  it("returns status unchanged when starts_at is null", () => {
+    mockDate("2026-03-10T00:00:00Z")
+    expect(getEffectiveStatus({ status: "registration_open", starts_at: null, ends_at: null })).toBe("registration_open")
+  })
+
+  it("returns active when starts_at has passed and ends_at is null", () => {
+    mockDate("2026-03-10T00:00:00Z")
+    expect(getEffectiveStatus({
+      status: "published",
+      starts_at: "2026-03-01T00:00:00Z",
+      ends_at: null,
+    })).toBe("active")
+  })
+})
 
 describe("getTimelineState", () => {
   let originalDate: typeof Date
@@ -14,20 +125,7 @@ describe("getTimelineState", () => {
   })
 
   function mockDate(isoString: string) {
-    const mockNow = new Date(isoString).getTime()
-    globalThis.Date = class extends originalDate {
-      constructor(...args: Parameters<typeof Date>) {
-        if (args.length === 0) {
-          super(mockNow)
-        } else {
-          // @ts-expect-error - spreading args
-          super(...args)
-        }
-      }
-      static now() {
-        return mockNow
-      }
-    } as typeof Date
+    mockDateGlobal(originalDate, isoString)
   }
 
   describe("status-based states", () => {

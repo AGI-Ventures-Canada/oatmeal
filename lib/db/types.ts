@@ -222,8 +222,10 @@ export type Database = {
           hackathon_id: string
           id: string
           logo_url: string | null
+          logo_url_dark: string | null
           name: string
           sponsor_tenant_id: string | null
+          tenant_sponsor_id: string | null
           tier: Database["public"]["Enums"]["sponsor_tier"]
           website_url: string | null
         }
@@ -233,8 +235,10 @@ export type Database = {
           hackathon_id: string
           id?: string
           logo_url?: string | null
+          logo_url_dark?: string | null
           name: string
           sponsor_tenant_id?: string | null
+          tenant_sponsor_id?: string | null
           tier?: Database["public"]["Enums"]["sponsor_tier"]
           website_url?: string | null
         }
@@ -244,8 +248,10 @@ export type Database = {
           hackathon_id?: string
           id?: string
           logo_url?: string | null
+          logo_url_dark?: string | null
           name?: string
           sponsor_tenant_id?: string | null
+          tenant_sponsor_id?: string | null
           tier?: Database["public"]["Enums"]["sponsor_tier"]
           website_url?: string | null
         }
@@ -262,6 +268,13 @@ export type Database = {
             columns: ["sponsor_tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathon_sponsors_tenant_sponsor_id_fkey"
+            columns: ["tenant_sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_sponsors"
             referencedColumns: ["id"]
           },
         ]
@@ -959,6 +972,47 @@ export type Database = {
           },
         ]
       }
+      tenant_sponsors: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          logo_url_dark: string | null
+          name: string
+          tenant_id: string
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          logo_url_dark?: string | null
+          name: string
+          tenant_id: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          logo_url_dark?: string | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_sponsors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           clerk_org_id: string | null
@@ -1137,6 +1191,14 @@ export type Database = {
           success: boolean
         }[]
       }
+      effective_hackathon_status: {
+        Args: {
+          ends_at: string
+          starts_at: string
+          status: Database["public"]["Enums"]["hackathon_status"]
+        }
+        Returns: Database["public"]["Enums"]["hackathon_status"]
+      }
       register_for_hackathon:
         | {
             Args: { p_clerk_user_id: string; p_hackathon_id: string }
@@ -1214,6 +1276,9 @@ export type Database = {
         | "hackathon.updated"
         | "submission.created"
         | "submission.submitted"
+        | "participant.registered"
+        | "submission.updated"
+        | "results.published"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1387,6 +1452,9 @@ export const Constants = {
         "hackathon.updated",
         "submission.created",
         "submission.submitted",
+        "participant.registered",
+        "submission.updated",
+        "results.published",
       ],
     },
   },

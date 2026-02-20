@@ -21,6 +21,8 @@ import { formatDateTimeDisplay } from "@/lib/utils/format"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
 import type { Submission } from "@/lib/db/hackathon-types"
 import type { ParticipantTeamInfo } from "@/lib/services/hackathons"
+import { PublicResults } from "@/components/hackathon/results/public-results"
+import type { PublicResultWithDetails } from "@/lib/services/results"
 
 interface HackathonPreviewClientProps {
   hackathon: PublicHackathon
@@ -33,6 +35,7 @@ interface HackathonPreviewClientProps {
   submission?: Submission | null
   submissions?: GallerySubmission[]
   teamInfo?: ParticipantTeamInfo
+  publicResults?: PublicResultWithDetails[]
 }
 
 function HackathonPreviewContent({
@@ -45,6 +48,7 @@ function HackathonPreviewContent({
   submission = null,
   submissions = [],
   teamInfo = null,
+  publicResults = [],
 }: Omit<HackathonPreviewClientProps, "isEditable">) {
   const { isEditable, editMode, openSection } = useEdit()
   const { user } = useUser()
@@ -80,13 +84,15 @@ function HackathonPreviewContent({
 
   const judgeStatus = isJudge && (
     <div className="flex items-center gap-3">
+      {hasJudgeAssignments && (
+        <Button
+          onClick={() => router.push(`/e/${hackathon.slug}/judge`)}
+        >
+          <Scale className="size-4" />
+          Enter Judge Mode
+        </Button>
+      )}
       <span className="text-xs text-muted-foreground">You&apos;re assigned as a judge</span>
-      <Button
-        onClick={() => document.getElementById("judge-assignments")?.scrollIntoView({ behavior: "smooth" })}
-      >
-        <Scale className="size-4" />
-        Enter Judge Mode
-      </Button>
     </div>
   )
 
@@ -226,6 +232,10 @@ function HackathonPreviewContent({
       <section className="py-12 border-t">
         <div className="mx-auto max-w-4xl px-4">
           <div className="space-y-8">
+            {publicResults.length > 0 && (
+              <PublicResults results={publicResults} />
+            )}
+
             <EditableSection
               section="about"
               isEmpty={!hackathon.description}
@@ -345,11 +355,7 @@ function HackathonPreviewContent({
   return (
     <>
       {showActionBar && (
-        <FloatingActionBar
-          isOrganizer={isEditable}
-          isJudge={participantRole === "judge"}
-          hasJudgeAssignments={hasJudgeAssignments}
-        />
+        <FloatingActionBar isOrganizer={isEditable} />
       )}
       <div>
         {heroContent}
@@ -372,6 +378,7 @@ export function HackathonPreviewClient({
   submission,
   submissions,
   teamInfo,
+  publicResults,
 }: HackathonPreviewClientProps) {
   return (
     <EditProvider isEditable={isEditable} defaultEditMode={!showActionBar}>
@@ -385,6 +392,7 @@ export function HackathonPreviewClient({
         submission={submission}
         submissions={submissions}
         teamInfo={teamInfo}
+        publicResults={publicResults}
       />
     </EditProvider>
   )

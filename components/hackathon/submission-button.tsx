@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
-import { usePathname, useRouter } from "next/navigation"
-import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -37,7 +36,6 @@ export function SubmissionButton({
   submission: initialSubmission,
 }: SubmissionButtonProps) {
   const { isSignedIn, isLoaded } = useUser()
-  const pathname = usePathname()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [submission, setSubmission] = useState(initialSubmission)
@@ -75,13 +73,7 @@ export function SubmissionButton({
   }
 
   if (!isSignedIn) {
-    return (
-      <Button asChild variant="outline" size="lg">
-        <Link href={`/sign-in?redirect_url=${encodeURIComponent(pathname)}`}>
-          Sign in to Submit
-        </Link>
-      </Button>
-    )
+    return null
   }
 
   if (!isRegistered) {

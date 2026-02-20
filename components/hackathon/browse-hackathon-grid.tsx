@@ -118,7 +118,7 @@ export function BrowseHackathonGrid({
         clearTimeout(debounceRef.current)
       }
     }
-  }, [query, initialHackathons, initialPage, initialTotalPages, fetchPage, page])
+  }, [query, initialHackathons, initialPage, initialTotalPages, fetchPage])
 
   function goToPage(targetPage: number) {
     fetchPage(targetPage, isSearching ? query : undefined)
@@ -143,7 +143,7 @@ export function BrowseHackathonGrid({
 
   return (
     <div className="space-y-4">
-      <div className="relative w-64">
+      <div className="relative w-full sm:w-64">
         {loading ? (
           <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
         ) : (

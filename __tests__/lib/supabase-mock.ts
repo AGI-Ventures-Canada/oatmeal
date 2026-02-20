@@ -78,6 +78,7 @@ export interface ChainableMock {
   is: ChainMethod
   or: ChainMethod
   not: ChainMethod
+  ilike: ChainMethod
   contains: ChainMethod
   order: ChainMethod
   limit: ChainMethod
@@ -117,6 +118,7 @@ export function createChainableMock<T = unknown>(resolvedValue: ChainableResult<
     is: mock(() => chain),
     or: mock(() => chain),
     not: mock(() => chain),
+    ilike: mock(() => chain),
     contains: mock(() => chain),
     order: mock(() => chain),
     limit: mock(() => chain),

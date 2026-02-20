@@ -1,143 +1,211 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef, useMemo } from "react"
-import { useRouter } from "next/navigation"
-import { OptimizedImage } from "@/components/ui/optimized-image"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { OptimizedImage } from "@/components/ui/optimized-image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
+import { Field, FieldLabel, FieldGroup } from "@/components/ui/field";
+import { useEdit } from "@/components/hackathon/preview/edit-context";
+import { Badge } from "@/components/ui/badge";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
-  Field,
-  FieldLabel,
-  FieldGroup,
-} from "@/components/ui/field"
-import { useEdit } from "@/components/hackathon/preview/edit-context"
-import { Badge } from "@/components/ui/badge"
-import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { Trash2, Plus, Building2, Loader2, Undo2, ExternalLink } from "lucide-react"
-import type { HackathonSponsor, SponsorTier, TenantProfile } from "@/lib/db/hackathon-types"
+  Trash2,
+  Plus,
+  Building2,
+  Loader2,
+  Undo2,
+  ExternalLink,
+  Sun,
+  Moon,
+} from "lucide-react";
+import { SponsorLogoUpload } from "./sponsor-logo-upload";
+import type {
+  HackathonSponsor,
+  SponsorTier,
+  TenantProfile,
+} from "@/lib/db/hackathon-types";
 
 type SponsorWithTenant = HackathonSponsor & {
-  tenant?: Pick<TenantProfile, "slug" | "name" | "logo_url" | "logo_url_dark"> | null
-}
+  tenant?: Pick<
+    TenantProfile,
+    "slug" | "name" | "logo_url" | "logo_url_dark"
+  > | null;
+};
 
 interface SponsorsEditFormProps {
-  hackathonId: string
-  initialSponsors: SponsorWithTenant[]
-  onSaveAndNext?: () => void
+  hackathonId: string;
+  initialSponsors: SponsorWithTenant[];
+  onSaveAndNext?: () => void;
 }
 
 interface OrgSearchResult {
-  id: string
-  name: string
-  slug: string | null
-  logoUrl: string | null
-  websiteUrl: string | null
+  id: string;
+  name: string;
+  slug: string | null;
+  logoUrl: string | null;
+  logoUrlDark: string | null;
+  websiteUrl: string | null;
+  isSaved?: boolean;
 }
 
+type LogoVariant = "light" | "dark";
+
 type PendingChange =
-  | { type: "add"; sponsor: SponsorWithTenant; tempId: string }
+  | {
+      type: "add";
+      sponsor: SponsorWithTenant;
+      tempId: string;
+      logoFile?: File;
+      logoPreviewUrl?: string;
+      logoDarkFile?: File;
+      logoDarkPreviewUrl?: string;
+    }
   | { type: "delete"; sponsorId: string; originalSponsor: SponsorWithTenant }
-  | { type: "tier"; sponsorId: string; newTier: SponsorTier; oldTier: SponsorTier }
+  | {
+      type: "tier";
+      sponsorId: string;
+      newTier: SponsorTier;
+      oldTier: SponsorTier;
+    }
+  | {
+      type: "logo";
+      sponsorId: string;
+      variant: LogoVariant;
+      file: File;
+      previewUrl: string;
+      oldUrl: string | null;
+    };
 
 function useOrgSearch(excludeIdsString: string) {
-  const [query, setQuery] = useState("")
-  const [results, setResults] = useState<OrgSearchResult[]>([])
-  const [loading, setLoading] = useState(false)
-  const [searched, setSearched] = useState(false)
-  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<OrgSearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
+      clearTimeout(debounceRef.current);
     }
 
     if (query.length < 2) {
-      setResults([])
-      setSearched(false)
-      return
+      setResults([]);
+      setSearched(false);
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const excludeParam = excludeIdsString ? `&exclude=${excludeIdsString}` : ""
-        const res = await fetch(`/api/dashboard/organizations/search?q=${encodeURIComponent(query)}${excludeParam}`)
+        const excludeParam = excludeIdsString
+          ? `&exclude=${excludeIdsString}`
+          : "";
+        const res = await fetch(
+          `/api/dashboard/organizations/search?q=${encodeURIComponent(query)}${excludeParam}`,
+        );
         if (res.ok) {
-          const data = await res.json()
-          setResults(data.organizations)
+          const data = await res.json();
+          setResults(data.organizations);
         }
       } catch {
-        setResults([])
+        setResults([]);
       } finally {
-        setLoading(false)
-        setSearched(true)
+        setLoading(false);
+        setSearched(true);
       }
-    }, 300)
+    }, 300);
 
     return () => {
       if (debounceRef.current) {
-        clearTimeout(debounceRef.current)
+        clearTimeout(debounceRef.current);
       }
-    }
-  }, [query, excludeIdsString])
+    };
+  }, [query, excludeIdsString]);
 
-  return { query, setQuery, results, loading, searched }
+  return { query, setQuery, results, loading, searched };
 }
 
-export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }: SponsorsEditFormProps) {
-  const router = useRouter()
-  const { closeDrawer } = useEdit()
-  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const tempIdCounter = useRef(0)
+export function SponsorsEditForm({
+  hackathonId,
+  initialSponsors,
+  onSaveAndNext,
+}: SponsorsEditFormProps) {
+  const router = useRouter();
+  const { closeDrawer } = useEdit();
+  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const tempIdCounter = useRef(0);
 
   const currentSponsors = useMemo(() => {
-    let sponsors = [...initialSponsors]
+    let sponsors = [...initialSponsors];
 
     for (const change of pendingChanges) {
       if (change.type === "add") {
-        sponsors.push(change.sponsor)
+        const sponsorWithPreview = {
+          ...change.sponsor,
+          ...(change.logoPreviewUrl && { logo_url: change.logoPreviewUrl }),
+          ...(change.logoDarkPreviewUrl && {
+            logo_url_dark: change.logoDarkPreviewUrl,
+          }),
+        };
+        sponsors.push(sponsorWithPreview);
       } else if (change.type === "delete") {
-        sponsors = sponsors.filter(s => s.id !== change.sponsorId)
+        sponsors = sponsors.filter((s) => s.id !== change.sponsorId);
       } else if (change.type === "tier") {
-        sponsors = sponsors.map(s =>
-          s.id === change.sponsorId ? { ...s, tier: change.newTier } : s
-        )
+        sponsors = sponsors.map((s) =>
+          s.id === change.sponsorId ? { ...s, tier: change.newTier } : s,
+        );
+      } else if (change.type === "logo") {
+        sponsors = sponsors.map((s) =>
+          s.id === change.sponsorId
+            ? {
+                ...s,
+                ...(change.variant === "light"
+                  ? { logo_url: change.previewUrl }
+                  : { logo_url_dark: change.previewUrl }),
+              }
+            : s,
+        );
       }
     }
 
-    return sponsors
-  }, [initialSponsors, pendingChanges])
+    return sponsors;
+  }, [initialSponsors, pendingChanges]);
 
   const excludeIdsString = useMemo(
-    () => currentSponsors
-      .map(s => s.sponsor_tenant_id)
-      .filter((id): id is string => id !== null)
-      .join(","),
-    [currentSponsors]
-  )
+    () =>
+      currentSponsors
+        .map((s) => s.sponsor_tenant_id)
+        .filter((id): id is string => id !== null)
+        .join(","),
+    [currentSponsors],
+  );
 
-  const { query, setQuery, results, loading, searched } = useOrgSearch(excludeIdsString)
+  const { query, setQuery, results, loading, searched } =
+    useOrgSearch(excludeIdsString);
 
-  const hasChanges = pendingChanges.length > 0
+  const hasChanges = pendingChanges.length > 0;
 
   function handleAddOrg(org: OrgSearchResult) {
-    const tempId = `temp-${++tempIdCounter.current}`
+    const tempId = `temp-${++tempIdCounter.current}`;
     const newSponsor: SponsorWithTenant = {
       id: tempId,
       hackathon_id: hackathonId,
       sponsor_tenant_id: org.id,
+      tenant_sponsor_id: null,
       name: org.name,
       logo_url: org.logoUrl,
+      logo_url_dark: org.logoUrlDark,
       website_url: org.websiteUrl,
       tier: "none",
       display_order: currentSponsors.length,
@@ -146,194 +214,400 @@ export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }
         slug: org.slug,
         name: org.name,
         logo_url: org.logoUrl,
-        logo_url_dark: null,
+        logo_url_dark: org.logoUrlDark,
       },
-    }
+    };
 
-    setPendingChanges([...pendingChanges, { type: "add", sponsor: newSponsor, tempId }])
-    setQuery("")
+    setPendingChanges([
+      ...pendingChanges,
+      { type: "add", sponsor: newSponsor, tempId },
+    ]);
+    setQuery("");
   }
 
   function handleAddManual() {
-    if (!query.trim()) return
+    if (!query.trim()) return;
 
-    const tempId = `temp-${++tempIdCounter.current}`
+    const tempId = `temp-${++tempIdCounter.current}`;
     const newSponsor: SponsorWithTenant = {
       id: tempId,
       hackathon_id: hackathonId,
       sponsor_tenant_id: null,
+      tenant_sponsor_id: null,
       name: query.trim(),
       logo_url: null,
+      logo_url_dark: null,
       website_url: null,
       tier: "none",
       display_order: currentSponsors.length,
       created_at: new Date().toISOString(),
-    }
+    };
 
-    setPendingChanges([...pendingChanges, { type: "add", sponsor: newSponsor, tempId }])
-    setQuery("")
+    setPendingChanges([
+      ...pendingChanges,
+      { type: "add", sponsor: newSponsor, tempId },
+    ]);
+    setQuery("");
   }
 
   function handleUpdateTier(sponsorId: string, newTier: SponsorTier) {
     const existingTierChangeIndex = pendingChanges.findIndex(
-      c => c.type === "tier" && c.sponsorId === sponsorId
-    )
+      (c) => c.type === "tier" && c.sponsorId === sponsorId,
+    );
 
     if (existingTierChangeIndex >= 0) {
-      const existingChange = pendingChanges[existingTierChangeIndex] as Extract<PendingChange, { type: "tier" }>
+      const existingChange = pendingChanges[existingTierChangeIndex] as Extract<
+        PendingChange,
+        { type: "tier" }
+      >;
       if (existingChange.oldTier === newTier) {
-        setPendingChanges(pendingChanges.filter((_, i) => i !== existingTierChangeIndex))
+        setPendingChanges(
+          pendingChanges.filter((_, i) => i !== existingTierChangeIndex),
+        );
       } else {
-        const updated = [...pendingChanges]
-        updated[existingTierChangeIndex] = { ...existingChange, newTier }
-        setPendingChanges(updated)
+        const updated = [...pendingChanges];
+        updated[existingTierChangeIndex] = { ...existingChange, newTier };
+        setPendingChanges(updated);
       }
-      return
+      return;
     }
 
     const addChange = pendingChanges.find(
-      c => c.type === "add" && c.tempId === sponsorId
-    ) as Extract<PendingChange, { type: "add" }> | undefined
+      (c) => c.type === "add" && c.tempId === sponsorId,
+    ) as Extract<PendingChange, { type: "add" }> | undefined;
 
     if (addChange) {
-      setPendingChanges(pendingChanges.map(c =>
-        c === addChange
-          ? { ...c, sponsor: { ...c.sponsor, tier: newTier } }
-          : c
-      ))
-      return
+      setPendingChanges(
+        pendingChanges.map((c) =>
+          c === addChange
+            ? { ...c, sponsor: { ...c.sponsor, tier: newTier } }
+            : c,
+        ),
+      );
+      return;
     }
 
-    const currentSponsor = initialSponsors.find(s => s.id === sponsorId)
-    if (!currentSponsor || currentSponsor.tier === newTier) return
+    const currentSponsor = initialSponsors.find((s) => s.id === sponsorId);
+    if (!currentSponsor || currentSponsor.tier === newTier) return;
 
-    setPendingChanges([...pendingChanges, {
-      type: "tier",
-      sponsorId,
-      newTier,
-      oldTier: currentSponsor.tier,
-    }])
+    setPendingChanges([
+      ...pendingChanges,
+      {
+        type: "tier",
+        sponsorId,
+        newTier,
+        oldTier: currentSponsor.tier,
+      },
+    ]);
   }
 
   function handleDeleteSponsor(sponsorId: string) {
     const addChange = pendingChanges.find(
-      c => c.type === "add" && c.tempId === sponsorId
-    )
+      (c) => c.type === "add" && c.tempId === sponsorId,
+    );
 
     if (addChange) {
-      setPendingChanges(pendingChanges.filter(c => c !== addChange))
-      return
+      setPendingChanges(pendingChanges.filter((c) => c !== addChange));
+      return;
     }
 
-    const originalSponsor = initialSponsors.find(s => s.id === sponsorId)
-    if (!originalSponsor) return
+    const originalSponsor = initialSponsors.find((s) => s.id === sponsorId);
+    if (!originalSponsor) return;
 
     const tierChange = pendingChanges.find(
-      c => c.type === "tier" && c.sponsorId === sponsorId
-    )
+      (c) => c.type === "tier" && c.sponsorId === sponsorId,
+    );
 
-    const filtered = pendingChanges.filter(c => c !== tierChange)
-    setPendingChanges([...filtered, { type: "delete", sponsorId, originalSponsor }])
+    const filtered = pendingChanges.filter((c) => c !== tierChange);
+    setPendingChanges([
+      ...filtered,
+      { type: "delete", sponsorId, originalSponsor },
+    ]);
+  }
+
+  function handleLogoSelected(
+    sponsorId: string,
+    file: File,
+    variant: LogoVariant,
+  ) {
+    const previewUrl = URL.createObjectURL(file);
+
+    const addChange = pendingChanges.find(
+      (c) => c.type === "add" && c.tempId === sponsorId,
+    ) as Extract<PendingChange, { type: "add" }> | undefined;
+
+    if (addChange) {
+      if (variant === "light") {
+        if (addChange.logoPreviewUrl) {
+          URL.revokeObjectURL(addChange.logoPreviewUrl);
+        }
+        setPendingChanges(
+          pendingChanges.map((c) =>
+            c === addChange
+              ? { ...c, logoFile: file, logoPreviewUrl: previewUrl }
+              : c,
+          ),
+        );
+      } else {
+        if (addChange.logoDarkPreviewUrl) {
+          URL.revokeObjectURL(addChange.logoDarkPreviewUrl);
+        }
+        setPendingChanges(
+          pendingChanges.map((c) =>
+            c === addChange
+              ? { ...c, logoDarkFile: file, logoDarkPreviewUrl: previewUrl }
+              : c,
+          ),
+        );
+      }
+      return;
+    }
+
+    const existingLogoChange = pendingChanges.find(
+      (c) =>
+        c.type === "logo" &&
+        c.sponsorId === sponsorId &&
+        c.variant === variant,
+    ) as Extract<PendingChange, { type: "logo" }> | undefined;
+
+    if (existingLogoChange) {
+      URL.revokeObjectURL(existingLogoChange.previewUrl);
+      setPendingChanges(
+        pendingChanges.map((c) =>
+          c === existingLogoChange ? { ...c, file, previewUrl } : c,
+        ),
+      );
+      return;
+    }
+
+    const currentSponsor = initialSponsors.find((s) => s.id === sponsorId);
+    if (!currentSponsor) return;
+
+    setPendingChanges([
+      ...pendingChanges,
+      {
+        type: "logo",
+        sponsorId,
+        variant,
+        file,
+        previewUrl,
+        oldUrl:
+          variant === "light"
+            ? currentSponsor.logo_url
+            : currentSponsor.logo_url_dark,
+      },
+    ]);
   }
 
   function handleUndo(index: number) {
-    setPendingChanges(pendingChanges.filter((_, i) => i !== index))
+    const change = pendingChanges[index];
+    if (change.type === "add") {
+      if (change.logoPreviewUrl) URL.revokeObjectURL(change.logoPreviewUrl);
+      if (change.logoDarkPreviewUrl)
+        URL.revokeObjectURL(change.logoDarkPreviewUrl);
+    }
+    if (change.type === "logo") {
+      URL.revokeObjectURL(change.previewUrl);
+    }
+    setPendingChanges(pendingChanges.filter((_, i) => i !== index));
   }
 
   function handleUndoAll() {
-    setPendingChanges([])
+    for (const change of pendingChanges) {
+      if (change.type === "add") {
+        if (change.logoPreviewUrl) URL.revokeObjectURL(change.logoPreviewUrl);
+        if (change.logoDarkPreviewUrl)
+          URL.revokeObjectURL(change.logoDarkPreviewUrl);
+      }
+      if (change.type === "logo") {
+        URL.revokeObjectURL(change.previewUrl);
+      }
+    }
+    setPendingChanges([]);
   }
 
   async function saveChanges() {
-    if (!hasChanges) return true
+    if (!hasChanges) return true;
 
-    setSaving(true)
-    setError(null)
+    setSaving(true);
+    setError(null);
 
     try {
       for (const change of pendingChanges) {
         if (change.type === "add") {
-          const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/sponsors`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: change.sponsor.name,
-              tier: change.sponsor.tier,
-              logoUrl: change.sponsor.logo_url,
-              websiteUrl: change.sponsor.website_url,
-              sponsorTenantId: change.sponsor.sponsor_tenant_id,
-            }),
-          })
+          const res = await fetch(
+            `/api/dashboard/hackathons/${hackathonId}/sponsors`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: change.sponsor.name,
+                tier: change.sponsor.tier,
+                logoUrl: change.sponsor.sponsor_tenant_id
+                  ? change.sponsor.logo_url
+                  : null,
+                websiteUrl: change.sponsor.website_url,
+                sponsorTenantId: change.sponsor.sponsor_tenant_id,
+              }),
+            },
+          );
           if (!res.ok) {
-            const data = await res.json()
-            throw new Error(data.error || `Failed to add ${change.sponsor.name}`)
+            const data = await res.json();
+            throw new Error(
+              data.error || `Failed to add ${change.sponsor.name}`,
+            );
+          }
+
+          if (change.logoFile || change.logoDarkFile) {
+            const sponsorData = await res.json();
+
+            if (change.logoFile) {
+              const formData = new FormData();
+              formData.append("file", change.logoFile);
+              formData.append("variant", "light");
+
+              const logoRes = await fetch(
+                `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorData.id}/logo`,
+                { method: "POST", body: formData },
+              );
+              if (!logoRes.ok) {
+                const logoData = await logoRes.json();
+                throw new Error(
+                  logoData.error ||
+                    `Failed to upload light logo for ${change.sponsor.name}`,
+                );
+              }
+            }
+
+            if (change.logoDarkFile) {
+              const formData = new FormData();
+              formData.append("file", change.logoDarkFile);
+              formData.append("variant", "dark");
+
+              const logoRes = await fetch(
+                `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorData.id}/logo`,
+                { method: "POST", body: formData },
+              );
+              if (!logoRes.ok) {
+                const logoData = await logoRes.json();
+                throw new Error(
+                  logoData.error ||
+                    `Failed to upload dark logo for ${change.sponsor.name}`,
+                );
+              }
+            }
           }
         } else if (change.type === "delete") {
-          const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/sponsors/${change.sponsorId}`, {
-            method: "DELETE",
-          })
+          const res = await fetch(
+            `/api/dashboard/hackathons/${hackathonId}/sponsors/${change.sponsorId}`,
+            {
+              method: "DELETE",
+            },
+          );
           if (!res.ok) {
-            const data = await res.json()
-            throw new Error(data.error || "Failed to remove sponsor")
+            const data = await res.json();
+            throw new Error(data.error || "Failed to remove sponsor");
           }
         } else if (change.type === "tier") {
-          const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/sponsors/${change.sponsorId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tier: change.newTier }),
-          })
+          const res = await fetch(
+            `/api/dashboard/hackathons/${hackathonId}/sponsors/${change.sponsorId}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ tier: change.newTier }),
+            },
+          );
           if (!res.ok) {
-            const data = await res.json()
-            throw new Error(data.error || "Failed to update tier")
+            const data = await res.json();
+            throw new Error(data.error || "Failed to update tier");
+          }
+        } else if (change.type === "logo") {
+          const formData = new FormData();
+          formData.append("file", change.file);
+          formData.append("variant", change.variant);
+
+          const res = await fetch(
+            `/api/dashboard/hackathons/${hackathonId}/sponsors/${change.sponsorId}/logo`,
+            { method: "POST", body: formData },
+          );
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(
+              data.error || `Failed to upload ${change.variant} logo`,
+            );
           }
         }
       }
 
-      router.refresh()
-      return true
+      for (const change of pendingChanges) {
+        if (change.type === "add") {
+          if (change.logoPreviewUrl) URL.revokeObjectURL(change.logoPreviewUrl);
+          if (change.logoDarkPreviewUrl)
+            URL.revokeObjectURL(change.logoDarkPreviewUrl);
+        }
+        if (change.type === "logo") {
+          URL.revokeObjectURL(change.previewUrl);
+        }
+      }
+
+      router.refresh();
+      return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save changes")
-      return false
+      setError(err instanceof Error ? err.message : "Failed to save changes");
+      return false;
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   async function handleSave() {
     if (!hasChanges) {
-      closeDrawer()
-      return
+      closeDrawer();
+      return;
     }
 
-    const ok = await saveChanges()
-    if (ok) closeDrawer()
+    const ok = await saveChanges();
+    if (ok) closeDrawer();
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      e.preventDefault()
+      e.preventDefault();
       if (query.trim() && !saving) {
-        handleAddManual()
+        handleAddManual();
       } else if (!saving) {
-        saveChanges().then(ok => {
-          if (ok) { if (onSaveAndNext) { onSaveAndNext() } else { closeDrawer() } }
-        })
+        saveChanges().then((ok) => {
+          if (ok) {
+            if (onSaveAndNext) {
+              onSaveAndNext();
+            } else {
+              closeDrawer();
+            }
+          }
+        });
       }
     }
   }
 
-  const showResults = query.length >= 2
-  const showAddManually = showResults && searched && !loading
+  const showResults = query.length >= 2;
+  const showAddManually = showResults && searched && !loading;
 
   function isPending(sponsorId: string) {
-    return sponsorId.startsWith("temp-") || pendingChanges.some(
-      c => (c.type === "delete" && c.sponsorId === sponsorId) ||
-           (c.type === "tier" && c.sponsorId === sponsorId)
-    )
+    return (
+      sponsorId.startsWith("temp-") ||
+      pendingChanges.some(
+        (c) =>
+          (c.type === "delete" && c.sponsorId === sponsorId) ||
+          (c.type === "tier" && c.sponsorId === sponsorId) ||
+          (c.type === "logo" && c.sponsorId === sponsorId),
+      )
+    );
   }
 
   function isDeleted(sponsorId: string) {
-    return pendingChanges.some(c => c.type === "delete" && c.sponsorId === sponsorId)
+    return pendingChanges.some(
+      (c) => c.type === "delete" && c.sponsorId === sponsorId,
+    );
   }
 
   return (
@@ -366,22 +640,40 @@ export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }
                   className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left"
                 >
                   {org.logoUrl ? (
-                    <OptimizedImage
-                      src={org.logoUrl}
-                      alt={org.name}
-                      width={32}
-                      height={32}
-                      className="rounded-md"
-                    />
+                    <>
+                      <OptimizedImage
+                        src={org.logoUrl}
+                        alt={org.name}
+                        width={32}
+                        height={32}
+                        className="rounded-md dark:hidden"
+                      />
+                      <OptimizedImage
+                        src={org.logoUrlDark || org.logoUrl}
+                        alt={org.name}
+                        width={32}
+                        height={32}
+                        className="rounded-md hidden dark:block"
+                      />
+                    </>
                   ) : (
                     <div className="size-8 rounded-md bg-muted flex items-center justify-center">
                       <Building2 className="size-4 text-muted-foreground" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate text-sm">{org.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-medium truncate text-sm">{org.name}</p>
+                      {org.isSaved && (
+                        <Badge variant="secondary" className="text-[10px] shrink-0">
+                          Saved
+                        </Badge>
+                      )}
+                    </div>
                     {org.slug && (
-                      <p className="text-xs text-muted-foreground">@{org.slug}</p>
+                      <p className="text-xs text-muted-foreground">
+                        @{org.slug}
+                      </p>
                     )}
                   </div>
                 </button>
@@ -397,8 +689,12 @@ export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }
                     <Plus className="size-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">Add &quot;{query}&quot; manually</p>
-                    <p className="text-xs text-muted-foreground">Not on the platform</p>
+                    <p className="font-medium text-sm">
+                      Add &quot;{query}&quot; manually
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Not on the platform
+                    </p>
                   </div>
                 </button>
               )}
@@ -406,15 +702,15 @@ export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }
           )}
         </Field>
 
-        {error && (
-          <p className="text-destructive text-sm">{error}</p>
-        )}
+        {error && <p className="text-destructive text-sm">{error}</p>}
       </FieldGroup>
 
       {currentSponsors.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Sponsors ({currentSponsors.length})</h4>
+            <h4 className="text-sm font-medium">
+              Sponsors ({currentSponsors.length})
+            </h4>
             {hasChanges && (
               <Button
                 type="button"
@@ -430,77 +726,142 @@ export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }
           </div>
           <div className="space-y-2">
             {currentSponsors.map((sponsor) => {
-              const pending = isPending(sponsor.id)
-              const deleted = isDeleted(sponsor.id)
+              const pending = isPending(sponsor.id);
+              const deleted = isDeleted(sponsor.id);
+
+              const isLinked = !!sponsor.sponsor_tenant_id;
 
               return (
                 <div
                   key={sponsor.id}
-                  className={`flex items-center gap-3 rounded-lg border p-3 ${
+                  className={`rounded-lg border p-3 space-y-3 ${
                     pending ? "border-dashed bg-muted/30" : ""
                   } ${deleted ? "opacity-50" : ""}`}
                 >
-                  {sponsor.logo_url ? (
-                    <OptimizedImage
-                      src={sponsor.logo_url}
-                      alt={sponsor.name}
-                      width={32}
-                      height={32}
-                      className="rounded-md shrink-0"
-                    />
+                  {isLinked && sponsor.tenant?.logo_url ? (
+                    <div className="flex gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Sun className="size-2.5" />
+                          <span>Light</span>
+                        </div>
+                        <div className="bg-[#f5f5f4] border border-[#e5e5e5] p-2 flex items-center justify-center h-14 w-28">
+                          <OptimizedImage
+                            src={sponsor.tenant.logo_url}
+                            alt={`${sponsor.name} light logo`}
+                            width={96}
+                            height={40}
+                            className="max-h-10 max-w-full object-contain"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Moon className="size-2.5" />
+                          <span>Dark</span>
+                        </div>
+                        <div className="bg-[#1a1a1a] border border-[#333] p-2 flex items-center justify-center h-14 w-28">
+                          <OptimizedImage
+                            src={
+                              sponsor.tenant.logo_url_dark ||
+                              sponsor.tenant.logo_url
+                            }
+                            alt={`${sponsor.name} dark logo`}
+                            width={96}
+                            height={40}
+                            className="max-h-10 max-w-full object-contain"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   ) : (
-                    <div className="size-8 rounded-md bg-muted flex items-center justify-center shrink-0">
-                      <Building2 className="size-4 text-muted-foreground" />
+                    <div className="flex gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Sun className="size-2.5" />
+                          <span>Light</span>
+                        </div>
+                        <SponsorLogoUpload
+                          logoUrl={sponsor.logo_url}
+                          hackathonId={hackathonId}
+                          sponsorId={sponsor.id}
+                          variant="light"
+                          onFileSelected={(file) =>
+                            handleLogoSelected(sponsor.id, file, "light")
+                          }
+                          onUploaded={() => router.refresh()}
+                          disabled={deleted}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Moon className="size-2.5" />
+                          <span>Dark</span>
+                        </div>
+                        <SponsorLogoUpload
+                          logoUrl={sponsor.logo_url_dark}
+                          hackathonId={hackathonId}
+                          sponsorId={sponsor.id}
+                          variant="dark"
+                          onFileSelected={(file) =>
+                            handleLogoSelected(sponsor.id, file, "dark")
+                          }
+                          onUploaded={() => router.refresh()}
+                          disabled={deleted}
+                        />
+                      </div>
                     </div>
                   )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      {sponsor.tenant?.slug ? (
-                        <Link
-                          href={`/o/${sponsor.tenant.slug}`}
-                          className="font-medium truncate text-sm hover:underline inline-flex items-center gap-1"
-                          target="_blank"
-                        >
-                          {sponsor.name}
-                          <ExternalLink className="size-3 text-muted-foreground" />
-                        </Link>
-                      ) : (
-                        <span className="font-medium truncate text-sm">{sponsor.name}</span>
-                      )}
-                      {sponsor.sponsor_tenant_id && (
-                        <Badge variant="secondary" className="text-xs shrink-0">
-                          Linked
-                        </Badge>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-2">
+                    {sponsor.tenant?.slug ? (
+                      <Link
+                        href={`/o/${sponsor.tenant.slug}`}
+                        className="font-medium text-sm hover:underline inline-flex items-center gap-1"
+                        target="_blank"
+                      >
+                        {sponsor.name}
+                        <ExternalLink className="size-3 text-muted-foreground shrink-0" />
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-sm">{sponsor.name}</span>
+                    )}
+                    {isLinked && (
+                      <Badge variant="secondary" className="text-xs shrink-0">
+                        Linked
+                      </Badge>
+                    )}
                   </div>
-                  <Select
-                    value={sponsor.tier}
-                    onValueChange={(v) => handleUpdateTier(sponsor.id, v as SponsorTier)}
-                    disabled={deleted}
-                  >
-                    <SelectTrigger className="w-24 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Tier</SelectItem>
-                      <SelectItem value="gold">Gold</SelectItem>
-                      <SelectItem value="silver">Silver</SelectItem>
-                      <SelectItem value="bronze">Bronze</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteSponsor(sponsor.id)}
-                    disabled={deleted}
-                    className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={sponsor.tier}
+                      onValueChange={(v) =>
+                        handleUpdateTier(sponsor.id, v as SponsorTier)
+                      }
+                      disabled={deleted}
+                    >
+                      <SelectTrigger className="w-24 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Tier</SelectItem>
+                        <SelectItem value="gold">Gold</SelectItem>
+                        <SelectItem value="silver">Silver</SelectItem>
+                        <SelectItem value="bronze">Bronze</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteSponsor(sponsor.id)}
+                      disabled={deleted}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </div>
-              )
+              );
             })}
           </div>
         </div>
@@ -513,11 +874,23 @@ export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }
           </h4>
           <div className="space-y-1">
             {pendingChanges.map((change, index) => (
-              <div key={index} className="flex items-center justify-between text-xs">
+              <div
+                key={index}
+                className="flex items-center justify-between text-xs"
+              >
                 <span className="text-muted-foreground">
-                  {change.type === "add" && `+ Add "${change.sponsor.name}"`}
-                  {change.type === "delete" && `- Remove "${change.originalSponsor.name}"`}
-                  {change.type === "tier" && `~ Change tier to ${change.newTier}`}
+                  {change.type === "add" &&
+                    `+ Add "${change.sponsor.name}"${
+                      change.logoFile || change.logoDarkFile
+                        ? ` (with ${[change.logoFile && "light", change.logoDarkFile && "dark"].filter(Boolean).join(" + ")} logo)`
+                        : ""
+                    }`}
+                  {change.type === "delete" &&
+                    `- Remove "${change.originalSponsor.name}"`}
+                  {change.type === "tier" &&
+                    `~ Change tier to ${change.newTier}`}
+                  {change.type === "logo" &&
+                    `~ Update ${change.variant} logo`}
                 </span>
                 <Button
                   type="button"
@@ -538,7 +911,14 @@ export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }
         <div className="flex gap-2">
           {hasChanges ? (
             <>
-              <Button type="button" variant="outline" onClick={() => { handleUndoAll(); closeDrawer() }}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  handleUndoAll();
+                  closeDrawer();
+                }}
+              >
                 Discard
               </Button>
               <Button type="button" onClick={handleSave} disabled={saving}>
@@ -554,10 +934,14 @@ export function SponsorsEditForm({ hackathonId, initialSponsors, onSaveAndNext }
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
-            <KbdGroup><Kbd>⌘</Kbd><Kbd>↵</Kbd></KbdGroup> save & next
+            <KbdGroup>
+              <Kbd>⌘</Kbd>
+              <Kbd>↵</Kbd>
+            </KbdGroup>{" "}
+            save & next
           </span>
         </div>
       </div>
     </div>
-  )
+  );
 }
