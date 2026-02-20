@@ -77,7 +77,6 @@ describe("LifecycleStepper", () => {
         judgingSetupStatus={{ judgeCount: 3, hasUnassignedSubmissions: true }}
       />
     )
-    expect(screen.queryByText("Take Offline")).toBeNull()
     expect(screen.queryByText("Assign Submissions")).toBeNull()
     expect(screen.queryByText("Close Submissions")).toBeNull()
   })
@@ -192,7 +191,7 @@ describe("LifecycleStepper", () => {
 
     it("wraps adjacent backward node in HoverCard trigger (published → Draft)", () => {
       render(<LifecycleStepper {...baseProps} status="published" />)
-      expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Take Offline")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
 
     it("wraps distant future node in Tooltip trigger (draft → Completed)", () => {
