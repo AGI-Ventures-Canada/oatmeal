@@ -114,31 +114,27 @@ export function DateTimePicker({
   }
 
   function updatePeriod(newPeriod: "AM" | "PM") {
-    setTime((prev) => {
-      if (prev.period === newPeriod) return prev;
-      if (value) {
-        const hours12 = parseInt(prev.hours, 10) || 12;
-        const hours24 = to24Hour(hours12, newPeriod);
-        const newDate = new Date(value);
-        newDate.setHours(hours24, value.getMinutes(), 0, 0);
-        onChange?.(newDate);
-      }
-      return { ...prev, period: newPeriod };
-    });
+    if (time.period === newPeriod) return;
+    if (value) {
+      const hours12 = parseInt(time.hours, 10) || 12;
+      const hours24 = to24Hour(hours12, newPeriod);
+      const newDate = new Date(value);
+      newDate.setHours(hours24, value.getMinutes(), 0, 0);
+      onChange?.(newDate);
+    }
+    setTime((prev) => ({ ...prev, period: newPeriod }));
   }
 
   function handlePeriodToggle() {
-    setTime((prev) => {
-      const newPeriod = prev.period === "AM" ? "PM" : "AM";
-      if (value) {
-        const hours12 = parseInt(prev.hours, 10) || 12;
-        const hours24 = to24Hour(hours12, newPeriod);
-        const newDate = new Date(value);
-        newDate.setHours(hours24, value.getMinutes(), 0, 0);
-        onChange?.(newDate);
-      }
-      return { ...prev, period: newPeriod };
-    });
+    const newPeriod = time.period === "AM" ? "PM" : "AM";
+    if (value) {
+      const hours12 = parseInt(time.hours, 10) || 12;
+      const hours24 = to24Hour(hours12, newPeriod);
+      const newDate = new Date(value);
+      newDate.setHours(hours24, value.getMinutes(), 0, 0);
+      onChange?.(newDate);
+    }
+    setTime((prev) => ({ ...prev, period: newPeriod }));
   }
 
   function handlePeriodKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
