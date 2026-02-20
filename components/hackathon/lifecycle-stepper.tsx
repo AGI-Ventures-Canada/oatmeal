@@ -19,7 +19,7 @@ import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
 const phases = [
   { key: "draft" as const, label: "Draft", icon: EyeOff },
-  { key: "published" as const, label: "Published", icon: Globe },
+  { key: "published" as const, label: "Go Live", icon: Globe },
   { key: "judging" as const, label: "Judging", icon: Gavel },
   { key: "completed" as const, label: "Completed", icon: Trophy },
 ] as const
@@ -27,13 +27,13 @@ const phases = [
 type PhaseKey = (typeof phases)[number]["key"]
 
 const advanceCta: Record<string, string> = {
-  draft: "Publish",
+  draft: "Go Live",
   judging: "Complete Event",
 }
 
 const confirmations: Record<string, { title: string; description: string }> = {
   "draft→published": {
-    title: "Publish hackathon?",
+    title: "Go live with hackathon?",
     description:
       "Your hackathon will become visible on the browse page and open for registration.",
   },
@@ -48,7 +48,7 @@ const confirmations: Record<string, { title: string; description: string }> = {
       "Judging will close and results will be published on the event page. Participants will be notified of the winner.",
   },
   "published→draft": {
-    title: "Revert to draft?",
+    title: "Take offline?",
     description: "Your hackathon will be hidden from the browse page.",
   },
   "judging→published": {
@@ -96,9 +96,15 @@ interface LifecycleStepperProps {
   endsAt?: string | null
   registrationOpensAt?: string | null
   registrationClosesAt?: string | null
+  description?: string | null
+  bannerUrl?: string | null
+  locationType?: "in_person" | "virtual" | null
+  locationName?: string | null
+  locationUrl?: string | null
+  sponsorCount?: number
 }
 
-export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissionCount = 0, judgingProgress, judgingSetupStatus, startsAt, endsAt, registrationOpensAt, registrationClosesAt }: LifecycleStepperProps) {
+export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissionCount = 0, judgingProgress, judgingSetupStatus, startsAt, endsAt, registrationOpensAt, registrationClosesAt, description, bannerUrl, locationType, locationName, locationUrl, sponsorCount = 0 }: LifecycleStepperProps) {
   const router = useRouter()
   const [currentStatus, setCurrentStatus] = useState(status)
   const [updating, setUpdating] = useState(false)
@@ -189,6 +195,15 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
   ].filter(Boolean) as string[]
   const hasAllDates = missingDates.length === 0
 
+  const goLiveWarnings = [
+    !description && "No description",
+    !bannerUrl && "No banner image",
+    !locationType && "Location not set",
+    locationType === "in_person" && !locationName && "Venue details missing",
+    locationType === "virtual" && !locationUrl && "Virtual link missing",
+    sponsorCount === 0 && "No sponsors",
+  ].filter(Boolean) as string[]
+
   const isPublishedPhase = phases[currentIndex]?.key === "published"
   const hasJudges = (judgingSetupStatus?.judgeCount ?? 0) > 0
   const allSubmissionsAssigned = hasJudges && !judgingSetupStatus?.hasUnassignedSubmissions
@@ -277,29 +292,38 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                   {index < phases.length - 1 && (
                     <div className="flex-1 flex items-center self-stretch pt-1" style={{ height: "2.5rem" }}>
                       {isConnectorWithCta ? (
-                        <div className="flex-1 flex items-center">
-                          <div
-                            className={cn(
-                              "h-px flex-1",
-                              index < currentIndex ? "bg-primary" : "bg-border"
-                            )}
-                          />
-                          <Button
-                            size="sm"
-                            onClick={handleCtaClick}
-                            disabled={updating}
-                            className="shrink-0 gap-1.5 mx-2"
-                          >
-                            {updating ? (
-                              <Loader2 className="size-3.5 animate-spin" />
-                            ) : (
-                              <>
-                                {getCtaText()}
-                                <ArrowRight className="size-3.5" />
-                              </>
-                            )}
-                          </Button>
-                          <div className="h-px flex-1 bg-border" />
+                        <div className="flex-1 flex flex-col items-center">
+                          <div className="flex-1 flex items-center w-full">
+                            <div
+                              className={cn(
+                                "h-px flex-1",
+                                index < currentIndex ? "bg-primary" : "bg-border"
+                              )}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={handleCtaClick}
+                              disabled={updating}
+                              className="shrink-0 gap-1.5 mx-2"
+                            >
+                              {updating ? (
+                                <Loader2 className="size-3.5 animate-spin" />
+                              ) : (
+                                <>
+                                  {getCtaText()}
+                                  <ArrowRight className="size-3.5" />
+                                </>
+                              )}
+                            </Button>
+                            <div className="h-px flex-1 bg-border" />
+                          </div>
+                          {isPublishedPhase && (
+                            <span className="text-[11px] text-muted-foreground mt-0.5">
+                              {judgingSetupStatus?.judgeCount === 1
+                                ? "1 judge"
+                                : `${judgingSetupStatus?.judgeCount ?? 0} judges`}
+                            </span>
+                          )}
                         </div>
                       ) : isUnpublishConnector ? (
                         <div className="flex-1 flex items-center">
@@ -316,7 +340,7 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                             ) : (
                               <>
                                 <EyeOff className="size-3.5" />
-                                Unpublish
+                                Take Offline
                               </>
                             )}
                           </Button>
@@ -356,6 +380,19 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                 <p className="text-destructive/80">
                   Set the following dates before publishing: {missingDates.join(", ")}.
                 </p>
+              </div>
+            </div>
+          )}
+          {pendingTarget === "published" && goLiveWarnings.length > 0 && (
+            <div className="flex items-start gap-3 rounded-md border border-muted p-3">
+              <AlertTriangle className="size-5 shrink-0 text-muted-foreground" />
+              <div className="text-sm">
+                <p className="font-medium">Before you go live</p>
+                <ul className="mt-1 list-disc pl-4 text-muted-foreground">
+                  {goLiveWarnings.map((w) => (
+                    <li key={w}>{w}</li>
+                  ))}
+                </ul>
               </div>
             </div>
           )}

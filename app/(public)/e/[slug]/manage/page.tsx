@@ -56,6 +56,12 @@ export default async function ManagePage({ params }: PageProps) {
         endsAt={hackathon.ends_at}
         registrationOpensAt={hackathon.registration_opens_at}
         registrationClosesAt={hackathon.registration_closes_at}
+        description={hackathon.description}
+        bannerUrl={hackathon.banner_url}
+        locationType={hackathon.location_type}
+        locationName={hackathon.location_name}
+        locationUrl={hackathon.location_url}
+        sponsorCount={hackathon.sponsors.length}
       />
 
       <div className="rounded-lg border overflow-hidden">

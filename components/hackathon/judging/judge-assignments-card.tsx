@@ -4,8 +4,9 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Gavel, CheckCircle2, Circle, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
+import { Gavel, CheckCircle2, Circle, ChevronDown, ChevronLeft, ChevronRight, Focus, List } from "lucide-react"
 import { ScoringPanel } from "./scoring-panel"
+import { FocusScoringView } from "./focus-scoring-view"
 
 const PAGE_SIZE = 20
 
@@ -31,6 +32,7 @@ export function JudgeAssignmentsCard({
   hackathonSlug,
   assignments,
 }: JudgeAssignmentsCardProps) {
+  const [viewMode, setViewMode] = useState<"focus" | "list">("focus")
   const [openAssignmentId, setOpenAssignmentId] = useState<string | null>(null)
   const [completedIds, setCompletedIds] = useState<Set<string>>(
     new Set(assignments.filter((a) => a.isComplete).map((a) => a.id))
@@ -45,14 +47,16 @@ export function JudgeAssignmentsCard({
   function handleScoreSubmitted(assignmentId: string) {
     setCompletedIds((prev) => new Set([...prev, assignmentId]))
 
-    const currentIdx = assignments.findIndex((a) => a.id === assignmentId)
-    const nextUnscored = assignments.find(
-      (a, idx) => idx > currentIdx && !completedIds.has(a.id) && a.id !== assignmentId
-    )
-    if (nextUnscored) {
-      setTimeout(() => setOpenAssignmentId(nextUnscored.id), 500)
-    } else {
-      setTimeout(() => setOpenAssignmentId(null), 500)
+    if (viewMode === "list") {
+      const currentIdx = assignments.findIndex((a) => a.id === assignmentId)
+      const nextUnscored = assignments.find(
+        (a, idx) => idx > currentIdx && !completedIds.has(a.id) && a.id !== assignmentId
+      )
+      if (nextUnscored) {
+        setTimeout(() => setOpenAssignmentId(nextUnscored.id), 500)
+      } else {
+        setTimeout(() => setOpenAssignmentId(null), 500)
+      }
     }
   }
 
@@ -66,83 +70,116 @@ export function JudgeAssignmentsCard({
             <Gavel className="size-4" />
             Your Judging Assignments
           </CardTitle>
-          <Badge variant="secondary">
-            {completed}/{total} scored
-          </Badge>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-md border">
+              <Button
+                variant={viewMode === "focus" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 gap-1.5 rounded-r-none"
+                onClick={() => setViewMode("focus")}
+              >
+                <Focus className="size-3.5" />
+                Focus
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 gap-1.5 rounded-l-none"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="size-3.5" />
+                List
+              </Button>
+            </div>
+            <Badge variant="secondary">
+              {completed}/{total} scored
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-1">
-          {pageAssignments.map((a) => {
-            const isComplete = completedIds.has(a.id)
-            const isOpen = openAssignmentId === a.id
+        {viewMode === "focus" ? (
+          <FocusScoringView
+            hackathonSlug={hackathonSlug}
+            assignments={assignments}
+            initialCompletedIds={completedIds}
+            onScoreSubmitted={handleScoreSubmitted}
+          />
+        ) : (
+          <>
+            <div className="space-y-1">
+              {pageAssignments.map((a) => {
+                const isComplete = completedIds.has(a.id)
+                const isOpen = openAssignmentId === a.id
 
-            return (
-              <div key={a.id} className={`rounded-lg border ${isOpen ? "border-border" : "border-transparent"}`}>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 h-auto py-3"
-                  onClick={() => setOpenAssignmentId(isOpen ? null : a.id)}
-                >
-                  {isComplete ? (
-                    <CheckCircle2 className="size-4 text-primary shrink-0" />
-                  ) : (
-                    <Circle className="size-4 text-muted-foreground shrink-0" />
-                  )}
-                  <div className="text-left flex-1">
-                    <p className="font-medium text-sm">{a.submissionTitle}</p>
-                    {a.teamName && (
-                      <p className="text-xs text-muted-foreground">{a.teamName}</p>
+                return (
+                  <div key={a.id} className={`rounded-lg border ${isOpen ? "border-border" : "border-transparent"}`}>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 h-auto py-3"
+                      onClick={() => setOpenAssignmentId(isOpen ? null : a.id)}
+                    >
+                      {isComplete ? (
+                        <CheckCircle2 className="size-4 text-primary shrink-0" />
+                      ) : (
+                        <Circle className="size-4 text-muted-foreground shrink-0" />
+                      )}
+                      <div className="text-left flex-1">
+                        <p className="font-medium text-sm">{a.submissionTitle}</p>
+                        {a.teamName && (
+                          <p className="text-xs text-muted-foreground">{a.teamName}</p>
+                        )}
+                      </div>
+                      <Badge variant={isComplete ? "default" : "outline"}>
+                        {isComplete ? "Scored" : "Pending"}
+                      </Badge>
+                      <ChevronDown
+                        className={`size-4 text-muted-foreground shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                      />
+                    </Button>
+
+                    {isOpen && (
+                      <div className="border-t px-4 py-4">
+                        <ScoringPanel
+                          hackathonSlug={hackathonSlug}
+                          assignmentId={a.id}
+                          onClose={() => setOpenAssignmentId(null)}
+                          onScoreSubmitted={() => handleScoreSubmitted(a.id)}
+                        />
+                      </div>
                     )}
                   </div>
-                  <Badge variant={isComplete ? "default" : "outline"}>
-                    {isComplete ? "Scored" : "Pending"}
-                  </Badge>
-                  <ChevronDown
-                    className={`size-4 text-muted-foreground shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
-                  />
-                </Button>
-
-                {isOpen && (
-                  <div className="border-t px-4 py-4">
-                    <ScoringPanel
-                      hackathonSlug={hackathonSlug}
-                      assignmentId={a.id}
-                      onClose={() => setOpenAssignmentId(null)}
-                      onScoreSubmitted={() => handleScoreSubmitted(a.id)}
-                    />
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-3 pt-3 border-t">
-            <span className="text-xs text-muted-foreground">
-              Page {page + 1} of {totalPages}
-            </span>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                disabled={page === 0}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                disabled={page === totalPages - 1}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                <ChevronRight className="size-4" />
-              </Button>
+                )
+              })}
             </div>
-          </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                <span className="text-xs text-muted-foreground">
+                  Page {page + 1} of {totalPages}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    disabled={page === 0}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    disabled={page === totalPages - 1}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

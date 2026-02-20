@@ -43,6 +43,7 @@ interface ScoringPanelProps {
   assignmentId: string
   onClose: () => void
   onScoreSubmitted: () => void
+  cancelLabel?: string
 }
 
 export function ScoringPanel({
@@ -50,6 +51,7 @@ export function ScoringPanel({
   assignmentId,
   onClose,
   onScoreSubmitted,
+  cancelLabel = "Cancel",
 }: ScoringPanelProps) {
   const [detail, setDetail] = useState<AssignmentDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -310,7 +312,7 @@ export function ScoringPanel({
           Submit Scores
         </Button>
         <Button variant="outline" onClick={onClose}>
-          Cancel
+          {cancelLabel}
         </Button>
       </div>
     </div>
