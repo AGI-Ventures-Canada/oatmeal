@@ -21,14 +21,17 @@ All endpoints require an API key with `webhooks:read` or `webhooks:write` scope.
 |-------|-------------|
 | `hackathon.created` | A new hackathon was created |
 | `hackathon.updated` | A hackathon's settings were updated |
-| `submission.created` | A new submission draft was created |
+| `participant.registered` | A user registered for a hackathon |
+| `submission.created` | A team created a new submission |
 | `submission.submitted` | A submission was finalized and submitted |
+| `submission.updated` | A team updated their submission |
+| `results.published` | Hackathon results were published |
 
 ## Create a Webhook
 
 `POST /api/v1/webhooks` — requires `webhooks:write` scope.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    url: \"https://your-app.com/webhooks/oatmeal\",\n    events: [\"hackathon.created\", \"submission.submitted\"],\n  }),\n})\n\nconst webhook = await res.json()\nconsole.log(\"Webhook ID:\", webhook.id)\nconsole.log(\"Secret:\", webhook.secret)"}>
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    url: \"https://your-app.com/webhooks/oatmeal\",\n    events: [\"hackathon.created\", \"submission.created\"],\n  }),\n})\n\nconst webhook = await res.json()\nconsole.log(\"Webhook ID:\", webhook.id)\nconsole.log(\"Secret:\", webhook.secret)"}>
   <CodeBlockHeader>
     <CodeBlockFilename>create-webhook.ts</CodeBlockFilename>
     <CodeBlockActions>
@@ -50,7 +53,7 @@ The webhook `secret` is only returned once at creation time. Store it securely f
 
 ### Response
 
-<CodeBlock language="json" code={"{\n  \"id\": \"wh_abc123\",\n  \"url\": \"https://your-app.com/webhooks/oatmeal\",\n  \"events\": [\"hackathon.created\", \"submission.submitted\"],\n  \"secret\": \"whsec_...\",\n  \"createdAt\": \"2026-02-10T15:30:00Z\"\n}"}>
+<CodeBlock language="json" code={"{\n  \"id\": \"wh_abc123\",\n  \"url\": \"https://your-app.com/webhooks/oatmeal\",\n  \"events\": [\"hackathon.created\", \"submission.created\"],\n  \"secret\": \"whsec_...\",\n  \"createdAt\": \"2026-02-10T15:30:00Z\"\n}"}>
   <CodeBlockHeader>
     <CodeBlockFilename>response.json</CodeBlockFilename>
     <CodeBlockActions>
@@ -74,7 +77,7 @@ The webhook `secret` is only returned once at creation time. Store it securely f
 
 ### Response
 
-<CodeBlock language="json" code={"{\n  \"webhooks\": [\n    {\n      \"id\": \"wh_abc123\",\n      \"url\": \"https://your-app.com/webhooks/oatmeal\",\n      \"events\": [\"hackathon.created\", \"submission.submitted\"],\n      \"isActive\": true,\n      \"failureCount\": 0,\n      \"lastTriggeredAt\": \"2026-02-10T16:00:00Z\",\n      \"createdAt\": \"2026-02-10T15:30:00Z\"\n    }\n  ]\n}"}>
+<CodeBlock language="json" code={"{\n  \"webhooks\": [\n    {\n      \"id\": \"wh_abc123\",\n      \"url\": \"https://your-app.com/webhooks/oatmeal\",\n      \"events\": [\"hackathon.created\", \"submission.created\"],\n      \"isActive\": true,\n      \"failureCount\": 0,\n      \"lastTriggeredAt\": \"2026-02-10T16:00:00Z\",\n      \"createdAt\": \"2026-02-10T15:30:00Z\"\n    }\n  ]\n}"}>
   <CodeBlockHeader>
     <CodeBlockFilename>response.json</CodeBlockFilename>
     <CodeBlockActions>
@@ -100,7 +103,7 @@ The webhook `secret` is only returned once at creation time. Store it securely f
 
 Webhook requests are sent as `POST` with a JSON body:
 
-<CodeBlock language="json" code={"{\n  \"event\": \"submission.submitted\",\n  \"data\": {\n    \"hackathonId\": \"hack_abc123\",\n    \"submissionId\": \"sub_xyz456\",\n    \"title\": \"AI Code Review Bot\",\n    \"teamName\": \"BuilderSquad\",\n    \"submittedAt\": \"2026-02-10T15:30:00Z\"\n  }\n}"}>
+<CodeBlock language="json" code={"{\n  \"event\": \"submission.created\",\n  \"timestamp\": \"2026-02-10T15:30:00Z\",\n  \"data\": {\n    \"hackathonId\": \"hack_abc123\",\n    \"submissionId\": \"sub_xyz456\",\n    \"title\": \"AI Code Review Bot\"\n  }\n}"}>
   <CodeBlockHeader>
     <CodeBlockFilename>payload.json</CodeBlockFilename>
     <CodeBlockActions>

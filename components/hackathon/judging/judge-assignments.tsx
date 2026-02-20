@@ -921,7 +921,7 @@ export function JudgeAssignments({
           <div className="space-y-2">
             <Label>Judge</Label>
             <Select value={selectedJudgeId} onValueChange={setSelectedJudgeId}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Select judge" />
               </SelectTrigger>
               <SelectContent>
@@ -939,7 +939,7 @@ export function JudgeAssignments({
               value={selectedSubmissionId}
               onValueChange={setSelectedSubmissionId}
             >
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-full sm:w-56">
                 <SelectValue placeholder="Select submission" />
               </SelectTrigger>
               <SelectContent>
@@ -1038,7 +1038,7 @@ export function JudgeAssignments({
             </p>
           </div>
         ) : (
-          <div className="rounded-lg border">
+          <div className="rounded-lg border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

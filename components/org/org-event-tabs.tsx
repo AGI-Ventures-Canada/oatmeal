@@ -33,25 +33,27 @@ export function OrgEventTabs({
 
   return (
     <Tabs defaultValue="all" className="w-full">
-      <div className="flex items-center justify-between mb-6">
-        <TabsList variant="line">
-          <TabsTrigger value="all">All ({totalUniqueEvents})</TabsTrigger>
-          <TabsTrigger value="organized">
-            Organizing ({organizedHackathons.length})
-          </TabsTrigger>
-          <TabsTrigger value="sponsored">
-            Sponsoring ({sponsoredHackathons.length})
-          </TabsTrigger>
-        </TabsList>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="overflow-x-auto overflow-y-hidden">
+          <TabsList variant="line">
+            <TabsTrigger value="all">All ({totalUniqueEvents})</TabsTrigger>
+            <TabsTrigger value="organized">
+              Organizing ({organizedHackathons.length})
+            </TabsTrigger>
+            <TabsTrigger value="sponsored">
+              Sponsoring ({sponsoredHackathons.length})
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {hasCompleted && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Switch
               id="show-completed"
               checked={showCompleted}
               onCheckedChange={setShowCompleted}
             />
-            <Label htmlFor="show-completed" className="text-sm text-muted-foreground cursor-pointer">
+            <Label htmlFor="show-completed" className="text-sm text-muted-foreground cursor-pointer whitespace-nowrap">
               Show completed
             </Label>
           </div>

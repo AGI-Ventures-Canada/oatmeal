@@ -190,6 +190,13 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
+    const { triggerWebhooks } = await import("@/lib/services/webhooks")
+    triggerWebhooks(hackathon.tenant_id, "participant.registered", {
+      event: "participant.registered",
+      timestamp: new Date().toISOString(),
+      data: { hackathonId: hackathon.id, participantId: result.participantId, teamId: result.teamId },
+    }).catch(console.error)
+
     return { success: true, participantId: result.participantId, teamId: result.teamId }
   }, {
     detail: {
@@ -351,6 +358,13 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         )
       }
 
+      const { triggerWebhooks } = await import("@/lib/services/webhooks")
+      triggerWebhooks(hackathon.tenant_id, "submission.created", {
+        event: "submission.created",
+        timestamp: new Date().toISOString(),
+        data: { hackathonId: hackathon.id, submissionId: submission.id, title: body.title },
+      }).catch(console.error)
+
       return { success: true, submissionId: submission.id }
     },
     {
@@ -451,6 +465,13 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
           { status: 500, headers: { "Content-Type": "application/json" } }
         )
       }
+
+      const { triggerWebhooks } = await import("@/lib/services/webhooks")
+      triggerWebhooks(hackathon.tenant_id, "submission.updated", {
+        event: "submission.updated",
+        timestamp: new Date().toISOString(),
+        data: { hackathonId: hackathon.id, submissionId: submission.id },
+      }).catch(console.error)
 
       return { success: true, submissionId: submission.id }
     },

@@ -125,6 +125,7 @@ export function ScheduleList({ schedules }: ScheduleListProps) {
 
   return (
     <>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -214,6 +215,7 @@ export function ScheduleList({ schedules }: ScheduleListProps) {
           ))}
         </TableBody>
       </Table>
+      </div>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>

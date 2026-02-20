@@ -250,6 +250,42 @@ Exceptions (use Enter instead):
 - Single-line forms with one field
 - Chat/message inputs
 
+### Mobile-First Responsive Design
+
+**All UI must work on mobile (375px+).** Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`) with mobile-first defaults:
+
+- **Layouts**: Use `p-4 md:p-6` for padding, stack elements vertically by default
+- **Flex containers with actions**: `flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`
+- **Fixed-width inputs**: `w-full sm:w-64` (full width on mobile, fixed on desktop)
+- **Tables**: Always wrap `<Table>` in `<div className="overflow-x-auto">`
+- **Button labels**: For action bars with multiple buttons, hide text on mobile: `<span className="hidden sm:inline">Label</span>` (keep icons visible)
+- **Tab bars**: Wrap in `<div className="overflow-x-auto">` for horizontal scrolling
+
+**Touch interactions**: Hover-based interactions (tooltips, hovercards, preview popups) don't work on touch devices. Every hover interaction must have a tap/click equivalent on mobile:
+- **Hovercards/popups**: Use click/tap to open on mobile (e.g., wrap in a clickable element or use Popover instead of HoverCard)
+- **Tooltips**: Ensure the underlying action is accessible without the tooltip
+- **Hover states**: Visual hover effects are fine, but don't hide essential information behind hover-only interactions
+
+**Mobile navigation**: The mobile menu (`components/mobile-header.tsx`) is a full-screen overlay with drill-down navigation (Sierra-style), completely independent from the desktop sidebar. Key principles:
+- **Full-screen takeover**: Mobile menus use `fixed inset-0` overlays, never side-panel sheets that partially cover the screen
+- **Drill-down, not replicate**: Don't mirror the desktop sidebar. Show only top-level items; expandable sections slide to a sub-level with a back button
+- **Large touch targets**: Navigation items use `text-xl` with generous vertical padding (`py-5`). Minimum 44px tap target height
+- **Separate components**: Mobile and desktop navigation are independent components with their own state — never reuse the desktop sidebar on mobile
+- **Body scroll lock**: Lock `document.body.style.overflow = "hidden"` when the menu is open
+- **Auto-close on navigation**: Watch `pathname`/`searchParams` and close the menu when they change
+
+**Sidebar breakpoint**: The desktop sidebar uses `lg:` (1024px) as its visibility breakpoint, matching `MOBILE_BREAKPOINT = 1024` in `hooks/use-mobile.ts`. The mobile header shows below `lg:` (`flex lg:hidden`). Never use `md:` for sidebar-related visibility.
+
+```typescript
+// GOOD - mobile-first
+<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+<div className="relative w-full sm:w-64">
+
+// BAD - desktop-only
+<div className="flex items-center justify-between">
+<div className="relative w-64">
+```
+
 ### Code Style
 
 - Do not write comments above code

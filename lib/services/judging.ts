@@ -522,7 +522,7 @@ export async function autoAssignJudges(
 export type JudgingProgress = {
   totalAssignments: number
   completedAssignments: number
-  judges: { participantId: string; clerkUserId: string; completed: number; total: number }[]
+  judges: { participantId: string; clerkUserId: string; displayName: string; completed: number; total: number }[]
 }
 
 export async function getJudgingProgress(hackathonId: string): Promise<JudgingProgress> {
@@ -551,12 +551,28 @@ export async function getJudgingProgress(hackathonId: string): Promise<JudgingPr
     if (a.is_complete) judgeMap[a.judge_participant_id].completed++
   }
 
+  const userMap: Record<string, string> = {}
+  if (judges && judges.length > 0) {
+    try {
+      const { clerkClient } = await import("@clerk/nextjs/server")
+      const clerk = await clerkClient()
+      const clerkUserIds = judges.map((j) => j.clerk_user_id)
+      const clerkUsers = await clerk.users.getUserList({ userId: clerkUserIds, limit: 100 })
+      for (const u of clerkUsers.data) {
+        userMap[u.id] = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.id
+      }
+    } catch (err) {
+      console.error("Failed to fetch Clerk users for judging progress:", err)
+    }
+  }
+
   return {
     totalAssignments,
     completedAssignments,
     judges: (judges ?? []).map((j) => ({
       participantId: j.id,
       clerkUserId: j.clerk_user_id,
+      displayName: userMap[j.clerk_user_id] ?? j.clerk_user_id,
       completed: judgeMap[j.id]?.completed ?? 0,
       total: judgeMap[j.id]?.total ?? 0,
     })),

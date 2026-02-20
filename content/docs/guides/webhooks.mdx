@@ -14,7 +14,7 @@ Webhooks allow you to:
 
 ## Creating a Webhook
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    url: \"https://your-app.com/webhooks/oatmeal\",\n    events: [\"hackathon.created\", \"submission.submitted\"],\n  }),\n})\n\nconst webhook = await res.json()\n\n// Save the secret for verifying signatures\nconsole.log(`Webhook secret: ${webhook.secret}`)"}>
+<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    url: \"https://your-app.com/webhooks/oatmeal\",\n    events: [\"hackathon.created\", \"submission.created\"],\n  }),\n})\n\nconst webhook = await res.json()\n\n// Save the secret for verifying signatures\nconsole.log(`Webhook secret: ${webhook.secret}`)"}>
   <CodeBlockHeader>
     <CodeBlockFilename>create-webhook.ts</CodeBlockFilename>
     <CodeBlockActions>
@@ -33,16 +33,20 @@ The webhook secret is only shown once. Store it securely for signature verificat
 |-------|-------------|
 | `hackathon.created` | A new hackathon was created |
 | `hackathon.updated` | A hackathon's settings were updated |
-| `submission.created` | A new submission draft was created |
+| `participant.registered` | A user registered for a hackathon |
+| `submission.created` | A team created a new submission |
 | `submission.submitted` | A submission was finalized and submitted |
+| `submission.updated` | A team updated their submission |
+| `results.published` | Hackathon results were published |
 
 ## Webhook Payload
 
 Webhook requests include:
 - `event` - The event type
+- `timestamp` - ISO 8601 timestamp of when the event occurred
 - `data` - Event-specific data including resource IDs and metadata
 
-<CodeBlock language="json" code={"{\n  \"event\": \"submission.submitted\",\n  \"data\": {\n    \"hackathonId\": \"hack_abc123\",\n    \"submissionId\": \"sub_xyz456\",\n    \"title\": \"AI Code Review Bot\",\n    \"teamName\": \"BuilderSquad\",\n    \"submittedAt\": \"2026-02-10T15:30:00Z\"\n  }\n}"}>
+<CodeBlock language="json" code={"{\n  \"event\": \"submission.created\",\n  \"timestamp\": \"2026-02-10T15:30:00Z\",\n  \"data\": {\n    \"hackathonId\": \"hack_abc123\",\n    \"submissionId\": \"sub_xyz456\",\n    \"title\": \"AI Code Review Bot\"\n  }\n}"}>
   <CodeBlockHeader>
     <CodeBlockFilename>payload.json</CodeBlockFilename>
     <CodeBlockActions>
@@ -57,7 +61,7 @@ Webhook requests include an `X-Webhook-Signature` header containing an HMAC-SHA2
 
 ### Express Example
 
-<CodeBlock language="typescript" showLineNumbers code={"import express from \"express\"\nimport crypto from \"crypto\"\n\nconst app = express()\napp.use(express.json())\n\nconst WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!\n\napp.post(\"/webhooks/oatmeal\", (req, res) => {\n  const signature = req.headers[\"x-webhook-signature\"] as string\n  const payload = JSON.stringify(req.body)\n  const expected = crypto\n    .createHmac(\"sha256\", WEBHOOK_SECRET)\n    .update(payload)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return res.status(401).send(\"Invalid signature\")\n  }\n\n  const { event, data } = req.body\n\n  switch (event) {\n    case \"hackathon.created\":\n      console.log(`Hackathon created: ${data.hackathonId}`)\n      break\n    case \"submission.submitted\":\n      console.log(`Submission received: ${data.submissionId}`)\n      break\n  }\n\n  res.status(200).send(\"OK\")\n})"}>
+<CodeBlock language="typescript" showLineNumbers code={"import express from \"express\"\nimport crypto from \"crypto\"\n\nconst app = express()\napp.use(express.json())\n\nconst WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!\n\napp.post(\"/webhooks/oatmeal\", (req, res) => {\n  const signature = req.headers[\"x-webhook-signature\"] as string\n  const payload = JSON.stringify(req.body)\n  const expected = crypto\n    .createHmac(\"sha256\", WEBHOOK_SECRET)\n    .update(payload)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return res.status(401).send(\"Invalid signature\")\n  }\n\n  const { event, data } = req.body\n\n  switch (event) {\n    case \"hackathon.created\":\n      console.log(`Hackathon created: ${data.hackathonId}`)\n      break\n    case \"submission.created\":\n      console.log(`Submission received: ${data.submissionId}`)\n      break\n  }\n\n  res.status(200).send(\"OK\")\n})"}>
   <CodeBlockHeader>
     <CodeBlockFilename>express-webhook.ts</CodeBlockFilename>
     <CodeBlockActions>
@@ -68,7 +72,7 @@ Webhook requests include an `X-Webhook-Signature` header containing an HMAC-SHA2
 
 ### Next.js API Route
 
-<CodeBlock language="typescript" showLineNumbers code={"import { NextRequest, NextResponse } from \"next/server\"\nimport crypto from \"crypto\"\n\nexport async function POST(req: NextRequest) {\n  const signature = req.headers.get(\"x-webhook-signature\")\n  const body = await req.text()\n\n  const expected = crypto\n    .createHmac(\"sha256\", process.env.WEBHOOK_SECRET!)\n    .update(body)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return NextResponse.json({ error: \"Invalid signature\" }, { status: 401 })\n  }\n\n  const { event, data } = JSON.parse(body)\n\n  if (event === \"submission.submitted\") {\n    await processSubmission(data.submissionId, data.title)\n  }\n\n  return NextResponse.json({ received: true })\n}"}>
+<CodeBlock language="typescript" showLineNumbers code={"import { NextRequest, NextResponse } from \"next/server\"\nimport crypto from \"crypto\"\n\nexport async function POST(req: NextRequest) {\n  const signature = req.headers.get(\"x-webhook-signature\")\n  const body = await req.text()\n\n  const expected = crypto\n    .createHmac(\"sha256\", process.env.WEBHOOK_SECRET!)\n    .update(body)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return NextResponse.json({ error: \"Invalid signature\" }, { status: 401 })\n  }\n\n  const { event, data } = JSON.parse(body)\n\n  if (event === \"submission.created\") {\n    await processSubmission(data.submissionId, data.title)\n  }\n\n  return NextResponse.json({ received: true })\n}"}>
   <CodeBlockHeader>
     <CodeBlockFilename>app/api/webhooks/route.ts</CodeBlockFilename>
     <CodeBlockActions>
