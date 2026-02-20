@@ -1303,6 +1303,9 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
           websiteUrl: body.websiteUrl,
         })
         tenantSponsorId = tenantSponsor?.id ?? null
+        if (!tenantSponsorId) {
+          console.warn(`upsertTenantSponsor returned null for tenant ${principal.tenantId}, sponsor "${body.name}" will be added without a library link`)
+        }
       }
 
       const sponsor = await addSponsor({

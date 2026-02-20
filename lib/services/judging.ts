@@ -557,9 +557,13 @@ export async function getJudgingProgress(hackathonId: string): Promise<JudgingPr
       const { clerkClient } = await import("@clerk/nextjs/server")
       const clerk = await clerkClient()
       const clerkUserIds = judges.map((j) => j.clerk_user_id)
-      const clerkUsers = await clerk.users.getUserList({ userId: clerkUserIds, limit: 100 })
-      for (const u of clerkUsers.data) {
-        userMap[u.id] = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.id
+      const batchSize = 100
+      for (let i = 0; i < clerkUserIds.length; i += batchSize) {
+        const batch = clerkUserIds.slice(i, i + batchSize)
+        const clerkUsers = await clerk.users.getUserList({ userId: batch, limit: batchSize })
+        for (const u of clerkUsers.data) {
+          userMap[u.id] = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.id
+        }
       }
     } catch (err) {
       console.error("Failed to fetch Clerk users for judging progress:", err)
