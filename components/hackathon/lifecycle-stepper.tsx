@@ -14,7 +14,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Check, EyeOff, Globe, Gavel, Trophy, Loader2, ArrowRight, AlertTriangle, Users } from "lucide-react"
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { Check, EyeOff, Globe, Gavel, Trophy, Loader2, AlertTriangle, Users } from "lucide-react"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
 const phases = [
@@ -25,11 +35,6 @@ const phases = [
 ] as const
 
 type PhaseKey = (typeof phases)[number]["key"]
-
-const advanceCta: Record<string, string> = {
-  draft: "Go Live",
-  judging: "Complete Event",
-}
 
 const confirmations: Record<string, { title: string; description: string }> = {
   "draft→published": {
@@ -104,6 +109,13 @@ interface LifecycleStepperProps {
   sponsorCount?: number
 }
 
+type HoverAction = {
+  title: string
+  description: string
+  buttonText: string
+  onClick: () => void
+}
+
 export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissionCount = 0, judgingProgress, judgingSetupStatus, startsAt, endsAt, registrationOpensAt, registrationClosesAt, description, bannerUrl, locationType, locationName, locationUrl, sponsorCount = 0 }: LifecycleStepperProps) {
   const router = useRouter()
   const [currentStatus, setCurrentStatus] = useState(status)
@@ -111,7 +123,6 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
   const [pendingTarget, setPendingTarget] = useState<PhaseKey | null>(null)
 
   const currentIndex = resolvePhaseIndex(currentStatus)
-  const nextPhase = currentIndex < phases.length - 1 ? phases[currentIndex + 1] : null
 
   async function commitStatusChange(newStatus: PhaseKey) {
     const now = new Date().toISOString()
@@ -180,6 +191,35 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
     setPendingTarget(target)
   }
 
+  function getHoverAction(phaseIndex: number): HoverAction | null {
+    if (updating) return null
+    const distance = phaseIndex - currentIndex
+    if (Math.abs(distance) !== 1) return null
+
+    const phaseKey = phases[phaseIndex].key
+    const currentKey = phases[currentIndex].key
+
+    if (distance === 1) {
+      if (currentKey === "draft" && phaseKey === "published")
+        return { title: "Go Live", description: "Make the event open for registrations", buttonText: "Go Live", onClick: () => requestTransition("published") }
+      if (currentKey === "published" && phaseKey === "judging") {
+        if (judgingSetupStatus?.hasUnassignedSubmissions)
+          return { title: "Assign Submissions", description: "Some submissions don't have judges assigned yet", buttonText: "Assign Submissions", onClick: () => router.push(`/e/${hackathonSlug}/manage/judging?tab=assignments`) }
+        return { title: "Start Judging", description: "Close submissions and begin judging", buttonText: "Start Judging", onClick: () => requestTransition("judging") }
+      }
+      if (currentKey === "judging" && phaseKey === "completed")
+        return { title: "End Event", description: "End the event and publish results", buttonText: "End Event", onClick: () => requestTransition("completed") }
+    } else {
+      if (currentKey === "published" && phaseKey === "draft")
+        return { title: "Take Offline", description: "Hide the event from the browse page", buttonText: "Take Offline", onClick: () => requestTransition("draft") }
+      if (currentKey === "judging" && phaseKey === "published")
+        return { title: "Reopen Submissions", description: "Revert to published and allow new submissions", buttonText: "Reopen", onClick: () => requestTransition("published") }
+      if (currentKey === "completed" && phaseKey === "judging")
+        return { title: "Reopen Judging", description: "Revert to the judging phase", buttonText: "Reopen", onClick: () => requestTransition("judging") }
+    }
+    return null
+  }
+
   const confirmation = pendingTarget
     ? confirmations[`${phases[currentIndex].key}→${pendingTarget}`] ?? {
         title: `Switch to ${pendingTarget}?`,
@@ -204,33 +244,11 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
     sponsorCount === 0 && "No sponsors",
   ].filter(Boolean) as string[]
 
-  const isPublishedPhase = phases[currentIndex]?.key === "published"
   const judgeCount = judgingSetupStatus?.judgeCount ?? 0
   const hasJudges = judgeCount > 0
-  const allSubmissionsAssigned = hasJudges && !judgingSetupStatus?.hasUnassignedSubmissions
   const judgesLabel = hasJudges
     ? (judgeCount === 1 ? "1 judge" : `${judgeCount} judges`)
     : "Assign Judges"
-  const publishedCtaText = judgingSetupStatus?.hasUnassignedSubmissions
-    ? "Assign Submissions"
-    : "Close Submissions"
-
-  function getCtaText() {
-    if (isPublishedPhase) return publishedCtaText
-    return advanceCta[phases[currentIndex].key]
-  }
-
-  function handleCtaClick() {
-    if (isPublishedPhase) {
-      if (allSubmissionsAssigned) {
-        requestTransition("judging")
-      } else {
-        router.push(`/e/${hackathonSlug}/manage/judging?tab=assignments`)
-      }
-    } else if (nextPhase) {
-      requestTransition(nextPhase.key)
-    }
-  }
 
   return (
     <>
@@ -242,9 +260,74 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
               const isCurrent = index === currentIndex
               const isFuture = index > currentIndex
               const Icon = phase.icon
-              const isClickable = !isCurrent && !updating && Math.abs(index - currentIndex) === 1
-              const isConnectorWithCta = nextPhase && index === currentIndex
-              const isUnpublishConnector = isPublishedPhase && index === 0
+              const isAdjacent = !isCurrent && !updating && Math.abs(index - currentIndex) === 1
+              const isDistant = !isCurrent && Math.abs(index - currentIndex) > 1
+              const hoverAction = getHoverAction(index)
+
+              const nodeElement = (
+                <button
+                  type="button"
+                  className={cn(
+                    "group/phase flex flex-col items-center gap-1.5 rounded-md px-2 pt-1 pb-1.5 transition-colors shrink-0",
+                    isAdjacent && "hover:bg-muted cursor-pointer",
+                    isCurrent && "cursor-default",
+                    isDistant && "cursor-default opacity-40"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
+                      isCompleted && "bg-muted-foreground text-background",
+                      isCurrent && "bg-primary text-primary-foreground",
+                      isFuture && "border-2 border-muted-foreground/30"
+                    )}
+                  >
+                    {isCompleted ? (
+                      <Check className="size-3.5" strokeWidth={2.5} />
+                    ) : (
+                      <Icon className="size-3.5" />
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      "text-xs font-medium whitespace-nowrap",
+                      isCompleted && "text-muted-foreground",
+                      isCurrent && "text-foreground",
+                      isFuture && "text-muted-foreground"
+                    )}
+                  >
+                    {phase.label}
+                  </span>
+                </button>
+              )
+
+              const wrappedNode = hoverAction ? (
+                <HoverCard openDelay={200}>
+                  <HoverCardTrigger asChild>
+                    {nodeElement}
+                  </HoverCardTrigger>
+                  <HoverCardContent side="top" align="center" className="w-auto">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">{hoverAction.title}</p>
+                      <p className="text-muted-foreground">{hoverAction.description}</p>
+                      <Button size="sm" className="w-full" onClick={hoverAction.onClick}>
+                        {hoverAction.buttonText}
+                      </Button>
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
+              ) : isDistant ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {nodeElement}
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    {phase.label}
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                nodeElement
+              )
 
               return (
                 <div
@@ -254,42 +337,7 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                     index < phases.length - 1 ? "flex-1" : "flex-none"
                   )}
                 >
-                  <button
-                    type="button"
-                    onClick={() => isClickable && requestTransition(phase.key)}
-                    disabled={!isClickable}
-                    className={cn(
-                      "group/phase flex flex-col items-center gap-1.5 rounded-md px-2 pt-1 pb-1.5 transition-colors shrink-0",
-                      isClickable && "hover:bg-muted cursor-pointer",
-                      !isClickable && isCurrent && "cursor-default",
-                      !isClickable && isFuture && "cursor-default opacity-40"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                        isCompleted && "bg-primary text-primary-foreground",
-                        isCurrent && "bg-primary text-primary-foreground",
-                        isFuture && "border-2 border-muted-foreground/30"
-                      )}
-                    >
-                      {isCompleted ? (
-                        <Check className="size-3.5" strokeWidth={2.5} />
-                      ) : (
-                        <Icon className="size-3.5" />
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        "text-xs font-medium whitespace-nowrap",
-                        isCompleted && "text-muted-foreground",
-                        isCurrent && "text-foreground",
-                        isFuture && "text-muted-foreground"
-                      )}
-                    >
-                      {phase.label}
-                    </span>
-                  </button>
+                  {wrappedNode}
 
                   {index < phases.length - 1 && (
                     <div className="flex-1 flex items-center self-stretch pt-1" style={{ height: "2.5rem" }}>
@@ -298,7 +346,7 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                           <div
                             className={cn(
                               "h-px flex-1",
-                              index < currentIndex ? "bg-primary" : "bg-border"
+                              index < currentIndex ? "bg-muted-foreground" : "bg-border"
                             )}
                           />
                           <button
@@ -309,8 +357,8 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                             <div
                               className={cn(
                                 "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                                hasJudges
-                                  ? "bg-primary text-primary-foreground"
+                                currentIndex > 0
+                                  ? "bg-muted-foreground text-background"
                                   : "border-2 border-muted-foreground/30 text-muted-foreground"
                               )}
                             >
@@ -323,86 +371,15 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                           <div
                             className={cn(
                               "h-px flex-1",
-                              index < currentIndex ? "bg-primary" : "bg-border"
+                              index < currentIndex ? "bg-muted-foreground" : "bg-border"
                             )}
                           />
-                          {isConnectorWithCta && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={handleCtaClick}
-                                disabled={updating}
-                                className="shrink-0 gap-1.5 mx-2"
-                              >
-                                {updating ? (
-                                  <Loader2 className="size-3.5 animate-spin" />
-                                ) : (
-                                  <>
-                                    {getCtaText()}
-                                    <ArrowRight className="size-3.5" />
-                                  </>
-                                )}
-                              </Button>
-                              <div className="h-px flex-1 bg-border" />
-                            </>
-                          )}
-                          {isUnpublishConnector && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => requestTransition("draft")}
-                                disabled={updating}
-                                className="shrink-0 gap-1.5 mx-2"
-                              >
-                                {updating ? (
-                                  <Loader2 className="size-3.5 animate-spin" />
-                                ) : (
-                                  <>
-                                    <EyeOff className="size-3.5" />
-                                    Take Offline
-                                  </>
-                                )}
-                              </Button>
-                              <div
-                                className={cn(
-                                  "h-px flex-1",
-                                  index < currentIndex ? "bg-primary" : "bg-border"
-                                )}
-                              />
-                            </>
-                          )}
-                        </div>
-                      ) : isConnectorWithCta && !(isPublishedPhase && !hasJudges) ? (
-                        <div className="flex-1 flex items-center">
-                          <div
-                            className={cn(
-                              "h-px flex-1",
-                              index < currentIndex ? "bg-primary" : "bg-border"
-                            )}
-                          />
-                          <Button
-                            size="sm"
-                            onClick={handleCtaClick}
-                            disabled={updating}
-                            className="shrink-0 gap-1.5 mx-2"
-                          >
-                            {updating ? (
-                              <Loader2 className="size-3.5 animate-spin" />
-                            ) : (
-                              <>
-                                {getCtaText()}
-                                <ArrowRight className="size-3.5" />
-                              </>
-                            )}
-                          </Button>
-                          <div className="h-px flex-1 bg-border" />
                         </div>
                       ) : (
                         <div
                           className={cn(
                             "h-px flex-1 mx-1",
-                            index < currentIndex ? "bg-primary" : "bg-border"
+                            index < currentIndex ? "bg-muted-foreground" : "bg-border"
                           )}
                         />
                       )}
