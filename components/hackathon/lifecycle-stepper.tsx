@@ -253,7 +253,7 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
   return (
     <>
       <div className="rounded-lg border bg-card">
-        <div className="px-5 py-4">
+        <div className="px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex items-start">
             {phases.map((phase, index) => {
               const isCompleted = index < currentIndex
@@ -290,7 +290,7 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                   </div>
                   <span
                     className={cn(
-                      "text-xs font-medium whitespace-nowrap",
+                      "hidden sm:block text-xs font-medium whitespace-nowrap",
                       isCompleted && "text-muted-foreground",
                       isCurrent && "text-foreground",
                       isFuture && "text-muted-foreground"
@@ -364,7 +364,7 @@ export function LifecycleStepper({ hackathonId, hackathonSlug, status, submissio
                             >
                               <Users className="size-3.5" />
                             </div>
-                            <span className="absolute top-full mt-1 left-1/2 -translate-x-1/2 text-[11px] font-medium whitespace-nowrap text-muted-foreground">
+                            <span className="hidden sm:block absolute top-full mt-1 left-1/2 -translate-x-1/2 text-[11px] font-medium whitespace-nowrap text-muted-foreground">
                               {judgesLabel}
                             </span>
                           </button>

@@ -86,6 +86,7 @@ export function WebhookList({ webhooks }: WebhookListProps) {
 
   return (
     <>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -167,6 +168,7 @@ export function WebhookList({ webhooks }: WebhookListProps) {
           ))}
         </TableBody>
       </Table>
+      </div>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
