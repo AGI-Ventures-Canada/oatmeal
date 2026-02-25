@@ -1,5 +1,7 @@
 import { Elysia, t } from "elysia"
 import { extractLumaEventData } from "@/lib/services/luma-import"
+import { resolvePrincipal, requirePrincipal, AuthError } from "@/lib/auth/principal"
+import { logAudit } from "@/lib/services/audit"
 
 export const importRoutes = new Elysia({ prefix: "/public/import" })
   .post(
@@ -22,6 +24,81 @@ export const importRoutes = new Elysia({ prefix: "/public/import" })
       },
       body: t.Object({
         slug: t.String({ minLength: 1 }),
+      }),
+    }
+  )
+
+export const dashboardImportRoutes = new Elysia({ prefix: "/dashboard/import" })
+  .onError(({ error, set }) => {
+    if (error instanceof AuthError) {
+      set.status = error.statusCode
+      return { error: error.message }
+    }
+    set.status = 500
+    return { error: "Internal server error" }
+  })
+  .derive(async ({ request }) => {
+    const principal = await resolvePrincipal(request)
+    return { principal }
+  })
+  .post(
+    "/luma",
+    async ({ principal, body, set }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { createHackathonFromImport } = await import("@/lib/services/luma-import-create")
+      const hackathon = await createHackathonFromImport(principal.tenantId, {
+        name: body.name,
+        description: body.description ?? null,
+        startsAt: body.startsAt ?? null,
+        endsAt: body.endsAt ?? null,
+        locationType: body.locationType ?? null,
+        locationName: body.locationName ?? null,
+        locationUrl: body.locationUrl ?? null,
+        imageUrl: body.imageUrl ?? null,
+      })
+
+      if (!hackathon) {
+        set.status = 500
+        return { error: "Failed to create hackathon" }
+      }
+
+      await logAudit({
+        principal,
+        action: "hackathon.created",
+        resourceType: "hackathon",
+        resourceId: hackathon.id,
+        metadata: { source: "luma_import" },
+      })
+
+      const { triggerWebhooks } = await import("@/lib/services/webhooks")
+      triggerWebhooks(principal.tenantId, "hackathon.created", {
+        event: "hackathon.created",
+        timestamp: new Date().toISOString(),
+        data: { hackathonId: hackathon.id, source: "luma_import" },
+      }).catch(console.error)
+
+      return {
+        id: hackathon.id,
+        name: hackathon.name,
+        slug: hackathon.slug,
+      }
+    },
+    {
+      detail: {
+        summary: "Create hackathon from Luma import",
+        description: "Creates a new hackathon with prefilled data from a Luma event. Requires hackathons:write scope.",
+        tags: ["dashboard"],
+      },
+      body: t.Object({
+        name: t.String({ minLength: 1 }),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+        startsAt: t.Optional(t.Union([t.String(), t.Null()])),
+        endsAt: t.Optional(t.Union([t.String(), t.Null()])),
+        locationType: t.Optional(t.Union([t.Literal("in_person"), t.Literal("virtual"), t.Null()])),
+        locationName: t.Optional(t.Union([t.String(), t.Null()])),
+        locationUrl: t.Optional(t.Union([t.String(), t.Null()])),
+        imageUrl: t.Optional(t.Union([t.String(), t.Null()])),
       }),
     }
   )

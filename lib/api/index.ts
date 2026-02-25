@@ -3,7 +3,7 @@ import { swagger } from "@elysiajs/swagger"
 import { publicRoutes } from "./routes/public"
 import { dashboardRoutes } from "./routes/dashboard"
 import { v1Routes } from "./routes/v1"
-import { importRoutes } from "./routes/import"
+import { importRoutes, dashboardImportRoutes } from "./routes/import"
 
 export const api = new Elysia({ prefix: "/api" })
   .use(
@@ -48,6 +48,7 @@ Authorization: Bearer sk_live_your_api_key_here
   )
   .use(publicRoutes)
   .use(importRoutes)
+  .use(dashboardImportRoutes)
   .use(dashboardRoutes)
   .use(v1Routes)
 
