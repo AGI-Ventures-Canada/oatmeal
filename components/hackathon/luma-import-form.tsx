@@ -29,47 +29,91 @@ export function LumaImportForm({ eventData, lumaSlug }: LumaImportFormProps) {
   const pathname = usePathname()
   const { isSignedIn } = useAuth()
   const { organization } = useOrganization()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const autoSubmitTriggered = useRef(false)
 
-  const [formData, setFormData] = useState({
-    name: eventData.name,
-    description: eventData.description ?? "",
-    startsAt: eventData.startsAt ?? "",
-    endsAt: eventData.endsAt ?? "",
-    locationType: eventData.locationType ?? "",
-    locationName: eventData.locationName ?? "",
-    locationUrl: eventData.locationUrl ?? "",
-    imageUrl: eventData.imageUrl ?? "",
-  })
-
-  useEffect(() => {
+  // Check if we should auto-submit on mount (user just signed in)
+  const shouldAutoSubmit = (() => {
+    if (typeof window === "undefined") return false
+    if (!isSignedIn || !organization) return false
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (!saved) return
+    if (!saved) return false
+    try {
+      const parsed = JSON.parse(saved)
+      return Date.now() - parsed.savedAt < STORAGE_EXPIRY_MS
+    } catch {
+      return false
+    }
+  })()
+
+  const [isSubmitting, setIsSubmitting] = useState(shouldAutoSubmit)
+  const [error, setError] = useState<string | null>(null)
+
+  const [formData, setFormData] = useState(() => {
+    if (typeof window === "undefined") {
+      return {
+        name: eventData.name,
+        description: eventData.description ?? "",
+        startsAt: eventData.startsAt ?? "",
+        endsAt: eventData.endsAt ?? "",
+        locationType: eventData.locationType ?? "",
+        locationName: eventData.locationName ?? "",
+        locationUrl: eventData.locationUrl ?? "",
+        imageUrl: eventData.imageUrl ?? "",
+      }
+    }
+
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (!saved) {
+      return {
+        name: eventData.name,
+        description: eventData.description ?? "",
+        startsAt: eventData.startsAt ?? "",
+        endsAt: eventData.endsAt ?? "",
+        locationType: eventData.locationType ?? "",
+        locationName: eventData.locationName ?? "",
+        locationUrl: eventData.locationUrl ?? "",
+        imageUrl: eventData.imageUrl ?? "",
+      }
+    }
 
     try {
       const parsed = JSON.parse(saved)
       if (Date.now() - parsed.savedAt >= STORAGE_EXPIRY_MS) {
         localStorage.removeItem(STORAGE_KEY)
-        return
+        return {
+          name: eventData.name,
+          description: eventData.description ?? "",
+          startsAt: eventData.startsAt ?? "",
+          endsAt: eventData.endsAt ?? "",
+          locationType: eventData.locationType ?? "",
+          locationName: eventData.locationName ?? "",
+          locationUrl: eventData.locationUrl ?? "",
+          imageUrl: eventData.imageUrl ?? "",
+        }
       }
-      setFormData(parsed)
+      return parsed
     } catch {
       localStorage.removeItem(STORAGE_KEY)
+      return {
+        name: eventData.name,
+        description: eventData.description ?? "",
+        startsAt: eventData.startsAt ?? "",
+        endsAt: eventData.endsAt ?? "",
+        locationType: eventData.locationType ?? "",
+        locationName: eventData.locationName ?? "",
+        locationUrl: eventData.locationUrl ?? "",
+        imageUrl: eventData.imageUrl ?? "",
+      }
     }
-  }, [])
+  })
 
   useEffect(() => {
-    if (!isSignedIn || !organization) return
+    if (!shouldAutoSubmit) return
     if (autoSubmitTriggered.current) return
-
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (!saved) return
 
     autoSubmitTriggered.current = true
     handleSubmit()
-  }, [isSignedIn, organization])
+  }, [shouldAutoSubmit])
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !isSubmitting) {
