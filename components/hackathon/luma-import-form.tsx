@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth, useOrganization } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
@@ -31,6 +31,7 @@ export function LumaImportForm({ eventData, lumaSlug }: LumaImportFormProps) {
   const { organization } = useOrganization()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const autoSubmitTriggered = useRef(false)
 
   const [formData, setFormData] = useState({
     name: eventData.name,
@@ -45,19 +46,30 @@ export function LumaImportForm({ eventData, lumaSlug }: LumaImportFormProps) {
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        if (Date.now() - parsed.savedAt < STORAGE_EXPIRY_MS) {
-          setFormData(parsed)
-        } else {
-          localStorage.removeItem(STORAGE_KEY)
-        }
-      } catch {
+    if (!saved) return
+
+    try {
+      const parsed = JSON.parse(saved)
+      if (Date.now() - parsed.savedAt >= STORAGE_EXPIRY_MS) {
         localStorage.removeItem(STORAGE_KEY)
+        return
       }
+      setFormData(parsed)
+    } catch {
+      localStorage.removeItem(STORAGE_KEY)
     }
   }, [])
+
+  useEffect(() => {
+    if (!isSignedIn || !organization) return
+    if (autoSubmitTriggered.current) return
+
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (!saved) return
+
+    autoSubmitTriggered.current = true
+    handleSubmit()
+  }, [isSignedIn, organization])
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !isSubmitting) {
@@ -115,6 +127,22 @@ export function LumaImportForm({ eventData, lumaSlug }: LumaImportFormProps) {
 
   function updateField(field: string, value: string) {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  if (isSubmitting) {
+    return (
+      <div className="mx-auto max-w-2xl p-4 md:p-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <Loader2 className="size-8 animate-spin text-muted-foreground mb-4" />
+            <CardTitle className="mb-2">Creating your hackathon...</CardTitle>
+            <CardDescription>
+              Importing from <span className="font-mono text-xs">luma.com/{lumaSlug}</span>
+            </CardDescription>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
