@@ -390,3 +390,28 @@ export async function deleteSponsorLogo(
 
   return true
 }
+
+export async function downloadAndUploadBanner(
+  hackathonId: string,
+  imageUrl: string | null
+): Promise<UploadBannerResult | null> {
+  if (!imageUrl) return null
+
+  let response: Response
+  try {
+    response = await fetch(imageUrl)
+  } catch {
+    return null
+  }
+
+  if (!response.ok) return null
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+
+  try {
+    return await uploadBanner(hackathonId, buffer)
+  } catch {
+    return null
+  }
+}
