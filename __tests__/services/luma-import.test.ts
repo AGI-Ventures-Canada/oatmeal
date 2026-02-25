@@ -78,6 +78,24 @@ describe("extractLumaEventData", () => {
     expect(result!.locationType).toBe("virtual")
   })
 
+  it("handles script tags with extra attributes (real Luma format)", async () => {
+    const realFormatHtml = `
+<html><head>
+<script data-cfasync="false" type="application/ld+json" data-next-head="">
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": "Real Luma Event"
+}
+</script>
+</head><body></body></html>`
+    mockFetch.mockResolvedValueOnce(new Response(realFormatHtml, { status: 200 }))
+
+    const result = await extractLumaEventData("real-event")
+    expect(result).not.toBeNull()
+    expect(result!.name).toBe("Real Luma Event")
+  })
+
   it("handles missing optional fields gracefully", async () => {
     const minimalHtml = `
 <html><head>

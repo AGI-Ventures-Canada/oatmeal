@@ -35,7 +35,7 @@ export async function extractLumaEventData(
 
 function parseJsonLd(html: string): LumaEventData | null {
   const jsonLdMatch = html.match(
-    /<script\s+type="application\/ld\+json">([\s\S]*?)<\/script>/
+    /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/
   )
   if (!jsonLdMatch) return null
 
