@@ -12,12 +12,21 @@ mock.module("@/lib/services/storage", () => ({
   optimizeBanner: mock(() => Promise.resolve({ buffer: Buffer.from(""), mimeType: "image/webp" })),
 }))
 
-const { createHackathonFromImport } = await import("@/lib/services/luma-import-create")
+const mockCreatePrize = mock(() => Promise.resolve({ id: "p1", hackathon_id: "h1", name: "Test", description: null, value: null, display_order: 0, created_at: "" }))
+mock.module("@/lib/services/prizes", () => ({
+  createPrize: mockCreatePrize,
+  listPrizes: mock(() => Promise.resolve([])),
+  updatePrize: mock(() => Promise.resolve(null)),
+  deletePrize: mock(() => Promise.resolve(true)),
+}))
+
+const { createHackathonFromImport, createPrizesFromImport } = await import("@/lib/services/luma-import-create")
 
 describe("createHackathonFromImport", () => {
   beforeEach(() => {
     resetSupabaseMocks()
     mockDownloadAndUploadBanner.mockClear()
+    mockCreatePrize.mockClear()
   })
 
   it("creates hackathon with all imported fields", async () => {
@@ -122,5 +131,95 @@ describe("createHackathonFromImport", () => {
     })
 
     expect(result).toBeNull()
+  })
+
+  it("includes rules field in hackathon update", async () => {
+    const selectChain = createChainableMock({ data: null, error: null })
+    const insertChain = createChainableMock({
+      data: { id: "h3", name: "With Rules", slug: "with-rules", tenant_id: "t1" },
+      error: null,
+    })
+    const updateChain = createChainableMock({
+      data: { id: "h3", updated_at: "2026-02-25" },
+      error: null,
+    })
+
+    let callCount = 0
+    setMockFromImplementation(() => {
+      callCount++
+      if (callCount === 1) return selectChain
+      if (callCount === 2) return insertChain
+      return updateChain
+    })
+
+    mockDownloadAndUploadBanner.mockResolvedValueOnce(null)
+
+    const result = await createHackathonFromImport("tenant-1", {
+      name: "With Rules",
+      description: null,
+      startsAt: null,
+      endsAt: null,
+      locationType: null,
+      locationName: null,
+      locationUrl: null,
+      imageUrl: null,
+      rules: "No plagiarism allowed.",
+    })
+
+    expect(result).not.toBeNull()
+    expect(result!.id).toBe("h3")
+  })
+})
+
+describe("createPrizesFromImport", () => {
+  beforeEach(() => {
+    mockCreatePrize.mockClear()
+  })
+
+  it("creates prizes with correct display order", async () => {
+    await createPrizesFromImport("h1", [
+      { name: "Grand Prize", description: "Top team", value: "$5,000" },
+      { name: "Runner Up", description: null, value: "$2,500" },
+      { name: "Best Design", description: "Most creative UI", value: null },
+    ])
+
+    expect(mockCreatePrize).toHaveBeenCalledTimes(3)
+    expect(mockCreatePrize).toHaveBeenNthCalledWith(1, "h1", {
+      name: "Grand Prize",
+      description: "Top team",
+      value: "$5,000",
+      displayOrder: 0,
+    })
+    expect(mockCreatePrize).toHaveBeenNthCalledWith(2, "h1", {
+      name: "Runner Up",
+      description: null,
+      value: "$2,500",
+      displayOrder: 1,
+    })
+    expect(mockCreatePrize).toHaveBeenNthCalledWith(3, "h1", {
+      name: "Best Design",
+      description: "Most creative UI",
+      value: null,
+      displayOrder: 2,
+    })
+  })
+
+  it("handles empty prizes array", async () => {
+    await createPrizesFromImport("h1", [])
+
+    expect(mockCreatePrize).not.toHaveBeenCalled()
+  })
+
+  it("defaults null description and value", async () => {
+    await createPrizesFromImport("h1", [
+      { name: "Participation Award" },
+    ])
+
+    expect(mockCreatePrize).toHaveBeenCalledWith("h1", {
+      name: "Participation Award",
+      description: null,
+      value: null,
+      displayOrder: 0,
+    })
   })
 })

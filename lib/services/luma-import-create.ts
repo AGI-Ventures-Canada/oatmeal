@@ -1,6 +1,7 @@
 import { createHackathon } from "@/lib/services/hackathons"
 import { downloadAndUploadBanner } from "@/lib/services/storage"
 import { addSponsor } from "@/lib/services/sponsors"
+import { createPrize } from "@/lib/services/prizes"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Hackathon, SponsorTier } from "@/lib/db/hackathon-types"
@@ -16,6 +17,7 @@ export type ImportHackathonInput = {
   locationName: string | null
   locationUrl: string | null
   imageUrl: string | null
+  rules?: string | null
 }
 
 export async function createHackathonFromImport(
@@ -43,6 +45,7 @@ export async function createHackathonFromImport(
       location_name: input.locationName,
       location_url: input.locationUrl,
       banner_url: bannerResult?.url ?? null,
+      rules: input.rules ?? null,
     })
     .eq("id", hackathon.id)
 
@@ -66,6 +69,21 @@ export async function createSponsorsFromImport(
       hackathonId,
       name: s.name,
       tier,
+      displayOrder: i,
+    })
+  }
+}
+
+export async function createPrizesFromImport(
+  hackathonId: string,
+  prizes: { name: string; description?: string | null; value?: string | null }[]
+): Promise<void> {
+  for (let i = 0; i < prizes.length; i++) {
+    const p = prizes[i]
+    await createPrize(hackathonId, {
+      name: p.name,
+      description: p.description ?? null,
+      value: p.value ?? null,
       displayOrder: i,
     })
   }

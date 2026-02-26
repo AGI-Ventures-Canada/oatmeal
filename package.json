@@ -32,6 +32,7 @@
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@supabase/supabase-js": "^2.90.1",
     "@tailwindcss/typography": "^0.5.19",
+    "@tavily/core": "^0.7.2",
     "@workflow/ai": "^4.0.1-beta.44",
     "@xyflow/react": "^12.10.0",
     "ai": "^6.0.33",

@@ -3,15 +3,20 @@
 import { useCallback } from "react"
 import { HackathonDraftEditor, type DraftState } from "@/components/hackathon/hackathon-draft-editor"
 import type { LumaEventData } from "@/lib/services/luma-import"
+import type { LumaRichContent } from "@/lib/services/luma-extract"
 
 const STORAGE_KEY = "oatmeal:luma-import"
 
 type LumaImportEditorProps = {
   eventData: LumaEventData
+  richContent: LumaRichContent | null
   lumaSlug: string
 }
 
-function eventDataToState(eventData: LumaEventData): DraftState {
+function eventDataToState(
+  eventData: LumaEventData,
+  richContent: LumaRichContent | null
+): DraftState {
   return {
     name: eventData.name,
     description: eventData.description,
@@ -23,11 +28,17 @@ function eventDataToState(eventData: LumaEventData): DraftState {
     locationName: eventData.locationName,
     locationUrl: eventData.locationUrl,
     imageUrl: eventData.imageUrl,
-    sponsors: [],
+    sponsors: richContent?.sponsors ?? [],
+    rules: richContent?.rules ?? null,
+    prizes: richContent?.prizes?.map((p) => ({
+      name: p.name,
+      description: p.description,
+      value: p.value,
+    })) ?? [],
   }
 }
 
-export function LumaImportEditor({ eventData, lumaSlug }: LumaImportEditorProps) {
+export function LumaImportEditor({ eventData, richContent, lumaSlug }: LumaImportEditorProps) {
   const handleSubmit = useCallback(async (state: DraftState) => {
     const res = await fetch("/api/dashboard/import/luma", {
       method: "POST",
@@ -44,6 +55,8 @@ export function LumaImportEditor({ eventData, lumaSlug }: LumaImportEditorProps)
         locationUrl: state.locationUrl,
         imageUrl: state.imageUrl,
         sponsors: state.sponsors,
+        rules: state.rules,
+        prizes: state.prizes,
       }),
     })
 
@@ -57,7 +70,7 @@ export function LumaImportEditor({ eventData, lumaSlug }: LumaImportEditorProps)
 
   return (
     <HackathonDraftEditor
-      initialState={eventDataToState(eventData)}
+      initialState={eventDataToState(eventData, richContent)}
       storageKey={STORAGE_KEY}
       onSubmit={handleSubmit}
       sourceLabel={`luma.com/${lumaSlug}`}

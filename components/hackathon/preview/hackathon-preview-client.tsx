@@ -355,6 +355,7 @@ function HackathonPreviewContent({
                   hackathonId={hackathon.id}
                   initialData={{ rules: hackathon.rules }}
                   onSaveAndNext={() => handleSaveAndNext("rules")}
+                  onSave={onFormSave ? (data) => onFormSave(data) : undefined}
                 />
               </div>
             ) : (
