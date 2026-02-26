@@ -42,7 +42,7 @@ api_url = "http://127.0.0.1"
 
 [inbucket]
 enabled = true
-port = 54424
+port = 54426
 
 [storage]
 enabled = true

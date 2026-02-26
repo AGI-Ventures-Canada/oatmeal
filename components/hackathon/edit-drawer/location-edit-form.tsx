@@ -11,25 +11,32 @@ import {
   FieldGroup,
 } from "@/components/ui/field"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { useEdit } from "@/components/hackathon/preview/edit-context"
+import { useEditOptional } from "@/components/hackathon/preview/edit-context"
 import { MapPin, Video, Undo2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type LocationType = "in_person" | "virtual" | null
 
 interface LocationEditFormProps {
-  hackathonId: string
+  hackathonId?: string
   initialData: {
     locationType: LocationType
     locationName: string | null
     locationUrl: string | null
   }
   onSaveAndNext?: () => void
+  onSave?: (data: {
+    locationType: LocationType
+    locationName: string | null
+    locationUrl: string | null
+  }) => Promise<boolean>
+  onCancel?: () => void
 }
 
-export function LocationEditForm({ hackathonId, initialData, onSaveAndNext }: LocationEditFormProps) {
+export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSave, onCancel }: LocationEditFormProps) {
   const router = useRouter()
-  const { closeDrawer } = useEdit()
+  const editContext = useEditOptional()
+  const closeDrawer = onCancel ?? editContext?.closeDrawer ?? (() => {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -54,6 +61,14 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext }: Lo
     setError(null)
 
     try {
+      if (onSave) {
+        return await onSave({
+          locationType,
+          locationName: locationName.trim() || null,
+          locationUrl: locationUrl.trim() || null,
+        })
+      }
+
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -73,8 +88,9 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext }: Lo
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save")
-      setSaving(false)
       return false
+    } finally {
+      setSaving(false)
     }
   }
 

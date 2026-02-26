@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test"
 import { mockFrom, mockRpc } from "../lib/supabase-mock"
 
+const mockFetch = mock(() => Promise.resolve(new Response("")))
+globalThis.fetch = mockFetch as unknown as typeof fetch
+
 const mockUpload = mock(() => Promise.resolve({ error: null }))
 const mockRemove = mock(() => Promise.resolve({ error: null }))
 const mockGetPublicUrl = mock(() => ({ data: { publicUrl: "https://storage.test/file.webp" } }))
@@ -46,6 +49,7 @@ const {
   deleteScreenshot,
   uploadSponsorLogo,
   deleteSponsorLogo,
+  downloadAndUploadBanner,
 } = await import("@/lib/services/storage")
 
 describe("Storage Service", () => {
@@ -414,6 +418,47 @@ describe("Storage Service", () => {
       const result = await deleteSponsorLogo("hackathon123", "sponsor456")
 
       expect(result).toBe(false)
+    })
+  })
+
+  describe("downloadAndUploadBanner", () => {
+    beforeEach(() => {
+      mockFetch.mockClear()
+    })
+
+    it("downloads image and uploads to storage", async () => {
+      const imageBuffer = Buffer.alloc(1024)
+      mockFetch.mockResolvedValueOnce(
+        new Response(imageBuffer, {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        })
+      )
+
+      const result = await downloadAndUploadBanner("hackathon-123", "https://images.lumacdn.com/test.png")
+      expect(mockFetch).toHaveBeenCalledWith("https://images.lumacdn.com/test.png")
+      expect(result).not.toBeNull()
+      expect(result?.path).toBe("hackathon-123/banner.webp")
+    })
+
+    it("returns null when image download fails (404)", async () => {
+      mockFetch.mockResolvedValueOnce(new Response("Not Found", { status: 404 }))
+
+      const result = await downloadAndUploadBanner("hackathon-123", "https://bad-url.com/nope.png")
+      expect(result).toBeNull()
+    })
+
+    it("returns null when imageUrl is null", async () => {
+      const result = await downloadAndUploadBanner("hackathon-123", null)
+      expect(result).toBeNull()
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+
+    it("returns null when fetch throws a network error", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"))
+
+      const result = await downloadAndUploadBanner("hackathon-123", "https://unreachable.com/img.png")
+      expect(result).toBeNull()
     })
   })
 })

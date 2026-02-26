@@ -607,6 +607,81 @@ curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/results"
 
 ---
 
+### POST /api/public/import/luma
+
+Extracts structured event data from a public Luma event page by parsing JSON-LD metadata.
+
+#### curl
+
+```bash
+curl -X POST "https://your-domain.com/api/public/import/luma" \
+  -H "Content-Type: application/json" \
+  -d '{"slug": "sfagents"}'
+```
+
+#### TypeScript
+
+```typescript
+const response = await fetch("https://your-domain.com/api/public/import/luma", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ slug: "sfagents" })
+})
+
+const eventData = await response.json()
+```
+
+#### Python
+
+```python
+import requests
+
+response = requests.post(
+    "https://your-domain.com/api/public/import/luma",
+    json={"slug": "sfagents"}
+)
+
+event_data = response.json()
+```
+
+#### Request Body
+
+```json
+{
+  "slug": "sfagents"
+}
+```
+
+**Parameters:**
+- `slug` (string, required): Luma event slug from the URL (e.g., "sfagents" from `luma.com/sfagents`)
+
+#### Response (200 OK)
+
+```json
+{
+  "name": "Autonomous Agents Hackathon",
+  "description": "Build AI agents that work autonomously...",
+  "startsAt": "2026-02-27T09:30:00.000-08:00",
+  "endsAt": "2026-02-27T19:30:00.000-08:00",
+  "locationType": "in_person",
+  "locationName": "San Francisco, California",
+  "locationUrl": null,
+  "imageUrl": "https://images.lumacdn.com/cdn-cgi/image/.../event-covers/..."
+}
+```
+
+#### Response (404 Not Found)
+
+```json
+{
+  "error": "Could not extract event data from Luma"
+}
+```
+
+**Note:** Returns 404 if the Luma event doesn't exist, is private, or the page structure has changed.
+
+---
+
 ## Dashboard Endpoints
 
 All dashboard endpoints require Clerk session or API key (`Authorization: Bearer sk_live_...`).
@@ -647,6 +722,133 @@ curl "https://your-domain.com/api/dashboard/me" \
 ---
 
 ### Hackathon Management
+
+#### POST /api/dashboard/import/luma
+
+Creates a new hackathon from imported Luma event data. Extracts the event metadata, downloads the banner image, and creates a fully configured hackathon.
+
+##### curl
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/import/luma" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -d '{
+    "name": "Autonomous Agents Hackathon",
+    "description": "Build AI agents that work autonomously...",
+    "startsAt": "2026-02-27T09:30:00.000-08:00",
+    "endsAt": "2026-02-27T19:30:00.000-08:00",
+    "locationType": "in_person",
+    "locationName": "San Francisco, California",
+    "locationUrl": null,
+    "imageUrl": "https://images.lumacdn.com/cdn-cgi/image/.../event-covers/..."
+  }'
+```
+
+##### TypeScript
+
+```typescript
+const response = await fetch("https://your-domain.com/api/dashboard/import/luma", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer sk_live_your_api_key_here"
+  },
+  body: JSON.stringify({
+    name: "Autonomous Agents Hackathon",
+    description: "Build AI agents that work autonomously...",
+    startsAt: "2026-02-27T09:30:00.000-08:00",
+    endsAt: "2026-02-27T19:30:00.000-08:00",
+    locationType: "in_person",
+    locationName: "San Francisco, California",
+    locationUrl: null,
+    imageUrl: "https://images.lumacdn.com/cdn-cgi/image/.../event-covers/..."
+  })
+})
+
+const hackathon = await response.json()
+```
+
+##### Python
+
+```python
+import requests
+
+response = requests.post(
+    "https://your-domain.com/api/dashboard/import/luma",
+    headers={
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_live_your_api_key_here"
+    },
+    json={
+        "name": "Autonomous Agents Hackathon",
+        "description": "Build AI agents that work autonomously...",
+        "startsAt": "2026-02-27T09:30:00.000-08:00",
+        "endsAt": "2026-02-27T19:30:00.000-08:00",
+        "locationType": "in_person",
+        "locationName": "San Francisco, California",
+        "locationUrl": None,
+        "imageUrl": "https://images.lumacdn.com/cdn-cgi/image/.../event-covers/..."
+    }
+)
+
+hackathon = response.json()
+```
+
+##### Request Body
+
+```json
+{
+  "name": "Autonomous Agents Hackathon",
+  "description": "Build AI agents that work autonomously...",
+  "startsAt": "2026-02-27T09:30:00.000-08:00",
+  "endsAt": "2026-02-27T19:30:00.000-08:00",
+  "locationType": "in_person",
+  "locationName": "San Francisco, California",
+  "locationUrl": null,
+  "imageUrl": "https://images.lumacdn.com/cdn-cgi/image/.../event-covers/..."
+}
+```
+
+**Parameters:**
+- `name` (string, required): Hackathon name
+- `description` (string, optional): Full description of the hackathon
+- `startsAt` (string, optional): ISO 8601 datetime for hackathon start
+- `endsAt` (string, optional): ISO 8601 datetime for hackathon end
+- `locationType` (string, optional): Either `"in_person"` or `"virtual"`
+- `locationName` (string, optional): Human-readable location name
+- `locationUrl` (string, optional): URL for virtual events or location details
+- `imageUrl` (string, optional): URL of the banner image to download and import
+
+##### Response (200 OK)
+
+```json
+{
+  "id": "uuid",
+  "name": "Autonomous Agents Hackathon",
+  "slug": "autonomous-agents-hackathon"
+}
+```
+
+##### Response (401 Unauthorized)
+
+```json
+{
+  "error": "Unauthorized"
+}
+```
+
+##### Response (500 Internal Server Error)
+
+```json
+{
+  "error": "Failed to create hackathon"
+}
+```
+
+**Note:** The banner image (if provided) is downloaded, optimized, and uploaded to storage. If the download fails, the hackathon is still created but without a banner. This endpoint requires the `hackathons:write` scope.
+
+---
 
 #### GET /api/dashboard/hackathons
 

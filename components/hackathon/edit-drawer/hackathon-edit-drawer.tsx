@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button"
 import { ChevronUp, ChevronDown } from "lucide-react"
 import { useEdit, type EditSection, SECTION_ORDER } from "@/components/hackathon/preview/edit-context"
 import { NameEditForm } from "./name-edit-form"
-import { AboutEditForm } from "./about-edit-form"
 import { RulesEditForm } from "./rules-edit-form"
 import { TimelineEditForm } from "./timeline-edit-form"
 import { LocationEditForm } from "./location-edit-form"
@@ -26,6 +25,10 @@ const sectionMeta: Record<Exclude<EditSection, null>, { title: string; descripti
   name: {
     title: "Edit Name",
     description: "Update the hackathon name",
+  },
+  dates: {
+    title: "Edit Registration Dates",
+    description: "Set when registration opens and closes",
   },
   about: {
     title: "Edit About",
@@ -52,7 +55,8 @@ const sectionMeta: Record<Exclude<EditSection, null>, { title: string; descripti
 export function HackathonEditDrawer({ hackathon }: HackathonEditDrawerProps) {
   const { activeSection, openSection, closeDrawer } = useEdit()
 
-  const isOpen = activeSection !== null
+  const INLINE_SECTIONS: Set<string> = new Set(["about"])
+  const isOpen = activeSection !== null && !INLINE_SECTIONS.has(activeSection)
   const currentIndex = activeSection ? SECTION_ORDER.indexOf(activeSection) : -1
   const hasPrev = currentIndex > 0
   const hasNext = currentIndex >= 0 && currentIndex < SECTION_ORDER.length - 1
@@ -116,16 +120,6 @@ export function HackathonEditDrawer({ hackathon }: HackathonEditDrawerProps) {
             <NameEditForm
               hackathonId={hackathon.id}
               initialName={hackathon.name}
-              onSaveAndNext={handleSaveAndNext}
-            />
-          )}
-
-          {activeSection === "about" && (
-            <AboutEditForm
-              hackathonId={hackathon.id}
-              initialData={{
-                description: hackathon.description,
-              }}
               onSaveAndNext={handleSaveAndNext}
             />
           )}

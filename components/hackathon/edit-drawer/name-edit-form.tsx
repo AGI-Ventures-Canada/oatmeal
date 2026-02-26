@@ -11,17 +11,20 @@ import {
 } from "@/components/ui/field"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Undo2 } from "lucide-react"
-import { useEdit } from "@/components/hackathon/preview/edit-context"
+import { useEditOptional } from "@/components/hackathon/preview/edit-context"
 
 interface NameEditFormProps {
-  hackathonId: string
+  hackathonId?: string
   initialName: string
   onSaveAndNext?: () => void
+  onSave?: (data: { name: string }) => Promise<boolean>
+  onCancel?: () => void
 }
 
-export function NameEditForm({ hackathonId, initialName, onSaveAndNext }: NameEditFormProps) {
+export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, onCancel }: NameEditFormProps) {
   const router = useRouter()
-  const { closeDrawer } = useEdit()
+  const editContext = useEditOptional()
+  const closeDrawer = onCancel ?? editContext?.closeDrawer ?? (() => {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,6 +41,10 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext }: NameEd
     setError(null)
 
     try {
+      if (onSave) {
+        return await onSave({ name })
+      }
+
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -53,8 +60,9 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext }: NameEd
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save")
-      setSaving(false)
       return false
+    } finally {
+      setSaving(false)
     }
   }
 

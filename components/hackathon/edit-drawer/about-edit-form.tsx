@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { MarkdownEditor } from "@/components/ui/markdown-editor"
 import {
   Field,
   FieldLabel,
@@ -12,19 +12,22 @@ import {
 } from "@/components/ui/field"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Undo2 } from "lucide-react"
-import { useEdit } from "@/components/hackathon/preview/edit-context"
+import { useEditOptional } from "@/components/hackathon/preview/edit-context"
 
 interface AboutEditFormProps {
-  hackathonId: string
+  hackathonId?: string
   initialData: {
     description: string | null
   }
   onSaveAndNext?: () => void
+  onSave?: (data: { description: string | null }) => Promise<boolean>
+  onCancel?: () => void
 }
 
-export function AboutEditForm({ hackathonId, initialData, onSaveAndNext }: AboutEditFormProps) {
+export function AboutEditForm({ hackathonId, initialData, onSaveAndNext, onSave, onCancel }: AboutEditFormProps) {
   const router = useRouter()
-  const { closeDrawer } = useEdit()
+  const editContext = useEditOptional()
+  const closeDrawer = onCancel ?? editContext?.closeDrawer ?? (() => {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,6 +44,10 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext }: About
     setError(null)
 
     try {
+      if (onSave) {
+        return await onSave({ description: description || null })
+      }
+
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -58,8 +65,9 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext }: About
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save")
-      setSaving(false)
       return false
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -92,20 +100,15 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext }: About
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="about-description">Description</FieldLabel>
-          <Textarea
+          <MarkdownEditor
             id="about-description"
-            name="description"
             rows={8}
             placeholder="Tell participants about your hackathon..."
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            autoComplete="off"
-            data-1p-ignore
-            data-lpignore="true"
-            data-form-type="other"
+            onChange={setDescription}
           />
           <FieldDescription>
-            Describe the hackathon theme, goals, and what participants can expect
+            Supports markdown: **bold**, _italic_, ## headings, lists, and [links](url)
           </FieldDescription>
         </Field>
 

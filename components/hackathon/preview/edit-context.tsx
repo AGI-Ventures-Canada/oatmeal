@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from "rea
 
 export type EditSection =
   | "name"
+  | "dates"
   | "about"
   | "rules"
   | "timeline"
@@ -13,9 +14,10 @@ export type EditSection =
 
 export const SECTION_ORDER: Exclude<EditSection, null>[] = [
   "name",
-  "timeline",
+  "dates",
   "location",
   "sponsors",
+  "timeline",
   "about",
   "rules",
 ]
@@ -60,7 +62,13 @@ export function EditProvider({ children, isEditable, defaultEditMode = true }: E
     if (!activeSection) return
     const el = document.querySelector(`[data-edit-section="${activeSection}"]`)
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" })
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+      requestAnimationFrame(() => {
+        const input = el.querySelector<HTMLElement>(
+          "input:not([type=\"hidden\"]), textarea, select, [contenteditable=\"true\"]"
+        )
+        if (input) input.focus()
+      })
     }
   }, [activeSection])
 
@@ -86,4 +94,8 @@ export function useEdit() {
     throw new Error("useEdit must be used within EditProvider")
   }
   return context
+}
+
+export function useEditOptional() {
+  return useContext(EditContext)
 }
