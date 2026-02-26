@@ -60,7 +60,7 @@ export function EditProvider({ children, isEditable, defaultEditMode = true }: E
     if (!activeSection) return
     const el = document.querySelector(`[data-edit-section="${activeSection}"]`)
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" })
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
     }
   }, [activeSection])
 

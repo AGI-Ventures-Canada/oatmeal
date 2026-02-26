@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useCallback } from "react"
+import { useRef, useState, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
@@ -46,9 +46,17 @@ export function MarkdownEditor({
   id,
 }: MarkdownEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [activeTab, setActiveTab] = useState("write")
+  const pendingAction = useRef<FormatAction | null>(null)
 
   const applyFormat = useCallback(
     (action: FormatAction) => {
+      if (activeTab !== "write") {
+        pendingAction.current = action
+        setActiveTab("write")
+        return
+      }
+
       const textarea = textareaRef.current
       if (!textarea) return
 
@@ -95,11 +103,29 @@ export function MarkdownEditor({
         textarea.setSelectionRange(cursorPos, cursorPos)
       })
     },
-    [value, onChange]
+    [value, onChange, activeTab]
+  )
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      setActiveTab(tab)
+      if (tab === "write" && pendingAction.current) {
+        const action = pendingAction.current
+        pendingAction.current = null
+        requestAnimationFrame(() => {
+          const textarea = textareaRef.current
+          if (!textarea) return
+          const end = value.length
+          textarea.setSelectionRange(end, end)
+          applyFormat(action)
+        })
+      }
+    },
+    [value, applyFormat]
   )
 
   return (
-    <Tabs defaultValue="write">
+    <Tabs value={activeTab} onValueChange={handleTabChange}>
       <div className="flex items-center justify-between">
         <TabsList variant="line">
           <TabsTrigger value="write">Write</TabsTrigger>
@@ -114,6 +140,7 @@ export function MarkdownEditor({
                   type="button"
                   variant="ghost"
                   size="icon-xs"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => applyFormat(item.action)}
                   tabIndex={-1}
                 >
