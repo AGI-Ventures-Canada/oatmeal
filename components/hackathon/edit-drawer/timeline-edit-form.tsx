@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/field"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Undo2 } from "lucide-react"
-import { useEdit } from "@/components/hackathon/preview/edit-context"
+import { useEditOptional } from "@/components/hackathon/preview/edit-context"
 
 interface TimelineEditFormProps {
-  hackathonId: string
+  hackathonId?: string
   initialData: {
     startsAt: string | null
     endsAt: string | null
@@ -23,6 +23,13 @@ interface TimelineEditFormProps {
     registrationClosesAt: string | null
   }
   onSaveAndNext?: () => void
+  onSave?: (data: {
+    startsAt: Date | null
+    endsAt: Date | null
+    registrationOpensAt: Date | null
+    registrationClosesAt: Date | null
+  }) => Promise<boolean>
+  onCancel?: () => void
 }
 
 function parseDate(dateString: string | null): Date | null {
@@ -30,9 +37,10 @@ function parseDate(dateString: string | null): Date | null {
   return new Date(dateString)
 }
 
-export function TimelineEditForm({ hackathonId, initialData, onSaveAndNext }: TimelineEditFormProps) {
+export function TimelineEditForm({ hackathonId, initialData, onSaveAndNext, onSave, onCancel }: TimelineEditFormProps) {
   const router = useRouter()
-  const { closeDrawer } = useEdit()
+  const editContext = useEditOptional()
+  const closeDrawer = onCancel ?? editContext?.closeDrawer ?? (() => {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -66,6 +74,15 @@ export function TimelineEditForm({ hackathonId, initialData, onSaveAndNext }: Ti
     setError(null)
 
     try {
+      if (onSave) {
+        return await onSave({
+          startsAt: startsAt || null,
+          endsAt: endsAt || null,
+          registrationOpensAt: registrationOpensAt || null,
+          registrationClosesAt: registrationClosesAt || null,
+        })
+      }
+
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -86,8 +103,9 @@ export function TimelineEditForm({ hackathonId, initialData, onSaveAndNext }: Ti
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save")
-      setSaving(false)
       return false
+    } finally {
+      setSaving(false)
     }
   }
 

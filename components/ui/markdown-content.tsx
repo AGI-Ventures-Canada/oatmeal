@@ -1,5 +1,6 @@
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import remarkBreaks from "remark-breaks"
 import { cn } from "@/lib/utils"
 
 interface MarkdownContentProps {
@@ -12,7 +13,7 @@ export function MarkdownContent({ children, className }: MarkdownContentProps) {
 
   return (
     <div className={cn("prose prose-sm dark:prose-invert max-w-none", className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{children}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{children}</ReactMarkdown>
     </div>
   )
 }

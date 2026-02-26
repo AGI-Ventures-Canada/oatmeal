@@ -42,6 +42,7 @@ interface HackathonPreviewClientProps {
   submissions?: GallerySubmission[]
   teamInfo?: ParticipantTeamInfo
   publicResults?: PublicResultWithDetails[]
+  onFormSave?: (data: Record<string, unknown>) => Promise<boolean>
 }
 
 function HackathonPreviewContent({
@@ -55,6 +56,7 @@ function HackathonPreviewContent({
   submissions = [],
   teamInfo = null,
   publicResults = [],
+  onFormSave,
 }: Omit<HackathonPreviewClientProps, "isEditable">) {
   const { isEditable, editMode, activeSection, openSection, closeDrawer } = useEdit()
   const { user } = useUser()
@@ -271,6 +273,7 @@ function HackathonPreviewContent({
                   hackathonId={hackathon.id}
                   initialData={{ description: hackathon.description }}
                   onSaveAndNext={() => handleSaveAndNext("about")}
+                  onSave={onFormSave ? (data) => onFormSave(data) : undefined}
                 />
               </div>
             ) : (
@@ -380,6 +383,7 @@ function HackathonPreviewContent({
           hackathonId={hackathon.id}
           initialName={hackathon.name}
           onSaveAndNext={() => handleSaveAndNext("name")}
+          onSave={onFormSave ? (data) => onFormSave(data) : undefined}
         />
       ) : undefined}
       datesEditSlot={isEditable && editMode && activeSection === "timeline" ? (
@@ -392,6 +396,12 @@ function HackathonPreviewContent({
             registrationClosesAt: hackathon.registration_closes_at,
           }}
           onSaveAndNext={() => handleSaveAndNext("timeline")}
+          onSave={onFormSave ? (data) => onFormSave({
+            startsAt: data.startsAt?.toISOString() ?? null,
+            endsAt: data.endsAt?.toISOString() ?? null,
+            registrationOpensAt: data.registrationOpensAt?.toISOString() ?? null,
+            registrationClosesAt: data.registrationClosesAt?.toISOString() ?? null,
+          }) : undefined}
         />
       ) : undefined}
       locationEditSlot={isEditable && editMode && activeSection === "location" ? (
@@ -403,6 +413,7 @@ function HackathonPreviewContent({
             locationUrl: hackathon.location_url,
           }}
           onSaveAndNext={() => handleSaveAndNext("location")}
+          onSave={onFormSave ? (data) => onFormSave(data) : undefined}
         />
       ) : undefined}
       isRegistered={isRegistered}
@@ -455,6 +466,7 @@ export function HackathonPreviewClient({
   submissions,
   teamInfo,
   publicResults,
+  onFormSave,
 }: HackathonPreviewClientProps) {
   return (
     <EditProvider isEditable={isEditable} defaultEditMode={!showActionBar}>
@@ -469,6 +481,7 @@ export function HackathonPreviewClient({
         submissions={submissions}
         teamInfo={teamInfo}
         publicResults={publicResults}
+        onFormSave={onFormSave}
       />
     </EditProvider>
   )

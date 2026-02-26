@@ -87,3 +87,7 @@ export function useEdit() {
   }
   return context
 }
+
+export function useEditOptional() {
+  return useContext(EditContext)
+}

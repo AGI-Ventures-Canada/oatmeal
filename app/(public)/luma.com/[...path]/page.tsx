@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation"
+import { auth } from "@clerk/nextjs/server"
 import { extractLumaEventData } from "@/lib/services/luma-import"
-import { LumaImportForm } from "@/components/hackathon/luma-import-form"
+import { getOrCreateTenant } from "@/lib/services/tenants"
+import { LumaImportEditor } from "@/components/hackathon/luma-import-editor"
 import type { Metadata } from "next"
 
 type PageProps = {
@@ -31,5 +33,19 @@ export default async function LumaImportPage({ params }: PageProps) {
     notFound()
   }
 
-  return <LumaImportForm eventData={eventData} lumaSlug={slug} />
+  const { orgId } = await auth()
+  const tenant = orgId ? await getOrCreateTenant(orgId) : null
+
+  const organizer = tenant
+    ? {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        logo_url: tenant.logo_url,
+        logo_url_dark: tenant.logo_url_dark,
+        clerk_org_id: tenant.clerk_org_id ?? "",
+      }
+    : null
+
+  return <LumaImportEditor eventData={eventData} lumaSlug={slug} organizer={organizer} />
 }
