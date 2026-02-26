@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -37,7 +38,8 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
             <Plus className="mr-2 size-4" />
             <span>From scratch</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setLumaDialogOpen(true)}>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setLumaDialogOpen(true)} className="text-primary">
             <Sparkles className="mr-2 size-4" />
             <span>From Luma URL</span>
           </DropdownMenuItem>

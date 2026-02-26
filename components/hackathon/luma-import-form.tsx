@@ -113,6 +113,7 @@ export function LumaImportForm({ eventData, lumaSlug }: LumaImportFormProps) {
 
     autoSubmitTriggered.current = true
     handleSubmit()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldAutoSubmit])
 
   function handleKeyDown(e: React.KeyboardEvent) {
