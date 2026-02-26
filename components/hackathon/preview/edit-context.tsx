@@ -24,6 +24,7 @@ interface EditContextValue {
   activeSection: EditSection
   isEditable: boolean
   editMode: boolean
+  excludeSections: Exclude<EditSection, null>[]
   setEditMode: (mode: boolean) => void
   openSection: (section: EditSection) => void
   closeDrawer: () => void
@@ -78,6 +79,7 @@ export function EditProvider({ children, isEditable, defaultEditMode = true, exc
         activeSection,
         isEditable,
         editMode,
+        excludeSections: excludeSections ?? [],
         setEditMode,
         openSection,
         closeDrawer,
