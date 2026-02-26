@@ -251,6 +251,13 @@ Exceptions (use Enter instead):
 - Single-line forms with one field
 - Chat/message inputs
 
+**Auto-focus the first input when a form appears.** When a form, edit panel, or input section opens (via click, navigation, or modal), auto-focus the first focusable input so the user can start typing immediately. Use `autoFocus` on the first input, or programmatically focus via `ref` / `requestAnimationFrame` when the form mounts dynamically.
+
+Exceptions (don't auto-focus):
+- Mobile viewports where focus would trigger the keyboard and obscure content
+- Multi-step wizards where the user needs to read instructions first
+- Dialogs with destructive actions where accidental input is risky
+
 ### Mobile-First Responsive Design
 
 **All UI must work on mobile (375px+).** Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`) with mobile-first defaults:
