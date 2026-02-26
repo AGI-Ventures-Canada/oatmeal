@@ -26,6 +26,10 @@ const sectionMeta: Record<Exclude<EditSection, null>, { title: string; descripti
     title: "Edit Name",
     description: "Update the hackathon name",
   },
+  dates: {
+    title: "Edit Registration Dates",
+    description: "Set when registration opens and closes",
+  },
   about: {
     title: "Edit About",
     description: "Update the hackathon description",

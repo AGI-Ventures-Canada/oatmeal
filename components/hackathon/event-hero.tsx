@@ -266,7 +266,7 @@ export function EventHero({
         </h1>
       )}
       {datesEditSlot ? (
-        <div data-edit-section="timeline" className="scroll-mt-24">
+        <div data-edit-section="dates" className="scroll-mt-24">
           {datesEditSlot}
         </div>
       ) : onDatesClick ? (
@@ -276,7 +276,7 @@ export function EventHero({
             e.stopPropagation();
             onDatesClick();
           }}
-          data-edit-section="timeline"
+          data-edit-section="dates"
           className="group w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 text-left scroll-mt-24"
         >
           <div className="flex items-center gap-2">

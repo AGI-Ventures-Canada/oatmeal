@@ -43,7 +43,7 @@ interface HackathonPreviewClientProps {
   teamInfo?: ParticipantTeamInfo
   publicResults?: PublicResultWithDetails[]
   onFormSave?: (data: Record<string, unknown>) => Promise<boolean>
-  excludeSections?: Exclude<import("./edit-context").EditSection, null>[]
+  onAuthRequired?: () => void
 }
 
 function HackathonPreviewContent({
@@ -58,6 +58,7 @@ function HackathonPreviewContent({
   teamInfo = null,
   publicResults = [],
   onFormSave,
+  onAuthRequired,
 }: Omit<HackathonPreviewClientProps, "isEditable">) {
   const { isEditable, editMode, activeSection, openSection, closeDrawer } = useEdit()
   const { user } = useUser()
@@ -234,6 +235,7 @@ function HackathonPreviewContent({
       currentBannerUrl={bannerUrl}
       variant="hero"
       onUploadComplete={(url) => setBannerUrl(url || null)}
+      onAuthRequired={onAuthRequired}
     />
   ) : null
 
@@ -246,6 +248,7 @@ function HackathonPreviewContent({
               hackathonId={hackathon.id}
               initialSponsors={hackathon.sponsors}
               onSaveAndNext={() => handleSaveAndNext("sponsors")}
+              onSave={onFormSave ? (data) => onFormSave(data) : undefined}
             />
           </div>
         </div>
@@ -265,6 +268,56 @@ function HackathonPreviewContent({
           <div className="space-y-8">
             {publicResults.length > 0 && (
               <PublicResults results={publicResults} />
+            )}
+
+            {isEditable && editMode && activeSection === "timeline" ? (
+              <div data-edit-section="timeline" className="scroll-mt-24">
+                <h2 className="text-xl font-bold mb-4">Timeline</h2>
+                <TimelineEditForm
+                  hackathonId={hackathon.id}
+                  initialData={{
+                    startsAt: hackathon.starts_at,
+                    endsAt: hackathon.ends_at,
+                    registrationOpensAt: hackathon.registration_opens_at,
+                    registrationClosesAt: hackathon.registration_closes_at,
+                  }}
+                  showRegistrationDates={false}
+                  showHackathonDates
+                  onSaveAndNext={() => handleSaveAndNext("timeline")}
+                  onSave={onFormSave ? (data) => onFormSave({
+                    startsAt: data.startsAt?.toISOString() ?? null,
+                    endsAt: data.endsAt?.toISOString() ?? null,
+                    registrationOpensAt: data.registrationOpensAt?.toISOString() ?? null,
+                    registrationClosesAt: data.registrationClosesAt?.toISOString() ?? null,
+                  }) : undefined}
+                />
+              </div>
+            ) : (
+              <EditableSection
+                section="timeline"
+                isEmpty={!hasTimeline}
+                emptyLabel="Click to add timeline"
+              >
+                {hasTimeline && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4">Timeline</h2>
+                    <div className="space-y-2 text-sm">
+                      {hackathon.starts_at && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Hackathon Starts</span>
+                          <span>{formatDateTimeDisplay(hackathon.starts_at)}</span>
+                        </div>
+                      )}
+                      {hackathon.ends_at && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Hackathon Ends</span>
+                          <span>{formatDateTimeDisplay(hackathon.ends_at)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </EditableSection>
             )}
 
             {isEditable && editMode && activeSection === "about" ? (
@@ -317,44 +370,6 @@ function HackathonPreviewContent({
                 )}
               </EditableSection>
             )}
-
-            <EditableSection
-              section="timeline"
-              isEmpty={!hasTimeline}
-              emptyLabel="Click to add timeline"
-            >
-              {hasTimeline && (
-                <div>
-                  <h2 className="text-xl font-bold mb-4">Timeline</h2>
-                  <div className="space-y-2 text-sm">
-                    {hackathon.registration_opens_at && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Registration Opens</span>
-                        <span>{formatDateTimeDisplay(hackathon.registration_opens_at)}</span>
-                      </div>
-                    )}
-                    {hackathon.registration_closes_at && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Registration Closes</span>
-                        <span>{formatDateTimeDisplay(hackathon.registration_closes_at)}</span>
-                      </div>
-                    )}
-                    {hackathon.starts_at && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Hackathon Starts</span>
-                        <span>{formatDateTimeDisplay(hackathon.starts_at)}</span>
-                      </div>
-                    )}
-                    {hackathon.ends_at && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Hackathon Ends</span>
-                        <span>{formatDateTimeDisplay(hackathon.ends_at)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </EditableSection>
           </div>
         </div>
       </section>
@@ -377,7 +392,7 @@ function HackathonPreviewContent({
       locationName={hackathon.location_name}
       locationUrl={hackathon.location_url}
       onNameClick={isEditable && editMode && activeSection !== "name" ? () => openSection("name") : undefined}
-      onDatesClick={isEditable && editMode && activeSection !== "timeline" ? () => openSection("timeline") : undefined}
+      onDatesClick={isEditable && editMode && activeSection !== "dates" ? () => openSection("dates") : undefined}
       onLocationClick={isEditable && editMode && activeSection !== "location" ? () => openSection("location") : undefined}
       nameEditSlot={isEditable && editMode && activeSection === "name" ? (
         <NameEditForm
@@ -387,7 +402,7 @@ function HackathonPreviewContent({
           onSave={onFormSave ? (data) => onFormSave(data) : undefined}
         />
       ) : undefined}
-      datesEditSlot={isEditable && editMode && activeSection === "timeline" ? (
+      datesEditSlot={isEditable && editMode && activeSection === "dates" ? (
         <TimelineEditForm
           hackathonId={hackathon.id}
           initialData={{
@@ -396,7 +411,9 @@ function HackathonPreviewContent({
             registrationOpensAt: hackathon.registration_opens_at,
             registrationClosesAt: hackathon.registration_closes_at,
           }}
-          onSaveAndNext={() => handleSaveAndNext("timeline")}
+          showRegistrationDates
+          showHackathonDates={false}
+          onSaveAndNext={() => handleSaveAndNext("dates")}
           onSave={onFormSave ? (data) => onFormSave({
             startsAt: data.startsAt?.toISOString() ?? null,
             endsAt: data.endsAt?.toISOString() ?? null,
@@ -468,10 +485,10 @@ export function HackathonPreviewClient({
   teamInfo,
   publicResults,
   onFormSave,
-  excludeSections,
+  onAuthRequired,
 }: HackathonPreviewClientProps) {
   return (
-    <EditProvider isEditable={isEditable} defaultEditMode={!showActionBar} excludeSections={excludeSections}>
+    <EditProvider isEditable={isEditable} defaultEditMode={!showActionBar}>
       <HackathonPreviewContent
         hackathon={hackathon}
         isRegistered={isRegistered}
@@ -484,6 +501,7 @@ export function HackathonPreviewClient({
         teamInfo={teamInfo}
         publicResults={publicResults}
         onFormSave={onFormSave}
+        onAuthRequired={onAuthRequired}
       />
     </EditProvider>
   )

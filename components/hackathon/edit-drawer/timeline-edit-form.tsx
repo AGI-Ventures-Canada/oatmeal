@@ -22,6 +22,8 @@ interface TimelineEditFormProps {
     registrationOpensAt: string | null
     registrationClosesAt: string | null
   }
+  showRegistrationDates?: boolean
+  showHackathonDates?: boolean
   onSaveAndNext?: () => void
   onSave?: (data: {
     startsAt: Date | null
@@ -37,7 +39,7 @@ function parseDate(dateString: string | null): Date | null {
   return new Date(dateString)
 }
 
-export function TimelineEditForm({ hackathonId, initialData, onSaveAndNext, onSave, onCancel }: TimelineEditFormProps) {
+export function TimelineEditForm({ hackathonId, initialData, showRegistrationDates = true, showHackathonDates = true, onSaveAndNext, onSave, onCancel }: TimelineEditFormProps) {
   const router = useRouter()
   const editContext = useEditOptional()
   const closeDrawer = onCancel ?? editContext?.closeDrawer ?? (() => {})
@@ -56,10 +58,10 @@ export function TimelineEditForm({ hackathonId, initialData, onSaveAndNext, onSa
   }
 
   const isDirty =
-    !datesEqual(registrationOpensAt, initialData.registrationOpensAt) ||
-    !datesEqual(registrationClosesAt, initialData.registrationClosesAt) ||
-    !datesEqual(startsAt, initialData.startsAt) ||
-    !datesEqual(endsAt, initialData.endsAt)
+    (showRegistrationDates && !datesEqual(registrationOpensAt, initialData.registrationOpensAt)) ||
+    (showRegistrationDates && !datesEqual(registrationClosesAt, initialData.registrationClosesAt)) ||
+    (showHackathonDates && !datesEqual(startsAt, initialData.startsAt)) ||
+    (showHackathonDates && !datesEqual(endsAt, initialData.endsAt))
 
   function handleReset() {
     setRegistrationOpensAt(parseDate(initialData.registrationOpensAt))
@@ -136,45 +138,57 @@ export function TimelineEditForm({ hackathonId, initialData, onSaveAndNext, onSa
   return (
     <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6" autoComplete="off">
       <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="timeline-reg-opens">Registration Opens</FieldLabel>
-          <DateTimePicker
-            id="timeline-reg-opens"
-            value={registrationOpensAt}
-            onChange={setRegistrationOpensAt}
-            placeholder="Select date and time"
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="timeline-reg-closes">Registration Closes</FieldLabel>
-          <DateTimePicker
-            id="timeline-reg-closes"
-            value={registrationClosesAt}
-            onChange={setRegistrationClosesAt}
-            placeholder="Select date and time"
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="timeline-starts">Hackathon Starts</FieldLabel>
-          <DateTimePicker
-            id="timeline-starts"
-            value={startsAt}
-            onChange={setStartsAt}
-            placeholder="Select date and time"
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="timeline-ends">Hackathon Ends</FieldLabel>
-          <DateTimePicker
-            id="timeline-ends"
-            value={endsAt}
-            onChange={setEndsAt}
-            placeholder="Select date and time"
-          />
-        </Field>
+        {showRegistrationDates && (
+          <>
+            <Field>
+              <FieldLabel htmlFor="timeline-reg-opens">Registration Opens</FieldLabel>
+              <DateTimePicker
+                id="timeline-reg-opens"
+                value={registrationOpensAt}
+                onChange={setRegistrationOpensAt}
+                placeholder="Select date and time"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="timeline-reg-closes">Registration Closes</FieldLabel>
+              <DateTimePicker
+                id="timeline-reg-closes"
+                value={registrationClosesAt}
+                onChange={setRegistrationClosesAt}
+                placeholder="Select date and time"
+              />
+            </Field>
+          </>
+        )}
+        {showHackathonDates && (
+          <>
+            <Field>
+              <FieldLabel htmlFor="timeline-starts">Hackathon Starts</FieldLabel>
+              <DateTimePicker
+                id="timeline-starts"
+                value={startsAt}
+                onChange={setStartsAt}
+                placeholder="Select date and time"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="timeline-ends">Hackathon Ends</FieldLabel>
+              <DateTimePicker
+                id="timeline-ends"
+                value={endsAt}
+                onChange={setEndsAt}
+                placeholder="Select date and time"
+              />
+            </Field>
+          </>
+        )}
 
         <FieldDescription>
-          Set the key dates for your hackathon timeline
+          {showRegistrationDates && !showHackathonDates
+            ? "Set when registration opens and closes"
+            : showHackathonDates && !showRegistrationDates
+              ? "Set when the hackathon starts and ends"
+              : "Set the key dates for your hackathon timeline"}
         </FieldDescription>
 
         {error && (

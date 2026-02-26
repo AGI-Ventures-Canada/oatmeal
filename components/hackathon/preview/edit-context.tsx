@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from "rea
 
 export type EditSection =
   | "name"
+  | "dates"
   | "about"
   | "rules"
   | "timeline"
@@ -13,9 +14,10 @@ export type EditSection =
 
 export const SECTION_ORDER: Exclude<EditSection, null>[] = [
   "name",
-  "timeline",
+  "dates",
   "location",
   "sponsors",
+  "timeline",
   "about",
   "rules",
 ]
@@ -24,7 +26,6 @@ interface EditContextValue {
   activeSection: EditSection
   isEditable: boolean
   editMode: boolean
-  excludeSections: Exclude<EditSection, null>[]
   setEditMode: (mode: boolean) => void
   openSection: (section: EditSection) => void
   closeDrawer: () => void
@@ -36,10 +37,9 @@ interface EditProviderProps {
   children: React.ReactNode
   isEditable: boolean
   defaultEditMode?: boolean
-  excludeSections?: Exclude<EditSection, null>[]
 }
 
-export function EditProvider({ children, isEditable, defaultEditMode = true, excludeSections }: EditProviderProps) {
+export function EditProvider({ children, isEditable, defaultEditMode = true }: EditProviderProps) {
   const [activeSection, setActiveSection] = useState<EditSection>(null)
   const [editMode, setEditModeState] = useState(defaultEditMode)
 
@@ -51,9 +51,8 @@ export function EditProvider({ children, isEditable, defaultEditMode = true, exc
   }, [])
 
   const openSection = useCallback((section: EditSection) => {
-    if (section && excludeSections?.includes(section)) return
     setActiveSection(section)
-  }, [excludeSections])
+  }, [])
 
   const closeDrawer = useCallback(() => {
     setActiveSection(null)
@@ -79,7 +78,6 @@ export function EditProvider({ children, isEditable, defaultEditMode = true, exc
         activeSection,
         isEditable,
         editMode,
-        excludeSections: excludeSections ?? [],
         setEditMode,
         openSection,
         closeDrawer,

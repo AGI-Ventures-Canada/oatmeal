@@ -32,6 +32,7 @@ interface BannerUploadProps {
   hackathonId: string
   currentBannerUrl: string | null
   onUploadComplete?: (url: string) => void
+  onAuthRequired?: () => void
   className?: string
   variant?: "default" | "hero"
 }
@@ -91,6 +92,7 @@ export function BannerUpload({
   hackathonId,
   currentBannerUrl,
   onUploadComplete,
+  onAuthRequired,
   className,
   variant = "default",
 }: BannerUploadProps) {
@@ -113,6 +115,11 @@ export function BannerUpload({
   const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"]
 
   function processFile(file: File) {
+    if (onAuthRequired) {
+      onAuthRequired()
+      return
+    }
+
     if (!ALLOWED_TYPES.includes(file.type)) {
       setError("Please upload a PNG, JPEG, or WebP image")
       return
@@ -261,10 +268,8 @@ export function BannerUpload({
               />
             </div>
             <div className={cn(
-              "absolute inset-0 flex items-center justify-center gap-3 transition-opacity",
-              isDragOver
-                ? "bg-primary/20 opacity-100"
-                : "opacity-0 group-hover:opacity-100"
+              "absolute inset-0 flex items-center justify-center gap-3 pointer-events-none",
+              isDragOver && "bg-primary/20"
             )}>
               {isDragOver ? (
                 <div className="flex flex-col items-center gap-2 text-primary">
@@ -276,38 +281,48 @@ export function BannerUpload({
                   <Button
                     type="button"
                     size="icon"
-                    className="size-12 rounded-full shadow-lg"
+                    className="size-12 rounded-full shadow-lg pointer-events-auto"
                     onClick={() => inputRef.current?.click()}
                   >
                     <Upload className="size-5" />
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="size-12 rounded-full shadow-lg"
-                        disabled={deleting}
-                      >
-                        <Trash2 className="size-5" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Remove banner image?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently remove the current banner image. You can always upload a new one later.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction variant="destructive" onClick={handleDelete}>
-                          Remove
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  {onAuthRequired ? (
+                    <Button
+                      type="button"
+                      size="icon"
+                      className="size-12 rounded-full shadow-lg pointer-events-auto"
+                      onClick={onAuthRequired}
+                    >
+                      <Trash2 className="size-5" />
+                    </Button>
+                  ) : (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          size="icon"
+                          className="size-12 rounded-full shadow-lg pointer-events-auto"
+                          disabled={deleting}
+                        >
+                          <Trash2 className="size-5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove banner image?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently remove the current banner image. You can always upload a new one later.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction variant="destructive" onClick={handleDelete}>
+                            Remove
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </>
               )}
             </div>
@@ -315,7 +330,7 @@ export function BannerUpload({
         ) : (
           <button
             type="button"
-            onClick={() => inputRef.current?.click()}
+            onClick={() => onAuthRequired ? onAuthRequired() : inputRef.current?.click()}
             className={cn(
               "aspect-square w-full flex flex-col items-center justify-center gap-1.5 border border-dashed bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors",
               isHero

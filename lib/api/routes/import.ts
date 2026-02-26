@@ -52,6 +52,8 @@ export const dashboardImportRoutes = new Elysia({ prefix: "/dashboard/import" })
         description: body.description ?? null,
         startsAt: body.startsAt ?? null,
         endsAt: body.endsAt ?? null,
+        registrationOpensAt: body.registrationOpensAt ?? null,
+        registrationClosesAt: body.registrationClosesAt ?? null,
         locationType: body.locationType ?? null,
         locationName: body.locationName ?? null,
         locationUrl: body.locationUrl ?? null,
@@ -61,6 +63,11 @@ export const dashboardImportRoutes = new Elysia({ prefix: "/dashboard/import" })
       if (!hackathon) {
         set.status = 500
         return { error: "Failed to create hackathon" }
+      }
+
+      if (body.sponsors?.length) {
+        const { createSponsorsFromImport } = await import("@/lib/services/luma-import-create")
+        await createSponsorsFromImport(hackathon.id, body.sponsors)
       }
 
       await logAudit({
@@ -95,10 +102,16 @@ export const dashboardImportRoutes = new Elysia({ prefix: "/dashboard/import" })
         description: t.Optional(t.Union([t.String(), t.Null()])),
         startsAt: t.Optional(t.Union([t.String(), t.Null()])),
         endsAt: t.Optional(t.Union([t.String(), t.Null()])),
+        registrationOpensAt: t.Optional(t.Union([t.String(), t.Null()])),
+        registrationClosesAt: t.Optional(t.Union([t.String(), t.Null()])),
         locationType: t.Optional(t.Union([t.Literal("in_person"), t.Literal("virtual"), t.Null()])),
         locationName: t.Optional(t.Union([t.String(), t.Null()])),
         locationUrl: t.Optional(t.Union([t.String(), t.Null()])),
         imageUrl: t.Optional(t.Union([t.String(), t.Null()])),
+        sponsors: t.Optional(t.Array(t.Object({
+          name: t.String({ minLength: 1 }),
+          tier: t.Union([t.String(), t.Null()]),
+        }))),
       }),
     }
   )
