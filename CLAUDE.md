@@ -398,6 +398,28 @@ After rebasing, force-push to update the remote branch:
 git push --force-with-lease
 ```
 
+### Never Force-Push Away Others' Work
+
+**CRITICAL: `--force-with-lease` is ONLY safe when you are the sole author on the branch.** If someone else has pushed commits to the same branch, force-pushing will destroy their work.
+
+Before force-pushing, always check what's on the remote:
+```bash
+git log --oneline origin/<branch-name> --not <branch-name>
+```
+
+If that shows commits you didn't write, **do not force-push**. Instead:
+1. Pull and rebase on top of their changes: `git pull --rebase origin <branch-name>`
+2. Resolve any conflicts manually — never skip or discard incoming changes
+3. Push normally: `git push`
+
+**When you see merge conflicts, that means both sides have changes that matter.** Never resolve conflicts by discarding the other person's work (e.g., "accept current" on everything). For each conflict:
+1. Read both sides and understand what each change does
+2. Ask the AI to explain what each side is doing if you're unsure
+3. Keep both sides' intent in the resolution
+4. Test the result
+
+If you're unsure how to resolve a conflict, **ask for help** rather than force-pushing or blindly accepting one side.
+
 ### Check PR Status Before Pushing
 
 ```bash
