@@ -22,6 +22,7 @@ import type { Submission } from "@/lib/db/hackathon-types"
 import type { ParticipantTeamInfo } from "@/lib/services/hackathons"
 import { PublicResults } from "@/components/hackathon/results/public-results"
 import { MarkdownContent } from "@/components/ui/markdown-content"
+import { TruncatableContent } from "./truncatable-content"
 import { NameEditForm } from "@/components/hackathon/edit-drawer/name-edit-form"
 import { AboutEditForm } from "@/components/hackathon/edit-drawer/about-edit-form"
 import { RulesEditForm } from "@/components/hackathon/edit-drawer/rules-edit-form"
@@ -339,7 +340,9 @@ function HackathonPreviewContent({
                 {hackathon.description && (
                   <div>
                     <h2 className="text-xl font-bold mb-4">About</h2>
-                    <MarkdownContent>{hackathon.description}</MarkdownContent>
+                    <TruncatableContent>
+                      <MarkdownContent>{hackathon.description}</MarkdownContent>
+                    </TruncatableContent>
                   </div>
                 )}
               </EditableSection>
@@ -464,7 +467,7 @@ function HackathonPreviewContent({
       {showActionBar && (
         <FloatingActionBar isOrganizer={isEditable} />
       )}
-      <div>
+      <div className="pb-16">
         {heroContent}
         {eventContent}
       </div>
