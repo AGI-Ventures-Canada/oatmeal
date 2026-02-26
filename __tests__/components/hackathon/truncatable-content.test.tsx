@@ -71,7 +71,7 @@ describe("TruncatableContent", () => {
     )
 
     const contentDiv = container.firstElementChild!.firstElementChild as HTMLElement
-    expect(contentDiv.style.maxHeight).toBe("200px")
+    expect(contentDiv.style.maxHeight).toBe("400px")
 
     fireEvent.click(screen.getByText("Show more"))
 
