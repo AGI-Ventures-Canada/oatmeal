@@ -45,6 +45,7 @@ interface SponsorsEditFormProps {
   hackathonId: string;
   initialSponsors: SponsorWithTenant[];
   onSaveAndNext?: () => void;
+  onSave?: (data: { sponsors: { name: string; tier: string | null }[] }) => Promise<boolean>;
 }
 
 interface OrgSearchResult {
@@ -138,7 +139,9 @@ export function SponsorsEditForm({
   hackathonId,
   initialSponsors,
   onSaveAndNext,
+  onSave,
 }: SponsorsEditFormProps) {
+  const isLocalMode = !!onSave;
   const router = useRouter();
   const { closeDrawer } = useEdit();
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
@@ -191,8 +194,14 @@ export function SponsorsEditForm({
     [currentSponsors],
   );
 
-  const { query, setQuery, results, loading, searched } =
-    useOrgSearch(excludeIdsString);
+  const orgSearch = useOrgSearch(isLocalMode ? "" : excludeIdsString);
+  const [localQuery, setLocalQuery] = useState("");
+
+  const query = isLocalMode ? localQuery : orgSearch.query;
+  const setQuery = isLocalMode ? setLocalQuery : orgSearch.setQuery;
+  const results = isLocalMode ? [] : orgSearch.results;
+  const loading = isLocalMode ? false : orgSearch.loading;
+  const searched = isLocalMode ? true : orgSearch.searched;
 
   const hasChanges = pendingChanges.length > 0;
 
@@ -201,7 +210,7 @@ export function SponsorsEditForm({
     const newSponsor: SponsorWithTenant = {
       id: tempId,
       hackathon_id: hackathonId,
-      sponsor_tenant_id: org.id,
+      sponsor_tenant_id: org.isSaved ? null : org.id,
       tenant_sponsor_id: null,
       name: org.name,
       logo_url: org.logoUrl,
@@ -210,7 +219,7 @@ export function SponsorsEditForm({
       tier: "none",
       display_order: currentSponsors.length,
       created_at: new Date().toISOString(),
-      tenant: {
+      tenant: org.isSaved ? null : {
         slug: org.slug,
         name: org.name,
         logo_url: org.logoUrl,
@@ -428,6 +437,18 @@ export function SponsorsEditForm({
 
   async function saveChanges() {
     if (!hasChanges) return true;
+
+    if (isLocalMode) {
+      const sponsorsData = currentSponsors.map((s) => ({
+        name: s.name,
+        tier: s.tier === "none" ? null : s.tier,
+      }));
+      const ok = await onSave!({ sponsors: sponsorsData });
+      if (ok) {
+        setPendingChanges([]);
+      }
+      return ok;
+    }
 
     setSaving(true);
     setError(null);
@@ -738,7 +759,7 @@ export function SponsorsEditForm({
                     pending ? "border-dashed bg-muted/30" : ""
                   } ${deleted ? "opacity-50" : ""}`}
                 >
-                  {isLinked && sponsor.tenant?.logo_url ? (
+                  {!isLocalMode && (isLinked && sponsor.tenant?.logo_url ? (
                     <div className="flex gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -811,7 +832,7 @@ export function SponsorsEditForm({
                         />
                       </div>
                     </div>
-                  )}
+                  ))}
                   <div className="flex items-center gap-2">
                     {sponsor.tenant?.slug ? (
                       <Link

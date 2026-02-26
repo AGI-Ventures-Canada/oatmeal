@@ -42,6 +42,9 @@ interface EventHeroProps {
   onNameClick?: () => void;
   onDatesClick?: () => void;
   onLocationClick?: () => void;
+  nameEditSlot?: React.ReactNode;
+  datesEditSlot?: React.ReactNode;
+  locationEditSlot?: React.ReactNode;
   registrationProps?: RegistrationProps;
   isRegistered?: boolean;
   hideRegistrationButton?: boolean;
@@ -170,6 +173,9 @@ export function EventHero({
   onNameClick,
   onDatesClick,
   onLocationClick,
+  nameEditSlot,
+  datesEditSlot,
+  locationEditSlot,
   registrationProps,
   isRegistered = false,
   hideRegistrationButton = false,
@@ -234,7 +240,11 @@ export function EventHero({
           </Badge>
         )}
       </div>
-      {onNameClick ? (
+      {nameEditSlot ? (
+        <div data-edit-section="name" className="scroll-mt-24">
+          {nameEditSlot}
+        </div>
+      ) : onNameClick ? (
         <button
           type="button"
           onClick={onNameClick}
@@ -255,14 +265,18 @@ export function EventHero({
           {name}
         </h1>
       )}
-      {onDatesClick ? (
+      {datesEditSlot ? (
+        <div data-edit-section="dates" className="scroll-mt-24">
+          {datesEditSlot}
+        </div>
+      ) : onDatesClick ? (
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onDatesClick();
           }}
-          data-edit-section="timeline"
+          data-edit-section="dates"
           className="group w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 text-left scroll-mt-24"
         >
           <div className="flex items-center gap-2">
@@ -275,7 +289,11 @@ export function EventHero({
       ) : (
         datesContent
       )}
-      {locationType ? (
+      {locationEditSlot ? (
+        <div data-edit-section="location" className="scroll-mt-24">
+          {locationEditSlot}
+        </div>
+      ) : locationType ? (
         onLocationClick ? (
           <button
             type="button"

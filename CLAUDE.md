@@ -168,6 +168,7 @@ The dashboard sidebar is `components/app-sidebar-simple.tsx` — a custom compon
 - Use component variants (e.g., `variant="outline"`) instead of custom classes
 - Never override component styles with inline Tailwind classes
 - If you need different styling, use the component's built-in variants
+- **Use proper shadcn primitives — never wire up manual mouse/keyboard event handlers when a shadcn component already handles the interaction** (e.g., use `DropdownMenu` not `onMouseEnter`/`onMouseLeave` hacks, use `Dialog` not manual visibility state on a div)
 
 ```typescript
 // GOOD - use variant
@@ -250,6 +251,13 @@ Exceptions (use Enter instead):
 - Single-line forms with one field
 - Chat/message inputs
 
+**Auto-focus the first input when a form appears.** When a form, edit panel, or input section opens (via click, navigation, or modal), auto-focus the first focusable input so the user can start typing immediately. Use `autoFocus` on the first input, or programmatically focus via `ref` / `requestAnimationFrame` when the form mounts dynamically.
+
+Exceptions (don't auto-focus):
+- Mobile viewports where focus would trigger the keyboard and obscure content
+- Multi-step wizards where the user needs to read instructions first
+- Dialogs with destructive actions where accidental input is risky
+
 ### Mobile-First Responsive Design
 
 **All UI must work on mobile (375px+).** Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`) with mobile-first defaults:
@@ -290,6 +298,8 @@ Exceptions (use Enter instead):
 
 - Do not write comments above code
 - Maintain TypeScript type safety throughout
+- Delete dead code outright — no commented-out blocks, `// TODO: remove`, or placeholder stubs
+- **Reuse existing components and patterns** — before building something custom, check if a similar component already exists in the codebase. If unsure, ask the user before creating a new one
 
 ### Testing
 
@@ -395,6 +405,28 @@ After rebasing, force-push to update the remote branch:
 git push --force-with-lease
 ```
 
+### Never Force-Push Away Others' Work
+
+**CRITICAL: `--force-with-lease` is ONLY safe when you are the sole author on the branch.** If someone else has pushed commits to the same branch, force-pushing will destroy their work.
+
+Before force-pushing, always check what's on the remote:
+```bash
+git log --oneline origin/<branch-name> --not <branch-name>
+```
+
+If that shows commits you didn't write, **do not force-push**. Instead:
+1. Pull and rebase on top of their changes: `git pull --rebase origin <branch-name>`
+2. Resolve any conflicts manually — never skip or discard incoming changes
+3. Push normally: `git push`
+
+**When you see merge conflicts, that means both sides have changes that matter.** Never resolve conflicts by discarding the other person's work (e.g., "accept current" on everything). For each conflict:
+1. Read both sides and understand what each change does
+2. Ask the AI to explain what each side is doing if you're unsure
+3. Keep both sides' intent in the resolution
+4. Test the result
+
+If you're unsure how to resolve a conflict, **ask for help** rather than force-pushing or blindly accepting one side.
+
 ### Check PR Status Before Pushing
 
 ```bash
@@ -430,6 +462,30 @@ refactor: extract payment logic into service
 ```
 
 ## Maintenance
+
+### Proactive Code Review
+
+**After completing any non-trivial change, run the review skill before considering the task done:**
+
+```bash
+/review-pr
+```
+
+This catches style violations, shadcn primitive misuse, dead code, and other issues before they land in a PR.
+
+### Local Supabase Port Assignments
+
+Ports are customized in `supabase/config.toml` to avoid conflicts with `agents-server` (another local project that shares the same defaults):
+
+| Service | Port |
+|---------|------|
+| db | 54422 |
+| studio | 54423 |
+| inbucket | 54426 |
+| pooler | 54429 |
+| analytics | 54427 |
+
+If you see `ports are not available` on startup, the ghost port is likely held by a stopped Docker container from another project. Fix: `supabase stop` in the conflicting project, then restart Docker Desktop if the port persists.
 
 ### Keep Skills Updated
 

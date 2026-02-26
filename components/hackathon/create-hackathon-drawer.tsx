@@ -36,16 +36,20 @@ import { CreateOrganizationDialog } from "@/components/create-organization-dialo
 import { Plus } from "lucide-react"
 
 type CreateHackathonDrawerProps = {
-  trigger: React.ReactNode
+  trigger: React.ReactNode | null
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
+export function CreateHackathonDrawer({ trigger, open: controlledOpen, onOpenChange }: CreateHackathonDrawerProps) {
   const router = useRouter()
   const { organization } = useOrganization()
   const { userMemberships, setActive } = useOrganizationList({
     userMemberships: { infinite: true },
   })
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
   const [orgGateOpen, setOrgGateOpen] = useState(false)
   const [createOrgOpen, setCreateOrgOpen] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -105,7 +109,7 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
     }
   }
 
-  const triggerElement = isValidElement(trigger)
+  const triggerElement = trigger && isValidElement(trigger)
     ? cloneElement(trigger as React.ReactElement<{ onClick?: () => void }>, {
         onClick: handleTriggerClick,
       })
@@ -113,7 +117,7 @@ export function CreateHackathonDrawer({ trigger }: CreateHackathonDrawerProps) {
 
   return (
     <>
-      {triggerElement}
+      {trigger && triggerElement}
       <Drawer direction="left" open={open} onOpenChange={setOpen}>
         <DrawerContent>
           <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col h-full" autoComplete="off">

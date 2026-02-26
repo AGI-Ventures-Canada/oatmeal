@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { Mail, Calendar, FileText, PartyPopper, Loader2, Key } from "lucide-react"
+import { FileText, PartyPopper, Loader2, Key } from "lucide-react"
 import type { OrgIntegration, IntegrationProvider, OrgApiCredential, ApiCredentialProvider } from "@/lib/db/hackathon-types"
 import { IntegrationCard } from "@/components/dashboard/integration-card"
 import { Button } from "@/components/ui/button"
@@ -37,7 +37,7 @@ type OAuthIntegration = {
   provider: IntegrationProvider
   name: string
   description: string
-  icon: typeof Mail
+  icon: typeof FileText
 }
 
 type ApiKeyIntegration = {
@@ -45,25 +45,11 @@ type ApiKeyIntegration = {
   provider: ApiCredentialProvider
   name: string
   description: string
-  icon: typeof Mail
+  icon: typeof FileText
   helpUrl?: string
 }
 
 const oauthIntegrations: OAuthIntegration[] = [
-  {
-    type: "oauth",
-    provider: "gmail",
-    name: "Gmail",
-    description: "Send and manage emails from your Gmail account",
-    icon: Mail,
-  },
-  {
-    type: "oauth",
-    provider: "google_calendar",
-    name: "Google Calendar",
-    description: "Create and manage calendar events",
-    icon: Calendar,
-  },
   {
     type: "oauth",
     provider: "notion",
@@ -218,8 +204,8 @@ export function IntegrationList({
           <AlertDialogHeader>
             <AlertDialogTitle>Disconnect Integration</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to disconnect this integration? Agents will
-              no longer be able to access this service.
+              Are you sure you want to disconnect this integration? You will
+              no longer be able to use this service.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

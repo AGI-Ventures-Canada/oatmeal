@@ -1,22 +1,4 @@
 -- ============================================================================
--- SEED DATA FOR LOCAL DEVELOPMENT
--- ============================================================================
--- This file runs automatically on `supabase db reset` and for preview branches.
---
--- MAINTAINERS: Edit the modular files in `supabase/seeds/` then regenerate
--- this file by running: cat supabase/seeds/*.sql > supabase/seed.sql
---
--- Seed files are numbered to ensure proper ordering based on FK dependencies:
---   01_tenants.sql              - Base tenants (orgs and users)
---   02_api_keys_and_audit.sql   - API keys and audit logs
---   03-06_hackathons_*.sql      - Hackathons by organization
---   07_sponsors.sql             - Hackathon sponsors
---   08-10_participants_*.sql    - Participant registrations
---   11-13_teams*.sql            - Teams and assignments
---   14-19_submissions_*.sql     - Project submissions
--- ============================================================================
-
--- ============================================================================
 -- TENANTS
 -- Run first - all other tables reference tenants
 -- ============================================================================
@@ -99,7 +81,23 @@ VALUES
     '22222222-2222-2222-2222-222222222222',
     'AI Agents Hackathon 2026',
     'ai-agents-2026',
-    'Build the next generation of AI agents! Join us for a weekend of innovation, collaboration, and creativity. Whether you''re building autonomous agents, multi-agent systems, or novel AI applications, this hackathon is for you.',
+    'Build the next generation of AI agents! Join us for a weekend of **innovation**, **collaboration**, and **creativity**.
+
+## What to Expect
+
+Whether you''re building autonomous agents, multi-agent systems, or novel AI applications, this hackathon is for you.
+
+### Tracks
+
+- **Autonomous Agents** — Build agents that can plan, reason, and act independently
+- **Multi-Agent Systems** — Create systems where multiple agents collaborate
+- **Creative AI** — Push the boundaries of AI-generated art, music, and storytelling
+
+### Resources
+
+All participants get free API credits from our sponsors. Check the [AI SDK docs](https://ai-sdk.dev) for getting started quickly.
+
+> _"The best way to predict the future is to build it."_',
     '1. Teams of 1-4 people
 2. All code must be written during the hackathon
 3. You may use any AI APIs and frameworks

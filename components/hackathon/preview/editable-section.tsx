@@ -65,6 +65,7 @@ export function EditableSection({
         "group relative cursor-pointer rounded-lg transition-all scroll-mt-24",
         "outline outline-2 outline-transparent hover:outline-primary/50",
         "ring-0 hover:ring-2 hover:ring-primary/20",
+        "[&_a]:pointer-events-none",
         className
       )}
     >

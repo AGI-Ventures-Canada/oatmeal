@@ -10,7 +10,23 @@ VALUES
     '22222222-2222-2222-2222-222222222222',
     'AI Agents Hackathon 2026',
     'ai-agents-2026',
-    'Build the next generation of AI agents! Join us for a weekend of innovation, collaboration, and creativity. Whether you''re building autonomous agents, multi-agent systems, or novel AI applications, this hackathon is for you.',
+    'Build the next generation of AI agents! Join us for a weekend of **innovation**, **collaboration**, and **creativity**.
+
+## What to Expect
+
+Whether you''re building autonomous agents, multi-agent systems, or novel AI applications, this hackathon is for you.
+
+### Tracks
+
+- **Autonomous Agents** — Build agents that can plan, reason, and act independently
+- **Multi-Agent Systems** — Create systems where multiple agents collaborate
+- **Creative AI** — Push the boundaries of AI-generated art, music, and storytelling
+
+### Resources
+
+All participants get free API credits from our sponsors. Check the [AI SDK docs](https://ai-sdk.dev) for getting started quickly.
+
+> _"The best way to predict the future is to build it."_',
     '1. Teams of 1-4 people
 2. All code must be written during the hackathon
 3. You may use any AI APIs and frameworks

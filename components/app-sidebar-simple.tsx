@@ -54,7 +54,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ThemeSwitcher } from "@/components/theme-switcher"
-import { CreateHackathonDrawer } from "@/components/hackathon/create-hackathon-drawer"
+import { CreateHackathonMenu } from "@/components/hackathon/create-hackathon-menu"
 import { CreateOrganizationDialog } from "@/components/create-organization-dialog"
 
 const mainItems = [
@@ -297,7 +297,7 @@ export function AppSidebarSimple() {
                     </SidebarMenuItem>
                   ))}
                   <SidebarMenuItem>
-                    <CreateHackathonDrawer
+                    <CreateHackathonMenu
                       trigger={
                         <SidebarMenuButton className="h-10">
                           <Plus />

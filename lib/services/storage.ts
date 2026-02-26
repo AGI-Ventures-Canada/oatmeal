@@ -390,3 +390,63 @@ export async function deleteSponsorLogo(
 
   return true
 }
+
+export async function downloadAndUploadBanner(
+  hackathonId: string,
+  imageUrl: string | null
+): Promise<UploadBannerResult | null> {
+  if (!imageUrl) return null
+
+  // Validate URL scheme to prevent SSRF
+  try {
+    const url = new URL(imageUrl)
+    if (url.protocol !== "https:") {
+      console.warn(`Rejected non-HTTPS banner URL: ${imageUrl}`)
+      return null
+    }
+    // Block private IP ranges and localhost
+    const hostname = url.hostname.replace(/^\[|\]$/g, "").toLowerCase()
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" ||
+      hostname === "::1" ||
+      hostname === "0000:0000:0000:0000:0000:0000:0000:0001" ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+      /^169\.254\./.test(hostname) ||
+      hostname.startsWith("fc") ||
+      hostname.startsWith("fd") ||
+      hostname.startsWith("fe80")
+    ) {
+      console.warn(`Rejected private/internal banner URL: ${imageUrl}`)
+      return null
+    }
+  } catch (err) {
+    console.error(`Invalid banner URL: ${imageUrl}`, err)
+    return null
+  }
+
+  let response: Response
+  try {
+    response = await fetch(imageUrl)
+  } catch (err) {
+    console.error(`Failed to fetch banner image from ${imageUrl}:`, err)
+    return null
+  }
+
+  if (!response.ok) {
+    console.warn(`Banner image fetch returned ${response.status} for ${imageUrl}`)
+    return null
+  }
+
+  try {
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    return await uploadBanner(hackathonId, buffer)
+  } catch (err) {
+    console.error(`Failed to process/upload banner for hackathon ${hackathonId}:`, err)
+    return null
+  }
+}
