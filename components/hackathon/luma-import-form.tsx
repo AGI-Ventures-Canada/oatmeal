@@ -162,7 +162,8 @@ export function LumaImportForm({ eventData, lumaSlug }: LumaImportFormProps) {
       const { slug } = await res.json()
       localStorage.removeItem(STORAGE_KEY)
       router.push(`/e/${slug}/manage`)
-    } catch {
+    } catch (err) {
+      console.error("Failed to create hackathon from Luma import:", err)
       setError("Something went wrong. Please try again.")
     } finally {
       setIsSubmitting(false)
@@ -250,7 +251,14 @@ export function LumaImportForm({ eventData, lumaSlug }: LumaImportFormProps) {
                     id="startsAt"
                     type="datetime-local"
                     value={formData.startsAt ? formData.startsAt.slice(0, 16) : ""}
-                    onChange={(e) => updateField("startsAt", e.target.value ? new Date(e.target.value).toISOString() : "")}
+                    onChange={(e) => {
+                      if (!e.target.value) {
+                        updateField("startsAt", "")
+                      } else {
+                        const date = new Date(e.target.value)
+                        updateField("startsAt", isNaN(date.getTime()) ? "" : date.toISOString())
+                      }
+                    }}
                     autoComplete="off"
                     data-1p-ignore
                     data-lpignore="true"
@@ -262,7 +270,14 @@ export function LumaImportForm({ eventData, lumaSlug }: LumaImportFormProps) {
                     id="endsAt"
                     type="datetime-local"
                     value={formData.endsAt ? formData.endsAt.slice(0, 16) : ""}
-                    onChange={(e) => updateField("endsAt", e.target.value ? new Date(e.target.value).toISOString() : "")}
+                    onChange={(e) => {
+                      if (!e.target.value) {
+                        updateField("endsAt", "")
+                      } else {
+                        const date = new Date(e.target.value)
+                        updateField("endsAt", isNaN(date.getTime()) ? "" : date.toISOString())
+                      }
+                    }}
                     autoComplete="off"
                     data-1p-ignore
                     data-lpignore="true"

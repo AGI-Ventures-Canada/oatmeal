@@ -23,7 +23,8 @@ export async function extractLumaEventData(
   let response: Response
   try {
     response = await fetch(url)
-  } catch {
+  } catch (err) {
+    console.error(`Failed to fetch Luma event from ${url}:`, err)
     return null
   }
 
@@ -42,7 +43,8 @@ function parseJsonLd(html: string): LumaEventData | null {
   let data: Record<string, unknown>
   try {
     data = JSON.parse(jsonLdMatch[1])
-  } catch {
+  } catch (err) {
+    console.error("Failed to parse JSON-LD from Luma page:", err)
     return null
   }
 

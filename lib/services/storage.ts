@@ -397,21 +397,51 @@ export async function downloadAndUploadBanner(
 ): Promise<UploadBannerResult | null> {
   if (!imageUrl) return null
 
-  let response: Response
+  // Validate URL scheme to prevent SSRF
   try {
-    response = await fetch(imageUrl)
-  } catch {
+    const url = new URL(imageUrl)
+    if (url.protocol !== "https:") {
+      console.warn(`Rejected non-HTTPS banner URL: ${imageUrl}`)
+      return null
+    }
+    // Block private IP ranges and localhost
+    const hostname = url.hostname.toLowerCase()
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("172.16.") ||
+      hostname.match(/^169\.254\./)
+    ) {
+      console.warn(`Rejected private/internal banner URL: ${imageUrl}`)
+      return null
+    }
+  } catch (err) {
+    console.error(`Invalid banner URL: ${imageUrl}`, err)
     return null
   }
 
-  if (!response.ok) return null
+  let response: Response
+  try {
+    response = await fetch(imageUrl)
+  } catch (err) {
+    console.error(`Failed to fetch banner image from ${imageUrl}:`, err)
+    return null
+  }
 
-  const arrayBuffer = await response.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
+  if (!response.ok) {
+    console.warn(`Banner image fetch returned ${response.status} for ${imageUrl}`)
+    return null
+  }
 
   try {
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
     return await uploadBanner(hackathonId, buffer)
-  } catch {
+  } catch (err) {
+    console.error(`Failed to process/upload banner for hackathon ${hackathonId}:`, err)
     return null
   }
 }
