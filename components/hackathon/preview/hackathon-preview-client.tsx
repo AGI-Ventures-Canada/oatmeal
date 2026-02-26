@@ -3,10 +3,9 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
-import { EditProvider, useEdit } from "./edit-context"
+import { EditProvider, useEdit, SECTION_ORDER } from "./edit-context"
 import { EditableSection } from "./editable-section"
 import { FloatingActionBar } from "./floating-action-bar"
-import { HackathonEditDrawer } from "@/components/hackathon/edit-drawer/hackathon-edit-drawer"
 import { OrganizerLogoPrompt } from "@/components/hackathon/organizer-logo-prompt"
 import { EventHero } from "@/components/hackathon/event-hero"
 import { BannerUpload } from "@/components/hackathon/banner-upload"
@@ -22,6 +21,13 @@ import type { PublicHackathon } from "@/lib/services/public-hackathons"
 import type { Submission } from "@/lib/db/hackathon-types"
 import type { ParticipantTeamInfo } from "@/lib/services/hackathons"
 import { PublicResults } from "@/components/hackathon/results/public-results"
+import { MarkdownContent } from "@/components/ui/markdown-content"
+import { NameEditForm } from "@/components/hackathon/edit-drawer/name-edit-form"
+import { AboutEditForm } from "@/components/hackathon/edit-drawer/about-edit-form"
+import { RulesEditForm } from "@/components/hackathon/edit-drawer/rules-edit-form"
+import { TimelineEditForm } from "@/components/hackathon/edit-drawer/timeline-edit-form"
+import { LocationEditForm } from "@/components/hackathon/edit-drawer/location-edit-form"
+import { SponsorsEditForm } from "@/components/hackathon/edit-drawer/sponsors-edit-form"
 import type { PublicResultWithDetails } from "@/lib/services/results"
 
 interface HackathonPreviewClientProps {
@@ -50,7 +56,7 @@ function HackathonPreviewContent({
   teamInfo = null,
   publicResults = [],
 }: Omit<HackathonPreviewClientProps, "isEditable">) {
-  const { isEditable, editMode, openSection } = useEdit()
+  const { isEditable, editMode, activeSection, openSection, closeDrawer } = useEdit()
   const { user } = useUser()
   const router = useRouter()
   const [cancellingId, setCancellingId] = useState<string | null>(null)
@@ -62,6 +68,16 @@ function HackathonPreviewContent({
     setIsRegistered(true)
     setJustRegistered(true)
   }
+
+  function handleSaveAndNext(currentSection: string) {
+    const idx = SECTION_ORDER.indexOf(currentSection as typeof SECTION_ORDER[number])
+    if (idx >= 0 && idx < SECTION_ORDER.length - 1) {
+      openSection(SECTION_ORDER[idx + 1])
+    } else {
+      closeDrawer()
+    }
+  }
+
   const hasTimeline = hackathon.registration_opens_at || hackathon.registration_closes_at || hackathon.starts_at || hackathon.ends_at
 
   async function handleCancelInvitation(invitationId: string) {
@@ -220,14 +236,26 @@ function HackathonPreviewContent({
 
   const eventContent = (
     <>
-      <EditableSection
-        section="sponsors"
-        isEmpty={hackathon.sponsors.length === 0}
-        emptyLabel="Click to add sponsors"
-        className="py-12"
-      >
-        <SponsorSection sponsors={hackathon.sponsors} />
-      </EditableSection>
+      {isEditable && editMode && activeSection === "sponsors" ? (
+        <div data-edit-section="sponsors" className="py-12 scroll-mt-24">
+          <div className="mx-auto max-w-4xl px-4">
+            <SponsorsEditForm
+              hackathonId={hackathon.id}
+              initialSponsors={hackathon.sponsors}
+              onSaveAndNext={() => handleSaveAndNext("sponsors")}
+            />
+          </div>
+        </div>
+      ) : (
+        <EditableSection
+          section="sponsors"
+          isEmpty={hackathon.sponsors.length === 0}
+          emptyLabel="Click to add sponsors"
+          className="py-12"
+        >
+          <SponsorSection sponsors={hackathon.sponsors} />
+        </EditableSection>
+      )}
 
       <section className="py-12 border-t">
         <div className="mx-auto max-w-4xl px-4">
@@ -236,35 +264,55 @@ function HackathonPreviewContent({
               <PublicResults results={publicResults} />
             )}
 
-            <EditableSection
-              section="about"
-              isEmpty={!hackathon.description}
-              emptyLabel="Click to add description"
-            >
-              {hackathon.description && (
-                <div>
-                  <h2 className="text-xl font-bold mb-4">About</h2>
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <p className="whitespace-pre-wrap">{hackathon.description}</p>
+            {isEditable && editMode && activeSection === "about" ? (
+              <div data-edit-section="about" className="scroll-mt-24">
+                <h2 className="text-xl font-bold mb-4">About</h2>
+                <AboutEditForm
+                  hackathonId={hackathon.id}
+                  initialData={{ description: hackathon.description }}
+                  onSaveAndNext={() => handleSaveAndNext("about")}
+                />
+              </div>
+            ) : (
+              <EditableSection
+                section="about"
+                isEmpty={!hackathon.description}
+                emptyLabel="Click to add description"
+              >
+                {hackathon.description && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4">About</h2>
+                    <MarkdownContent>{hackathon.description}</MarkdownContent>
                   </div>
-                </div>
-              )}
-            </EditableSection>
+                )}
+              </EditableSection>
+            )}
 
-            <EditableSection
-              section="rules"
-              isEmpty={!hackathon.rules}
-              emptyLabel="Click to add rules"
-            >
-              {hackathon.rules && (
-                <div>
-                  <h2 className="text-xl font-bold mb-4">Rules</h2>
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <p className="whitespace-pre-wrap">{hackathon.rules}</p>
+            {isEditable && editMode && activeSection === "rules" ? (
+              <div data-edit-section="rules" className="scroll-mt-24">
+                <h2 className="text-xl font-bold mb-4">Rules</h2>
+                <RulesEditForm
+                  hackathonId={hackathon.id}
+                  initialData={{ rules: hackathon.rules }}
+                  onSaveAndNext={() => handleSaveAndNext("rules")}
+                />
+              </div>
+            ) : (
+              <EditableSection
+                section="rules"
+                isEmpty={!hackathon.rules}
+                emptyLabel="Click to add rules"
+              >
+                {hackathon.rules && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4">Rules</h2>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <p className="whitespace-pre-wrap">{hackathon.rules}</p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </EditableSection>
+                )}
+              </EditableSection>
+            )}
 
             <EditableSection
               section="timeline"
@@ -324,9 +372,39 @@ function HackathonPreviewContent({
       locationType={hackathon.location_type}
       locationName={hackathon.location_name}
       locationUrl={hackathon.location_url}
-      onNameClick={isEditable && editMode ? () => openSection("name") : undefined}
-      onDatesClick={isEditable && editMode ? () => openSection("timeline") : undefined}
-      onLocationClick={isEditable && editMode ? () => openSection("location") : undefined}
+      onNameClick={isEditable && editMode && activeSection !== "name" ? () => openSection("name") : undefined}
+      onDatesClick={isEditable && editMode && activeSection !== "timeline" ? () => openSection("timeline") : undefined}
+      onLocationClick={isEditable && editMode && activeSection !== "location" ? () => openSection("location") : undefined}
+      nameEditSlot={isEditable && editMode && activeSection === "name" ? (
+        <NameEditForm
+          hackathonId={hackathon.id}
+          initialName={hackathon.name}
+          onSaveAndNext={() => handleSaveAndNext("name")}
+        />
+      ) : undefined}
+      datesEditSlot={isEditable && editMode && activeSection === "timeline" ? (
+        <TimelineEditForm
+          hackathonId={hackathon.id}
+          initialData={{
+            startsAt: hackathon.starts_at,
+            endsAt: hackathon.ends_at,
+            registrationOpensAt: hackathon.registration_opens_at,
+            registrationClosesAt: hackathon.registration_closes_at,
+          }}
+          onSaveAndNext={() => handleSaveAndNext("timeline")}
+        />
+      ) : undefined}
+      locationEditSlot={isEditable && editMode && activeSection === "location" ? (
+        <LocationEditForm
+          hackathonId={hackathon.id}
+          initialData={{
+            locationType: hackathon.location_type,
+            locationName: hackathon.location_name,
+            locationUrl: hackathon.location_url,
+          }}
+          onSaveAndNext={() => handleSaveAndNext("location")}
+        />
+      ) : undefined}
       isRegistered={isRegistered}
       hideRegistrationButton={isJudge}
       isOrganizer={isEditable && !editMode}
@@ -361,8 +439,6 @@ function HackathonPreviewContent({
         {heroContent}
         {eventContent}
       </div>
-
-      {isEditable && editMode && <HackathonEditDrawer hackathon={hackathon} />}
     </>
   )
 }

@@ -29,42 +29,49 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
   const [lumaDialogOpen, setLumaDialogOpen] = useState(false)
   const closeTimeout = useRef<ReturnType<typeof setTimeout>>(undefined)
 
+  const openTimeout = useRef<ReturnType<typeof setTimeout>>(undefined)
+
   const handleMouseEnter = useCallback(() => {
     clearTimeout(closeTimeout.current)
-    setMenuOpen(true)
-  }, [])
+    if (!menuOpen) {
+      openTimeout.current = setTimeout(() => setMenuOpen(true), 150)
+    }
+  }, [menuOpen])
 
   const handleMouseLeave = useCallback(() => {
-    closeTimeout.current = setTimeout(() => setMenuOpen(false), 150)
+    clearTimeout(openTimeout.current)
+    closeTimeout.current = setTimeout(() => setMenuOpen(false), 300)
   }, [])
 
   return (
     <>
-      <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            {trigger}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="right"
-            align="start"
-            sideOffset={16}
-            className="w-48"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            <DropdownMenuItem onSelect={() => setDrawerOpen(true)}>
-              <Plus className="size-4" />
-              <span>From scratch</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => setLumaDialogOpen(true)} className="text-primary">
-              <Sparkles className="size-4" />
-              <span>From Luma URL</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
+        <DropdownMenuTrigger
+          asChild
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          {trigger}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          side="right"
+          align="start"
+          sideOffset={4}
+          className="w-48"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <DropdownMenuItem onSelect={() => setDrawerOpen(true)}>
+            <Plus className="size-4" />
+            <span>From scratch</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setLumaDialogOpen(true)} className="text-primary">
+            <Sparkles className="size-4" />
+            <span>From Luma URL</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <CreateHackathonDrawer
         open={drawerOpen}

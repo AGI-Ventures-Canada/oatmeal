@@ -112,7 +112,7 @@ export async function createTestHackathon(opts: {
       tenant_id: opts.tenantId,
       name: opts.name,
       slug: opts.slug,
-      description: `Test hackathon for the "${opts.slug}" scenario.`,
+      description: `Test hackathon for the **${opts.slug}** scenario.\n\n## Getting Started\n\n- Register your team\n- Check out the [rules](#rules) section\n- Start building!\n\n> _Good luck to all participants!_`,
       status: opts.status,
       starts_at: opts.startsAt.toISOString(),
       ends_at: opts.endsAt.toISOString(),

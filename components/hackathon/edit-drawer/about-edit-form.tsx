@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { MarkdownEditor } from "@/components/ui/markdown-editor"
 import {
   Field,
   FieldLabel,
@@ -92,20 +92,15 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext }: About
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="about-description">Description</FieldLabel>
-          <Textarea
+          <MarkdownEditor
             id="about-description"
-            name="description"
             rows={8}
             placeholder="Tell participants about your hackathon..."
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            autoComplete="off"
-            data-1p-ignore
-            data-lpignore="true"
-            data-form-type="other"
+            onChange={setDescription}
           />
           <FieldDescription>
-            Describe the hackathon theme, goals, and what participants can expect
+            Supports markdown: **bold**, _italic_, ## headings, lists, and [links](url)
           </FieldDescription>
         </Field>
 
