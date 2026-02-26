@@ -58,9 +58,7 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
               Paste a Luma event URL to import event details
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <LumaPasteInput />
-          </div>
+          <LumaPasteInput onClose={() => setLumaDialogOpen(false)} />
         </DialogContent>
       </Dialog>
     </>

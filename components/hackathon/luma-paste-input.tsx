@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 function parseLumaUrl(input: string): string | null {
   try {
@@ -19,14 +20,16 @@ function parseLumaUrl(input: string): string | null {
   }
 }
 
-export function LumaPasteInput() {
+type LumaPasteInputProps = {
+  onClose?: () => void
+}
+
+export function LumaPasteInput({ onClose }: LumaPasteInputProps = {}) {
   const router = useRouter()
   const [value, setValue] = useState("")
   const [error, setError] = useState<string | null>(null)
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter") return
-
+  function handleSubmit() {
     const slug = parseLumaUrl(value)
     if (!slug) {
       setError("Please enter a valid Luma URL (e.g. luma.com/my-event)")
@@ -34,25 +37,45 @@ export function LumaPasteInput() {
     }
 
     setError(null)
+    onClose?.()
     router.push(`/luma.com/${slug}`)
   }
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleSubmit()
+    }
+  }
+
+  const isValid = value.trim().length > 0 && parseLumaUrl(value) !== null
+
   return (
-    <div className="w-full sm:w-64">
-      <Input
-        placeholder="Paste a Luma link to import"
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value)
-          setError(null)
-        }}
-        onKeyDown={handleKeyDown}
-        autoComplete="off"
-        data-1p-ignore
-        data-lpignore="true"
-        data-form-type="other"
-      />
-      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+    <div className="space-y-4 py-4">
+      <div className="space-y-2">
+        <Input
+          placeholder="Paste a Luma link (e.g. luma.com/my-event)"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value)
+            setError(null)
+          }}
+          onKeyDown={handleKeyDown}
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
+          data-form-type="other"
+          autoFocus
+        />
+        {error && <p className="text-xs text-destructive">{error}</p>}
+      </div>
+      <Button
+        onClick={handleSubmit}
+        disabled={!isValid}
+        className="w-full"
+      >
+        Continue
+      </Button>
     </div>
   )
 }
