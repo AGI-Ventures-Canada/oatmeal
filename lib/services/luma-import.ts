@@ -1,3 +1,5 @@
+import { cache } from "react"
+
 export type LumaEventData = {
   name: string
   description: string | null
@@ -15,7 +17,7 @@ const ATTENDANCE_MODE_MAP: Record<string, "in_person" | "virtual"> = {
   "https://schema.org/MixedEventAttendanceMode": "in_person",
 }
 
-export async function extractLumaEventData(
+export const extractLumaEventData = cache(async function extractLumaEventData(
   slug: string
 ): Promise<LumaEventData | null> {
   const url = `https://luma.com/${slug}`
@@ -32,7 +34,7 @@ export async function extractLumaEventData(
 
   const html = await response.text()
   return parseJsonLd(html)
-}
+})
 
 function parseJsonLd(html: string): LumaEventData | null {
   const jsonLdMatch = html.match(

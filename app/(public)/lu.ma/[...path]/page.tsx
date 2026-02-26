@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation"
+import { permanentRedirect } from "next/navigation"
 
 type PageProps = {
   params: Promise<{ path: string[] }>
@@ -6,5 +6,5 @@ type PageProps = {
 
 export default async function LumaShortUrlPage({ params }: PageProps) {
   const { path } = await params
-  redirect(`/luma.com/${path.join("/")}`)
+  permanentRedirect(`/luma.com/${path.join("/")}`)
 }
