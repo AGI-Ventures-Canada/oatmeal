@@ -43,6 +43,7 @@ interface HackathonPreviewClientProps {
   teamInfo?: ParticipantTeamInfo
   publicResults?: PublicResultWithDetails[]
   onFormSave?: (data: Record<string, unknown>) => Promise<boolean>
+  excludeSections?: Exclude<import("./edit-context").EditSection, null>[]
 }
 
 function HackathonPreviewContent({
@@ -467,9 +468,10 @@ export function HackathonPreviewClient({
   teamInfo,
   publicResults,
   onFormSave,
+  excludeSections,
 }: HackathonPreviewClientProps) {
   return (
-    <EditProvider isEditable={isEditable} defaultEditMode={!showActionBar}>
+    <EditProvider isEditable={isEditable} defaultEditMode={!showActionBar} excludeSections={excludeSections}>
       <HackathonPreviewContent
         hackathon={hackathon}
         isRegistered={isRegistered}

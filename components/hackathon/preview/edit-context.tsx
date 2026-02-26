@@ -35,9 +35,10 @@ interface EditProviderProps {
   children: React.ReactNode
   isEditable: boolean
   defaultEditMode?: boolean
+  excludeSections?: Exclude<EditSection, null>[]
 }
 
-export function EditProvider({ children, isEditable, defaultEditMode = true }: EditProviderProps) {
+export function EditProvider({ children, isEditable, defaultEditMode = true, excludeSections }: EditProviderProps) {
   const [activeSection, setActiveSection] = useState<EditSection>(null)
   const [editMode, setEditModeState] = useState(defaultEditMode)
 
@@ -49,8 +50,9 @@ export function EditProvider({ children, isEditable, defaultEditMode = true }: E
   }, [])
 
   const openSection = useCallback((section: EditSection) => {
+    if (section && excludeSections?.includes(section)) return
     setActiveSection(section)
-  }, [])
+  }, [excludeSections])
 
   const closeDrawer = useCallback(() => {
     setActiveSection(null)
