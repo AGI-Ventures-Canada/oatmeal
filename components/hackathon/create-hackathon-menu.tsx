@@ -1,14 +1,13 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState } from "react"
 import { Plus, Sparkles } from "lucide-react"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
+import { Separator } from "@/components/ui/separator"
 import {
   Dialog,
   DialogContent,
@@ -24,46 +23,35 @@ type CreateHackathonMenuProps = {
 }
 
 export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [lumaDialogOpen, setLumaDialogOpen] = useState(false)
-  const closeTimeout = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-  const handleMouseEnter = useCallback(() => {
-    clearTimeout(closeTimeout.current)
-    setMenuOpen(true)
-  }, [])
-
-  const handleMouseLeave = useCallback(() => {
-    closeTimeout.current = setTimeout(() => setMenuOpen(false), 150)
-  }, [])
 
   return (
     <>
-      <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            {trigger}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="right"
-            align="start"
-            className="w-56"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
+      <HoverCard openDelay={200} closeDelay={150}>
+        <HoverCardTrigger asChild>
+          {trigger}
+        </HoverCardTrigger>
+        <HoverCardContent side="right" align="start" className="w-48 p-1">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
           >
-            <DropdownMenuItem onSelect={() => setDrawerOpen(true)}>
-              <Plus className="mr-2 size-4" />
-              <span>From scratch</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => setLumaDialogOpen(true)} className="text-primary">
-              <Sparkles className="mr-2 size-4" />
-              <span>From Luma URL</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+            <Plus className="size-4" />
+            <span>From scratch</span>
+          </button>
+          <Separator className="my-1" />
+          <button
+            type="button"
+            onClick={() => setLumaDialogOpen(true)}
+            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-primary transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <Sparkles className="size-4" />
+            <span>From Luma URL</span>
+          </button>
+        </HoverCardContent>
+      </HoverCard>
 
       <CreateHackathonDrawer
         open={drawerOpen}
