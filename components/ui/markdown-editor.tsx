@@ -69,15 +69,20 @@ export function MarkdownEditor({
 
       switch (action.type) {
         case "wrap": {
+          const leadingWs = selected.match(/^\s*/)?.[0] ?? ""
+          const trailingWs = selected.match(/\s*$/)?.[0] ?? ""
+          const trimmed = selected.trim()
           newValue =
             value.slice(0, start) +
+            leadingWs +
             action.before +
-            selected +
+            trimmed +
             action.after +
+            trailingWs +
             value.slice(end)
-          cursorPos = selected
-            ? start + action.before.length + selected.length + action.after.length
-            : start + action.before.length
+          cursorPos = trimmed
+            ? start + leadingWs.length + action.before.length + trimmed.length + action.after.length
+            : start + leadingWs.length + action.before.length
           break
         }
         case "line-prefix": {
