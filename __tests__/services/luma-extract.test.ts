@@ -143,7 +143,7 @@ describe("extractLumaRichContent", () => {
     expect(mockGenerateObject).toHaveBeenCalledWith(
       expect.objectContaining({
         model: "mock-model",
-        maxTokens: 2048,
+        maxOutputTokens: 2048,
         prompt: expect.stringContaining("# Test Hackathon"),
       })
     )

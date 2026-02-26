@@ -91,7 +91,7 @@ If a section is not present in the content, return an empty array for sponsors/p
 
 Page content:
 ${rawContent}`,
-      maxTokens: 2048,
+      maxOutputTokens: 2048,
     })
 
     return object
