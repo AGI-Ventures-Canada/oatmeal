@@ -10,7 +10,7 @@ export default function LumaImportLoading() {
           <Skeleton className="h-4 w-64" />
         </CardHeader>
         <CardContent className="space-y-4">
-          <Skeleton className="aspect-video w-full" />
+          <Skeleton className="aspect-square w-full" />
           <div className="space-y-2">
             <Skeleton className="h-4 w-32" />
             <Skeleton className="h-10 w-full" />

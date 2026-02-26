@@ -32,7 +32,7 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
         <HoverCardTrigger asChild>
           {trigger}
         </HoverCardTrigger>
-        <HoverCardContent side="right" align="start" className="w-48 p-1">
+        <HoverCardContent side="right" align="start" sideOffset={16} className="w-48 p-1">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}

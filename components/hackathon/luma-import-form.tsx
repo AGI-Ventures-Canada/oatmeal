@@ -207,7 +207,7 @@ export function LumaImportForm({ eventData, lumaSlug }: LumaImportFormProps) {
                 <img
                   src={formData.imageUrl}
                   alt={formData.name}
-                  className="aspect-video w-full rounded-md object-cover"
+                  className="aspect-square w-full rounded-md object-cover"
                 />
               )}
 
