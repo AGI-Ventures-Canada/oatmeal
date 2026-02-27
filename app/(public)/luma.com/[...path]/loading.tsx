@@ -5,14 +5,14 @@ import { Loader2 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 
 const PROGRESS_MESSAGES = [
-  "Visiting the event page...",
-  "Reading event details...",
-  "Extracting sponsors and prizes...",
-  "Polishing the details...",
-  "Almost ready...",
+  { text: "Visiting the event page...", delay: 1200 },
+  { text: "Reading event details...", delay: 1800 },
+  { text: "Extracting sponsors and prizes...", delay: 2200 },
+  { text: "Polishing the details...", delay: 1500 },
+  { text: "Almost ready...", delay: 0 },
 ]
 
-const MESSAGE_INTERVAL_MS = 1500
+const JITTER_MS = 400
 
 export default function LumaImportLoading() {
   const [messageIndex, setMessageIndex] = useState(0)
@@ -20,9 +20,11 @@ export default function LumaImportLoading() {
   useEffect(() => {
     if (messageIndex >= PROGRESS_MESSAGES.length - 1) return
 
+    const baseDelay = PROGRESS_MESSAGES[messageIndex].delay
+    const jitter = Math.floor(Math.random() * JITTER_MS * 2) - JITTER_MS
     const timer = setTimeout(() => {
       setMessageIndex((prev) => prev + 1)
-    }, MESSAGE_INTERVAL_MS)
+    }, baseDelay + jitter)
 
     return () => clearTimeout(timer)
   }, [messageIndex])
@@ -49,7 +51,7 @@ export default function LumaImportLoading() {
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
         <Loader2 className="size-6 animate-spin text-foreground" />
         <p className="text-sm font-medium text-foreground transition-opacity duration-300">
-          {PROGRESS_MESSAGES[messageIndex]}
+          {PROGRESS_MESSAGES[messageIndex].text}
         </p>
       </div>
     </div>
