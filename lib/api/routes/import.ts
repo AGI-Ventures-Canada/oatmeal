@@ -58,6 +58,7 @@ export const dashboardImportRoutes = new Elysia({ prefix: "/dashboard/import" })
         locationName: body.locationName ?? null,
         locationUrl: body.locationUrl ?? null,
         imageUrl: body.imageUrl ?? null,
+        rules: body.rules ?? null,
       })
 
       if (!hackathon) {
@@ -68,6 +69,11 @@ export const dashboardImportRoutes = new Elysia({ prefix: "/dashboard/import" })
       if (body.sponsors?.length) {
         const { createSponsorsFromImport } = await import("@/lib/services/luma-import-create")
         await createSponsorsFromImport(hackathon.id, body.sponsors)
+      }
+
+      if (body.prizes?.length) {
+        const { createPrizesFromImport } = await import("@/lib/services/luma-import-create")
+        await createPrizesFromImport(hackathon.id, body.prizes)
       }
 
       await logAudit({
@@ -111,6 +117,12 @@ export const dashboardImportRoutes = new Elysia({ prefix: "/dashboard/import" })
         sponsors: t.Optional(t.Array(t.Object({
           name: t.String({ minLength: 1 }),
           tier: t.Union([t.String(), t.Null()]),
+        }))),
+        rules: t.Optional(t.Union([t.String(), t.Null()])),
+        prizes: t.Optional(t.Array(t.Object({
+          name: t.String({ minLength: 1 }),
+          description: t.Optional(t.Union([t.String(), t.Null()])),
+          value: t.Optional(t.Union([t.String(), t.Null()])),
         }))),
       }),
     }

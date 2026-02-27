@@ -16,6 +16,12 @@ export type DraftSponsor = {
   tier: string | null
 }
 
+export type DraftPrize = {
+  name: string
+  description: string | null
+  value: string | null
+}
+
 export type DraftState = {
   name: string
   description: string | null
@@ -28,6 +34,8 @@ export type DraftState = {
   locationUrl: string | null
   imageUrl: string | null
   sponsors: DraftSponsor[]
+  rules: string | null
+  prizes: DraftPrize[]
 }
 
 type HackathonDraftEditorProps = {
@@ -54,7 +62,7 @@ function stateToHackathon(state: DraftState): PublicHackathon {
     name: state.name,
     slug: "",
     description: state.description,
-    rules: null,
+    rules: state.rules,
     starts_at: state.startsAt,
     ends_at: state.endsAt,
     registration_opens_at: state.registrationOpensAt,
@@ -171,6 +179,7 @@ export function HackathonDraftEditor({
       if ("locationName" in data) next.locationName = data.locationName as string | null
       if ("locationUrl" in data) next.locationUrl = data.locationUrl as string | null
       if ("sponsors" in data) next.sponsors = data.sponsors as DraftSponsor[]
+      if ("rules" in data) next.rules = data.rules as string | null
       return next
     })
     return true

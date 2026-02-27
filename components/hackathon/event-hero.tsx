@@ -249,10 +249,10 @@ export function EventHero({
           type="button"
           onClick={onNameClick}
           data-edit-section="name"
-          className="group w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 text-left scroll-mt-24"
+          className="group w-fit max-w-full rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 text-left scroll-mt-24"
         >
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl md:text-5xl font-bold text-foreground">
+            <h1 className="text-3xl md:text-5xl font-bold text-foreground break-words">
               {name}
             </h1>
             <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-end mb-2">
@@ -261,7 +261,7 @@ export function EventHero({
           </div>
         </button>
       ) : (
-        <h1 className="text-3xl md:text-5xl font-bold text-foreground">
+        <h1 className="text-3xl md:text-5xl font-bold text-foreground break-words">
           {name}
         </h1>
       )}
@@ -433,7 +433,7 @@ export function EventHero({
     <div className="mx-auto max-w-4xl px-4 py-8">
       {hasRightColumn ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-          <div className="order-2 md:order-1">{contentColumn}</div>
+          <div className="order-2 md:order-1 min-w-0">{contentColumn}</div>
           <div className="order-1 md:order-2">
             {bannerSlot ? (
               bannerSlot

@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, mock } from "bun:test"
 const mockFetch = mock(() => Promise.resolve(new Response("")))
 globalThis.fetch = mockFetch as unknown as typeof fetch
 
-const { extractLumaEventData } = await import("@/lib/services/luma-import")
+const { extractLumaEventData, normalizeEventDate } = await import("@/lib/services/luma-import")
 
 const MOCK_HTML_WITH_JSONLD = `
 <html><head>
@@ -27,20 +27,55 @@ const MOCK_HTML_WITH_JSONLD = `
 </head><body></body></html>
 `
 
+describe("normalizeEventDate", () => {
+  it("strips timezone offset and preserves wall-clock time", () => {
+    expect(normalizeEventDate("2026-03-15T09:00:00.000-08:00")).toBe("2026-03-15T09:00:00")
+  })
+
+  it("strips positive timezone offset", () => {
+    expect(normalizeEventDate("2022-06-27T18:30:00.000+04:00")).toBe("2022-06-27T18:30:00")
+  })
+
+  it("strips Z suffix from UTC string", () => {
+    expect(normalizeEventDate("2026-01-01T00:00:00.000Z")).toBe("2026-01-01T00:00:00")
+  })
+
+  it("returns null for null input", () => {
+    expect(normalizeEventDate(null)).toBeNull()
+  })
+
+  it("returns original string if it doesn't match ISO format", () => {
+    expect(normalizeEventDate("not-a-date")).toBe("not-a-date")
+  })
+
+  it("handles string without milliseconds", () => {
+    expect(normalizeEventDate("2026-07-04T14:30:00-05:00")).toBe("2026-07-04T14:30:00")
+  })
+
+  it("produces consistent output regardless of runtime timezone", () => {
+    const input = "2026-03-15T09:00:00.000-08:00"
+    const result = normalizeEventDate(input)
+    const d = new Date(result!)
+    expect(d.getHours()).toBe(9)
+    expect(d.getMinutes()).toBe(0)
+    expect(d.getDate()).toBe(15)
+  })
+})
+
 describe("extractLumaEventData", () => {
   beforeEach(() => {
     mockFetch.mockClear()
   })
 
-  it("extracts event data from JSON-LD", async () => {
+  it("extracts event data from JSON-LD with normalized dates", async () => {
     mockFetch.mockResolvedValueOnce(new Response(MOCK_HTML_WITH_JSONLD, { status: 200 }))
 
     const result = await extractLumaEventData("sfagents")
     expect(result).not.toBeNull()
     expect(result!.name).toBe("Test Hackathon")
     expect(result!.description).toBe("A test event description")
-    expect(result!.startsAt).toBe("2026-03-15T09:00:00.000-08:00")
-    expect(result!.endsAt).toBe("2026-03-16T17:00:00.000-08:00")
+    expect(result!.startsAt).toBe("2026-03-15T09:00:00")
+    expect(result!.endsAt).toBe("2026-03-16T17:00:00")
     expect(result!.locationType).toBe("in_person")
     expect(result!.locationName).toBe("San Francisco, California")
     expect(result!.imageUrl).toBe("https://images.lumacdn.com/test-image.png")
@@ -68,14 +103,28 @@ describe("extractLumaEventData", () => {
   })
 
   it("maps OnlineEventAttendanceMode to virtual", async () => {
-    const virtualHtml = MOCK_HTML_WITH_JSONLD.replace(
-      "OfflineEventAttendanceMode",
-      "OnlineEventAttendanceMode"
-    )
+    const virtualHtml = `
+<html><head>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": "Virtual Hackathon",
+  "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+  "location": {
+    "@type": "VirtualLocation",
+    "name": "Online Event",
+    "url": "https://luma.com/virtual-event"
+  }
+}
+</script>
+</head><body></body></html>`
     mockFetch.mockResolvedValueOnce(new Response(virtualHtml, { status: 200 }))
 
     const result = await extractLumaEventData("virtual-event")
     expect(result!.locationType).toBe("virtual")
+    expect(result!.locationName).toBe("Online Event")
+    expect(result!.locationUrl).toBeNull()
   })
 
   it("handles script tags with extra attributes (real Luma format)", async () => {
@@ -115,5 +164,125 @@ describe("extractLumaEventData", () => {
     expect(result!.description).toBeNull()
     expect(result!.startsAt).toBeNull()
     expect(result!.imageUrl).toBeNull()
+  })
+
+  it("ignores placeholder address ('Register to See Address')", async () => {
+    const html = `
+<html><head>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": "Hidden Venue Event",
+  "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+  "location": {
+    "@type": "Place",
+    "name": "San Francisco, California",
+    "address": "Register to See Address"
+  }
+}
+</script>
+</head><body></body></html>`
+    mockFetch.mockResolvedValueOnce(new Response(html, { status: 200 }))
+
+    const result = await extractLumaEventData("hidden-venue")
+    expect(result!.locationName).toBe("San Francisco, California")
+  })
+
+  it("combines venue name with real address", async () => {
+    const html = `
+<html><head>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": "Venue Event",
+  "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+  "location": {
+    "@type": "Place",
+    "name": "Moscone Center",
+    "address": "747 Howard St, San Francisco, CA 94103"
+  }
+}
+</script>
+</head><body></body></html>`
+    mockFetch.mockResolvedValueOnce(new Response(html, { status: 200 }))
+
+    const result = await extractLumaEventData("venue-event")
+    expect(result!.locationName).toBe("Moscone Center (747 Howard St, San Francisco, CA 94103)")
+  })
+
+  it("handles PostalAddress object format", async () => {
+    const html = `
+<html><head>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": "Postal Event",
+  "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+  "location": {
+    "@type": "Place",
+    "name": "Tech Hub",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "123 Main St",
+      "addressLocality": "San Francisco",
+      "addressRegion": "CA"
+    }
+  }
+}
+</script>
+</head><body></body></html>`
+    mockFetch.mockResolvedValueOnce(new Response(html, { status: 200 }))
+
+    const result = await extractLumaEventData("postal-event")
+    expect(result!.locationName).toBe("Tech Hub (123 Main St, San Francisco, CA)")
+  })
+
+  it("avoids duplicate when address contains venue name", async () => {
+    const html = `
+<html><head>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": "Duplicate Event",
+  "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+  "location": {
+    "@type": "Place",
+    "name": "San Francisco",
+    "address": "747 Howard St, San Francisco, CA"
+  }
+}
+</script>
+</head><body></body></html>`
+    mockFetch.mockResolvedValueOnce(new Response(html, { status: 200 }))
+
+    const result = await extractLumaEventData("duplicate-event")
+    expect(result!.locationName).toBe("747 Howard St, San Francisco, CA")
+  })
+
+  it("preserves locationUrl for in-person events", async () => {
+    const html = `
+<html><head>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": "URL Event",
+  "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+  "location": {
+    "@type": "Place",
+    "name": "Conference Center",
+    "url": "https://maps.google.com/some-place"
+  }
+}
+</script>
+</head><body></body></html>`
+    mockFetch.mockResolvedValueOnce(new Response(html, { status: 200 }))
+
+    const result = await extractLumaEventData("url-event")
+    expect(result!.locationUrl).toBe("https://maps.google.com/some-place")
   })
 })
