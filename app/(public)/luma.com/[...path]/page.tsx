@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
 import { extractLumaEventData } from "@/lib/services/luma-import"
 import { extractLumaRichContent } from "@/lib/services/luma-extract"
@@ -7,6 +7,7 @@ import { getOrCreateTenant } from "@/lib/services/tenants"
 import { logAudit } from "@/lib/services/audit"
 import { scopesForRole } from "@/lib/auth/types"
 import { LumaImportEditor } from "@/components/hackathon/luma-import-editor"
+import { ImportComplete } from "@/components/hackathon/import-complete"
 import type { Metadata } from "next"
 
 type PageProps = {
@@ -94,7 +95,7 @@ export default async function LumaImportPage({ params, searchParams }: PageProps
         data: { hackathonId: hackathon.id, source: "luma_import" },
       }).catch(console.error)
 
-      redirect(`/e/${hackathon.slug}/manage`)
+      return <ImportComplete slug={hackathon.slug} />
     }
   }
 
