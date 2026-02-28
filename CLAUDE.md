@@ -294,6 +294,21 @@ Exceptions (don't auto-focus):
 <div className="relative w-64">
 ```
 
+### Three-Click Rule
+
+**CRITICAL: Every feature, action, and piece of content must be reachable in 3 clicks or fewer from any starting point. No exceptions.**
+
+This applies to all user-facing flows — dashboard, public pages, mobile, and desktop:
+
+- **Navigation depth**: No feature should be buried more than 3 levels deep. If a flow requires more than 3 clicks, flatten the hierarchy or add shortcuts
+- **Common actions**: Frequently used actions (create, edit, delete, view details) must be accessible in 1-2 clicks from the relevant context
+- **Settings and configuration**: All settings must be reachable in 3 clicks from the dashboard home
+- **Mobile parity**: The 3-click limit applies equally to mobile navigation — drill-down menus count as clicks
+- **Modals and dialogs**: Opening a modal counts as a click. Actions within the modal must complete within the remaining click budget
+- **Breadcrumbs and shortcuts**: When restructuring deep hierarchies, add breadcrumbs or direct-access shortcuts rather than forcing users through intermediate pages
+
+When implementing new features, count the clicks from the most logical entry point. If the count exceeds 3, restructure the flow before shipping. When reviewing existing flows that violate this rule, flag them for refactoring.
+
 ### Code Style
 
 - Do not write comments above code
