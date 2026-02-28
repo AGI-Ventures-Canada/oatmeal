@@ -309,6 +309,35 @@ A "step" is any deliberate user interaction that changes what's on screen — a 
 
 When implementing new features, count the steps from the most logical entry point. If the count exceeds 3, restructure the flow before shipping. When reviewing existing flows that violate this rule, flag them for refactoring.
 
+### Loading States and Skeletons
+
+**CRITICAL: Every async operation must have a visible loading state. No blank screens, no layout shifts, no unhandled loading.**
+
+- **Page-level loading**: Every route that fetches data must have a `loading.tsx` file with a skeleton that mirrors the page layout. Use Suspense boundaries to stream content progressively
+- **Component-level loading**: Any component that fetches data or waits on an async action must show a skeleton or spinner while loading. Never render an empty container that pops in content after load
+- **Button/form actions**: Buttons that trigger async operations must show a loading spinner and be disabled while the action is in progress. Use `isSubmitting` / `isPending` state to prevent double-clicks
+- **Skeleton fidelity**: Skeletons must match the shape and layout of the final content — same widths, heights, and spacing. Generic spinners are only acceptable for small inline actions, not page or section loads
+- **No layout shift**: Loading states must occupy the same space as the loaded content. Content appearing should not push other elements around the page
+- **Error states**: Pair every loading state with an error state. If data fails to load, show an inline error with a retry action — never leave the user on a skeleton forever
+
+```typescript
+// GOOD - skeleton matches final layout
+<div className="space-y-4">
+  <Skeleton className="h-8 w-48" />
+  <Skeleton className="h-4 w-full" />
+  <Skeleton className="h-4 w-3/4" />
+</div>
+
+// GOOD - button with loading state
+<Button disabled={isPending}>
+  {isPending && <Loader2 className="animate-spin" />}
+  Save
+</Button>
+
+// BAD - no loading state
+{data && <Content data={data} />}
+```
+
 ### Code Style
 
 - Do not write comments above code
