@@ -1019,7 +1019,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         scores: t.Array(
           t.Object({
             criteriaId: t.String(),
-            score: t.Number({ minimum: 0 }),
+            score: t.Union([t.Literal(0), t.Literal(1)]),
           })
         ),
         notes: t.Optional(t.String()),

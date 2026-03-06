@@ -1,5 +1,5 @@
-import { describe, expect, it, mock, afterEach } from "bun:test"
-import { render, screen, cleanup, fireEvent } from "@testing-library/react"
+import { describe, expect, it, mock, afterEach, beforeEach } from "bun:test"
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react"
 
 mock.module("next/navigation", () => ({
   useRouter: () => ({
@@ -11,15 +11,67 @@ mock.module("next/navigation", () => ({
   usePathname: () => "/e/test-hack/judge",
 }))
 
-mock.module("@/components/hackathon/judging/scoring-panel", () => ({
-  ScoringPanel: (props: { assignmentId: string; cancelLabel?: string; onClose: () => void; onScoreSubmitted: () => void }) => (
-    <div data-testid={`scoring-panel-${props.assignmentId}`}>
-      <span data-testid="cancel-label">{props.cancelLabel ?? "Cancel"}</span>
-      <button data-testid="mock-submit" onClick={props.onScoreSubmitted}>Submit</button>
-      <button data-testid="mock-close" onClick={props.onClose}>Close</button>
-    </div>
-  ),
-}))
+const assignmentDetails = {
+  a1: {
+    id: "a1",
+    submissionId: "s1",
+    submissionTitle: "Project Alpha",
+    submissionDescription: "Desc A",
+    submissionGithubUrl: null,
+    submissionLiveAppUrl: null,
+    submissionScreenshotUrl: null,
+    teamName: "Team A",
+    isComplete: false,
+    notes: "",
+    criteria: [{ id: "c1", name: "Innovation", description: null, max_score: 1, weight: 0.5, currentScore: null }],
+  },
+  a2: {
+    id: "a2",
+    submissionId: "s2",
+    submissionTitle: "Project Beta",
+    submissionDescription: "Desc B",
+    submissionGithubUrl: null,
+    submissionLiveAppUrl: null,
+    submissionScreenshotUrl: null,
+    teamName: "Team B",
+    isComplete: true,
+    notes: "Good work",
+    criteria: [{ id: "c2", name: "Execution", description: null, max_score: 1, weight: 0.5, currentScore: 1 }],
+  },
+} satisfies Record<string, unknown>
+
+const mockFetch = mock((input: RequestInfo | URL, init?: RequestInit) => {
+  const url = String(input)
+  const assignmentId = url.match(/assignments\/([^/]+)/)?.[1]
+
+  if (assignmentId && !init?.method) {
+    return Promise.resolve({
+      ok: true,
+      json: async () => assignmentDetails[assignmentId as keyof typeof assignmentDetails],
+    })
+  }
+
+  if (url.endsWith("/scores") && init?.method === "POST") {
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ success: true }),
+    })
+  }
+
+  if (url.endsWith("/notes") && init?.method === "PATCH") {
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ success: true }),
+    })
+  }
+
+  return Promise.resolve({
+    ok: true,
+    json: async () => ({}),
+  })
+})
+
+globalThis.fetch = mockFetch as unknown as typeof fetch
 
 const { JudgeAssignmentsCard } = await import(
   "@/components/hackathon/judging/judge-assignments-card"
@@ -53,13 +105,20 @@ const baseAssignments = [
 ]
 
 describe("JudgeAssignmentsCard", () => {
+  beforeEach(() => {
+    mockFetch.mockClear()
+  })
+
   afterEach(() => {
     cleanup()
   })
 
   it("renders nothing when no assignments", () => {
     const { container } = render(
-      <JudgeAssignmentsCard hackathonSlug="test-hack" assignments={[]} />
+      <JudgeAssignmentsCard
+        hackathonSlug="test-hack"
+        assignments={[]}
+      />
     )
     expect(container.innerHTML).toBe("")
   })
@@ -140,5 +199,21 @@ describe("JudgeAssignmentsCard", () => {
     fireEvent.click(screen.getByText("List"))
     fireEvent.click(screen.getByText("Focus"))
     expect(screen.getByText("1 of 2")).toBeDefined()
+  })
+
+  it("renders scoring content when the list item is expanded", async () => {
+    render(
+      <JudgeAssignmentsCard
+        hackathonSlug="test-hack"
+        assignments={baseAssignments}
+      />
+    )
+
+    fireEvent.click(screen.getByText("List"))
+    fireEvent.click(screen.getByText("Project Alpha"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Pass / Fail")).toBeDefined()
+    })
   })
 })

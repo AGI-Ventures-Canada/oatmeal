@@ -500,8 +500,8 @@ curl -X POST "https://your-domain.com/api/public/hackathons/ai-builders-2026/jud
   -H "Content-Type: application/json" \
   -d '{
     "scores": [
-      { "criteriaId": "uuid-1", "score": 8 },
-      { "criteriaId": "uuid-2", "score": 9 }
+      { "criteriaId": "uuid-1", "score": 1 },
+      { "criteriaId": "uuid-2", "score": 0 }
     ],
     "notes": "Excellent implementation, clean code"
   }'
@@ -1274,8 +1274,7 @@ curl "https://your-domain.com/api/dashboard/hackathons/{id}/judging/criteria" \
       "id": "uuid",
       "name": "Innovation",
       "description": "How novel is the approach?",
-      "maxScore": 10,
-      "weight": 1.5,
+      "weight": 0.4,
       "displayOrder": 1,
       "createdAt": "2026-01-15T10:00:00Z"
     }
@@ -1294,8 +1293,7 @@ curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judging/crit
   -d '{
     "name": "Innovation",
     "description": "How novel is the approach?",
-    "maxScore": 10,
-    "weight": 1.5
+    "weight": 0.4
   }'
 ```
 
@@ -1307,7 +1305,7 @@ Updates a judging criteria. Requires scope: `hackathons:write`
 curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/judging/criteria/{criteriaId}" \
   -H "Authorization: Bearer sk_live_your_api_key_here" \
   -H "Content-Type: application/json" \
-  -d '{ "weight": 2.0 }'
+  -d '{ "weight": 0.35 }'
 ```
 
 #### DELETE /api/dashboard/hackathons/:id/judging/criteria/:criteriaId

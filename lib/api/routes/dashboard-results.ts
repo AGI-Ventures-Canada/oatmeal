@@ -1,6 +1,10 @@
 import { Elysia } from "elysia"
 import { resolvePrincipal, requirePrincipal } from "@/lib/auth/principal"
 import { logAudit } from "@/lib/services/audit"
+import {
+  getCriteriaWeightTotalPercentage,
+  isBinaryWeightTotalComplete,
+} from "@/lib/utils/judging"
 
 export const dashboardResultsRoutes = new Elysia()
   .derive(async ({ request }) => {
@@ -24,6 +28,23 @@ export const dashboardResultsRoutes = new Elysia()
         status: 403,
         headers: { "Content-Type": "application/json" },
       })
+    }
+
+    const { listJudgingCriteria } = await import("@/lib/services/judging")
+    const criteria = await listJudgingCriteria(params.id)
+    const totalWeightPercentage = getCriteriaWeightTotalPercentage(criteria)
+
+    if (!isBinaryWeightTotalComplete(totalWeightPercentage)) {
+      return new Response(
+        JSON.stringify({
+          error: "Criteria weights must total 100% before results can be calculated",
+          code: "invalid_weight_total",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
     }
 
     const { calculateResults } = await import("@/lib/services/results")

@@ -5,7 +5,6 @@ import type { JudgingCriteria, JudgeAssignment } from "@/lib/db/hackathon-types"
 export type CreateCriteriaInput = {
   name: string
   description?: string | null
-  maxScore?: number
   weight?: number
   displayOrder?: number
 }
@@ -13,7 +12,6 @@ export type CreateCriteriaInput = {
 export type UpdateCriteriaInput = {
   name?: string
   description?: string | null
-  maxScore?: number
   weight?: number
   displayOrder?: number
 }
@@ -47,8 +45,8 @@ export async function createJudgingCriteria(
       hackathon_id: hackathonId,
       name: input.name,
       description: input.description ?? null,
-      max_score: input.maxScore ?? 10,
-      weight: input.weight ?? 1.0,
+      max_score: 1,
+      weight: input.weight ?? 0,
       display_order: input.displayOrder ?? 0,
     })
     .select()
@@ -72,9 +70,9 @@ export async function updateJudgingCriteria(
   const updates: Record<string, unknown> = {}
   if (input.name !== undefined) updates.name = input.name
   if (input.description !== undefined) updates.description = input.description
-  if (input.maxScore !== undefined) updates.max_score = input.maxScore
   if (input.weight !== undefined) updates.weight = input.weight
   if (input.displayOrder !== undefined) updates.display_order = input.displayOrder
+  updates.max_score = 1
   updates.updated_at = new Date().toISOString()
 
   const { data, error } = await client
@@ -752,7 +750,7 @@ export async function getAssignmentDetail(
 }
 
 export type SubmitScoresInput = {
-  scores: { criteriaId: string; score: number }[]
+  scores: { criteriaId: string; score: 0 | 1 }[]
   notes?: string
 }
 

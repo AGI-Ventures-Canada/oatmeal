@@ -32,8 +32,8 @@ const mockCriteria: JudgingCriteria = {
   hackathon_id: "h1",
   name: "Innovation",
   description: "How innovative is the solution",
-  max_score: 10,
-  weight: 1.0,
+  max_score: 1,
+  weight: 0.5,
   display_order: 0,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
@@ -111,7 +111,7 @@ describe("Judging Service", () => {
     })
 
     it("creates criteria with custom values", async () => {
-      const customCriteria = { ...mockCriteria, max_score: 5, weight: 2.0 }
+      const customCriteria = { ...mockCriteria, weight: 0.25 }
       const chain = createChainableMock({
         data: customCriteria,
         error: null,
@@ -121,14 +121,13 @@ describe("Judging Service", () => {
       const result = await createJudgingCriteria("h1", {
         name: "Innovation",
         description: "Test",
-        maxScore: 5,
-        weight: 2.0,
+        weight: 0.25,
         displayOrder: 1,
       })
 
       expect(result).not.toBeNull()
-      expect(result?.max_score).toBe(5)
-      expect(result?.weight).toBe(2.0)
+      expect(result?.max_score).toBe(1)
+      expect(result?.weight).toBe(0.25)
     })
 
     it("returns null when database insert fails", async () => {
@@ -162,7 +161,7 @@ describe("Judging Service", () => {
     })
 
     it("updates multiple fields at once", async () => {
-      const updated = { ...mockCriteria, name: "New", max_score: 5 }
+      const updated = { ...mockCriteria, name: "New", max_score: 1 }
       const chain = createChainableMock({
         data: updated,
         error: null,
@@ -171,8 +170,7 @@ describe("Judging Service", () => {
 
       const result = await updateJudgingCriteria("c1", "h1", {
         name: "New",
-        maxScore: 5,
-        weight: 1.5,
+        weight: 0.4,
       })
 
       expect(result).not.toBeNull()
@@ -915,7 +913,7 @@ describe("Judging Service", () => {
         }
         if (table === "scores") {
           return createChainableMock({
-            data: [{ criteria_id: "c1", score: 8 }],
+            data: [{ criteria_id: "c1", score: 1 }],
             error: null,
           })
         }
@@ -934,7 +932,7 @@ describe("Judging Service", () => {
       expect(result?.submissionTitle).toBe("Project")
       expect(result?.teamName).toBe("Team One")
       expect(result?.criteria).toHaveLength(1)
-      expect(result?.criteria[0].currentScore).toBe(8)
+      expect(result?.criteria[0].currentScore).toBe(1)
     })
 
     it("returns null when assignment does not exist", async () => {
@@ -985,7 +983,7 @@ describe("Judging Service", () => {
       )
 
       const result = await submitScores("a1", "user_123", {
-        scores: [{ criteriaId: "c1", score: 8 }],
+        scores: [{ criteriaId: "c1", score: 1 }],
         notes: "Good work",
       })
 
@@ -1000,7 +998,7 @@ describe("Judging Service", () => {
       setMockFromImplementation(() => chain)
 
       const result = await submitScores("a1", "user_123", {
-        scores: [{ criteriaId: "c1", score: 8 }],
+        scores: [{ criteriaId: "c1", score: 1 }],
       })
 
       expect(result.success).toBe(false)
@@ -1020,7 +1018,7 @@ describe("Judging Service", () => {
       setMockFromImplementation(() => chain)
 
       const result = await submitScores("a1", "user_123", {
-        scores: [{ criteriaId: "c1", score: 8 }],
+        scores: [{ criteriaId: "c1", score: 1 }],
       })
 
       expect(result.success).toBe(false)
@@ -1046,7 +1044,7 @@ describe("Judging Service", () => {
       )
 
       const result = await submitScores("a1", "user_123", {
-        scores: [{ criteriaId: "c1", score: 8 }],
+        scores: [{ criteriaId: "c1", score: 1 }],
       })
 
       expect(result.success).toBe(false)
@@ -1072,7 +1070,7 @@ describe("Judging Service", () => {
       )
 
       const result = await submitScores("a1", "user_123", {
-        scores: [{ criteriaId: "c1", score: 8 }],
+        scores: [{ criteriaId: "c1", score: 1 }],
       })
 
       expect(result.success).toBe(false)

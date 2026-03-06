@@ -167,6 +167,7 @@ export function LifecycleStepper({
   const router = useRouter()
   const isMobile = useIsMobile()
   const [currentStatus, setCurrentStatus] = useState(status)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [updating, setUpdating] = useState(false)
   const [pendingTarget, setPendingTarget] = useState<PhaseKey | null>(null)
 
@@ -175,6 +176,7 @@ export function LifecycleStepper({
   async function commitStatusChange(newStatus: PhaseKey) {
     const now = new Date().toISOString()
 
+    setActionError(null)
     setUpdating(true)
     try {
       if (newStatus === "completed") {
@@ -243,11 +245,16 @@ export function LifecycleStepper({
           body: JSON.stringify(body),
         },
       )
-      if (!res.ok) throw new Error("Failed to update status")
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || "Failed to update status")
+      }
       setCurrentStatus(newStatus)
       router.refresh()
-    } catch {
-      // keep current status on failure
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to update status"
+      )
     } finally {
       setUpdating(false)
       setPendingTarget(null)
@@ -632,6 +639,10 @@ export function LifecycleStepper({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {actionError && (
+        <p className="text-sm text-destructive">{actionError}</p>
+      )}
     </>
   )
 }

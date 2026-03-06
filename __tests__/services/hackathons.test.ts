@@ -11,6 +11,7 @@ const {
   listParticipatingHackathons,
   listOrganizedHackathons,
   listSponsoredHackathons,
+  createHackathon,
   isUserRegistered,
   getParticipantCount,
   getRegistrationInfo,
@@ -293,6 +294,32 @@ describe("Hackathons Service", () => {
       const result = await isUserRegistered("h1", "user_err")
 
       expect(result).toBe(false)
+    })
+  })
+
+  describe("createHackathon", () => {
+    it("creates new hackathons", async () => {
+      let callCount = 0
+      const insertChain = createChainableMock({
+        data: { ...mockHackathon, status: "draft" },
+        error: null,
+      })
+
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({ data: null, error: null })
+        }
+        return insertChain
+      })
+
+      const result = await createHackathon("t1", {
+        name: "Test Hackathon",
+        description: "A test hackathon",
+      })
+
+      expect(result).not.toBeNull()
+      expect(insertChain.insert).toHaveBeenCalled()
     })
   })
 

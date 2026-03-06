@@ -1,19 +1,29 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, CheckCircle2, ExternalLink, Github, Maximize2 } from "lucide-react"
-import Image from "next/image"
+import {
+  Loader2,
+  CheckCircle2,
+  ExternalLink,
+  Github,
+  Maximize2,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  decimalWeightToPercentage,
+} from "@/lib/utils/judging"
 
 type CriterionWithScore = {
   id: string
@@ -55,7 +65,7 @@ export function ScoringPanel({
 }: ScoringPanelProps) {
   const [detail, setDetail] = useState<AssignmentDetail | null>(null)
   const [loading, setLoading] = useState(true)
-  const [scores, setScores] = useState<Record<string, number>>({})
+  const [scores, setScores] = useState<Record<string, number | null>>({})
   const [notes, setNotes] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -73,9 +83,12 @@ export function ScoringPanel({
       .then((res) => res.json())
       .then((data) => {
         setDetail(data)
-        const initialScores: Record<string, number> = {}
-        for (const c of data.criteria ?? []) {
-          initialScores[c.id] = c.currentScore ?? 0
+        const initialScores: Record<string, number | null> = {}
+        for (const criterion of data.criteria ?? []) {
+          initialScores[criterion.id] =
+            criterion.currentScore === 0 || criterion.currentScore === 1
+              ? criterion.currentScore
+              : null
         }
         setScores(initialScores)
         setNotes(data.notes ?? "")
@@ -99,7 +112,7 @@ export function ScoringPanel({
             }
           )
         } catch {
-          // silent fail for auto-save
+          return
         } finally {
           setSavingNotes(false)
         }
@@ -113,10 +126,20 @@ export function ScoringPanel({
     debouncedSaveNotes(value)
   }
 
+  function setBinaryScore(criteriaId: string, score: 0 | 1) {
+    setScores((prev) => ({ ...prev, [criteriaId]: score }))
+  }
+
   async function handleSubmit() {
     if (!detail) return
     setSubmitting(true)
     setError(null)
+
+    if (detail.criteria.some((criterion) => scores[criterion.id] === null)) {
+      setError("Mark each criterion as good or bad before submitting")
+      setSubmitting(false)
+      return
+    }
 
     try {
       const res = await fetch(
@@ -125,9 +148,9 @@ export function ScoringPanel({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            scores: Object.entries(scores).map(([criteriaId, score]) => ({
-              criteriaId,
-              score,
+            scores: detail.criteria.map((criterion) => ({
+              criteriaId: criterion.id,
+              score: scores[criterion.id] as 0 | 1,
             })),
             notes,
           }),
@@ -185,19 +208,19 @@ export function ScoringPanel({
     <div className="space-y-6" onKeyDown={handleKeyDown}>
       {detail.submissionScreenshotUrl && (
         <>
-          <div className="relative rounded-lg border overflow-hidden group">
+          <div className="group relative overflow-hidden rounded-lg border">
             <Image
               src={detail.submissionScreenshotUrl}
               alt={detail.submissionTitle}
               width={1920}
               height={1080}
               unoptimized
-              className="w-full h-[180px] object-cover"
+              className="h-[180px] w-full object-cover"
             />
             <button
               type="button"
               onClick={() => setScreenshotOpen(true)}
-              className="absolute top-2 right-2 flex items-center gap-1.5 rounded-md bg-background/80 backdrop-blur-sm border px-2 py-1 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-2 right-2 flex items-center gap-1.5 rounded-md bg-background/80 px-2 py-1 text-xs font-medium opacity-0 transition-opacity group-hover:opacity-100"
             >
               <Maximize2 className="size-3" />
               View full
@@ -205,12 +228,20 @@ export function ScoringPanel({
           </div>
 
           <Dialog open={screenshotOpen} onOpenChange={setScreenshotOpen}>
-            <DialogContent className="max-w-6xl w-full p-2">
-              <DialogTitle className="sr-only">{detail.submissionTitle} screenshot</DialogTitle>
-              <img
+            <DialogContent className="w-full max-w-6xl p-2">
+              <DialogTitle className="sr-only">
+                {detail.submissionTitle} screenshot
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                Full-size submission screenshot
+              </DialogDescription>
+              <Image
                 src={detail.submissionScreenshotUrl}
                 alt={detail.submissionTitle}
-                className="w-full h-auto rounded-md"
+                width={1920}
+                height={1080}
+                unoptimized
+                className="h-auto w-full rounded-md"
               />
             </DialogContent>
           </Dialog>
@@ -241,48 +272,45 @@ export function ScoringPanel({
       </div>
 
       <div className="space-y-5">
-        <h4 className="text-sm font-semibold">Scoring</h4>
-        {detail.criteria.map((c) => (
-          <div key={c.id} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm font-medium">{c.name}</Label>
-                {c.description && (
-                  <p className="text-xs text-muted-foreground">{c.description}</p>
-                )}
+        <h4 className="text-sm font-semibold">Pass / Fail</h4>
+        {detail.criteria.map((criterion) => {
+          const score = scores[criterion.id]
+
+          return (
+            <div key={criterion.id} className="space-y-3 rounded-lg border p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <Label className="text-sm font-medium">{criterion.name}</Label>
+                  {criterion.description && (
+                    <p className="text-xs text-muted-foreground">{criterion.description}</p>
+                  )}
+                </div>
+                <Badge variant="secondary">
+                  {decimalWeightToPercentage(criterion.weight)}%
+                </Badge>
               </div>
-              <Badge variant="secondary">{c.weight}x</Badge>
+
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant={score === 1 ? "default" : "outline"}
+                  onClick={() => setBinaryScore(criterion.id, 1)}
+                >
+                  <ThumbsUp className="mr-2 size-4" />
+                  Good
+                </Button>
+                <Button
+                  type="button"
+                  variant={score === 0 ? "destructive" : "outline"}
+                  onClick={() => setBinaryScore(criterion.id, 0)}
+                >
+                  <ThumbsDown className="mr-2 size-4" />
+                  Bad
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Slider
-                value={[scores[c.id] ?? 0]}
-                onValueChange={([val]) =>
-                  setScores((prev) => ({ ...prev, [c.id]: val }))
-                }
-                min={0}
-                max={c.max_score}
-                step={1}
-                className="flex-1"
-              />
-              <Input
-                type="number"
-                min={0}
-                max={c.max_score}
-                value={scores[c.id] ?? 0}
-                onChange={(e) => {
-                  const val = Math.max(0, Math.min(c.max_score, parseInt(e.target.value) || 0))
-                  setScores((prev) => ({ ...prev, [c.id]: val }))
-                }}
-                className="w-16 text-center"
-                autoComplete="off"
-                data-1p-ignore
-                data-lpignore="true"
-                data-form-type="other"
-              />
-              <span className="text-xs text-muted-foreground w-8">/{c.max_score}</span>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div className="space-y-2">

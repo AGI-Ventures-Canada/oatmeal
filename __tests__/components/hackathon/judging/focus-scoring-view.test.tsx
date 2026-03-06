@@ -1,5 +1,5 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from "bun:test"
-import { render, screen, cleanup, fireEvent } from "@testing-library/react"
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react"
 
 mock.module("next/navigation", () => ({
   useRouter: () => ({
@@ -11,15 +11,80 @@ mock.module("next/navigation", () => ({
   usePathname: () => "/e/test-hack/judge",
 }))
 
-mock.module("@/components/hackathon/judging/scoring-panel", () => ({
-  ScoringPanel: (props: { assignmentId: string; cancelLabel?: string; onClose: () => void; onScoreSubmitted: () => void }) => (
-    <div data-testid={`scoring-panel-${props.assignmentId}`}>
-      <span data-testid="cancel-label">{props.cancelLabel ?? "Cancel"}</span>
-      <button data-testid="mock-submit" onClick={props.onScoreSubmitted}>Submit</button>
-      <button data-testid="mock-close" onClick={props.onClose}>Close</button>
-    </div>
-  ),
-}))
+const assignmentDetails = {
+  a1: {
+    id: "a1",
+    submissionId: "s1",
+    submissionTitle: "Project Alpha",
+    submissionDescription: "Desc A",
+    submissionGithubUrl: null,
+    submissionLiveAppUrl: null,
+    submissionScreenshotUrl: null,
+    teamName: "Team A",
+    isComplete: false,
+    notes: "",
+    criteria: [{ id: "c1", name: "Innovation", description: null, max_score: 1, weight: 0.5, currentScore: null }],
+  },
+  a2: {
+    id: "a2",
+    submissionId: "s2",
+    submissionTitle: "Project Beta",
+    submissionDescription: "Desc B",
+    submissionGithubUrl: null,
+    submissionLiveAppUrl: null,
+    submissionScreenshotUrl: null,
+    teamName: "Team B",
+    isComplete: false,
+    notes: "",
+    criteria: [{ id: "c2", name: "Execution", description: null, max_score: 1, weight: 0.5, currentScore: null }],
+  },
+  a3: {
+    id: "a3",
+    submissionId: "s3",
+    submissionTitle: "Project Gamma",
+    submissionDescription: "Desc C",
+    submissionGithubUrl: null,
+    submissionLiveAppUrl: null,
+    submissionScreenshotUrl: null,
+    teamName: null,
+    isComplete: false,
+    notes: "",
+    criteria: [{ id: "c3", name: "Polish", description: null, max_score: 1, weight: 0.5, currentScore: null }],
+  },
+} satisfies Record<string, unknown>
+
+const mockFetch = mock((input: RequestInfo | URL, init?: RequestInit) => {
+  const url = String(input)
+  const assignmentId = url.match(/assignments\/([^/]+)/)?.[1]
+
+  if (assignmentId && !init?.method) {
+    return Promise.resolve({
+      ok: true,
+      json: async () => assignmentDetails[assignmentId as keyof typeof assignmentDetails],
+    })
+  }
+
+  if (url.endsWith("/scores") && init?.method === "POST") {
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ success: true }),
+    })
+  }
+
+  if (url.endsWith("/notes") && init?.method === "PATCH") {
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ success: true }),
+    })
+  }
+
+  return Promise.resolve({
+    ok: true,
+    json: async () => ({}),
+  })
+})
+
+globalThis.fetch = mockFetch as unknown as typeof fetch
 
 const { FocusScoringView } = await import(
   "@/components/hackathon/judging/focus-scoring-view"
@@ -36,6 +101,7 @@ describe("FocusScoringView", () => {
 
   beforeEach(() => {
     onScoreSubmitted.mockClear()
+    mockFetch.mockClear()
   })
 
   afterEach(() => {
@@ -160,7 +226,7 @@ describe("FocusScoringView", () => {
     expect(screen.getByText("You've scored all 3 assignments.")).toBeDefined()
   })
 
-  it("passes cancelLabel='Skip' to ScoringPanel", () => {
+  it("renders the scoring panel skip button", async () => {
     render(
       <FocusScoringView
         hackathonSlug="test-hack"
@@ -169,10 +235,13 @@ describe("FocusScoringView", () => {
         onScoreSubmitted={onScoreSubmitted}
       />
     )
-    expect(screen.getByTestId("cancel-label").textContent).toBe("Skip")
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Skip" })).toBeDefined()
+    })
   })
 
-  it("renders ScoringPanel with current assignment id", () => {
+  it("renders the scoring panel content for the current assignment", async () => {
     render(
       <FocusScoringView
         hackathonSlug="test-hack"
@@ -181,7 +250,10 @@ describe("FocusScoringView", () => {
         onScoreSubmitted={onScoreSubmitted}
       />
     )
-    expect(screen.getByTestId("scoring-panel-a1")).toBeDefined()
+
+    await waitFor(() => {
+      expect(screen.getByText("Pass / Fail")).toBeDefined()
+    })
   })
 
   it("handles assignment with no team name", () => {

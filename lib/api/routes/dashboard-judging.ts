@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requirePrincipal } from "@/lib/auth/principal"
 import { logAudit } from "@/lib/services/audit"
+import { getCriteriaWeightTotalPercentage } from "@/lib/utils/judging"
 
 export const dashboardJudgingRoutes = new Elysia()
   .derive(async ({ request }) => {
@@ -34,7 +35,6 @@ export const dashboardJudgingRoutes = new Elysia()
         id: c.id,
         name: c.name,
         description: c.description,
-        maxScore: c.max_score,
         weight: c.weight,
         displayOrder: c.display_order,
         createdAt: c.created_at,
@@ -67,16 +67,36 @@ export const dashboardJudgingRoutes = new Elysia()
         })
       }
 
-      const { createJudgingCriteria } = await import("@/lib/services/judging")
-      const criteria = await createJudgingCriteria(params.id, {
+      const { createJudgingCriteria, listJudgingCriteria } = await import("@/lib/services/judging")
+
+      if (body.weight < 0 || body.weight > 1) {
+        return new Response(JSON.stringify({ error: "Weight must be between 0% and 100%" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const existingCriteria = await listJudgingCriteria(params.id)
+      const nextWeightTotal = getCriteriaWeightTotalPercentage([
+        ...existingCriteria,
+        { weight: body.weight },
+      ])
+
+      if (nextWeightTotal > 100.01) {
+        return new Response(JSON.stringify({ error: "Weights cannot exceed 100%" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const createdCriteria = await createJudgingCriteria(params.id, {
         name: body.name,
         description: body.description,
-        maxScore: body.maxScore,
         weight: body.weight,
         displayOrder: body.displayOrder,
       })
 
-      if (!criteria) {
+      if (!createdCriteria) {
         return new Response(JSON.stringify({ error: "Failed to create criteria" }), {
           status: 500,
           headers: { "Content-Type": "application/json" },
@@ -87,15 +107,14 @@ export const dashboardJudgingRoutes = new Elysia()
         principal,
         action: "judging_criteria.created",
         resourceType: "judging_criteria",
-        resourceId: criteria.id,
+        resourceId: createdCriteria.id,
         metadata: { hackathonId: params.id },
       })
 
       return {
-        id: criteria.id,
-        name: criteria.name,
-        maxScore: criteria.max_score,
-        weight: criteria.weight,
+        id: createdCriteria.id,
+        name: createdCriteria.name,
+        weight: createdCriteria.weight,
       }
     },
     {
@@ -106,8 +125,7 @@ export const dashboardJudgingRoutes = new Elysia()
       body: t.Object({
         name: t.String({ minLength: 1 }),
         description: t.Optional(t.Union([t.String(), t.Null()])),
-        maxScore: t.Optional(t.Number({ minimum: 1 })),
-        weight: t.Optional(t.Number({ minimum: 0 })),
+        weight: t.Number({ minimum: 0, maximum: 1 }),
         displayOrder: t.Optional(t.Number()),
       }),
     }
@@ -133,11 +151,41 @@ export const dashboardJudgingRoutes = new Elysia()
         })
       }
 
-      const { updateJudgingCriteria } = await import("@/lib/services/judging")
+      const { listJudgingCriteria, updateJudgingCriteria } = await import("@/lib/services/judging")
+      const existingCriteria = await listJudgingCriteria(params.id)
+      const currentCriteria = existingCriteria.find((criteria) => criteria.id === params.criteriaId)
+
+      if (!currentCriteria) {
+        return new Response(JSON.stringify({ error: "Criteria not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const nextWeight = body.weight ?? currentCriteria.weight
+
+      if (nextWeight < 0 || nextWeight > 1) {
+        return new Response(JSON.stringify({ error: "Weight must be between 0% and 100%" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const nextWeightTotal = getCriteriaWeightTotalPercentage([
+        ...existingCriteria.filter((criteria) => criteria.id !== params.criteriaId),
+        { weight: nextWeight },
+      ])
+
+      if (nextWeightTotal > 100.01) {
+        return new Response(JSON.stringify({ error: "Weights cannot exceed 100%" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
       const criteria = await updateJudgingCriteria(params.criteriaId, params.id, {
         name: body.name,
         description: body.description,
-        maxScore: body.maxScore,
         weight: body.weight,
         displayOrder: body.displayOrder,
       })
@@ -159,8 +207,7 @@ export const dashboardJudgingRoutes = new Elysia()
       body: t.Object({
         name: t.Optional(t.String()),
         description: t.Optional(t.Union([t.String(), t.Null()])),
-        maxScore: t.Optional(t.Number({ minimum: 1 })),
-        weight: t.Optional(t.Number({ minimum: 0 })),
+        weight: t.Optional(t.Number({ minimum: 0, maximum: 1 })),
         displayOrder: t.Optional(t.Number()),
       }),
     }

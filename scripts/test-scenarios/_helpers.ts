@@ -45,9 +45,9 @@ const SUBMISSION_DATA = [
 ]
 
 const CRITERIA_PRESETS = [
-  { name: "Innovation", description: "Novelty and creativity of the solution", max_score: 10, weight: 1.5 },
-  { name: "Technical Execution", description: "Code quality, architecture, and reliability", max_score: 10, weight: 1.0 },
-  { name: "Presentation", description: "Demo clarity, documentation, and communication", max_score: 10, weight: 0.5 },
+  { name: "Innovation", description: "Novelty and creativity of the solution", max_score: 1, weight: 0.5 },
+  { name: "Technical Execution", description: "Code quality, architecture, and reliability", max_score: 1, weight: 0.3 },
+  { name: "Presentation", description: "Demo clarity, documentation, and communication", max_score: 1, weight: 0.2 },
 ]
 
 export async function getOrCreateTenant(overrideTenantId?: string): Promise<string> {
@@ -313,7 +313,7 @@ export async function submitRandomScores(
   criteriaIds: string[]
 ): Promise<void> {
   for (const criteriaId of criteriaIds) {
-    const score = Math.floor(Math.random() * 8) + 3
+    const score = Math.random() >= 0.5 ? 1 : 0
 
     await supabase
       .from("scores")

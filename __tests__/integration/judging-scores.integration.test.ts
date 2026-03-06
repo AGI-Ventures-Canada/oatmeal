@@ -92,7 +92,7 @@ const mockHackathon = {
 }
 
 const scorePayload = {
-  scores: [{ criteriaId: "c1", score: 8 }],
+  scores: [{ criteriaId: "c1", score: 1 }],
   notes: "Good work",
 }
 

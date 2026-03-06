@@ -62,7 +62,6 @@ export default async function JudgingPage({ params, searchParams }: PageProps) {
               id: c.id,
               name: c.name,
               description: c.description,
-              maxScore: c.max_score,
               weight: Number(c.weight),
               displayOrder: c.display_order,
               createdAt: c.created_at,

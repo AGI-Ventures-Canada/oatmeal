@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Calculator, Globe, GlobeLock, Loader2, AlertTriangle, Trophy } from "lucide-react"
+import { formatBinaryPercentage } from "@/lib/utils/judging"
 
 type ResultEntry = {
   id: string
@@ -254,7 +255,7 @@ export function ResultsDashboard({
                 <TableHead className="w-[60px]">Rank</TableHead>
                 <TableHead>Submission</TableHead>
                 <TableHead>Team</TableHead>
-                <TableHead className="text-right">Weighted Score</TableHead>
+                <TableHead className="text-right">Final Score</TableHead>
                 <TableHead className="text-right">Judges</TableHead>
                 <TableHead>Prizes</TableHead>
               </TableRow>
@@ -270,7 +271,9 @@ export function ResultsDashboard({
                     {r.teamName || "—"}
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    {r.weightedScore !== null ? Number(r.weightedScore).toFixed(2) : "—"}
+                    {r.weightedScore !== null
+                      ? formatBinaryPercentage(Number(r.weightedScore))
+                      : "—"}
                   </TableCell>
                   <TableCell className="text-right">{r.judgeCount}</TableCell>
                   <TableCell>
