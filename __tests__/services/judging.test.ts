@@ -8,6 +8,7 @@ import {
 } from "../lib/supabase-mock"
 
 const {
+  seedDefaultCriteria,
   listJudgingCriteria,
   createJudgingCriteria,
   updateJudgingCriteria,
@@ -53,6 +54,35 @@ const mockAssignment: JudgeAssignment = {
 describe("Judging Service", () => {
   beforeEach(() => {
     resetSupabaseMocks()
+  })
+
+  describe("seedDefaultCriteria", () => {
+    it("inserts 3 default criteria rows", async () => {
+      const chain = createChainableMock({ data: null, error: null })
+      setMockFromImplementation(() => chain)
+
+      await seedDefaultCriteria("h1")
+
+      expect(chain.insert).toHaveBeenCalledTimes(1)
+      const insertArg = (chain.insert as ReturnType<typeof import("bun:test").mock>).mock.calls[0][0]
+      expect(insertArg).toHaveLength(3)
+      expect(insertArg[0].name).toBe("Innovation")
+      expect(insertArg[1].name).toBe("Technical Execution")
+      expect(insertArg[2].name).toBe("Presentation")
+      expect(insertArg[0].weight).toBe(0.5)
+      expect(insertArg[1].weight).toBe(0.3)
+      expect(insertArg[2].weight).toBe(0.2)
+    })
+
+    it("does not throw when insert fails", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "DB error" },
+      })
+      setMockFromImplementation(() => chain)
+
+      await seedDefaultCriteria("h1")
+    })
   })
 
   describe("listJudgingCriteria", () => {

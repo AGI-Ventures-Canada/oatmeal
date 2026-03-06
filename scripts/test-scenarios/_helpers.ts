@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import * as readline from "readline"
+import { DEFAULT_JUDGING_CRITERIA } from "@/lib/constants/judging"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -44,11 +45,12 @@ const SUBMISSION_DATA = [
   { title: "EcoTracker", desc: "Carbon footprint tracking with AI-driven recommendations", github: "https://github.com/example/ecotracker" },
 ]
 
-const CRITERIA_PRESETS = [
-  { name: "Innovation", description: "Novelty and creativity of the solution", max_score: 1, weight: 0.5 },
-  { name: "Technical Execution", description: "Code quality, architecture, and reliability", max_score: 1, weight: 0.3 },
-  { name: "Presentation", description: "Demo clarity, documentation, and communication", max_score: 1, weight: 0.2 },
-]
+const CRITERIA_PRESETS = DEFAULT_JUDGING_CRITERIA.map((c) => ({
+  name: c.name,
+  description: c.description,
+  max_score: 1,
+  weight: c.weight,
+}))
 
 export async function getOrCreateTenant(overrideTenantId?: string): Promise<string> {
   if (overrideTenantId) {

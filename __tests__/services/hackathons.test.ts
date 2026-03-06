@@ -321,6 +321,32 @@ describe("Hackathons Service", () => {
       expect(result).not.toBeNull()
       expect(insertChain.insert).toHaveBeenCalled()
     })
+
+    it("seeds default judging criteria after creation", async () => {
+      let callCount = 0
+      const criteriaChain = createChainableMock({ data: null, error: null })
+      const hackathonChain = createChainableMock({
+        data: { ...mockHackathon, id: "new-h1", status: "draft" },
+        error: null,
+      })
+
+      setMockFromImplementation((table) => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({ data: null, error: null })
+        }
+        if (table === "judging_criteria") {
+          return criteriaChain
+        }
+        return hackathonChain
+      })
+
+      await createHackathon("t1", {
+        name: "Test Hackathon",
+      })
+
+      expect(criteriaChain.insert).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe("getParticipantCount", () => {

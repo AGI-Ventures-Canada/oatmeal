@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Hackathon, HackathonParticipant } from "@/lib/db/hackathon-types"
 import { sortByStartDate } from "@/lib/utils/format"
 import { clerkClient } from "@clerk/nextjs/server"
+import { seedDefaultCriteria } from "@/lib/services/judging"
 
 type ParticipantWithHackathon = HackathonParticipant & {
   hackathons: Hackathon
@@ -186,7 +187,10 @@ export async function createHackathon(
     return null
   }
 
-  return data as unknown as Hackathon
+  const hackathon = data as unknown as Hackathon
+  await seedDefaultCriteria(hackathon.id)
+
+  return hackathon
 }
 
 export async function getHackathonById(

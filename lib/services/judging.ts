@@ -1,6 +1,7 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { JudgingCriteria, JudgeAssignment } from "@/lib/db/hackathon-types"
+import { DEFAULT_JUDGING_CRITERIA } from "@/lib/constants/judging"
 
 export type CreateCriteriaInput = {
   name: string
@@ -14,6 +15,25 @@ export type UpdateCriteriaInput = {
   description?: string | null
   weight?: number
   displayOrder?: number
+}
+
+export async function seedDefaultCriteria(hackathonId: string): Promise<void> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const rows = DEFAULT_JUDGING_CRITERIA.map((c) => ({
+    hackathon_id: hackathonId,
+    name: c.name,
+    description: c.description,
+    max_score: 1,
+    weight: c.weight,
+    display_order: c.displayOrder,
+  }))
+
+  const { error } = await client.from("judging_criteria").insert(rows)
+
+  if (error) {
+    console.error("Failed to seed default judging criteria:", error)
+  }
 }
 
 export async function listJudgingCriteria(
