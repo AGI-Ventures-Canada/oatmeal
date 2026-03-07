@@ -39,6 +39,8 @@ export const dashboardPrizesRoutes = new Elysia()
         name: p.name,
         description: p.description,
         value: p.value,
+        type: p.type,
+        rank: p.rank,
         displayOrder: p.display_order,
         createdAt: p.created_at,
       })),
@@ -84,6 +86,8 @@ export const dashboardPrizesRoutes = new Elysia()
         name: body.name,
         description: body.description,
         value: body.value,
+        type: body.type,
+        rank: body.rank,
         displayOrder: body.displayOrder,
       })
 
@@ -113,6 +117,8 @@ export const dashboardPrizesRoutes = new Elysia()
         name: t.String({ minLength: 1 }),
         description: t.Optional(t.Union([t.String(), t.Null()])),
         value: t.Optional(t.Union([t.String(), t.Null()])),
+        type: t.Optional(t.Union([t.Literal("score"), t.Literal("favorite"), t.Literal("crowd")])),
+        rank: t.Optional(t.Union([t.Number(), t.Null()])),
         displayOrder: t.Optional(t.Number()),
       }),
     }
@@ -143,6 +149,8 @@ export const dashboardPrizesRoutes = new Elysia()
         name: body.name,
         description: body.description,
         value: body.value,
+        type: body.type,
+        rank: body.rank,
         displayOrder: body.displayOrder,
       })
 
@@ -164,6 +172,8 @@ export const dashboardPrizesRoutes = new Elysia()
         name: t.Optional(t.String()),
         description: t.Optional(t.Union([t.String(), t.Null()])),
         value: t.Optional(t.Union([t.String(), t.Null()])),
+        type: t.Optional(t.Union([t.Literal("score"), t.Literal("favorite"), t.Literal("crowd")])),
+        rank: t.Optional(t.Union([t.Number(), t.Null()])),
         displayOrder: t.Optional(t.Number()),
       }),
     }

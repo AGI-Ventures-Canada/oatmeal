@@ -7,6 +7,7 @@ import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/servi
 import { dashboardJudgingRoutes } from "./dashboard-judging"
 import { dashboardPrizesRoutes } from "./dashboard-prizes"
 import { dashboardResultsRoutes } from "./dashboard-results"
+import { dashboardJudgeDisplayRoutes } from "./dashboard-judge-display"
 import { getEffectiveStatus } from "@/lib/utils/timeline"
 import type { Scope } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
@@ -2018,3 +2019,4 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .use(dashboardJudgingRoutes)
   .use(dashboardPrizesRoutes)
   .use(dashboardResultsRoutes)
+  .use(dashboardJudgeDisplayRoutes)

@@ -1,11 +1,13 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Prize, PrizeAssignment } from "@/lib/db/hackathon-types"
+import type { Prize, PrizeAssignment, PrizeType } from "@/lib/db/hackathon-types"
 
 export type CreatePrizeInput = {
   name: string
   description?: string | null
   value?: string | null
+  type?: PrizeType
+  rank?: number | null
   displayOrder?: number
 }
 
@@ -13,6 +15,8 @@ export type UpdatePrizeInput = {
   name?: string
   description?: string | null
   value?: string | null
+  type?: PrizeType
+  rank?: number | null
   displayOrder?: number
 }
 
@@ -44,6 +48,8 @@ export async function createPrize(
       name: input.name,
       description: input.description ?? null,
       value: input.value ?? null,
+      type: input.type ?? "favorite",
+      rank: input.rank ?? null,
       display_order: input.displayOrder ?? 0,
     })
     .select()
@@ -68,6 +74,8 @@ export async function updatePrize(
   if (input.name !== undefined) updates.name = input.name
   if (input.description !== undefined) updates.description = input.description
   if (input.value !== undefined) updates.value = input.value
+  if (input.type !== undefined) updates.type = input.type
+  if (input.rank !== undefined) updates.rank = input.rank
   if (input.displayOrder !== undefined) updates.display_order = input.displayOrder
   updates.updated_at = new Date().toISOString()
 
@@ -149,6 +157,55 @@ export async function removePrizeAssignment(
   }
 
   return true
+}
+
+export async function autoAssignPrizes(hackathonId: string): Promise<void> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: prizes } = await client
+    .from("prizes")
+    .select("id, type, rank")
+    .eq("hackathon_id", hackathonId)
+
+  if (!prizes || prizes.length === 0) return
+
+  const scorePrizes = prizes.filter(
+    (p: { type: string; rank: number | null }) => p.type === "score" && p.rank !== null
+  )
+
+  if (scorePrizes.length > 0) {
+    const { data: results } = await client
+      .from("hackathon_results")
+      .select("submission_id, rank")
+      .eq("hackathon_id", hackathonId)
+
+    if (results) {
+      const rankToSubmission = Object.fromEntries(
+        results.map((r: { submission_id: string; rank: number }) => [r.rank, r.submission_id])
+      )
+
+      for (const prize of scorePrizes) {
+        const submissionId = rankToSubmission[prize.rank as number]
+        if (submissionId) {
+          await assignPrize(prize.id, submissionId)
+        }
+      }
+    }
+  }
+
+  const crowdPrizes = prizes.filter(
+    (p: { type: string }) => p.type === "crowd"
+  )
+
+  if (crowdPrizes.length > 0) {
+    const { getCrowdFavoriteWinner } = await import("@/lib/services/crowd-voting")
+    const winnerId = await getCrowdFavoriteWinner(hackathonId)
+    if (winnerId) {
+      for (const prize of crowdPrizes) {
+        await assignPrize(prize.id, winnerId)
+      }
+    }
+  }
 }
 
 export type PrizeAssignmentWithDetails = PrizeAssignment & {

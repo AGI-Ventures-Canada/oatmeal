@@ -36,10 +36,8 @@ import {
   Globe,
   Gavel,
   Trophy,
-  Gift,
   Loader2,
   AlertTriangle,
-  Users,
 } from "lucide-react"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
@@ -139,6 +137,8 @@ interface LifecycleStepperProps {
   locationUrl?: string | null
   sponsorCount?: number
   prizeCount?: number
+  judgeDisplayCount?: number
+  criteriaCount?: number
 }
 
 type HoverAction = {
@@ -166,6 +166,8 @@ export function LifecycleStepper({
   locationUrl,
   sponsorCount = 0,
   prizeCount = 0,
+  judgeDisplayCount = 0,
+  criteriaCount = 0,
 }: LifecycleStepperProps) {
   const router = useRouter()
   const isMobile = useIsMobile()
@@ -353,22 +355,10 @@ export function LifecycleStepper({
     locationType === "in_person" && !locationName && "Venue details missing",
     locationType === "virtual" && !locationUrl && "Virtual link missing",
     sponsorCount === 0 && "No sponsors",
+    judgeDisplayCount === 0 && "No judges added",
+    prizeCount === 0 && "No prizes defined",
+    criteriaCount === 0 && "No judging criteria defined",
   ].filter(Boolean) as string[]
-
-  const judgeCount = judgingSetupStatus?.judgeCount ?? 0
-  const hasJudges = judgeCount > 0
-  const judgesLabel = hasJudges
-    ? judgeCount === 1
-      ? "1 judge"
-      : `${judgeCount} judges`
-    : "Assign Judges"
-
-  const hasPrizes = prizeCount > 0
-  const prizesLabel = hasPrizes
-    ? prizeCount === 1
-      ? "1 prize"
-      : `${prizeCount} prizes`
-    : "Set up Prizes"
 
   return (
     <>
@@ -497,96 +487,14 @@ export function LifecycleStepper({
 
                   {index < phases.length - 1 && (
                     <div className="flex-1 flex items-start self-stretch pt-1">
-                      {index === 0 ? (
-                        <div className="flex-1 flex items-start">
-                          <div
-                            className={cn(
-                              "h-px flex-1 mt-4",
-                              index < currentIndex
-                                ? "bg-muted-foreground"
-                                : "bg-border",
-                            )}
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              router.push(`/e/${hackathonSlug}/manage/judging`)
-                            }
-                            className="flex flex-col items-center gap-1.5 shrink-0 mx-1.5 rounded-md px-2 pb-1.5 hover:bg-muted transition-colors cursor-pointer"
-                          >
-                            <div
-                              className={cn(
-                                "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                                currentIndex > 0
-                                  ? "bg-muted-foreground text-background"
-                                  : "border-2 border-muted-foreground/30 text-muted-foreground",
-                              )}
-                            >
-                              <Users className="size-3.5" />
-                            </div>
-                            <span className="hidden sm:block text-xs font-medium whitespace-nowrap text-muted-foreground">
-                              {judgesLabel}
-                            </span>
-                          </button>
-                          <div
-                            className={cn(
-                              "h-px flex-1 mt-4",
-                              index < currentIndex
-                                ? "bg-muted-foreground"
-                                : "bg-border",
-                            )}
-                          />
-                        </div>
-                      ) : index === 2 ? (
-                        <div className="flex-1 flex items-start">
-                          <div
-                            className={cn(
-                              "h-px flex-1 mt-4",
-                              index < currentIndex
-                                ? "bg-muted-foreground"
-                                : "bg-border",
-                            )}
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              router.push(`/e/${hackathonSlug}/manage/prizes`)
-                            }
-                            className="flex flex-col items-center gap-1.5 shrink-0 mx-1.5 rounded-md px-2 pb-1.5 hover:bg-muted transition-colors cursor-pointer"
-                          >
-                            <div
-                              className={cn(
-                                "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                                currentIndex > 2
-                                  ? "bg-muted-foreground text-background"
-                                  : "border-2 border-muted-foreground/30 text-muted-foreground",
-                              )}
-                            >
-                              <Gift className="size-3.5" />
-                            </div>
-                            <span className="hidden sm:block text-xs font-medium whitespace-nowrap text-muted-foreground">
-                              {prizesLabel}
-                            </span>
-                          </button>
-                          <div
-                            className={cn(
-                              "h-px flex-1 mt-4",
-                              index < currentIndex
-                                ? "bg-muted-foreground"
-                                : "bg-border",
-                            )}
-                          />
-                        </div>
-                      ) : (
-                        <div
-                          className={cn(
-                            "h-px flex-1 mx-1 mt-4",
-                            index < currentIndex
-                              ? "bg-muted-foreground"
-                              : "bg-border",
-                          )}
-                        />
-                      )}
+                      <div
+                        className={cn(
+                          "h-px flex-1 mx-1 mt-4",
+                          index < currentIndex
+                            ? "bg-muted-foreground"
+                            : "bg-border",
+                        )}
+                      />
                     </div>
                   )}
                 </div>

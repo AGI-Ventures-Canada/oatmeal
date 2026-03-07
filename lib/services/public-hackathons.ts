@@ -1,6 +1,6 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Hackathon, TenantProfile, HackathonSponsor, HackathonStatus } from "@/lib/db/hackathon-types"
+import type { Hackathon, TenantProfile, HackathonSponsor, HackathonStatus, HackathonJudgeDisplay, Prize } from "@/lib/db/hackathon-types"
 import { getEffectiveStatus } from "@/lib/utils/timeline"
 import { sortByStatusPriority } from "@/lib/utils/sort-hackathons"
 
@@ -9,6 +9,8 @@ export type PublicHackathon = Hackathon & {
   sponsors: (HackathonSponsor & {
     tenant?: Pick<TenantProfile, "slug" | "name" | "logo_url" | "logo_url_dark"> | null
   })[]
+  judges: HackathonJudgeDisplay[]
+  prizes: Prize[]
 }
 
 export async function getPublicHackathonById(
@@ -70,10 +72,32 @@ export async function getPublicHackathon(
     console.error("Failed to get hackathon sponsors:", sponsorsError)
   }
 
+  const { data: judges, error: judgesError } = await client
+    .from("hackathon_judges_display")
+    .select("*")
+    .eq("hackathon_id", hackathon.id)
+    .order("display_order")
+
+  if (judgesError) {
+    console.error("Failed to get hackathon judges:", judgesError)
+  }
+
+  const { data: prizes, error: prizesError } = await client
+    .from("prizes")
+    .select("*")
+    .eq("hackathon_id", hackathon.id)
+    .order("display_order")
+
+  if (prizesError) {
+    console.error("Failed to get hackathon prizes:", prizesError)
+  }
+
   return {
     ...hackathon,
     status: getEffectiveStatus(hackathon),
     sponsors: sponsors || [],
+    judges: (judges || []) as unknown as HackathonJudgeDisplay[],
+    prizes: (prizes || []) as unknown as Prize[],
   } as unknown as PublicHackathon
 }
 
@@ -195,10 +219,24 @@ export async function getHackathonByIdWithFullData(
     console.error("Failed to get hackathon sponsors:", sponsorsError)
   }
 
+  const { data: judges } = await client
+    .from("hackathon_judges_display")
+    .select("*")
+    .eq("hackathon_id", hackathon.id)
+    .order("display_order")
+
+  const { data: prizes } = await client
+    .from("prizes")
+    .select("*")
+    .eq("hackathon_id", hackathon.id)
+    .order("display_order")
+
   return {
     ...hackathon,
     status: getEffectiveStatus(hackathon),
     sponsors: sponsors || [],
+    judges: (judges || []) as unknown as HackathonJudgeDisplay[],
+    prizes: (prizes || []) as unknown as Prize[],
   } as unknown as PublicHackathon
 }
 

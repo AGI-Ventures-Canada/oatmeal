@@ -312,12 +312,16 @@ export interface Score {
   updated_at: string
 }
 
+export type PrizeType = "score" | "favorite" | "crowd"
+
 export interface Prize {
   id: string
   hackathon_id: string
   name: string
   description: string | null
   value: string | null
+  type: PrizeType
+  rank: number | null
   display_order: number
   created_at: string
   updated_at: string
@@ -353,6 +357,28 @@ export interface JudgeInvitation {
   expires_at: string
   created_at: string
   updated_at: string
+}
+
+export interface HackathonJudgeDisplay {
+  id: string
+  hackathon_id: string
+  name: string
+  title: string | null
+  organization: string | null
+  headshot_url: string | null
+  clerk_user_id: string | null
+  participant_id: string | null
+  display_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CrowdVote {
+  id: string
+  hackathon_id: string
+  submission_id: string
+  clerk_user_id: string
+  created_at: string
 }
 
 export interface TenantProfile {

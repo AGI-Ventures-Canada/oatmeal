@@ -14,6 +14,7 @@ const {
   assignPrize,
   removePrizeAssignment,
   listPrizeAssignments,
+  autoAssignPrizes,
 } = await import("@/lib/services/prizes")
 
 const mockPrize: Prize = {
@@ -22,6 +23,8 @@ const mockPrize: Prize = {
   name: "First Place",
   description: "The grand prize",
   value: "$5000",
+  type: "score",
+  rank: 1,
   display_order: 0,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
@@ -415,6 +418,98 @@ describe("Prizes Service", () => {
       expect(result).toHaveLength(2)
       expect(result[0].prizeName).toBe("First Place")
       expect(result[1].prizeName).toBe("Second Place")
+    })
+  })
+
+  describe("autoAssignPrizes", () => {
+    it("assigns score-based prizes by matching rank", async () => {
+      let insertedAssignments: { prize_id: string; submission_id: string }[] = []
+      setMockFromImplementation((table) => {
+        if (table === "prizes") {
+          return createChainableMock({
+            data: [
+              { id: "p1", type: "score", rank: 1 },
+              { id: "p2", type: "score", rank: 2 },
+            ],
+            error: null,
+          })
+        }
+        if (table === "hackathon_results") {
+          return createChainableMock({
+            data: [
+              { submission_id: "s1", rank: 1 },
+              { submission_id: "s2", rank: 2 },
+            ],
+            error: null,
+          })
+        }
+        if (table === "prize_assignments") {
+          return {
+            insert: (row: { prize_id: string; submission_id: string }) => {
+              insertedAssignments.push(row)
+              return createChainableMock({ data: row, error: null })
+            },
+          }
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      await autoAssignPrizes("h1")
+
+      expect(insertedAssignments).toHaveLength(2)
+      expect(insertedAssignments[0]).toEqual({ prize_id: "p1", submission_id: "s1" })
+      expect(insertedAssignments[1]).toEqual({ prize_id: "p2", submission_id: "s2" })
+    })
+
+    it("does nothing when no prizes exist", async () => {
+      const chain = createChainableMock({ data: [], error: null })
+      setMockFromImplementation(() => chain)
+
+      await autoAssignPrizes("h1")
+    })
+
+    it("skips score prizes with no matching rank in results", async () => {
+      let insertedAssignments: { prize_id: string; submission_id: string }[] = []
+      setMockFromImplementation((table) => {
+        if (table === "prizes") {
+          return createChainableMock({
+            data: [{ id: "p1", type: "score", rank: 3 }],
+            error: null,
+          })
+        }
+        if (table === "hackathon_results") {
+          return createChainableMock({
+            data: [
+              { submission_id: "s1", rank: 1 },
+              { submission_id: "s2", rank: 2 },
+            ],
+            error: null,
+          })
+        }
+        if (table === "prize_assignments") {
+          return {
+            insert: (row: { prize_id: string; submission_id: string }) => {
+              insertedAssignments.push(row)
+              return createChainableMock({ data: row, error: null })
+            },
+          }
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      await autoAssignPrizes("h1")
+
+      expect(insertedAssignments).toHaveLength(0)
+    })
+
+    it("handles favorite prizes without assignment", async () => {
+      const chain = createChainableMock({
+        data: [{ id: "p1", type: "favorite", rank: null }],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      await autoAssignPrizes("h1")
     })
   })
 })
