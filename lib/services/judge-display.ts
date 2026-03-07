@@ -125,18 +125,22 @@ export async function reorderJudgeDisplayProfiles(
   orderedIds: string[]
 ): Promise<boolean> {
   const client = getSupabase() as unknown as SupabaseClient
+  const now = new Date().toISOString()
 
-  for (let i = 0; i < orderedIds.length; i++) {
-    const { error } = await client
+  const updates = orderedIds.map((id, i) =>
+    client
       .from("hackathon_judges_display")
-      .update({ display_order: i, updated_at: new Date().toISOString() })
-      .eq("id", orderedIds[i])
+      .update({ display_order: i, updated_at: now })
+      .eq("id", id)
       .eq("hackathon_id", hackathonId)
+  )
 
-    if (error) {
-      console.error("Failed to reorder judge display profiles:", error)
-      return false
-    }
+  const results = await Promise.all(updates)
+  const failed = results.find((r) => r.error)
+
+  if (failed?.error) {
+    console.error("Failed to reorder judge display profiles:", failed.error)
+    return false
   }
 
   return true
