@@ -362,6 +362,10 @@ For RPC calls, use `setMockRpcImplementation()` instead.
 
 ## Git Workflow
 
+### Build Before Pushing
+
+**CRITICAL: Always run `bun run build` before pushing to verify there are no TypeScript errors.** The Vercel build will fail on any type error, so catch them locally first. Do not push code that doesn't build.
+
 ### Never Push to Main
 
 **NEVER develop on or push directly to `main` or `staging`.** All changes go through feature branch → PR → merge.

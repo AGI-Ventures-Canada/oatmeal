@@ -129,7 +129,7 @@ export function JudgesEditForm({
     const original = initialJudges.find((j) => j.id === judgeId)
     if (!original) return
 
-    const oldValue = (original as Record<string, unknown>)[field] as string | null
+    const oldValue = (original as unknown as Record<string, unknown>)[field] as string | null
 
     if (existingUpdate >= 0) {
       if ((value || null) === oldValue) {

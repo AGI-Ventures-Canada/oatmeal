@@ -96,6 +96,8 @@ function stateToHackathon(state: DraftState): PublicHackathon {
       display_order: i,
       created_at: new Date().toISOString(),
     })),
+    judges: [],
+    prizes: [],
   }
 }
 

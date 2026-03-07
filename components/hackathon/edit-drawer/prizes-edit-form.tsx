@@ -132,7 +132,7 @@ export function PrizesEditForm({
     const original = initialPrizes.find((p) => p.id === prizeId)
     if (!original) return
 
-    const oldValue = (original as Record<string, unknown>)[field]
+    const oldValue = (original as unknown as Record<string, unknown>)[field]
 
     if (existingUpdate >= 0) {
       if (value === oldValue || (value === "" && oldValue === null)) {
