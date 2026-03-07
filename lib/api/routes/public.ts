@@ -988,9 +988,9 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         )
       }
 
-      if (hackathon.status !== "judging" && hackathon.status !== "active") {
+      if (hackathon.status === "draft" || hackathon.status === "completed" || hackathon.status === "archived") {
         return new Response(
-          JSON.stringify({ error: "Hackathon is not in judging phase", code: "not_judging" }),
+          JSON.stringify({ error: "Hackathon is not accepting scores", code: "not_judging" }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         )
       }

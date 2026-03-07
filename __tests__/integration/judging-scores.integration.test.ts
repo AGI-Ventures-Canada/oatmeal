@@ -135,7 +135,7 @@ describe("POST /api/public/hackathons/:slug/judging/assignments/:assignmentId/sc
     expect(res.status).toBe(404)
   })
 
-  it("returns 400 when hackathon is in a status that does not allow judging", async () => {
+  it("returns 400 when hackathon is in completed status", async () => {
     mockAuth.mockResolvedValue({ userId: "user_123" })
     mockGetPublicHackathon.mockResolvedValue({ ...mockHackathon, status: "completed" })
 
@@ -155,6 +155,23 @@ describe("POST /api/public/hackathons/:slug/judging/assignments/:assignmentId/sc
   it("returns 400 when hackathon is in draft status", async () => {
     mockAuth.mockResolvedValue({ userId: "user_123" })
     mockGetPublicHackathon.mockResolvedValue({ ...mockHackathon, status: "draft" })
+
+    const res = await app.handle(
+      new Request("http://localhost/api/public/hackathons/test-hackathon/judging/assignments/a1/scores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(scorePayload),
+      })
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.code).toBe("not_judging")
+  })
+
+  it("returns 400 when hackathon is in archived status", async () => {
+    mockAuth.mockResolvedValue({ userId: "user_123" })
+    mockGetPublicHackathon.mockResolvedValue({ ...mockHackathon, status: "archived" })
 
     const res = await app.handle(
       new Request("http://localhost/api/public/hackathons/test-hackathon/judging/assignments/a1/scores", {
@@ -209,6 +226,40 @@ describe("POST /api/public/hackathons/:slug/judging/assignments/:assignmentId/sc
       scores: scorePayload.scores,
       notes: scorePayload.notes,
     })
+  })
+
+  it("submits scores when hackathon is in published status", async () => {
+    mockAuth.mockResolvedValue({ userId: "user_123" })
+    mockGetPublicHackathon.mockResolvedValue({ ...mockHackathon, status: "published" })
+
+    const res = await app.handle(
+      new Request("http://localhost/api/public/hackathons/test-hackathon/judging/assignments/a1/scores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(scorePayload),
+      })
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+  })
+
+  it("submits scores when hackathon is in registration_open status", async () => {
+    mockAuth.mockResolvedValue({ userId: "user_123" })
+    mockGetPublicHackathon.mockResolvedValue({ ...mockHackathon, status: "registration_open" })
+
+    const res = await app.handle(
+      new Request("http://localhost/api/public/hackathons/test-hackathon/judging/assignments/a1/scores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(scorePayload),
+      })
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
   })
 
   it("returns 400 when score submission fails", async () => {
