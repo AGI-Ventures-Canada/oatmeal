@@ -187,7 +187,6 @@ describe("LifecycleStepper", () => {
     })
   })
 
-
   describe("connector lines", () => {
     it("uses muted-foreground for past connector lines", () => {
       const { container } = render(<LifecycleStepper {...baseProps} status="judging" />)

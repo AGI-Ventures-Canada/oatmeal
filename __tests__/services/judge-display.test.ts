@@ -15,6 +15,7 @@ const {
   createJudgeDisplayProfile,
   updateJudgeDisplayProfile,
   deleteJudgeDisplayProfile,
+  reorderJudgeDisplayProfiles,
   countJudgeDisplayProfiles,
 } = await import("@/lib/services/judge-display")
 
@@ -168,6 +169,32 @@ describe("Judge Display Service", () => {
       const result = await deleteJudgeDisplayProfile("j1", "h1")
 
       expect(result).toBe(false)
+    })
+  })
+
+  describe("reorderJudgeDisplayProfiles", () => {
+    it("returns true when all updates succeed", async () => {
+      const chain = createChainableMock({ data: null, error: null })
+      setMockFromImplementation(() => chain)
+
+      const result = await reorderJudgeDisplayProfiles("h1", ["j1", "j2", "j3"])
+
+      expect(result).toBe(true)
+    })
+
+    it("returns false when a database update fails", async () => {
+      const chain = createChainableMock({ data: null, error: { message: "DB error" } })
+      setMockFromImplementation(() => chain)
+
+      const result = await reorderJudgeDisplayProfiles("h1", ["j1", "j2"])
+
+      expect(result).toBe(false)
+    })
+
+    it("returns true for empty ordered ids", async () => {
+      const result = await reorderJudgeDisplayProfiles("h1", [])
+
+      expect(result).toBe(true)
     })
   })
 

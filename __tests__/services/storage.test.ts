@@ -50,6 +50,9 @@ const {
   uploadSponsorLogo,
   deleteSponsorLogo,
   downloadAndUploadBanner,
+  optimizeHeadshot,
+  uploadJudgeHeadshot,
+  deleteJudgeHeadshot,
 } = await import("@/lib/services/storage")
 
 describe("Storage Service", () => {
@@ -459,6 +462,84 @@ describe("Storage Service", () => {
 
       const result = await downloadAndUploadBanner("hackathon-123", "https://unreachable.com/img.png")
       expect(result).toBeNull()
+    })
+  })
+
+  describe("optimizeHeadshot", () => {
+    it("converts to webp format", async () => {
+      const buffer = Buffer.alloc(1024)
+      const result = await optimizeHeadshot(buffer)
+
+      expect(result.mimeType).toBe("image/webp")
+      expect(mockSharpInstance.webp).toHaveBeenCalled()
+    })
+
+    it("resizes images exceeding 400px dimensions", async () => {
+      mockSharpInstance.metadata.mockImplementation(() => Promise.resolve({ width: 800, height: 600 }))
+
+      const buffer = Buffer.alloc(1024)
+      await optimizeHeadshot(buffer)
+
+      expect(mockSharpInstance.resize).toHaveBeenCalledWith(400, 400, expect.objectContaining({ fit: "cover" }))
+    })
+
+    it("does not resize small images", async () => {
+      mockSharpInstance.metadata.mockImplementation(() => Promise.resolve({ width: 200, height: 200 }))
+
+      const buffer = Buffer.alloc(1024)
+      await optimizeHeadshot(buffer)
+
+      expect(mockSharpInstance.resize).not.toHaveBeenCalled()
+    })
+
+    it("throws error when optimized image is too large", async () => {
+      mockSharpInstance.toBuffer.mockImplementation(() => Promise.resolve(Buffer.alloc(250 * 1024)))
+
+      const buffer = Buffer.alloc(1024)
+      await expect(optimizeHeadshot(buffer)).rejects.toThrow(ImageTooLargeError)
+    })
+  })
+
+  describe("uploadJudgeHeadshot", () => {
+    it("uploads headshot and returns URL", async () => {
+      const buffer = Buffer.alloc(1024)
+      const result = await uploadJudgeHeadshot("h1", "j1", buffer)
+
+      expect(result).not.toBeNull()
+      expect(result?.url).toContain("https://storage.test/file.webp")
+      expect(result?.path).toBe("h1/j1/headshot.webp")
+      expect(mockStorageFrom).toHaveBeenCalledWith("headshots")
+    })
+
+    it("returns null on upload error", async () => {
+      mockUpload.mockImplementation(() => Promise.resolve({ error: { message: "Upload failed" } }))
+
+      const buffer = Buffer.alloc(1024)
+      const result = await uploadJudgeHeadshot("h1", "j1", buffer)
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe("deleteJudgeHeadshot", () => {
+    it("removes headshot files in all formats", async () => {
+      const result = await deleteJudgeHeadshot("h1", "j1")
+
+      expect(result).toBe(true)
+      expect(mockStorageFrom).toHaveBeenCalledWith("headshots")
+      expect(mockRemove).toHaveBeenCalledWith([
+        "h1/j1/headshot.webp",
+        "h1/j1/headshot.png",
+        "h1/j1/headshot.jpg",
+      ])
+    })
+
+    it("returns false on error", async () => {
+      mockRemove.mockImplementation(() => Promise.resolve({ error: { message: "Remove failed" } }))
+
+      const result = await deleteJudgeHeadshot("h1", "j1")
+
+      expect(result).toBe(false)
     })
   })
 })

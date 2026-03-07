@@ -1283,7 +1283,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     }
 
     const { castVote } = await import("@/lib/services/crowd-voting")
-    const result = await castVote(hackathon.id, (body as { submissionId: string }).submissionId, userId)
+    const result = await castVote(hackathon.id, body.submissionId, userId)
 
     if (!result.success) {
       return new Response(
@@ -1298,6 +1298,9 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       summary: "Cast vote",
       description: "Casts a vote for a submission. One vote per user per hackathon. Requires Clerk session.",
     },
+    body: t.Object({
+      submissionId: t.String({ description: "The submission ID to vote for" }),
+    }),
   })
   .delete("/hackathons/:slug/vote", async ({ params }) => {
     const { userId } = await auth()
