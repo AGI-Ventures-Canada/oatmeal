@@ -8,7 +8,7 @@ import { Field, FieldLabel, FieldGroup } from "@/components/ui/field"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useEdit } from "@/components/hackathon/preview/edit-context"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { Trash2, Plus, Loader2, Undo2 } from "lucide-react"
+import { Trash2, Loader2, Undo2, Mail } from "lucide-react"
 import type { HackathonJudgeDisplay } from "@/lib/db/hackathon-types"
 
 interface JudgesEditFormProps {
@@ -18,9 +18,13 @@ interface JudgesEditFormProps {
 }
 
 type PendingChange =
-  | { type: "add"; judge: HackathonJudgeDisplay; tempId: string }
+  | { type: "add"; judge: HackathonJudgeDisplay; tempId: string; email?: string }
   | { type: "delete"; judgeId: string; originalJudge: HackathonJudgeDisplay }
   | { type: "update"; judgeId: string; field: string; newValue: string; oldValue: string | null }
+
+function isEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
 
 function getInitials(name: string): string {
   return name
@@ -67,11 +71,13 @@ export function JudgesEditForm({
   function handleAddManual() {
     if (!nameInput.trim()) return
 
+    const input = nameInput.trim()
+    const inputIsEmail = isEmail(input)
     const tempId = `temp-${++tempIdCounter.current}`
     const newJudge: HackathonJudgeDisplay = {
       id: tempId,
       hackathon_id: hackathonId,
-      name: nameInput.trim(),
+      name: inputIsEmail ? input.split("@")[0] : input,
       title: null,
       organization: null,
       headshot_url: null,
@@ -82,7 +88,10 @@ export function JudgesEditForm({
       updated_at: new Date().toISOString(),
     }
 
-    setPendingChanges([...pendingChanges, { type: "add", judge: newJudge, tempId }])
+    setPendingChanges([
+      ...pendingChanges,
+      { type: "add", judge: newJudge, tempId, ...(inputIsEmail ? { email: input } : {}) },
+    ])
     setNameInput("")
   }
 
@@ -177,6 +186,7 @@ export function JudgesEditForm({
                 title: change.judge.title,
                 organization: change.judge.organization,
                 displayOrder: change.judge.display_order,
+                ...(change.email ? { email: change.email } : {}),
               }),
             }
           )
@@ -259,33 +269,25 @@ export function JudgesEditForm({
       <FieldGroup>
         <Field>
           <FieldLabel>Add Judge</FieldLabel>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Judge name..."
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && nameInput.trim()) {
-                  e.preventDefault()
-                  handleAddManual()
-                }
-              }}
-              autoFocus
-              autoComplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-form-type="other"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={handleAddManual}
-              disabled={!nameInput.trim()}
-            >
-              <Plus className="size-4" />
-            </Button>
-          </div>
+          <Input
+            placeholder="Name or email..."
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && nameInput.trim()) {
+                e.preventDefault()
+                handleAddManual()
+              }
+            }}
+            autoFocus
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+            data-form-type="other"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Press Enter to add
+          </p>
         </Field>
 
         {error && <p className="text-destructive text-sm">{error}</p>}
@@ -313,6 +315,10 @@ export function JudgesEditForm({
           <div className="space-y-2">
             {currentJudges.map((judge) => {
               const deleted = isDeleted(judge.id)
+              const addChange = pendingChanges.find(
+                (c) => c.type === "add" && c.tempId === judge.id
+              ) as Extract<PendingChange, { type: "add" }> | undefined
+              const email = addChange?.email
 
               return (
                 <div
@@ -374,6 +380,12 @@ export function JudgesEditForm({
                       data-form-type="other"
                     />
                   </div>
+                  {email && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Mail className="size-3" />
+                      <span>{email}</span>
+                    </div>
+                  )}
                 </div>
               )
             })}

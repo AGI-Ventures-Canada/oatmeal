@@ -110,6 +110,7 @@ export const dashboardJudgeDisplayRoutes = new Elysia()
         clerkUserId: t.Optional(t.Union([t.String(), t.Null()])),
         participantId: t.Optional(t.Union([t.String(), t.Null()])),
         displayOrder: t.Optional(t.Number()),
+        email: t.Optional(t.String()),
       }),
     }
   )

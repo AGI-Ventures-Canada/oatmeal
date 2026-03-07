@@ -15,7 +15,7 @@ import { Field, FieldLabel, FieldGroup } from "@/components/ui/field"
 import { useEdit } from "@/components/hackathon/preview/edit-context"
 import { Badge } from "@/components/ui/badge"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { Trash2, Plus, Loader2, Undo2 } from "lucide-react"
+import { Trash2, Loader2, Undo2 } from "lucide-react"
 import type { Prize, PrizeType } from "@/lib/db/hackathon-types"
 
 interface PrizesEditFormProps {
@@ -269,33 +269,25 @@ export function PrizesEditForm({
       <FieldGroup>
         <Field>
           <FieldLabel>Add Prize</FieldLabel>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Prize name..."
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && nameInput.trim()) {
-                  e.preventDefault()
-                  handleAddPrize()
-                }
-              }}
-              autoFocus
-              autoComplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-form-type="other"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={handleAddPrize}
-              disabled={!nameInput.trim()}
-            >
-              <Plus className="size-4" />
-            </Button>
-          </div>
+          <Input
+            placeholder="Prize name..."
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && nameInput.trim()) {
+                e.preventDefault()
+                handleAddPrize()
+              }
+            }}
+            autoFocus
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+            data-form-type="other"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Press Enter to add
+          </p>
         </Field>
 
         {error && <p className="text-destructive text-sm">{error}</p>}
