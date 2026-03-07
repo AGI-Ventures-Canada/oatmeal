@@ -242,6 +242,44 @@ describe("LifecycleStepper", () => {
     })
   })
 
+  describe("prizes node", () => {
+    it("shows 'Set up Prizes' when no prizes", () => {
+      render(<LifecycleStepper {...baseProps} prizeCount={0} />)
+      expect(screen.getByText("Set up Prizes")).toBeDefined()
+    })
+
+    it("shows singular count when 1 prize", () => {
+      render(<LifecycleStepper {...baseProps} prizeCount={1} />)
+      expect(screen.getByText("1 prize")).toBeDefined()
+    })
+
+    it("shows plural count when multiple prizes", () => {
+      render(<LifecycleStepper {...baseProps} prizeCount={4} />)
+      expect(screen.getByText("4 prizes")).toBeDefined()
+    })
+
+    it("navigates to prizes page on click", () => {
+      render(<LifecycleStepper {...baseProps} />)
+      const prizesNode = screen.getByText("Set up Prizes").closest("button")
+      fireEvent.click(prizesNode!)
+      expect(mockPush).toHaveBeenCalledWith("/e/test-hack/manage/prizes")
+    })
+
+    it("uses outline for prizes circle when not yet completed", () => {
+      render(<LifecycleStepper {...baseProps} status="judging" />)
+      const prizesBtn = screen.getByText("Set up Prizes").closest("button")
+      const circle = prizesBtn?.querySelector("div")
+      expect(circle?.className).toContain("border-muted-foreground/30")
+    })
+
+    it("uses muted-foreground for prizes circle when completed", () => {
+      render(<LifecycleStepper {...baseProps} status="completed" />)
+      const prizesBtn = screen.getByText("Set up Prizes").closest("button")
+      const circle = prizesBtn?.querySelector("div")
+      expect(circle?.className).toContain("bg-muted-foreground")
+    })
+  })
+
   describe("connector lines", () => {
     it("uses muted-foreground for past connector lines", () => {
       const { container } = render(<LifecycleStepper {...baseProps} status="judging" />)

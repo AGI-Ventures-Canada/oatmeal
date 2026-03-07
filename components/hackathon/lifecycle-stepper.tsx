@@ -36,6 +36,7 @@ import {
   Globe,
   Gavel,
   Trophy,
+  Gift,
   Loader2,
   AlertTriangle,
   Users,
@@ -137,6 +138,7 @@ interface LifecycleStepperProps {
   locationName?: string | null
   locationUrl?: string | null
   sponsorCount?: number
+  prizeCount?: number
 }
 
 type HoverAction = {
@@ -163,6 +165,7 @@ export function LifecycleStepper({
   locationName,
   locationUrl,
   sponsorCount = 0,
+  prizeCount = 0,
 }: LifecycleStepperProps) {
   const router = useRouter()
   const isMobile = useIsMobile()
@@ -360,6 +363,13 @@ export function LifecycleStepper({
       : `${judgeCount} judges`
     : "Assign Judges"
 
+  const hasPrizes = prizeCount > 0
+  const prizesLabel = hasPrizes
+    ? prizeCount === 1
+      ? "1 prize"
+      : `${prizeCount} prizes`
+    : "Set up Prizes"
+
   return (
     <>
       <div className="rounded-lg border bg-card">
@@ -516,6 +526,46 @@ export function LifecycleStepper({
                             </div>
                             <span className="hidden sm:block text-xs font-medium whitespace-nowrap text-muted-foreground">
                               {judgesLabel}
+                            </span>
+                          </button>
+                          <div
+                            className={cn(
+                              "h-px flex-1 mt-4",
+                              index < currentIndex
+                                ? "bg-muted-foreground"
+                                : "bg-border",
+                            )}
+                          />
+                        </div>
+                      ) : index === 2 ? (
+                        <div className="flex-1 flex items-start">
+                          <div
+                            className={cn(
+                              "h-px flex-1 mt-4",
+                              index < currentIndex
+                                ? "bg-muted-foreground"
+                                : "bg-border",
+                            )}
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(`/e/${hackathonSlug}/manage/prizes`)
+                            }
+                            className="flex flex-col items-center gap-1.5 shrink-0 mx-1.5 rounded-md px-2 pb-1.5 hover:bg-muted transition-colors cursor-pointer"
+                          >
+                            <div
+                              className={cn(
+                                "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
+                                currentIndex > 2
+                                  ? "bg-muted-foreground text-background"
+                                  : "border-2 border-muted-foreground/30 text-muted-foreground",
+                              )}
+                            >
+                              <Gift className="size-3.5" />
+                            </div>
+                            <span className="hidden sm:block text-xs font-medium whitespace-nowrap text-muted-foreground">
+                              {prizesLabel}
                             </span>
                           </button>
                           <div
