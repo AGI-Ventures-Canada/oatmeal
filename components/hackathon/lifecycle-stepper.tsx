@@ -34,7 +34,7 @@ import {
   Check,
   EyeOff,
   Globe,
-  Gavel,
+  Lock,
   Trophy,
   Loader2,
   AlertTriangle,
@@ -44,7 +44,7 @@ import type { HackathonStatus } from "@/lib/db/hackathon-types"
 const phases = [
   { key: "draft" as const, label: "Draft", icon: EyeOff },
   { key: "published" as const, label: "Go Live", icon: Globe },
-  { key: "judging" as const, label: "Judging", icon: Gavel },
+  { key: "judging" as const, label: "Closed for submissions", icon: Lock },
   { key: "completed" as const, label: "Completed", icon: Trophy },
 ] as const
 
@@ -57,7 +57,7 @@ const confirmations: Record<string, { title: string; description: string }> = {
       "Your hackathon will become visible on the browse page and open for registration.",
   },
   "published→judging": {
-    title: "Start the judging phase?",
+    title: "Close submissions?",
     description:
       "Submissions will close and the judging phase will begin. Make sure your judges and criteria are configured.",
   },

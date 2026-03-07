@@ -51,7 +51,7 @@ describe("LifecycleStepper", () => {
     render(<LifecycleStepper {...baseProps} />)
     expect(screen.getByText("Draft")).toBeDefined()
     expect(screen.getByText("Go Live")).toBeDefined()
-    expect(screen.getByText("Judging")).toBeDefined()
+    expect(screen.getByText("Closed for submissions")).toBeDefined()
     expect(screen.getByText("Completed")).toBeDefined()
   })
 
@@ -160,7 +160,7 @@ describe("LifecycleStepper", () => {
       render(<LifecycleStepper {...baseProps} status="completed" />)
       expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
       expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
-      expect(findPhaseNode("Judging")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Closed for submissions")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
 
     it("does not wrap current completed node", () => {
