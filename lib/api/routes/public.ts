@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia"
 import { auth, clerkClient } from "@clerk/nextjs/server"
+import { normalizeUrl } from "@/lib/utils/url"
 import { exchangeCodeForTokens, saveIntegration, getProviderConfig } from "@/lib/integrations/oauth"
 import { getPublicHackathon, listPublicHackathons } from "@/lib/services/public-hackathons"
 import { registerForHackathon, getParticipantCount, isUserRegistered } from "@/lib/services/hackathons"
@@ -324,8 +325,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         )
       }
 
+      const githubUrl = normalizeUrl(body.githubUrl)
+      const liveAppUrl = body.liveAppUrl ? normalizeUrl(body.liveAppUrl) : body.liveAppUrl
+
       try {
-        const url = new URL(body.githubUrl)
+        const url = new URL(githubUrl)
         if (url.hostname !== "github.com" && url.hostname !== "www.github.com") {
           return new Response(
             JSON.stringify({ error: "GitHub URL must be from github.com", code: "invalid_github_url" }),
@@ -346,8 +350,8 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         {
           title: body.title,
           description: body.description,
-          githubUrl: body.githubUrl,
-          liveAppUrl: body.liveAppUrl,
+          githubUrl,
+          liveAppUrl,
         }
       )
 
@@ -430,9 +434,12 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         )
       }
 
-      if (body.githubUrl) {
+      const normalizedGithubUrl = body.githubUrl ? normalizeUrl(body.githubUrl) : body.githubUrl
+      const normalizedLiveAppUrl = body.liveAppUrl ? normalizeUrl(body.liveAppUrl) : body.liveAppUrl
+
+      if (normalizedGithubUrl) {
         try {
-          const url = new URL(body.githubUrl)
+          const url = new URL(normalizedGithubUrl)
           if (url.hostname !== "github.com" && url.hostname !== "www.github.com") {
             return new Response(
               JSON.stringify({ error: "GitHub URL must be from github.com", code: "invalid_github_url" }),
@@ -454,8 +461,8 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         {
           title: body.title,
           description: body.description,
-          githubUrl: body.githubUrl,
-          liveAppUrl: body.liveAppUrl,
+          githubUrl: normalizedGithubUrl,
+          liveAppUrl: normalizedLiveAppUrl,
         }
       )
 

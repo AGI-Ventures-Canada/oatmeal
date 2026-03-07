@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia"
+import { normalizeUrl } from "@/lib/utils/url"
 import { resolvePrincipal, requirePrincipal, AuthError } from "@/lib/auth/principal"
 import { createApiKey, listApiKeys, revokeApiKey, getApiKeyById } from "@/lib/services/api-keys"
 import { listJobs, getJobById } from "@/lib/services/jobs"
@@ -1295,12 +1296,14 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
       const { addSponsor } = await import("@/lib/services/sponsors")
 
+      const websiteUrl = body.websiteUrl ? normalizeUrl(body.websiteUrl) : body.websiteUrl
+
       let tenantSponsorId: string | null = null
       if (!body.sponsorTenantId) {
         const { upsertTenantSponsor } = await import("@/lib/services/tenant-sponsors")
         const tenantSponsor = await upsertTenantSponsor(principal.tenantId, {
           name: body.name,
-          websiteUrl: body.websiteUrl,
+          websiteUrl,
         })
         tenantSponsorId = tenantSponsor?.id ?? null
         if (!tenantSponsorId) {
@@ -1312,7 +1315,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         hackathonId: params.id,
         name: body.name,
         logoUrl: body.logoUrl,
-        websiteUrl: body.websiteUrl,
+        websiteUrl,
         tier: body.tier as "title" | "gold" | "silver" | "bronze" | "partner" | undefined,
         sponsorTenantId: body.sponsorTenantId,
         tenantSponsorId,
@@ -1378,10 +1381,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
 
       const { updateSponsor } = await import("@/lib/services/sponsors")
+      const sponsorWebsiteUrl = body.websiteUrl ? normalizeUrl(body.websiteUrl) : body.websiteUrl
       const sponsor = await updateSponsor(params.sponsorId, {
         name: body.name,
         logoUrl: body.logoUrl,
-        websiteUrl: body.websiteUrl,
+        websiteUrl: sponsorWebsiteUrl,
         tier: body.tier as "title" | "gold" | "silver" | "bronze" | "partner" | undefined,
         sponsorTenantId: body.sponsorTenantId,
         displayOrder: body.displayOrder,
@@ -1714,7 +1718,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         logoUrl: body.logoUrl,
         logoUrlDark: body.logoUrlDark,
         description: body.description,
-        websiteUrl: body.websiteUrl,
+        websiteUrl: body.websiteUrl ? normalizeUrl(body.websiteUrl) : body.websiteUrl,
         name: body.name,
       })
 
