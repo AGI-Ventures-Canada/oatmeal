@@ -7,7 +7,11 @@ import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/servi
 import { dashboardJudgingRoutes } from "./dashboard-judging"
 import { dashboardPrizesRoutes } from "./dashboard-prizes"
 import { dashboardResultsRoutes } from "./dashboard-results"
-import { getEffectiveStatus } from "@/lib/utils/timeline"
+import { getEffectiveStatus, validateTimelineOrder } from "@/lib/utils/timeline"
+import {
+  getCriteriaWeightTotalPercentage,
+  isBinaryWeightTotalComplete,
+} from "@/lib/utils/judging"
 import type { Scope } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
 
@@ -1032,7 +1036,62 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     async ({ principal, params, body }) => {
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
-      const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
+      const { checkHackathonOrganizer, updateHackathonSettings } = await import("@/lib/services/public-hackathons")
+      const organizerResult = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (organizerResult.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      if (organizerResult.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized to manage this hackathon. You may need to switch to the correct organization." }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      if (body.status === "judging") {
+        const { listJudgingCriteria } = await import("@/lib/services/judging")
+        const criteria = await listJudgingCriteria(params.id)
+        const totalWeightPercentage = getCriteriaWeightTotalPercentage(criteria)
+
+        if (!isBinaryWeightTotalComplete(totalWeightPercentage)) {
+          return new Response(
+            JSON.stringify({
+              error: "Criteria weights must total 100% before judging can start",
+              code: "invalid_weight_total",
+            }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            }
+          )
+        }
+      }
+
+      const hasDateUpdates = body.startsAt !== undefined || body.endsAt !== undefined ||
+        body.registrationOpensAt !== undefined || body.registrationClosesAt !== undefined
+      if (hasDateUpdates) {
+        const currentHackathon = organizerResult.hackathon
+        const mergedDates = {
+          registrationOpensAt: body.registrationOpensAt !== undefined ? body.registrationOpensAt : currentHackathon.registration_opens_at,
+          registrationClosesAt: body.registrationClosesAt !== undefined ? body.registrationClosesAt : currentHackathon.registration_closes_at,
+          startsAt: body.startsAt !== undefined ? body.startsAt : currentHackathon.starts_at,
+          endsAt: body.endsAt !== undefined ? body.endsAt : currentHackathon.ends_at,
+        }
+        const timelineError = validateTimelineOrder(mergedDates)
+        if (timelineError) {
+          return new Response(
+            JSON.stringify({ error: timelineError, code: "invalid_timeline_order" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          )
+        }
+      }
+
+
       const hackathon = await updateHackathonSettings(params.id, principal.tenantId, {
         bannerUrl: body.bannerUrl,
         name: body.name,

@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test"
-import { getEffectiveStatus, getTimelineState } from "@/lib/utils/timeline"
+import { getEffectiveStatus, getTimelineState, validateTimelineOrder } from "@/lib/utils/timeline"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
 function mockDateGlobal(originalDate: typeof Date, isoString: string) {
@@ -280,5 +280,88 @@ describe("getTimelineState", () => {
       })
       expect(result).toEqual({ label: "Coming Soon", variant: "secondary" })
     })
+  })
+})
+
+describe("validateTimelineOrder", () => {
+  it("returns null for valid chronological order", () => {
+    expect(validateTimelineOrder({
+      registrationOpensAt: "2026-02-01T00:00:00Z",
+      registrationClosesAt: "2026-02-15T00:00:00Z",
+      startsAt: "2026-03-01T00:00:00Z",
+      endsAt: "2026-03-05T00:00:00Z",
+    })).toBeNull()
+  })
+
+  it("returns null when all dates are null", () => {
+    expect(validateTimelineOrder({
+      registrationOpensAt: null,
+      registrationClosesAt: null,
+      startsAt: null,
+      endsAt: null,
+    })).toBeNull()
+  })
+
+  it("returns null when only some dates are set in valid order", () => {
+    expect(validateTimelineOrder({
+      startsAt: "2026-03-01T00:00:00Z",
+      endsAt: "2026-03-05T00:00:00Z",
+    })).toBeNull()
+  })
+
+  it("returns error when registration opens after it closes", () => {
+    const result = validateTimelineOrder({
+      registrationOpensAt: "2026-02-15T00:00:00Z",
+      registrationClosesAt: "2026-02-01T00:00:00Z",
+    })
+    expect(result).toBe("Registration open date must be before registration close date")
+  })
+
+  it("returns error when registration closes after hackathon starts", () => {
+    const result = validateTimelineOrder({
+      registrationClosesAt: "2026-03-15T00:00:00Z",
+      startsAt: "2026-03-01T00:00:00Z",
+    })
+    expect(result).toBe("Registration close date must be before hackathon start date")
+  })
+
+  it("returns error when hackathon starts after it ends", () => {
+    const result = validateTimelineOrder({
+      startsAt: "2026-03-10T00:00:00Z",
+      endsAt: "2026-03-01T00:00:00Z",
+    })
+    expect(result).toBe("Hackathon start date must be before end date")
+  })
+
+  it("returns error when registration opens after hackathon starts", () => {
+    const result = validateTimelineOrder({
+      registrationOpensAt: "2026-03-15T00:00:00Z",
+      startsAt: "2026-03-01T00:00:00Z",
+    })
+    expect(result).toBe("Registration open date must be before hackathon start date")
+  })
+
+  it("accepts Date objects as input", () => {
+    expect(validateTimelineOrder({
+      startsAt: new Date("2026-03-01T00:00:00Z"),
+      endsAt: new Date("2026-03-05T00:00:00Z"),
+    })).toBeNull()
+  })
+
+  it("returns error with Date objects when order is invalid", () => {
+    const result = validateTimelineOrder({
+      startsAt: new Date("2026-03-10T00:00:00Z"),
+      endsAt: new Date("2026-03-01T00:00:00Z"),
+    })
+    expect(result).toBe("Hackathon start date must be before end date")
+  })
+
+  it("skips checks when one date in a pair is null", () => {
+    expect(validateTimelineOrder({
+      registrationOpensAt: "2026-03-15T00:00:00Z",
+      registrationClosesAt: null,
+      startsAt: null,
+      endsAt: "2026-03-01T00:00:00Z",
+    })).toBeNull()
   })
 })

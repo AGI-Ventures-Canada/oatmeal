@@ -13,6 +13,7 @@ import {
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Undo2 } from "lucide-react"
 import { useEditOptional } from "@/components/hackathon/preview/edit-context"
+import { validateTimelineOrder } from "@/lib/utils/timeline"
 
 interface TimelineEditFormProps {
   hackathonId?: string
@@ -74,6 +75,18 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
   async function save() {
     setSaving(true)
     setError(null)
+
+    const timelineError = validateTimelineOrder({
+      registrationOpensAt: registrationOpensAt,
+      registrationClosesAt: registrationClosesAt,
+      startsAt: startsAt,
+      endsAt: endsAt,
+    })
+    if (timelineError) {
+      setError(timelineError)
+      setSaving(false)
+      return false
+    }
 
     try {
       if (onSave) {

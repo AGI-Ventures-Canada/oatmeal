@@ -123,3 +123,34 @@ export function getTimelineState(hackathon: TimelineInput): TimelineState {
 
   return { label: "Coming Soon", variant: "secondary" }
 }
+
+export interface TimelineDates {
+  registrationOpensAt?: string | Date | null
+  registrationClosesAt?: string | Date | null
+  startsAt?: string | Date | null
+  endsAt?: string | Date | null
+}
+
+export function validateTimelineOrder(dates: TimelineDates): string | null {
+  const toTime = (v: string | Date | null | undefined) =>
+    v ? new Date(v).getTime() : null
+
+  const regOpens = toTime(dates.registrationOpensAt)
+  const regCloses = toTime(dates.registrationClosesAt)
+  const starts = toTime(dates.startsAt)
+  const ends = toTime(dates.endsAt)
+
+  if (regOpens !== null && regCloses !== null && regOpens > regCloses) {
+    return "Registration open date must be before registration close date"
+  }
+  if (regCloses !== null && starts !== null && regCloses > starts) {
+    return "Registration close date must be before hackathon start date"
+  }
+  if (starts !== null && ends !== null && starts > ends) {
+    return "Hackathon start date must be before end date"
+  }
+  if (regOpens !== null && starts !== null && regOpens > starts) {
+    return "Registration open date must be before hackathon start date"
+  }
+  return null
+}
