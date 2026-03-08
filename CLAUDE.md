@@ -380,6 +380,18 @@ Before making changes:
 gh pr create --base staging --draft --title "feat: your feature" --body "Description"
 ```
 
+### Merge Staging to Main via PR Only
+
+**CRITICAL: Always merge `staging` into `main` via a pull request, never by direct merge + push.** Supabase's GitHub integration only applies migrations when they arrive through a PR merge event. A direct `git merge` + `git push` will deploy code to Vercel but **skip database migrations**, leaving production out of sync.
+
+```bash
+# GOOD - creates PR, Supabase applies migrations on merge
+gh pr create --base main --head staging --title "Release: description" --body "Release notes"
+
+# BAD - migrations won't run
+git checkout main && git merge staging && git push
+```
+
 ### Rebase Feature Branches
 
 **Keep feature branches clean with only branch-specific commits.** Before creating a PR or pushing updates, rebase onto the latest `staging`:
