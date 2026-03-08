@@ -1,5 +1,5 @@
 ---
-name: oatmeal-cli
+name: hackathon
 model: sonnet
 description: Control the Oatmeal hackathon platform via its REST API from an AI coding agent. Use when the user asks to create hackathons, add judges, manage prizes, configure judging, publish results, or perform any hackathon management task through API calls.
 activationKeywords:
@@ -12,10 +12,9 @@ activationKeywords:
   - "manage hackathon"
   - "hackathon on"
   - "oatmeal api"
-  - "oatmeal cli"
 ---
 
-# Oatmeal CLI — Agent Skill
+# Hackathon — Agent Skill
 
 Manage the Oatmeal hackathon platform programmatically via its REST API. This skill enables AI coding agents to create hackathons, manage judges, configure prizes, publish results, and more — all through `curl` commands.
 

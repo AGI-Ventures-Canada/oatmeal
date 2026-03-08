@@ -51,7 +51,7 @@ claude
 # Or: "Set up prizes: 1st $5k, 2nd $2.5k, 3rd $1k"
 ```
 
-The skill guides your agent through API authentication, hackathon creation, judge management, prize setup, and results publishing. See `.claude/skills/oatmeal-cli/` for the full skill.
+The skill guides your agent through API authentication, hackathon creation, judge management, prize setup, and results publishing. See `.claude/skills/hackathon/` for the full skill.
 
 ## New Developer Setup
 
