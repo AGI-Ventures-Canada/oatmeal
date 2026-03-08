@@ -680,6 +680,41 @@ export const dashboardJudgingRoutes = new Elysia()
       }),
     }
   )
+  .get("/hackathons/:id/judging/pick-results", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
+
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+    if (result.status === "not_found") {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    const { listPrizes } = await import("@/lib/services/prizes")
+    const prizes = await listPrizes(params.id)
+
+    const { getPickResults } = await import("@/lib/services/judge-picks")
+    const results: Record<string, Awaited<ReturnType<typeof getPickResults>>> = {}
+    for (const prize of prizes) {
+      results[prize.id] = await getPickResults(params.id, prize.id)
+    }
+
+    return { results }
+  }, {
+    detail: {
+      summary: "Get pick results for subjective judging",
+      description: "Returns tallied pick results per prize for subjective judging mode. Requires hackathons:read scope.",
+    },
+  })
   .get("/hackathons/:id/judging/invitations", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 

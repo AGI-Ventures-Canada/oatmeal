@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Gavel, CheckCircle2, Circle, ChevronDown, ChevronLeft, ChevronRight, Focus, List } from "lucide-react"
+import { Gavel, CheckCircle2, Circle, ChevronDown, ChevronLeft, ChevronRight, Focus, List, Eye } from "lucide-react"
 import { ScoringPanel } from "./scoring-panel"
 import { FocusScoringView } from "./focus-scoring-view"
 
@@ -21,6 +21,7 @@ type JudgeAssignment = {
   teamName: string | null
   isComplete: boolean
   notes: string
+  viewedAt: string | null
 }
 
 interface JudgeAssignmentsCardProps {
@@ -130,6 +131,9 @@ export function JudgeAssignmentsCard({
                           <p className="text-xs text-muted-foreground">{a.teamName}</p>
                         )}
                       </div>
+                      {!isComplete && a.viewedAt && (
+                        <Eye className="size-3.5 text-muted-foreground" />
+                      )}
                       <Badge variant={isComplete ? "default" : "outline"}>
                         {isComplete ? "Scored" : "Pending"}
                       </Badge>

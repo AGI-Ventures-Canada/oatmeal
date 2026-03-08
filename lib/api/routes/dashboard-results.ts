@@ -123,6 +123,13 @@ export const dashboardResultsRoutes = new Elysia()
       })
     }
 
+    try {
+      const { autoAssignPrizes } = await import("@/lib/services/prizes")
+      await autoAssignPrizes(params.id)
+    } catch (err) {
+      console.error("Failed to auto-assign prizes (non-blocking):", err)
+    }
+
     await logAudit({
       principal,
       action: "results.published",

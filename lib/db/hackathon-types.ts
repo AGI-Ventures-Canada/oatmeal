@@ -78,6 +78,7 @@ export interface Hackathon {
   location_name: string | null
   location_url: string | null
   anonymous_judging: boolean
+  judging_mode: JudgingMode
   results_published_at: string | null
   winner_emails_sent_at: string | null
   metadata: Json
@@ -301,6 +302,19 @@ export interface JudgeAssignment {
   is_complete: boolean
   assigned_at: string
   completed_at: string | null
+  viewed_at: string | null
+}
+
+export interface JudgePick {
+  id: string
+  hackathon_id: string
+  judge_participant_id: string
+  prize_id: string
+  submission_id: string
+  rank: number
+  reason: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface Score {
@@ -312,16 +326,28 @@ export interface Score {
   updated_at: string
 }
 
+export type PrizeType = "score" | "favorite" | "crowd" | "criteria"
+
 export interface Prize {
   id: string
   hackathon_id: string
   name: string
   description: string | null
   value: string | null
+  type: PrizeType
+  rank: number | null
+  kind: string
+  monetary_value: number | null
+  currency: string | null
+  distribution_method: string | null
+  display_value: string | null
+  criteria_id: string | null
   display_order: number
   created_at: string
   updated_at: string
 }
+
+export type JudgingMode = "points" | "subjective"
 
 export interface PrizeAssignment {
   id: string
@@ -353,6 +379,28 @@ export interface JudgeInvitation {
   expires_at: string
   created_at: string
   updated_at: string
+}
+
+export interface HackathonJudgeDisplay {
+  id: string
+  hackathon_id: string
+  name: string
+  title: string | null
+  organization: string | null
+  headshot_url: string | null
+  clerk_user_id: string | null
+  participant_id: string | null
+  display_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CrowdVote {
+  id: string
+  hackathon_id: string
+  submission_id: string
+  clerk_user_id: string
+  created_at: string
 }
 
 export interface TenantProfile {

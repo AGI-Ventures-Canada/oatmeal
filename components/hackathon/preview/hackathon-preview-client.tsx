@@ -10,6 +10,8 @@ import { OrganizerLogoPrompt } from "@/components/hackathon/organizer-logo-promp
 import { EventHero } from "@/components/hackathon/event-hero"
 import { BannerUpload } from "@/components/hackathon/banner-upload"
 import { SponsorSection } from "@/components/hackathon/sponsor-section"
+import { JudgeSection } from "@/components/hackathon/judge-section"
+import { PrizeSection } from "@/components/hackathon/prize-section"
 import { SubmissionGallery, type GallerySubmission } from "@/components/hackathon/submission-gallery"
 import { TeamInviteDialog } from "@/components/hackathon/team-invite-dialog"
 import { Button } from "@/components/ui/button"
@@ -29,6 +31,8 @@ import { RulesEditForm } from "@/components/hackathon/edit-drawer/rules-edit-for
 import { TimelineEditForm } from "@/components/hackathon/edit-drawer/timeline-edit-form"
 import { LocationEditForm } from "@/components/hackathon/edit-drawer/location-edit-form"
 import { SponsorsEditForm } from "@/components/hackathon/edit-drawer/sponsors-edit-form"
+import { JudgesEditForm } from "@/components/hackathon/edit-drawer/judges-edit-form"
+import { PrizesEditForm } from "@/components/hackathon/edit-drawer/prizes-edit-form"
 import type { PublicResultWithDetails } from "@/lib/services/results"
 
 interface HackathonPreviewClientProps {
@@ -261,6 +265,52 @@ function HackathonPreviewContent({
           className="py-12"
         >
           <SponsorSection sponsors={hackathon.sponsors} />
+        </EditableSection>
+      )}
+
+      {isEditable && editMode && activeSection === "judges" ? (
+        <div data-edit-section="judges" className="py-12 scroll-mt-24">
+          <div className="mx-auto max-w-4xl px-4">
+            <JudgesEditForm
+              hackathonId={hackathon.id}
+              initialJudges={hackathon.judges}
+              onSaveAndNext={() => handleSaveAndNext("judges")}
+            />
+          </div>
+        </div>
+      ) : (
+        <EditableSection
+          section="judges"
+          isEmpty={hackathon.judges.length === 0}
+          emptyLabel="Click to add judges"
+          className="py-12"
+        >
+          <JudgeSection judges={hackathon.judges} />
+        </EditableSection>
+      )}
+
+      {isEditable && editMode && activeSection === "prizes" ? (
+        <div data-edit-section="prizes" className="py-12 scroll-mt-24">
+          <div className="mx-auto max-w-4xl px-4">
+            <PrizesEditForm
+              hackathonId={hackathon.id}
+              initialPrizes={hackathon.prizes}
+              onSaveAndNext={() => handleSaveAndNext("prizes")}
+            />
+          </div>
+        </div>
+      ) : (
+        <EditableSection
+          section="prizes"
+          isEmpty={hackathon.prizes.length === 0}
+          emptyLabel="Click to add prizes"
+          className="py-12"
+        >
+          <PrizeSection
+            prizes={hackathon.prizes}
+            hackathonSlug={hackathon.slug}
+            hackathonStatus={hackathon.status}
+          />
         </EditableSection>
       )}
 

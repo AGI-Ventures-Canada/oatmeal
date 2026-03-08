@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation"
 import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { getHackathonSubmissions } from "@/lib/services/submissions"
-import { getJudgingProgress, getJudgingSetupStatus } from "@/lib/services/judging"
+import { getJudgingProgress, getJudgingSetupStatus, listJudgingCriteria } from "@/lib/services/judging"
+import { listPrizes } from "@/lib/services/prizes"
+import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
 import { PageHeader } from "@/components/page-header"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
@@ -21,10 +23,13 @@ export default async function ManagePage({ params }: PageProps) {
 
   const { hackathon } = result
 
-  const [submissions, judgingProgress, judgingSetupStatus] = await Promise.all([
+  const [submissions, judgingProgress, judgingSetupStatus, prizes, judgeDisplayCount, criteria] = await Promise.all([
     getHackathonSubmissions(hackathon.id),
     getJudgingProgress(hackathon.id),
     getJudgingSetupStatus(hackathon.id),
+    listPrizes(hackathon.id),
+    countJudgeDisplayProfiles(hackathon.id),
+    listJudgingCriteria(hackathon.id),
   ])
 
   const submissionCount = submissions.length
@@ -62,6 +67,9 @@ export default async function ManagePage({ params }: PageProps) {
         locationName={hackathon.location_name}
         locationUrl={hackathon.location_url}
         sponsorCount={hackathon.sponsors.length}
+        prizeCount={prizes.length}
+        judgeDisplayCount={judgeDisplayCount}
+        criteriaCount={criteria.length}
       />
 
       <div className="rounded-lg border overflow-hidden">

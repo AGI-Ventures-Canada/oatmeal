@@ -1,0 +1,175 @@
+---
+title: Getting Started
+description: Authenticate and run your first CLI commands.
+---
+
+This guide walks you through signing in, verifying your setup, and running your first commands with the Oatmeal CLI.
+
+## Sign In
+
+The fastest way to authenticate is the browser flow. Run `oatmeal login` and a browser window opens for you to sign in:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal login"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Terminal</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+The CLI automatically creates an API key named "Oatmeal CLI" with full management scopes and saves it to `~/.oatmeal/config.json`.
+
+### Alternative Auth Methods
+
+If you can't open a browser (e.g., SSH session or CI), use one of these alternatives:
+
+<CodeBlock language="bash" showLineNumbers code={"# Paste an existing API key interactively\noatmeal login --no-browser\n\n# Provide an API key directly\noatmeal login --api-key sk_live_your_key_here\n\n# Use an environment variable (no login needed)\nexport OATMEAL_API_KEY=sk_live_your_key_here\noatmeal hackathons list"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Alternative auth</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Verify Your Connection
+
+Check that you're authenticated:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal whoami"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Terminal</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+This shows your tenant ID, key prefix, and available scopes:
+
+<CodeBlock language="text" showLineNumbers={false} code={"Tenant:  org_abc123\nKey:     sk_live_...xyz\nScopes:  hackathons:read, hackathons:write, webhooks:read, webhooks:write, ..."}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Output</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Browse Public Hackathons
+
+Browse commands work without authentication. Try searching for hackathons:
+
+<CodeBlock language="bash" showLineNumbers code={"# List all public hackathons\noatmeal browse hackathons\n\n# Search by keyword\noatmeal browse hackathons --search \"AI\"\n\n# View a specific hackathon\noatmeal browse hackathon my-hackathon-slug\n\n# View published results\noatmeal browse results my-hackathon-slug"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Browsing commands</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## List Your Hackathons
+
+Once authenticated, list hackathons your organization manages:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal hackathons list"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Terminal</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+The output shows a table with hackathon names, slugs, and statuses. Use `--json` for machine-readable output:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal hackathons list --json"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>JSON output</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Create Your First Hackathon
+
+Run the create command interactively:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal hackathons create"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Terminal</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+The CLI prompts for name, slug, and description. Or provide everything via flags:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal hackathons create --name \"Spring Hack 2026\" --slug spring-hack-2026 --description \"Build something amazing\""}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Non-interactive</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Using Slugs vs IDs
+
+Most commands accept either a UUID or a slug. The CLI automatically resolves slugs:
+
+<CodeBlock language="bash" showLineNumbers code={"# Both work:\noatmeal hackathons get spring-hack-2026\noatmeal hackathons get 550e8400-e29b-41d4-a716-446655440000"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Slug resolution</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OATMEAL_API_KEY` | API key (overrides saved config) | — |
+| `OATMEAL_BASE_URL` | API base URL | `https://oatmeal.app` |
+| `NO_COLOR` | Disable colored output | — |
+
+## Connecting to Different Environments
+
+The base URL is saved after login. To switch environments:
+
+<CodeBlock language="bash" showLineNumbers code={"# Local development\noatmeal login --base-url http://localhost:3000\n\n# Production (default)\noatmeal login"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Environments</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Sign Out
+
+Remove saved credentials:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal logout"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Terminal</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+This deletes `~/.oatmeal/config.json`. It does not revoke the API key — you can do that from the dashboard under Settings > API Keys.
+
+## Next Steps
+
+- [Organizer Guide](/docs/guides/cli-organizer) — Manage an entire hackathon lifecycle
+- [Browsing Guide](/docs/guides/cli-browsing) — Discover and explore public hackathons
+- [Judging Guide](/docs/guides/cli-judging) — Set up judges, criteria, and scoring
+- [CI/CD Guide](/docs/guides/cli-automation) — Automate with scripts and pipelines

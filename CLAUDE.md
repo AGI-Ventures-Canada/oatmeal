@@ -22,6 +22,9 @@ bun test:all         # Run all tests (unit + integration)
 bun db:sync          # Reset DB + regenerate types
 bun db:diff name     # Capture Studio changes as migration
 bun update-types     # Regenerate TypeScript types from DB
+bun cli <args>       # Run CLI package (dev mode, TypeScript)
+bun cli:test         # Run CLI tests
+bun cli:build        # Build CLI for npm distribution
 ```
 
 ### Test Scenarios
@@ -52,6 +55,7 @@ Next.js 16 App Router with:
 - Elysia (API routes)
 - AI SDK 6
 - Shadcn/ui components
+- `@oatmeal/cli` — standalone CLI package (`packages/cli/`), published to npm, no server-side imports
 
 ### Route Structure
 
@@ -80,6 +84,7 @@ See domain-specific CLAUDE.md files for detailed patterns:
 - `lib/email/CLAUDE.md` - Resend email sending and receiving
 - `supabase/CLAUDE.md` - Database development, migrations, branching
 - `scripts/CLAUDE.md` - Test scenario scripts for seeding dev database
+- `packages/cli/CLAUDE.md` - CLI package architecture, adding commands, testing
 
 ### External Documentation Links
 
@@ -362,6 +367,21 @@ For RPC calls, use `setMockRpcImplementation()` instead.
 
 ## Git Workflow
 
+### Run CI Checks Before Pushing
+
+**CRITICAL: Before pushing, run the same checks CI runs.** Catch failures locally instead of waiting for the pipeline.
+
+```bash
+bun lint && bun run build && bun test:all && bun cli:build
+```
+
+- `bun lint` — ESLint (CI `lint` job)
+- `bun run build` — TypeScript type check + Next.js build (CI `test` job runs `tsc --noEmit`; build implies the same)
+- `bun test:all` — unit + integration tests (CI `test` job)
+- `bun cli:build` — CLI bundle must produce `packages/cli/dist/cli.mjs` without errors
+
+If any command fails, fix the issue before pushing. Do not push code that doesn't pass all three.
+
 ### Never Push to Main
 
 **NEVER develop on or push directly to `main` or `staging`.** All changes go through feature branch → PR → merge.
@@ -426,6 +446,10 @@ If that shows commits you didn't write, **do not force-push**. Instead:
 4. Test the result
 
 If you're unsure how to resolve a conflict, **ask for help** rather than force-pushing or blindly accepting one side.
+
+### Auto-Push After Committing
+
+**When the user says "push" or "push to PR", always commit and push in one flow.** If an open PR already exists for the current branch, push immediately after committing — do not ask for confirmation. Check for an existing PR with `gh pr view` before pushing.
 
 ### Check PR Status Before Pushing
 

@@ -1,6 +1,8 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Hackathon, TenantProfile, HackathonSponsor, HackathonStatus } from "@/lib/db/hackathon-types"
+import type { Hackathon, TenantProfile, HackathonSponsor, HackathonStatus, HackathonJudgeDisplay, Prize, JudgingMode } from "@/lib/db/hackathon-types"
+
+export type PublicPrize = Omit<Prize, "distribution_method" | "monetary_value" | "currency">
 import { getEffectiveStatus } from "@/lib/utils/timeline"
 import { sortByStatusPriority } from "@/lib/utils/sort-hackathons"
 
@@ -9,6 +11,8 @@ export type PublicHackathon = Hackathon & {
   sponsors: (HackathonSponsor & {
     tenant?: Pick<TenantProfile, "slug" | "name" | "logo_url" | "logo_url_dark"> | null
   })[]
+  judges: HackathonJudgeDisplay[]
+  prizes: PublicPrize[]
 }
 
 export async function getPublicHackathonById(
@@ -70,10 +74,34 @@ export async function getPublicHackathon(
     console.error("Failed to get hackathon sponsors:", sponsorsError)
   }
 
+  const { data: judges, error: judgesError } = await client
+    .from("hackathon_judges_display")
+    .select("*")
+    .eq("hackathon_id", hackathon.id)
+    .order("display_order")
+
+  if (judgesError) {
+    console.error("Failed to get hackathon judges:", judgesError)
+  }
+
+  const { data: prizes, error: prizesError } = await client
+    .from("prizes")
+    .select("*")
+    .eq("hackathon_id", hackathon.id)
+    .order("display_order")
+
+  if (prizesError) {
+    console.error("Failed to get hackathon prizes:", prizesError)
+  }
+
+  const publicPrizes = ((prizes || []) as unknown as Prize[]).map(({ distribution_method, monetary_value, currency, ...rest }) => rest)
+
   return {
     ...hackathon,
     status: getEffectiveStatus(hackathon),
     sponsors: sponsors || [],
+    judges: (judges || []) as unknown as HackathonJudgeDisplay[],
+    prizes: publicPrizes,
   } as unknown as PublicHackathon
 }
 
@@ -195,10 +223,26 @@ export async function getHackathonByIdWithFullData(
     console.error("Failed to get hackathon sponsors:", sponsorsError)
   }
 
+  const { data: judges } = await client
+    .from("hackathon_judges_display")
+    .select("*")
+    .eq("hackathon_id", hackathon.id)
+    .order("display_order")
+
+  const { data: prizes } = await client
+    .from("prizes")
+    .select("*")
+    .eq("hackathon_id", hackathon.id)
+    .order("display_order")
+
+  const fullPrizes = ((prizes || []) as unknown as Prize[]).map(({ distribution_method, monetary_value, currency, ...rest }) => rest)
+
   return {
     ...hackathon,
     status: getEffectiveStatus(hackathon),
     sponsors: sponsors || [],
+    judges: (judges || []) as unknown as HackathonJudgeDisplay[],
+    prizes: fullPrizes,
   } as unknown as PublicHackathon
 }
 
@@ -264,9 +308,14 @@ export async function updateHackathonSettings(
     registrationClosesAt?: string | null
     status?: HackathonStatus
     anonymousJudging?: boolean
+    judgingMode?: JudgingMode
     locationType?: "in_person" | "virtual" | null
     locationName?: string | null
     locationUrl?: string | null
+    maxParticipants?: number | null
+    minTeamSize?: number
+    maxTeamSize?: number
+    allowSolo?: boolean
   }
 ): Promise<Hackathon | null> {
   const client = getSupabase() as unknown as SupabaseClient
@@ -282,9 +331,14 @@ export async function updateHackathonSettings(
   if (updates.registrationClosesAt !== undefined) updateData.registration_closes_at = updates.registrationClosesAt
   if (updates.status !== undefined) updateData.status = updates.status
   if (updates.anonymousJudging !== undefined) updateData.anonymous_judging = updates.anonymousJudging
+  if (updates.judgingMode !== undefined) updateData.judging_mode = updates.judgingMode
   if (updates.locationType !== undefined) updateData.location_type = updates.locationType
   if (updates.locationName !== undefined) updateData.location_name = updates.locationName
   if (updates.locationUrl !== undefined) updateData.location_url = updates.locationUrl
+  if (updates.maxParticipants !== undefined) updateData.max_participants = updates.maxParticipants
+  if (updates.minTeamSize !== undefined) updateData.min_team_size = updates.minTeamSize
+  if (updates.maxTeamSize !== undefined) updateData.max_team_size = updates.maxTeamSize
+  if (updates.allowSolo !== undefined) updateData.allow_solo = updates.allowSolo
 
   const { data, error } = await client
     .from("hackathons")

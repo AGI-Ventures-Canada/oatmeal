@@ -25,6 +25,7 @@ const {
   submitScores,
   saveNotes,
   getJudgingSetupStatus,
+  markAssignmentViewed,
 } = await import("@/lib/services/judging")
 
 const mockCriteria: JudgingCriteria = {
@@ -48,6 +49,7 @@ const mockAssignment: JudgeAssignment = {
   notes: "",
   assigned_at: "2026-01-01T00:00:00Z",
   completed_at: null,
+  viewed_at: null,
 }
 
 describe("Judging Service", () => {
@@ -1153,6 +1155,94 @@ describe("Judging Service", () => {
 
       const result = await saveNotes("a1", "user_123", "Notes")
 
+      expect(result).toBe(false)
+    })
+  })
+
+  describe("markAssignmentViewed", () => {
+    it("marks assignment as viewed when not already viewed", async () => {
+      let fetchedAssignment = false
+      setMockFromImplementation(() => {
+        if (!fetchedAssignment) {
+          fetchedAssignment = true
+          return createChainableMock({
+            data: {
+              id: "a1",
+              viewed_at: null,
+              judge: { clerk_user_id: "user_123" },
+            },
+            error: null,
+          })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      const result = await markAssignmentViewed("a1", "user_123")
+      expect(result).toBe(true)
+    })
+
+    it("returns true without updating when already viewed", async () => {
+      const chain = createChainableMock({
+        data: {
+          id: "a1",
+          viewed_at: "2026-01-01T00:00:00Z",
+          judge: { clerk_user_id: "user_123" },
+        },
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await markAssignmentViewed("a1", "user_123")
+      expect(result).toBe(true)
+    })
+
+    it("returns false when assignment does not exist", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await markAssignmentViewed("a1", "user_123")
+      expect(result).toBe(false)
+    })
+
+    it("returns false when user is not the assigned judge", async () => {
+      const chain = createChainableMock({
+        data: {
+          id: "a1",
+          viewed_at: null,
+          judge: { clerk_user_id: "other_user" },
+        },
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await markAssignmentViewed("a1", "user_123")
+      expect(result).toBe(false)
+    })
+
+    it("returns false when database update fails", async () => {
+      let fetchedAssignment = false
+      setMockFromImplementation(() => {
+        if (!fetchedAssignment) {
+          fetchedAssignment = true
+          return createChainableMock({
+            data: {
+              id: "a1",
+              viewed_at: null,
+              judge: { clerk_user_id: "user_123" },
+            },
+            error: null,
+          })
+        }
+        return createChainableMock({
+          data: null,
+          error: { message: "Update failed" },
+        })
+      })
+
+      const result = await markAssignmentViewed("a1", "user_123")
       expect(result).toBe(false)
     })
   })
