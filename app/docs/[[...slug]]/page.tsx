@@ -33,17 +33,17 @@ export default async function Page(props: PageProps) {
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
         <MDX
-            components={{
-              ...defaultMdxComponents,
-              Tab,
-              Tabs,
-              CodeBlock,
-              CodeBlockHeader,
-              CodeBlockFilename,
-              CodeBlockActions,
-              CodeBlockCopyButton,
-            }}
-          />
+          components={{
+            ...defaultMdxComponents,
+            Tab,
+            Tabs,
+            CodeBlock,
+            CodeBlockHeader,
+            CodeBlockFilename,
+            CodeBlockActions,
+            CodeBlockCopyButton,
+          }}
+        />
       </DocsBody>
     </DocsPage>
   )
