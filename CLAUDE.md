@@ -416,6 +416,8 @@ gh pr create --base main --head staging --title "Release: description" --body "R
 git checkout main && git merge staging && git push
 ```
 
+**Wait at least 10 minutes after merging a feature PR to staging before creating the staging→main PR.** Supabase's GitHub integration needs time to process preview branch migrations. Merging too quickly can cause migrations to be skipped on the production database.
+
 ### Rebase Feature Branches
 
 **Keep feature branches clean with only branch-specific commits.** Before creating a PR or pushing updates, rebase onto the latest `staging`:
