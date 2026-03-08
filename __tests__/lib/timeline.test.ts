@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test"
-import { getEffectiveStatus, getTimelineState } from "@/lib/utils/timeline"
+import { getEffectiveStatus, getTimelineState, validateTimelineDates } from "@/lib/utils/timeline"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
 function mockDateGlobal(originalDate: typeof Date, isoString: string) {
@@ -280,5 +280,112 @@ describe("getTimelineState", () => {
       })
       expect(result).toEqual({ label: "Coming Soon", variant: "secondary" })
     })
+  })
+})
+
+describe("validateTimelineDates", () => {
+  it("returns null for valid chronological dates", () => {
+    expect(validateTimelineDates({
+      registrationOpensAt: "2026-01-01T00:00:00Z",
+      registrationClosesAt: "2026-02-01T00:00:00Z",
+      startsAt: "2026-03-01T00:00:00Z",
+      endsAt: "2026-03-02T00:00:00Z",
+    })).toBeNull()
+  })
+
+  it("returns null when all dates are null", () => {
+    expect(validateTimelineDates({
+      registrationOpensAt: null,
+      registrationClosesAt: null,
+      startsAt: null,
+      endsAt: null,
+    })).toBeNull()
+  })
+
+  it("returns null for partial dates in valid order", () => {
+    expect(validateTimelineDates({
+      startsAt: "2026-03-01T00:00:00Z",
+      endsAt: "2026-03-02T00:00:00Z",
+    })).toBeNull()
+  })
+
+  it("allows registration to close exactly when hackathon starts", () => {
+    expect(validateTimelineDates({
+      registrationOpensAt: "2026-01-01T00:00:00Z",
+      registrationClosesAt: "2026-03-01T00:00:00Z",
+      startsAt: "2026-03-01T00:00:00Z",
+      endsAt: "2026-03-02T00:00:00Z",
+    })).toBeNull()
+  })
+
+  it("rejects registration opens after registration closes", () => {
+    const error = validateTimelineDates({
+      registrationOpensAt: "2026-03-01T00:00:00Z",
+      registrationClosesAt: "2026-02-01T00:00:00Z",
+    })
+    expect(error).toBe("Registration must open before it closes")
+  })
+
+  it("rejects registration opens equal to registration closes", () => {
+    const error = validateTimelineDates({
+      registrationOpensAt: "2026-02-01T00:00:00Z",
+      registrationClosesAt: "2026-02-01T00:00:00Z",
+    })
+    expect(error).toBe("Registration must open before it closes")
+  })
+
+  it("rejects registration closes after hackathon starts", () => {
+    const error = validateTimelineDates({
+      registrationClosesAt: "2026-04-01T00:00:00Z",
+      startsAt: "2026-03-01T00:00:00Z",
+    })
+    expect(error).toBe("Registration must close on or before the hackathon starts")
+  })
+
+  it("rejects registration opens after hackathon starts", () => {
+    const error = validateTimelineDates({
+      registrationOpensAt: "2026-04-01T00:00:00Z",
+      startsAt: "2026-03-01T00:00:00Z",
+    })
+    expect(error).toBe("Registration must open before the hackathon starts")
+  })
+
+  it("rejects hackathon starts after it ends", () => {
+    const error = validateTimelineDates({
+      startsAt: "2026-03-02T00:00:00Z",
+      endsAt: "2026-03-01T00:00:00Z",
+    })
+    expect(error).toBe("Hackathon must start before it ends")
+  })
+
+  it("rejects hackathon starts equal to ends", () => {
+    const error = validateTimelineDates({
+      startsAt: "2026-03-01T00:00:00Z",
+      endsAt: "2026-03-01T00:00:00Z",
+    })
+    expect(error).toBe("Hackathon must start before it ends")
+  })
+
+  it("rejects registration opens after hackathon ends", () => {
+    const error = validateTimelineDates({
+      registrationOpensAt: "2026-04-01T00:00:00Z",
+      endsAt: "2026-03-01T00:00:00Z",
+    })
+    expect(error).toBe("Registration must open before the hackathon ends")
+  })
+
+  it("rejects registration closes after hackathon ends", () => {
+    const error = validateTimelineDates({
+      registrationClosesAt: "2026-04-01T00:00:00Z",
+      endsAt: "2026-03-01T00:00:00Z",
+    })
+    expect(error).toBe("Registration must close on or before the hackathon ends")
+  })
+
+  it("accepts Date objects as input", () => {
+    expect(validateTimelineDates({
+      startsAt: new Date("2026-03-01T00:00:00Z"),
+      endsAt: new Date("2026-03-02T00:00:00Z"),
+    })).toBeNull()
   })
 })
