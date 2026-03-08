@@ -17,9 +17,17 @@ activationKeywords:
 
 # Hackathon CLI — Oatmeal Command-Line Tool
 
+> **Status: Planned — not yet published.** The `@oatmeal/cli` package does not exist yet. The commands documented here represent the target CLI interface that will wrap the existing REST API.
+>
+> **Until the CLI is available, use the `hackathon-api` skill instead.** It provides the same functionality via direct `curl` commands against the REST API. Every CLI command below maps 1:1 to an API endpoint documented in `hackathon-api`.
+
 Manage the Oatmeal hackathon platform from the terminal using the `oatmeal` CLI. This skill guides AI agents through installing, configuring, and using the CLI to create hackathons, manage judges, set up prizes, and publish results.
 
-**For direct REST API access (curl commands, debugging endpoints), use the `hackathon-api` skill instead.**
+## Agent Instructions
+
+1. **Check if the CLI is installed first:** Run `which oatmeal` or `oatmeal --version`. If the CLI is not found, **do not attempt to install it** — it is not yet published.
+2. **If the CLI is not installed:** Tell the user the CLI is not yet available, then **automatically fall back to the `hackathon-api` skill** to accomplish the same task using curl commands against the REST API.
+3. **If the CLI is installed:** Proceed with the CLI commands documented below.
 
 ## Reference Files
 
@@ -42,15 +50,12 @@ Manage the Oatmeal hackathon platform from the terminal using the `oatmeal` CLI.
 - User is asking about general hackathon concepts (use `hackathon-organizer` or `hackathon-attendee`)
 - User is working with the Oatmeal web dashboard UI directly
 
-## Installation
+## Installation (once published)
 
 ### Install the CLI
 
 ```bash
-# Install globally via npm
-npm install -g @oatmeal/cli
-
-# Or with bun
+# Install globally via bun
 bun add -g @oatmeal/cli
 ```
 
