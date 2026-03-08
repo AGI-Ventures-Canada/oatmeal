@@ -4,5 +4,10 @@ import { llms } from "fumadocs-core/source"
 export const revalidate = false
 
 export function GET() {
-  return new Response(llms(source).index())
+  let content = llms(source).index()
+
+  content = content.replace(/\(\/docs(\/[^)]*)\)/g, "(/docs$1.mdx)")
+  content = content.replace(/: undefined/g, "")
+
+  return new Response(content)
 }
