@@ -70,3 +70,12 @@ jobs:
 
       - name: Run tests
         run: bun test:all
+
+      - name: Run CLI tests
+        run: bun test packages/cli/__tests__/
+
+      - name: CLI type check
+        run: cd packages/cli && bunx tsc --noEmit
+
+      - name: CLI build
+        run: bun cli:build

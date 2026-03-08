@@ -372,12 +372,13 @@ For RPC calls, use `setMockRpcImplementation()` instead.
 **CRITICAL: Before pushing, run the same checks CI runs.** Catch failures locally instead of waiting for the pipeline.
 
 ```bash
-bun lint && bun run build && bun test:all
+bun lint && bun run build && bun test:all && bun cli:build
 ```
 
 - `bun lint` — ESLint (CI `lint` job)
 - `bun run build` — TypeScript type check + Next.js build (CI `test` job runs `tsc --noEmit`; build implies the same)
 - `bun test:all` — unit + integration tests (CI `test` job)
+- `bun cli:build` — CLI bundle must produce `packages/cli/dist/cli.mjs` without errors
 
 If any command fails, fix the issue before pushing. Do not push code that doesn't pass all three.
 
