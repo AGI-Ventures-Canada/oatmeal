@@ -23,6 +23,7 @@ interface RegistrationProps {
   maxParticipants: number | null;
   participantCount: number;
   isRegistered: boolean;
+  requireLocationVerification?: boolean;
   submission?: Submission | null;
   onRegistrationSuccess?: () => void;
 }
@@ -412,6 +413,7 @@ export function EventHero({
               maxParticipants={registrationProps.maxParticipants}
               participantCount={registrationProps.participantCount}
               isRegistered={registrationProps.isRegistered}
+              requireLocationVerification={registrationProps.requireLocationVerification}
               onRegistrationSuccess={registrationProps.onRegistrationSuccess}
             />
           )}

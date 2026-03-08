@@ -312,6 +312,9 @@ export async function updateHackathonSettings(
     locationType?: "in_person" | "virtual" | null
     locationName?: string | null
     locationUrl?: string | null
+    locationLatitude?: number | null
+    locationLongitude?: number | null
+    requireLocationVerification?: boolean
     maxParticipants?: number | null
     minTeamSize?: number
     maxTeamSize?: number
@@ -335,6 +338,9 @@ export async function updateHackathonSettings(
   if (updates.locationType !== undefined) updateData.location_type = updates.locationType
   if (updates.locationName !== undefined) updateData.location_name = updates.locationName
   if (updates.locationUrl !== undefined) updateData.location_url = updates.locationUrl
+  if (updates.locationLatitude !== undefined) updateData.location_latitude = updates.locationLatitude
+  if (updates.locationLongitude !== undefined) updateData.location_longitude = updates.locationLongitude
+  if (updates.requireLocationVerification !== undefined) updateData.require_location_verification = updates.requireLocationVerification
   if (updates.maxParticipants !== undefined) updateData.max_participants = updates.maxParticipants
   if (updates.minTeamSize !== undefined) updateData.min_team_size = updates.minTeamSize
   if (updates.maxTeamSize !== undefined) updateData.max_team_size = updates.maxTeamSize

@@ -507,6 +507,7 @@ function HackathonPreviewContent({
         maxParticipants: hackathon.max_participants,
         participantCount,
         isRegistered,
+        requireLocationVerification: hackathon.require_location_verification,
         submission,
         onRegistrationSuccess: handleRegistrationSuccess,
       }}
