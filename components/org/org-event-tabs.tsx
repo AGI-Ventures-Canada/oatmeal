@@ -27,21 +27,32 @@ export function OrgEventTabs({
 }: Props) {
   const [showCompleted, setShowCompleted] = useState(false)
 
-  const hasCompleted = allHackathons.some((h) =>
-    COMPLETED_LABELS.has(getTimelineState(h).label)
-  )
+  const isActive = (h: HackathonWithRole) =>
+    !COMPLETED_LABELS.has(getTimelineState(h).label)
+
+  const hasCompleted = allHackathons.some((h) => !isActive(h))
+
+  const visibleAllCount = showCompleted
+    ? totalUniqueEvents
+    : allHackathons.filter(isActive).length
+  const visibleOrganizedCount = showCompleted
+    ? organizedHackathons.length
+    : organizedHackathons.filter(isActive).length
+  const visibleSponsoredCount = showCompleted
+    ? sponsoredHackathons.length
+    : sponsoredHackathons.filter(isActive).length
 
   return (
     <Tabs defaultValue="all" className="w-full">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="overflow-x-auto overflow-y-hidden">
           <TabsList variant="line">
-            <TabsTrigger value="all">All ({totalUniqueEvents})</TabsTrigger>
+            <TabsTrigger value="all">All ({visibleAllCount})</TabsTrigger>
             <TabsTrigger value="organized">
-              Organizing ({organizedHackathons.length})
+              Organizing ({visibleOrganizedCount})
             </TabsTrigger>
             <TabsTrigger value="sponsored">
-              Sponsoring ({sponsoredHackathons.length})
+              Sponsoring ({visibleSponsoredCount})
             </TabsTrigger>
           </TabsList>
         </div>
@@ -65,7 +76,7 @@ export function OrgEventTabs({
       </TabsContent>
 
       <TabsContent value="organized">
-        {organizedHackathons.length > 0 ? (
+        {visibleOrganizedCount > 0 ? (
           <HackathonGrid hackathons={organizedHackathons} showCompleted={showCompleted} />
         ) : (
           <EmptyState message="This organization hasn't organized any public events yet." />
@@ -73,7 +84,7 @@ export function OrgEventTabs({
       </TabsContent>
 
       <TabsContent value="sponsored">
-        {sponsoredHackathons.length > 0 ? (
+        {visibleSponsoredCount > 0 ? (
           <HackathonGrid hackathons={sponsoredHackathons} showCompleted={showCompleted} />
         ) : (
           <EmptyState message="This organization hasn't sponsored any public events yet." />
