@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
 import { getPublicHackathon } from "@/lib/services/public-hackathons"
 import { JudgeAssignmentsCard } from "@/components/hackathon/judging/judge-assignments-card"
+import { SubjectiveScoringView } from "@/components/hackathon/judging/subjective-scoring-view"
 import { PageHeader } from "@/components/page-header"
 
 type PageProps = {
@@ -31,6 +32,68 @@ export default async function JudgePage({ params }: PageProps) {
 
   if (registrationInfo.participantRole !== "judge") {
     redirect(`/e/${slug}`)
+  }
+
+  const isSubjective = hackathon.judging_mode === "subjective"
+
+  if (isSubjective) {
+    const { getJudgePicks } = await import("@/lib/services/judge-picks")
+    const { getJudgeAssignments } = await import("@/lib/services/judging")
+
+    const [picks, assignments] = await Promise.all([
+      getJudgePicks(hackathon.id, registrationInfo.participantId!),
+      getJudgeAssignments(hackathon.id, userId),
+    ])
+
+    const submissions = assignments.map((a) => ({
+      id: a.submissionId,
+      title: hackathon.anonymous_judging ? a.submissionTitle : a.submissionTitle,
+      description: a.submissionDescription,
+      githubUrl: a.submissionGithubUrl,
+      liveAppUrl: a.submissionLiveAppUrl,
+      screenshotUrl: a.submissionScreenshotUrl,
+      teamName: hackathon.anonymous_judging ? null : a.teamName,
+      viewedAt: a.viewedAt,
+    }))
+
+    const prizes = hackathon.prizes.map((p) => ({
+      id: p.id,
+      name: p.name,
+    }))
+
+    const mappedPicks = picks.map((p) => ({
+      id: p.id,
+      prizeId: p.prize_id,
+      submissionId: p.submission_id,
+      rank: p.rank,
+      reason: p.reason,
+    }))
+
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <PageHeader
+          breadcrumbs={[
+            { label: hackathon.name, href: `/e/${slug}` },
+            { label: "Judging" },
+          ]}
+          title="Judging"
+          description="Review submissions and pick your favorites for each prize category"
+        />
+
+        {submissions.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-12">
+            You don&apos;t have any assignments yet.
+          </p>
+        ) : (
+          <SubjectiveScoringView
+            hackathonSlug={slug}
+            prizes={prizes}
+            submissions={submissions}
+            initialPicks={mappedPicks}
+          />
+        )}
+      </div>
+    )
   }
 
   const { getJudgeAssignments } = await import("@/lib/services/judging")

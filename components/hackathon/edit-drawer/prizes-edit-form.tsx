@@ -4,6 +4,7 @@ import { useState, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -11,16 +12,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Field, FieldLabel, FieldGroup } from "@/components/ui/field"
 import { useEdit } from "@/components/hackathon/preview/edit-context"
 import { Badge } from "@/components/ui/badge"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { Trash2, Loader2, Undo2 } from "lucide-react"
-import type { Prize, PrizeType } from "@/lib/db/hackathon-types"
+import { Trash2, Loader2, Undo2, Check, ChevronsUpDown } from "lucide-react"
+import type { PrizeType, JudgingCriteria, JudgingMode } from "@/lib/db/hackathon-types"
+import type { PublicPrize } from "@/lib/services/public-hackathons"
+
+type Prize = PublicPrize & {
+  monetary_value?: number | null
+  currency?: string | null
+  distribution_method?: string | null
+}
+import { cn } from "@/lib/utils"
 
 interface PrizesEditFormProps {
   hackathonId: string
   initialPrizes: Prize[]
+  criteria?: JudgingCriteria[]
+  judgingMode?: JudgingMode
   onSaveAndNext?: () => void
 }
 
@@ -29,15 +53,50 @@ type PendingChange =
   | { type: "delete"; prizeId: string; originalPrize: Prize }
   | { type: "update"; prizeId: string; field: string; newValue: unknown; oldValue: unknown }
 
+const KIND_PRESETS = [
+  { value: "cash", label: "Cash" },
+  { value: "credit", label: "Credit" },
+  { value: "swag", label: "Swag" },
+  { value: "experience", label: "Experience" },
+  { value: "other", label: "Other" },
+]
+
 const typeLabels: Record<PrizeType, string> = {
   score: "Score-based",
+  criteria: "Best in Category",
   favorite: "Organizer's Pick",
   crowd: "Crowd's Favorite",
+}
+
+function getTypeLabel(type: PrizeType, judgingMode?: JudgingMode): string {
+  if (type === "favorite" && judgingMode === "subjective") return "Judge's Choice"
+  return typeLabels[type]
+}
+
+function getTypeInfo(type: PrizeType, judgingMode?: JudgingMode, criterionName?: string): string {
+  switch (type) {
+    case "score":
+      return "Awarded to rank #N based on overall judging scores"
+    case "criteria":
+      return criterionName
+        ? `Awarded to highest score in ${criterionName}`
+        : "Awarded to highest score in a specific criterion"
+    case "favorite":
+      return judgingMode === "subjective"
+        ? "Judges vote for their pick — most-picked wins"
+        : "You'll manually select the winner"
+    case "crowd":
+      return "Determined by audience votes"
+    default:
+      return ""
+  }
 }
 
 export function PrizesEditForm({
   hackathonId,
   initialPrizes,
+  criteria = [],
+  judgingMode = "points",
   onSaveAndNext,
 }: PrizesEditFormProps) {
   const router = useRouter()
@@ -80,6 +139,12 @@ export function PrizesEditForm({
       value: null,
       type: "favorite",
       rank: null,
+      kind: "other",
+      monetary_value: null,
+      currency: "USD",
+      distribution_method: null,
+      display_value: null,
+      criteria_id: null,
       display_order: currentPrizes.length,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -181,6 +246,12 @@ export function PrizesEditForm({
                 value: change.prize.value,
                 type: change.prize.type,
                 rank: change.prize.rank,
+                kind: change.prize.kind,
+                monetaryValue: change.prize.monetary_value,
+                currency: change.prize.currency,
+                distributionMethod: change.prize.distribution_method,
+                displayValue: change.prize.display_value,
+                criteriaId: change.prize.criteria_id,
                 displayOrder: change.prize.display_order,
               }),
             }
@@ -200,9 +271,19 @@ export function PrizesEditForm({
           }
         } else if (change.type === "update") {
           const body: Record<string, unknown> = {}
-          if (change.field === "type") body.type = change.newValue
-          else if (change.field === "rank") body.rank = change.newValue
-          else body[change.field] = change.newValue || null
+          const fieldMap: Record<string, string> = {
+            type: "type",
+            rank: "rank",
+            kind: "kind",
+            monetary_value: "monetaryValue",
+            currency: "currency",
+            distribution_method: "distributionMethod",
+            display_value: "displayValue",
+            criteria_id: "criteriaId",
+          }
+
+          const apiField = fieldMap[change.field] ?? change.field
+          body[apiField] = change.newValue ?? null
 
           const res = await fetch(
             `/api/dashboard/hackathons/${hackathonId}/prizes/${change.prizeId}`,
@@ -315,6 +396,9 @@ export function PrizesEditForm({
           <div className="space-y-2">
             {currentPrizes.map((prize) => {
               const deleted = isDeleted(prize.id)
+              const criterionName = prize.criteria_id
+                ? criteria.find((c) => c.id === prize.criteria_id)?.name
+                : undefined
 
               return (
                 <div
@@ -348,11 +432,31 @@ export function PrizesEditForm({
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+
+                  <Textarea
+                    value={prize.description ?? ""}
+                    onChange={(e) => handleFieldChange(prize.id, "description", e.target.value)}
+                    placeholder="Description"
+                    disabled={deleted}
+                    rows={2}
+                    className="text-sm resize-none"
+                    autoComplete="off"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    data-form-type="other"
+                  />
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">What&apos;s the prize?</p>
+                    <KindCombobox
+                      value={prize.kind}
+                      onChange={(v) => handleFieldChange(prize.id, "kind", v)}
+                      disabled={deleted}
+                    />
                     <Input
-                      value={prize.description ?? ""}
-                      onChange={(e) => handleFieldChange(prize.id, "description", e.target.value)}
-                      placeholder="Description"
+                      value={prize.display_value ?? ""}
+                      onChange={(e) => handleFieldChange(prize.id, "display_value", e.target.value)}
+                      placeholder='Display value (e.g. "$5,000 USD")'
                       disabled={deleted}
                       className="h-8 text-sm"
                       autoComplete="off"
@@ -360,54 +464,119 @@ export function PrizesEditForm({
                       data-lpignore="true"
                       data-form-type="other"
                     />
-                    <Input
-                      value={prize.value ?? ""}
-                      onChange={(e) => handleFieldChange(prize.id, "value", e.target.value)}
-                      placeholder="Value (e.g. $5,000)"
-                      disabled={deleted}
-                      className="h-8 text-sm"
-                      autoComplete="off"
-                      data-1p-ignore
-                      data-lpignore="true"
-                      data-form-type="other"
-                    />
+                    {(prize.kind === "cash" || prize.kind === "credit") && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          type="number"
+                          value={prize.monetary_value ?? ""}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              prize.id,
+                              "monetary_value",
+                              e.target.value ? parseFloat(e.target.value) : null
+                            )
+                          }
+                          placeholder="Amount"
+                          disabled={deleted}
+                          className="h-8 text-sm"
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          data-form-type="other"
+                        />
+                        <Input
+                          value={prize.currency ?? "USD"}
+                          onChange={(e) => handleFieldChange(prize.id, "currency", e.target.value)}
+                          placeholder="Currency (e.g. USD)"
+                          disabled={deleted}
+                          className="h-8 text-sm"
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          data-form-type="other"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <Input
+                        value={prize.distribution_method ?? ""}
+                        onChange={(e) => handleFieldChange(prize.id, "distribution_method", e.target.value)}
+                        placeholder="Distribution note (e.g. Wire to captain)"
+                        disabled={deleted}
+                        className="h-8 text-sm"
+                        autoComplete="off"
+                        data-1p-ignore
+                        data-lpignore="true"
+                        data-form-type="other"
+                      />
+                      <p className="text-xs text-muted-foreground mt-0.5">Not shown to participants</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={prize.type}
-                      onValueChange={(v) => handleFieldChange(prize.id, "type", v as PrizeType)}
-                      disabled={deleted}
-                    >
-                      <SelectTrigger className="w-40 h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="score">Score-based</SelectItem>
-                        <SelectItem value="favorite">Organizer&apos;s Pick</SelectItem>
-                        <SelectItem value="crowd">Crowd&apos;s Favorite</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {prize.type === "score" && (
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">How is the winner decided?</p>
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Select
-                        value={prize.rank?.toString() ?? "1"}
-                        onValueChange={(v) => handleFieldChange(prize.id, "rank", parseInt(v))}
+                        value={prize.type}
+                        onValueChange={(v) => {
+                          handleFieldChange(prize.id, "type", v as PrizeType)
+                          if (v !== "score") handleFieldChange(prize.id, "rank", null)
+                          if (v !== "criteria") handleFieldChange(prize.id, "criteria_id", null)
+                        }}
                         disabled={deleted}
                       >
-                        <SelectTrigger className="w-20 h-8 text-xs">
+                        <SelectTrigger className="w-44 h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1">1st</SelectItem>
-                          <SelectItem value="2">2nd</SelectItem>
-                          <SelectItem value="3">3rd</SelectItem>
-                          <SelectItem value="4">4th</SelectItem>
-                          <SelectItem value="5">5th</SelectItem>
+                          <SelectItem value="score">Score-based</SelectItem>
+                          <SelectItem value="criteria">Best in Category</SelectItem>
+                          <SelectItem value="favorite">
+                            {judgingMode === "subjective" ? "Judge's Choice" : "Organizer's Pick"}
+                          </SelectItem>
+                          <SelectItem value="crowd">Crowd&apos;s Favorite</SelectItem>
                         </SelectContent>
                       </Select>
-                    )}
-                    <Badge variant="secondary" className="text-xs shrink-0">
-                      {typeLabels[prize.type]}
-                    </Badge>
+                      {prize.type === "score" && (
+                        <Select
+                          value={prize.rank?.toString() ?? "1"}
+                          onValueChange={(v) => handleFieldChange(prize.id, "rank", parseInt(v))}
+                          disabled={deleted}
+                        >
+                          <SelectTrigger className="w-20 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1st</SelectItem>
+                            <SelectItem value="2">2nd</SelectItem>
+                            <SelectItem value="3">3rd</SelectItem>
+                            <SelectItem value="4">4th</SelectItem>
+                            <SelectItem value="5">5th</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {prize.type === "criteria" && criteria.length > 0 && (
+                        <Select
+                          value={prize.criteria_id ?? ""}
+                          onValueChange={(v) => handleFieldChange(prize.id, "criteria_id", v || null)}
+                          disabled={deleted}
+                        >
+                          <SelectTrigger className="w-44 h-8 text-xs">
+                            <SelectValue placeholder="Select criterion" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {criteria.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {getTypeInfo(prize.type, judgingMode, criterionName)}
+                    </p>
                   </div>
                 </div>
               )
@@ -475,13 +644,94 @@ export function PrizesEditForm({
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <KbdGroup>
-              <Kbd>⌘</Kbd>
-              <Kbd>↵</Kbd>
+              <Kbd>&#x2318;</Kbd>
+              <Kbd>&#x21B5;</Kbd>
             </KbdGroup>{" "}
             save & next
           </span>
         </div>
       </div>
     </div>
+  )
+}
+
+function KindCombobox({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string
+  onChange: (value: string) => void
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState("")
+
+  const selectedLabel = KIND_PRESETS.find((k) => k.value === value)?.label ?? value
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className="w-full justify-between h-8 text-xs"
+        >
+          {selectedLabel || "Select kind..."}
+          <ChevronsUpDown className="ml-2 size-3 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[200px] p-0" align="start">
+        <Command>
+          <CommandInput
+            placeholder="Search or type custom..."
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            <CommandEmpty>
+              {search.trim() ? (
+                <button
+                  type="button"
+                  className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent"
+                  onClick={() => {
+                    onChange(search.trim().toLowerCase())
+                    setOpen(false)
+                    setSearch("")
+                  }}
+                >
+                  Use &quot;{search.trim()}&quot;
+                </button>
+              ) : (
+                "No results"
+              )}
+            </CommandEmpty>
+            <CommandGroup>
+              {KIND_PRESETS.map((kind) => (
+                <CommandItem
+                  key={kind.value}
+                  value={kind.value}
+                  onSelect={(v) => {
+                    onChange(v)
+                    setOpen(false)
+                    setSearch("")
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 size-3",
+                      value === kind.value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {kind.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   )
 }

@@ -947,7 +947,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
-    const { getAssignmentDetail } = await import("@/lib/services/judging")
+    const { getAssignmentDetail, markAssignmentViewed } = await import("@/lib/services/judging")
     const detail = await getAssignmentDetail(params.assignmentId, userId)
 
     if (!detail) {
@@ -957,6 +957,8 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
+    markAssignmentViewed(params.assignmentId, userId).catch(() => {})
+
     const anonymize = hackathon.anonymous_judging
     return {
       ...detail,
@@ -965,7 +967,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
   }, {
     detail: {
       summary: "Get assignment detail",
-      description: "Returns full details for a specific judging assignment including criteria and scores.",
+      description: "Returns full details for a specific judging assignment including criteria and scores. Auto-marks as viewed.",
     },
   })
   .post(
@@ -1057,6 +1059,157 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       },
     }
   )
+  .get("/hackathons/:slug/judging/picks", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const hackathon = await getPublicHackathon(params.slug)
+    if (!hackathon) {
+      return new Response(
+        JSON.stringify({ error: "Hackathon not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getRegistrationInfo } = await import("@/lib/services/hackathons")
+    const regInfo = await getRegistrationInfo(hackathon.id, userId)
+    if (regInfo.participantRole !== "judge" || !regInfo.participantId) {
+      return new Response(
+        JSON.stringify({ error: "Not a judge" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getJudgePicks } = await import("@/lib/services/judge-picks")
+    const picks = await getJudgePicks(hackathon.id, regInfo.participantId)
+
+    return {
+      picks: picks.map((p) => ({
+        id: p.id,
+        prizeId: p.prize_id,
+        submissionId: p.submission_id,
+        rank: p.rank,
+        reason: p.reason,
+      })),
+    }
+  }, {
+    detail: {
+      summary: "Get judge's picks",
+      description: "Returns all picks for the current judge in subjective judging mode.",
+    },
+  })
+  .post(
+    "/hackathons/:slug/judging/picks",
+    async ({ params, body }) => {
+      const { userId } = await auth()
+
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const hackathon = await getPublicHackathon(params.slug)
+      if (!hackathon) {
+        return new Response(
+          JSON.stringify({ error: "Hackathon not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const { getRegistrationInfo } = await import("@/lib/services/hackathons")
+      const regInfo = await getRegistrationInfo(hackathon.id, userId)
+      if (regInfo.participantRole !== "judge" || !regInfo.participantId) {
+        return new Response(
+          JSON.stringify({ error: "Not a judge" }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const typedBody = body as { prizeId: string; submissionId: string; rank?: number; reason?: string }
+      const { submitPick } = await import("@/lib/services/judge-picks")
+      const result = await submitPick(
+        hackathon.id,
+        regInfo.participantId,
+        typedBody.prizeId,
+        typedBody.submissionId,
+        typedBody.rank ?? 1,
+        typedBody.reason
+      )
+
+      if (!result.success) {
+        return new Response(
+          JSON.stringify({ error: result.error }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      return { id: result.pick.id }
+    },
+    {
+      detail: {
+        summary: "Submit a judge pick",
+        description: "Submits a pick for a prize category in subjective judging mode.",
+      },
+      body: t.Object({
+        prizeId: t.String(),
+        submissionId: t.String(),
+        rank: t.Optional(t.Number({ minimum: 1 })),
+        reason: t.Optional(t.String()),
+      }),
+    }
+  )
+  .delete("/hackathons/:slug/judging/picks/:prizeId/:submissionId", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const hackathon = await getPublicHackathon(params.slug)
+    if (!hackathon) {
+      return new Response(
+        JSON.stringify({ error: "Hackathon not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getRegistrationInfo } = await import("@/lib/services/hackathons")
+    const regInfo = await getRegistrationInfo(hackathon.id, userId)
+    if (regInfo.participantRole !== "judge" || !regInfo.participantId) {
+      return new Response(
+        JSON.stringify({ error: "Not a judge" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { removePick } = await import("@/lib/services/judge-picks")
+    const success = await removePick(hackathon.id, regInfo.participantId, params.prizeId, params.submissionId)
+
+    if (!success) {
+      return new Response(
+        JSON.stringify({ error: "Pick not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    return { success: true }
+  }, {
+    detail: {
+      summary: "Remove a judge pick",
+      description: "Removes a pick for a prize category in subjective judging mode.",
+    },
+  })
   .get("/judge-invitations/:token", async ({ params }) => {
     const { getJudgeInvitationByToken } = await import("@/lib/services/judge-invitations")
     const invitation = await getJudgeInvitationByToken(params.token)

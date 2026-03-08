@@ -54,7 +54,7 @@ export default async function VotePage({ params }: PageProps) {
           title: s.title,
           description: s.description,
           screenshotUrl: s.screenshot_url,
-          submitterName: (s as Record<string, unknown>).submitter_name as string | undefined,
+          submitterName: s.submitter_name,
         }))}
         voteCounts={voteCounts}
         userVote={userVote}

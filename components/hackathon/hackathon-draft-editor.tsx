@@ -77,6 +77,7 @@ function stateToHackathon(state: DraftState): PublicHackathon {
     location_name: state.locationName,
     location_url: state.locationUrl,
     anonymous_judging: false,
+    judging_mode: "points",
     results_published_at: null,
     winner_emails_sent_at: null,
     metadata: {},

@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge"
-import type { PrizeType } from "@/lib/db/hackathon-types"
+import Link from "next/link"
+import type { PrizeType, HackathonStatus } from "@/lib/db/hackathon-types"
 
 interface PrizeCardProps {
   name: string
@@ -10,15 +11,24 @@ interface PrizeCardProps {
     submissionTitle: string
     teamName: string | null
   } | null
+  hackathonSlug?: string
+  hackathonStatus?: HackathonStatus
 }
 
 const typeLabels: Record<PrizeType, string> = {
   score: "Score-based",
+  criteria: "Best in Category",
   favorite: "Organizer's Pick",
   crowd: "Crowd's Favorite",
 }
 
-export function PrizeCard({ name, description, value, type, winner }: PrizeCardProps) {
+export function PrizeCard({ name, description, value, type, winner, hackathonSlug, hackathonStatus }: PrizeCardProps) {
+  const showCrowdLink =
+    type === "crowd" &&
+    hackathonSlug &&
+    hackathonStatus &&
+    ["active", "judging"].includes(hackathonStatus)
+
   return (
     <div className="rounded-lg border p-4 space-y-2">
       <div className="flex items-start justify-between gap-2">
@@ -28,9 +38,17 @@ export function PrizeCard({ name, description, value, type, winner }: PrizeCardP
             <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
           )}
         </div>
-        <Badge variant="secondary" className="shrink-0 text-xs">
-          {typeLabels[type]}
-        </Badge>
+        {showCrowdLink ? (
+          <Link href={`/e/${hackathonSlug}/vote`}>
+            <Badge variant="secondary" className="shrink-0 text-xs hover:bg-secondary/80 cursor-pointer">
+              {typeLabels[type]}
+            </Badge>
+          </Link>
+        ) : (
+          <Badge variant="secondary" className="shrink-0 text-xs">
+            {typeLabels[type]}
+          </Badge>
+        )}
       </div>
       {value && (
         <p className="text-sm font-medium">{value}</p>

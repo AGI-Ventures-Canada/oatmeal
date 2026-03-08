@@ -306,7 +306,11 @@ function HackathonPreviewContent({
           emptyLabel="Click to add prizes"
           className="py-12"
         >
-          <PrizeSection prizes={hackathon.prizes} />
+          <PrizeSection
+            prizes={hackathon.prizes}
+            hackathonSlug={hackathon.slug}
+            hackathonStatus={hackathon.status}
+          />
         </EditableSection>
       )}
 
