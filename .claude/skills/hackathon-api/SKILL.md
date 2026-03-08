@@ -1,22 +1,23 @@
 ---
-name: hackathon
+name: hackathon-api
 model: sonnet
-description: Control the Oatmeal hackathon platform via its REST API from an AI coding agent. Use when the user asks to create hackathons, add judges, manage prizes, configure judging, publish results, or perform any hackathon management task through API calls.
+description: Interact with the Oatmeal hackathon platform directly via its REST API using curl commands. Use when the user asks to make direct API calls, test endpoints, debug API responses, or integrate with the Oatmeal API programmatically without the CLI.
 activationKeywords:
-  - "create a hackathon"
-  - "make a hackathon"
-  - "add a judge"
-  - "set up judging"
-  - "add a prize"
-  - "publish results"
-  - "manage hackathon"
-  - "hackathon on"
   - "oatmeal api"
+  - "hackathon api"
+  - "curl hackathon"
+  - "api endpoint"
+  - "rest api hackathon"
+  - "api key oatmeal"
+  - "test api"
+  - "api call"
 ---
 
-# Hackathon — Agent Skill
+# Hackathon API — Direct REST API Access
 
-Manage the Oatmeal hackathon platform programmatically via its REST API. This skill enables AI coding agents to create hackathons, manage judges, configure prizes, publish results, and more — all through `curl` commands.
+Interact with the Oatmeal hackathon platform directly via its REST API using `curl` commands. Use this skill when you need raw API access, are debugging endpoints, testing integrations, or building custom scripts against the Oatmeal API.
+
+**For CLI usage, use the `hackathon-cli` skill instead.** This skill is for direct HTTP/REST API interaction.
 
 ## Reference Files
 
