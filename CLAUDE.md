@@ -104,6 +104,10 @@ When developers include external documentation links in requests, save them to t
 
 Skills in `.claude/skills/`:
 - `local-dev-setup.md` - Developer onboarding and local environment setup
+- `hackathon-cli/` - Use the Oatmeal CLI tool to manage hackathons from the terminal
+- `hackathon-api/` - Direct REST API access to the Oatmeal platform via curl commands
+- `hackathon-organizer/` - Tips, tricks, and best practices for organizing successful hackathons
+- `hackathon-attendee/` - Tips, tricks, and best practices for hackathon participants
 
 ## Next.js 16 Specifics
 
@@ -398,6 +402,18 @@ Before making changes:
 
 ```bash
 gh pr create --base staging --draft --title "feat: your feature" --body "Description"
+```
+
+### Merge Staging to Main via PR Only
+
+**CRITICAL: Always merge `staging` into `main` via a pull request, never by direct merge + push.** Supabase's GitHub integration only applies migrations when they arrive through a PR merge event. A direct `git merge` + `git push` will deploy code to Vercel but **skip database migrations**, leaving production out of sync.
+
+```bash
+# GOOD - creates PR, Supabase applies migrations on merge
+gh pr create --base main --head staging --title "Release: description" --body "Release notes"
+
+# BAD - migrations won't run
+git checkout main && git merge staging && git push
 ```
 
 ### Rebase Feature Branches
