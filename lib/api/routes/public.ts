@@ -148,7 +148,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       description: "Returns public hackathon details including sponsors.",
     },
   })
-  .post("/hackathons/:slug/register", async ({ params }) => {
+  .post("/hackathons/:slug/register", async ({ params, body }) => {
     const { userId } = await auth()
 
     if (!userId) {
@@ -165,6 +165,35 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         JSON.stringify({ error: "Hackathon not found", code: "hackathon_not_found" }),
         { status: 404, headers: { "Content-Type": "application/json" } }
       )
+    }
+
+    if (
+      hackathon.require_location_verification &&
+      hackathon.location_latitude != null &&
+      hackathon.location_longitude != null
+    ) {
+      if (body?.latitude == null || body?.longitude == null) {
+        return new Response(
+          JSON.stringify({ error: "Location verification required. Please share your location.", code: "location_required" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+      const { haversineDistance, MAX_DISTANCE_KM } = await import("@/lib/utils/geo")
+      const distance = haversineDistance(
+        body.latitude,
+        body.longitude,
+        hackathon.location_latitude,
+        hackathon.location_longitude
+      )
+      if (distance > MAX_DISTANCE_KM) {
+        return new Response(
+          JSON.stringify({
+            error: `You appear to be ${Math.round(distance)} km away. This in-person event requires you to be within ${MAX_DISTANCE_KM} km of the venue.`,
+            code: "location_too_far",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
     }
 
     let teamName: string | undefined
@@ -202,8 +231,12 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
   }, {
     detail: {
       summary: "Register for hackathon",
-      description: "Registers the authenticated user for a hackathon. Requires Clerk session.",
+      description: "Registers the authenticated user for a hackathon. Requires Clerk session. Optionally accepts latitude/longitude for location verification.",
     },
+    body: t.Optional(t.Object({
+      latitude: t.Optional(t.Number()),
+      longitude: t.Optional(t.Number()),
+    })),
   })
   .get("/hackathons/:slug/submissions/me", async ({ params }) => {
     const { userId } = await auth()
