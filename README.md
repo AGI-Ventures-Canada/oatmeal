@@ -40,6 +40,19 @@ Interactive documentation is available at `/docs` with:
 - Webhooks guide
 - Code examples with package manager tabs
 
+## AI Agent Integration
+
+Use the Oatmeal CLI agent skill to manage the platform from any AI coding agent (Claude Code, Cursor, etc.):
+
+```bash
+claude
+# Then say: "Create a hackathon this Saturday from 9am to 6pm"
+# Or: "Add judge@example.com as a judge to my hackathon"
+# Or: "Set up prizes: 1st $5k, 2nd $2.5k, 3rd $1k"
+```
+
+The skill guides your agent through API authentication, hackathon creation, judge management, prize setup, and results publishing. See `.claude/skills/oatmeal-cli/` for the full skill.
+
 ## New Developer Setup
 
 Use Claude Code for interactive onboarding:

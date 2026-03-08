@@ -99,6 +99,7 @@ When developers include external documentation links in requests, save them to t
 
 Skills in `.claude/skills/`:
 - `local-dev-setup.md` - Developer onboarding and local environment setup
+- `oatmeal-cli/` - Agent skill for managing the Oatmeal platform via REST API (create hackathons, add judges, manage prizes, publish results)
 
 ## Next.js 16 Specifics
 
