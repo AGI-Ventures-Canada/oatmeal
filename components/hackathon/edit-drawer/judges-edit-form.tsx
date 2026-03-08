@@ -1,14 +1,15 @@
 "use client"
 
-import { useState, useRef, useMemo } from "react"
+import { useState, useRef, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel, FieldGroup } from "@/components/ui/field"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useEdit } from "@/components/hackathon/preview/edit-context"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { Trash2, Loader2, Undo2, Mail } from "lucide-react"
+import { Trash2, Loader2, Undo2, Mail, Plus, Building2 } from "lucide-react"
+import { EmailChipsInput, type EmailEntry } from "./email-chips-input"
+import { JudgeHeadshotUpload } from "./judge-headshot-upload"
 import type { HackathonJudgeDisplay } from "@/lib/db/hackathon-types"
 
 interface JudgesEditFormProps {
@@ -18,12 +19,26 @@ interface JudgesEditFormProps {
 }
 
 type PendingChange =
-  | { type: "add"; judge: HackathonJudgeDisplay; tempId: string; email?: string }
+  | {
+      type: "add"
+      judge: HackathonJudgeDisplay
+      tempId: string
+      email?: string
+      clerkUser?: EmailEntry["clerkUser"]
+      headshotFile?: File
+      headshotPreviewUrl?: string
+    }
   | { type: "delete"; judgeId: string; originalJudge: HackathonJudgeDisplay }
   | { type: "update"; judgeId: string; field: string; newValue: string; oldValue: string | null }
+  | { type: "headshot"; judgeId: string; file: File; previewUrl: string; oldUrl: string | null }
 
-function isEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+interface OrgSearchResult {
+  id: string
+  name: string
+  slug: string | null
+  logoUrl: string | null
+  logoUrlDark: string | null
+  websiteUrl: string | null
 }
 
 function getInitials(name: string): string {
@@ -33,6 +48,110 @@ function getInitials(name: string): string {
     .slice(0, 2)
     .join("")
     .toUpperCase()
+}
+
+function useOrgSearch() {
+  const [query, setQuery] = useState("")
+  const [results, setResults] = useState<OrgSearchResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    if (query.length < 2) {
+      setResults([])
+      return
+    }
+
+    setLoading(true)
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/dashboard/organizations/search?q=${encodeURIComponent(query)}`
+        )
+        if (res.ok) {
+          const data = await res.json()
+          setResults(data.organizations || [])
+        }
+      } catch {
+        setResults([])
+      } finally {
+        setLoading(false)
+      }
+    }, 300)
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [query])
+
+  return { query, setQuery, results, loading }
+}
+
+function OrgAutocomplete({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string
+  onChange: (value: string) => void
+  disabled?: boolean
+}) {
+  const { query, setQuery, results, loading } = useOrgSearch()
+  const [showDropdown, setShowDropdown] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    onChange(val)
+    setQuery(val)
+    setShowDropdown(true)
+  }
+
+  function handleSelect(org: OrgSearchResult) {
+    onChange(org.name)
+    setShowDropdown(false)
+    setQuery("")
+  }
+
+  return (
+    <div className="relative">
+      <Input
+        ref={inputRef}
+        value={value}
+        onChange={handleChange}
+        onFocus={() => { if (query.length >= 2) setShowDropdown(true) }}
+        onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+        placeholder="Organization"
+        disabled={disabled}
+        className="h-8 text-sm"
+        autoComplete="off"
+        data-1p-ignore
+        data-lpignore="true"
+        data-form-type="other"
+      />
+      {loading && (
+        <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground animate-spin" />
+      )}
+      {showDropdown && results.length > 0 && (
+        <div className="absolute z-50 top-full mt-1 w-full border rounded-lg bg-popover shadow-md max-h-32 overflow-y-auto">
+          {results.map((org) => (
+            <button
+              key={org.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleSelect(org)}
+              className="w-full flex items-center gap-2 p-2 text-left hover:bg-muted/50 transition-colors"
+            >
+              <Building2 className="size-3.5 text-muted-foreground shrink-0" />
+              <span className="text-sm truncate">{org.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function JudgesEditForm({
@@ -45,20 +164,37 @@ export function JudgesEditForm({
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [nameInput, setNameInput] = useState("")
+  const [emailEntries, setEmailEntries] = useState<EmailEntry[]>([])
   const tempIdCounter = useRef(0)
+
+  const existingEmails = useMemo(() => {
+    const emails: string[] = []
+    for (const change of pendingChanges) {
+      if (change.type === "add" && change.email) {
+        emails.push(change.email)
+      }
+    }
+    return emails
+  }, [pendingChanges])
 
   const currentJudges = useMemo(() => {
     let judges = [...initialJudges]
 
     for (const change of pendingChanges) {
       if (change.type === "add") {
-        judges.push(change.judge)
+        const judge = change.headshotPreviewUrl
+          ? { ...change.judge, headshot_url: change.headshotPreviewUrl }
+          : change.judge
+        judges.push(judge)
       } else if (change.type === "delete") {
         judges = judges.filter((j) => j.id !== change.judgeId)
       } else if (change.type === "update") {
         judges = judges.map((j) =>
           j.id === change.judgeId ? { ...j, [change.field]: change.newValue } : j
+        )
+      } else if (change.type === "headshot") {
+        judges = judges.map((j) =>
+          j.id === change.judgeId ? { ...j, headshot_url: change.previewUrl } : j
         )
       }
     }
@@ -68,31 +204,40 @@ export function JudgesEditForm({
 
   const hasChanges = pendingChanges.length > 0
 
-  function handleAddManual() {
-    if (!nameInput.trim()) return
+  function handleAddFromChips() {
+    if (emailEntries.length === 0) return
 
-    const input = nameInput.trim()
-    const inputIsEmail = isEmail(input)
-    const tempId = `temp-${++tempIdCounter.current}`
-    const newJudge: HackathonJudgeDisplay = {
-      id: tempId,
-      hackathon_id: hackathonId,
-      name: inputIsEmail ? input.split("@")[0] : input,
-      title: null,
-      organization: null,
-      headshot_url: null,
-      clerk_user_id: null,
-      participant_id: null,
-      display_order: currentJudges.length,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
+    const newChanges: PendingChange[] = emailEntries.map((entry) => {
+      const tempId = `temp-${++tempIdCounter.current}`
+      const name = entry.clerkUser
+        ? [entry.clerkUser.firstName, entry.clerkUser.lastName].filter(Boolean).join(" ") || entry.email.split("@")[0]
+        : entry.email.split("@")[0]
 
-    setPendingChanges([
-      ...pendingChanges,
-      { type: "add", judge: newJudge, tempId, ...(inputIsEmail ? { email: input } : {}) },
-    ])
-    setNameInput("")
+      const newJudge: HackathonJudgeDisplay = {
+        id: tempId,
+        hackathon_id: hackathonId,
+        name,
+        title: null,
+        organization: null,
+        headshot_url: entry.clerkUser?.imageUrl ?? null,
+        clerk_user_id: entry.clerkUser?.id ?? null,
+        participant_id: null,
+        display_order: currentJudges.length,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      return {
+        type: "add" as const,
+        judge: newJudge,
+        tempId,
+        email: entry.email,
+        clerkUser: entry.clerkUser,
+      }
+    })
+
+    setPendingChanges([...pendingChanges, ...newChanges])
+    setEmailEntries([])
   }
 
   function handleDeleteJudge(judgeId: string) {
@@ -101,6 +246,9 @@ export function JudgesEditForm({
     )
 
     if (addChange) {
+      if (addChange.type === "add" && addChange.headshotPreviewUrl) {
+        URL.revokeObjectURL(addChange.headshotPreviewUrl)
+      }
       setPendingChanges(pendingChanges.filter((c) => c !== addChange))
       return
     }
@@ -109,8 +257,13 @@ export function JudgesEditForm({
     if (!originalJudge) return
 
     const relatedChanges = pendingChanges.filter(
-      (c) => (c.type === "update" && c.judgeId === judgeId)
+      (c) =>
+        (c.type === "update" && c.judgeId === judgeId) ||
+        (c.type === "headshot" && c.judgeId === judgeId)
     )
+    for (const c of relatedChanges) {
+      if (c.type === "headshot") URL.revokeObjectURL(c.previewUrl)
+    }
     const filtered = pendingChanges.filter((c) => !relatedChanges.includes(c))
     setPendingChanges([...filtered, { type: "delete", judgeId, originalJudge }])
   }
@@ -159,11 +312,66 @@ export function JudgesEditForm({
     }
   }
 
+  function handleHeadshotSelected(judgeId: string, file: File) {
+    const previewUrl = URL.createObjectURL(file)
+
+    const addChange = pendingChanges.find(
+      (c) => c.type === "add" && c.tempId === judgeId
+    ) as Extract<PendingChange, { type: "add" }> | undefined
+
+    if (addChange) {
+      if (addChange.headshotPreviewUrl) URL.revokeObjectURL(addChange.headshotPreviewUrl)
+      setPendingChanges(
+        pendingChanges.map((c) =>
+          c === addChange ? { ...c, headshotFile: file, headshotPreviewUrl: previewUrl } : c
+        )
+      )
+      return
+    }
+
+    const existingHeadshot = pendingChanges.find(
+      (c) => c.type === "headshot" && c.judgeId === judgeId
+    ) as Extract<PendingChange, { type: "headshot" }> | undefined
+
+    if (existingHeadshot) {
+      URL.revokeObjectURL(existingHeadshot.previewUrl)
+      setPendingChanges(
+        pendingChanges.map((c) =>
+          c === existingHeadshot ? { ...c, file, previewUrl } : c
+        )
+      )
+      return
+    }
+
+    const original = initialJudges.find((j) => j.id === judgeId)
+    if (!original) return
+
+    setPendingChanges([
+      ...pendingChanges,
+      { type: "headshot", judgeId, file, previewUrl, oldUrl: original.headshot_url },
+    ])
+  }
+
   function handleUndo(index: number) {
+    const change = pendingChanges[index]
+    if (change.type === "add" && change.headshotPreviewUrl) {
+      URL.revokeObjectURL(change.headshotPreviewUrl)
+    }
+    if (change.type === "headshot") {
+      URL.revokeObjectURL(change.previewUrl)
+    }
     setPendingChanges(pendingChanges.filter((_, i) => i !== index))
   }
 
   function handleUndoAll() {
+    for (const change of pendingChanges) {
+      if (change.type === "add" && change.headshotPreviewUrl) {
+        URL.revokeObjectURL(change.headshotPreviewUrl)
+      }
+      if (change.type === "headshot") {
+        URL.revokeObjectURL(change.previewUrl)
+      }
+    }
     setPendingChanges([])
   }
 
@@ -186,6 +394,8 @@ export function JudgesEditForm({
                 title: change.judge.title,
                 organization: change.judge.organization,
                 displayOrder: change.judge.display_order,
+                ...(change.clerkUser ? { clerkUserId: change.clerkUser.id } : {}),
+                ...(change.judge.headshot_url && !change.headshotFile ? { headshotUrl: change.judge.headshot_url } : {}),
                 ...(change.email ? { email: change.email } : {}),
               }),
             }
@@ -193,6 +403,32 @@ export function JudgesEditForm({
           if (!res.ok) {
             const data = await res.json()
             throw new Error(data.error || `Failed to add ${change.judge.name}`)
+          }
+
+          const displayProfile = await res.json()
+
+          if (change.headshotFile) {
+            const formData = new FormData()
+            formData.append("file", change.headshotFile)
+            await fetch(
+              `/api/dashboard/hackathons/${hackathonId}/judges/display/${displayProfile.id}/headshot`,
+              { method: "POST", body: formData }
+            )
+          }
+
+          if (change.email) {
+            await fetch(
+              `/api/dashboard/hackathons/${hackathonId}/judging/judges`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  ...(change.clerkUser
+                    ? { clerkUserId: change.clerkUser.id }
+                    : { email: change.email }),
+                }),
+              }
+            )
           }
         } else if (change.type === "delete") {
           const res = await fetch(
@@ -215,6 +451,17 @@ export function JudgesEditForm({
           if (!res.ok) {
             const data = await res.json()
             throw new Error(data.error || "Failed to update judge")
+          }
+        } else if (change.type === "headshot") {
+          const formData = new FormData()
+          formData.append("file", change.file)
+          const res = await fetch(
+            `/api/dashboard/hackathons/${hackathonId}/judges/display/${change.judgeId}/headshot`,
+            { method: "POST", body: formData }
+          )
+          if (!res.ok) {
+            const data = await res.json()
+            throw new Error(data.error || "Failed to upload headshot")
           }
         }
       }
@@ -242,8 +489,8 @@ export function JudgesEditForm({
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault()
-      if (nameInput.trim() && !saving) {
-        handleAddManual()
+      if (emailEntries.length > 0 && !saving) {
+        handleAddFromChips()
       } else if (!saving) {
         saveChanges().then((ok) => {
           if (ok) {
@@ -268,27 +515,26 @@ export function JudgesEditForm({
     <div className="space-y-6" onKeyDown={handleKeyDown}>
       <FieldGroup>
         <Field>
-          <FieldLabel>Add Judge</FieldLabel>
-          <Input
-            placeholder="Name or email..."
-            value={nameInput}
-            onChange={(e) => setNameInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && nameInput.trim()) {
-                e.preventDefault()
-                handleAddManual()
-              }
-            }}
-            autoFocus
-            autoComplete="off"
-            data-1p-ignore
-            data-lpignore="true"
-            data-form-type="other"
+          <FieldLabel>Invite Judges</FieldLabel>
+          <EmailChipsInput
+            hackathonId={hackathonId}
+            entries={emailEntries}
+            onAdd={(newEntries) => setEmailEntries((prev) => [...prev, ...newEntries])}
+            onRemove={(email) => setEmailEntries((prev) => prev.filter((e) => e.email !== email))}
+            existingEmails={existingEmails}
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            Press Enter to add
-          </p>
         </Field>
+
+        {emailEntries.length > 0 && (
+          <Button
+            type="button"
+            onClick={handleAddFromChips}
+            className="w-full"
+          >
+            <Plus className="size-4 mr-2" />
+            Add {emailEntries.length} judge{emailEntries.length > 1 ? "s" : ""}
+          </Button>
+        )}
 
         {error && <p className="text-destructive text-sm">{error}</p>}
       </FieldGroup>
@@ -327,65 +573,64 @@ export function JudgesEditForm({
                     judge.id.startsWith("temp-") ? "border-dashed bg-muted/30" : ""
                   } ${deleted ? "opacity-50" : ""}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="size-10 shrink-0">
-                      {judge.headshot_url && <AvatarImage src={judge.headshot_url} alt={judge.name} />}
-                      <AvatarFallback className="text-xs">{getInitials(judge.name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
+                  <div className="flex items-start gap-3">
+                    <JudgeHeadshotUpload
+                      headshotUrl={judge.headshot_url}
+                      hackathonId={hackathonId}
+                      judgeId={judge.id}
+                      initials={getInitials(judge.name)}
+                      onFileSelected={(file) => handleHeadshotSelected(judge.id, file)}
+                      onUploaded={() => router.refresh()}
+                      disabled={deleted}
+                    />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={judge.name}
+                          onChange={(e) => handleFieldChange(judge.id, "name", e.target.value)}
+                          placeholder="Name"
+                          disabled={deleted}
+                          className="h-8 text-sm font-medium"
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          data-form-type="other"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteJudge(judge.id)}
+                          disabled={deleted}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0 shrink-0"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
                       <Input
-                        value={judge.name}
-                        onChange={(e) => handleFieldChange(judge.id, "name", e.target.value)}
-                        placeholder="Name"
+                        value={judge.title ?? ""}
+                        onChange={(e) => handleFieldChange(judge.id, "title", e.target.value)}
+                        placeholder="Title"
                         disabled={deleted}
-                        className="h-8 text-sm font-medium"
+                        className="h-8 text-sm"
                         autoComplete="off"
                         data-1p-ignore
                         data-lpignore="true"
                         data-form-type="other"
                       />
+                      <OrgAutocomplete
+                        value={judge.organization ?? ""}
+                        onChange={(value) => handleFieldChange(judge.id, "organization", value)}
+                        disabled={deleted}
+                      />
+                      {email && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Mail className="size-3" />
+                          <span>{email}</span>
+                        </div>
+                      )}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteJudge(judge.id)}
-                      disabled={deleted}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0 shrink-0"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      value={judge.title ?? ""}
-                      onChange={(e) => handleFieldChange(judge.id, "title", e.target.value)}
-                      placeholder="Title"
-                      disabled={deleted}
-                      className="h-8 text-sm"
-                      autoComplete="off"
-                      data-1p-ignore
-                      data-lpignore="true"
-                      data-form-type="other"
-                    />
-                    <Input
-                      value={judge.organization ?? ""}
-                      onChange={(e) => handleFieldChange(judge.id, "organization", e.target.value)}
-                      placeholder="Organization"
-                      disabled={deleted}
-                      className="h-8 text-sm"
-                      autoComplete="off"
-                      data-1p-ignore
-                      data-lpignore="true"
-                      data-form-type="other"
-                    />
-                  </div>
-                  {email && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Mail className="size-3" />
-                      <span>{email}</span>
-                    </div>
-                  )}
                 </div>
               )
             })}
@@ -408,6 +653,7 @@ export function JudgesEditForm({
                   {change.type === "add" && `+ Add "${change.judge.name}"`}
                   {change.type === "delete" && `- Remove "${change.originalJudge.name}"`}
                   {change.type === "update" && `~ Update ${change.field}`}
+                  {change.type === "headshot" && `~ Update headshot`}
                 </span>
                 <Button
                   type="button"

@@ -1018,6 +1018,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       maxTeamSize: hackathon.max_team_size,
       allowSolo: hackathon.allow_solo,
       anonymousJudging: hackathon.anonymous_judging,
+      judgingMode: hackathon.judging_mode,
       resultsPublishedAt: hackathon.results_published_at,
       createdAt: hackathon.created_at,
       updatedAt: hackathon.updated_at,
@@ -1045,9 +1046,14 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         registrationClosesAt: body.registrationClosesAt,
         status: body.status as "draft" | "published" | "registration_open" | "active" | "judging" | "completed" | "archived" | undefined,
         anonymousJudging: body.anonymousJudging,
+        judgingMode: body.judgingMode as "points" | "subjective" | undefined,
         locationType: body.locationType as "in_person" | "virtual" | null | undefined,
         locationName: body.locationName,
         locationUrl: body.locationUrl,
+        maxParticipants: body.maxParticipants,
+        minTeamSize: body.minTeamSize,
+        maxTeamSize: body.maxTeamSize,
+        allowSolo: body.allowSolo,
       })
 
       if (!hackathon) {
@@ -1100,9 +1106,14 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
           t.Literal("archived"),
         ])),
         anonymousJudging: t.Optional(t.Boolean()),
+        judgingMode: t.Optional(t.Union([t.Literal("points"), t.Literal("subjective")])),
         locationType: t.Optional(t.Union([t.Literal("in_person"), t.Literal("virtual"), t.Null()])),
         locationName: t.Optional(t.Union([t.String(), t.Null()])),
         locationUrl: t.Optional(t.Union([t.String(), t.Null()])),
+        maxParticipants: t.Optional(t.Union([t.Number(), t.Null()])),
+        minTeamSize: t.Optional(t.Number()),
+        maxTeamSize: t.Optional(t.Number()),
+        allowSolo: t.Optional(t.Boolean()),
       }),
     }
   )

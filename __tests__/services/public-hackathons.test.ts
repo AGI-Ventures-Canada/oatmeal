@@ -268,5 +268,60 @@ describe("Public Hackathons Service", () => {
 
       expect(result?.banner_url).toBe("https://new.com/banner.png")
     })
+
+    it("updates team and participant settings", async () => {
+      const chain = createChainableMock({
+        data: {
+          ...mockHackathon,
+          max_participants: 200,
+          min_team_size: 2,
+          max_team_size: 4,
+          allow_solo: false,
+        },
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await updateHackathonSettings("h1", "t1", {
+        maxParticipants: 200,
+        minTeamSize: 2,
+        maxTeamSize: 4,
+        allowSolo: false,
+      })
+
+      expect(result).not.toBeNull()
+      expect(result?.max_participants).toBe(200)
+      expect(result?.min_team_size).toBe(2)
+      expect(result?.max_team_size).toBe(4)
+      expect(result?.allow_solo).toBe(false)
+    })
+
+    it("sets maxParticipants to null for unlimited", async () => {
+      const chain = createChainableMock({
+        data: { ...mockHackathon, max_participants: null },
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await updateHackathonSettings("h1", "t1", {
+        maxParticipants: null,
+      })
+
+      expect(result?.max_participants).toBeNull()
+    })
+
+    it("updates judging mode", async () => {
+      const chain = createChainableMock({
+        data: { ...mockHackathon, judging_mode: "subjective" },
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await updateHackathonSettings("h1", "t1", {
+        judgingMode: "subjective",
+      })
+
+      expect(result?.judging_mode).toBe("subjective")
+    })
   })
 })

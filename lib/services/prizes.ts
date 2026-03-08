@@ -8,6 +8,12 @@ export type CreatePrizeInput = {
   value?: string | null
   type?: PrizeType
   rank?: number | null
+  kind?: string
+  monetaryValue?: number | null
+  currency?: string | null
+  distributionMethod?: string | null
+  displayValue?: string | null
+  criteriaId?: string | null
   displayOrder?: number
 }
 
@@ -17,6 +23,12 @@ export type UpdatePrizeInput = {
   value?: string | null
   type?: PrizeType
   rank?: number | null
+  kind?: string
+  monetaryValue?: number | null
+  currency?: string | null
+  distributionMethod?: string | null
+  displayValue?: string | null
+  criteriaId?: string | null
   displayOrder?: number
 }
 
@@ -50,6 +62,12 @@ export async function createPrize(
       value: input.value ?? null,
       type: input.type ?? "favorite",
       rank: input.rank ?? null,
+      kind: input.kind ?? "other",
+      monetary_value: input.monetaryValue ?? null,
+      currency: input.currency ?? "USD",
+      distribution_method: input.distributionMethod ?? null,
+      display_value: input.displayValue ?? null,
+      criteria_id: input.criteriaId ?? null,
       display_order: input.displayOrder ?? 0,
     })
     .select()
@@ -76,6 +94,12 @@ export async function updatePrize(
   if (input.value !== undefined) updates.value = input.value
   if (input.type !== undefined) updates.type = input.type
   if (input.rank !== undefined) updates.rank = input.rank
+  if (input.kind !== undefined) updates.kind = input.kind
+  if (input.monetaryValue !== undefined) updates.monetary_value = input.monetaryValue
+  if (input.currency !== undefined) updates.currency = input.currency
+  if (input.distributionMethod !== undefined) updates.distribution_method = input.distributionMethod
+  if (input.displayValue !== undefined) updates.display_value = input.displayValue
+  if (input.criteriaId !== undefined) updates.criteria_id = input.criteriaId
   if (input.displayOrder !== undefined) updates.display_order = input.displayOrder
   updates.updated_at = new Date().toISOString()
 
@@ -159,12 +183,38 @@ export async function removePrizeAssignment(
   return true
 }
 
+export async function reorderPrizes(
+  hackathonId: string,
+  orderedIds: string[]
+): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const now = new Date().toISOString()
+
+  const updates = orderedIds.map((id, i) =>
+    client
+      .from("prizes")
+      .update({ display_order: i, updated_at: now })
+      .eq("id", id)
+      .eq("hackathon_id", hackathonId)
+  )
+
+  const results = await Promise.all(updates)
+  const failed = results.find((r) => r.error)
+
+  if (failed?.error) {
+    console.error("Failed to reorder prizes:", failed.error)
+    return false
+  }
+
+  return true
+}
+
 export async function autoAssignPrizes(hackathonId: string): Promise<void> {
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data: prizes } = await client
     .from("prizes")
-    .select("id, type, rank")
+    .select("id, type, rank, criteria_id")
     .eq("hackathon_id", hackathonId)
 
   if (!prizes || prizes.length === 0) return
@@ -193,6 +243,34 @@ export async function autoAssignPrizes(hackathonId: string): Promise<void> {
     }
   }
 
+  const criteriaPrizes = prizes.filter(
+    (p: { type: string; criteria_id: string | null }) => p.type === "criteria" && p.criteria_id !== null
+  )
+
+  for (const prize of criteriaPrizes) {
+    const { data: topSubmission } = await client
+      .from("scores")
+      .select(`
+        score,
+        judge_assignment:judge_assignments!judge_assignment_id(submission_id, is_complete, hackathon_id)
+      `)
+      .eq("criteria_id", prize.criteria_id)
+
+    if (!topSubmission) continue
+
+    const submissionScores: Record<string, number> = {}
+    for (const s of topSubmission) {
+      const assignment = s.judge_assignment as unknown as { submission_id: string; is_complete: boolean; hackathon_id: string } | null
+      if (!assignment || !assignment.is_complete || assignment.hackathon_id !== hackathonId) continue
+      submissionScores[assignment.submission_id] = (submissionScores[assignment.submission_id] ?? 0) + s.score
+    }
+
+    const sorted = Object.entries(submissionScores).sort(([, a], [, b]) => b - a)
+    if (sorted.length > 0) {
+      await assignPrize(prize.id, sorted[0][0])
+    }
+  }
+
   const crowdPrizes = prizes.filter(
     (p: { type: string }) => p.type === "crowd"
   )
@@ -203,6 +281,47 @@ export async function autoAssignPrizes(hackathonId: string): Promise<void> {
     if (winnerId) {
       for (const prize of crowdPrizes) {
         await assignPrize(prize.id, winnerId)
+      }
+    }
+  }
+
+  const { data: hackathon } = await client
+    .from("hackathons")
+    .select("judging_mode")
+    .eq("id", hackathonId)
+    .single()
+
+  if (hackathon?.judging_mode === "subjective") {
+    const favoritePrizes = prizes.filter(
+      (p: { type: string }) => p.type === "favorite"
+    )
+
+    for (const prize of favoritePrizes) {
+      const { data: picks } = await client
+        .from("judge_picks")
+        .select("submission_id, rank")
+        .eq("hackathon_id", hackathonId)
+        .eq("prize_id", prize.id)
+
+      if (!picks || picks.length === 0) continue
+
+      const pickCounts: Record<string, { firstPicks: number; totalRank: number; count: number }> = {}
+      for (const pick of picks) {
+        if (!pickCounts[pick.submission_id]) {
+          pickCounts[pick.submission_id] = { firstPicks: 0, totalRank: 0, count: 0 }
+        }
+        if (pick.rank === 1) pickCounts[pick.submission_id].firstPicks++
+        pickCounts[pick.submission_id].totalRank += pick.rank
+        pickCounts[pick.submission_id].count++
+      }
+
+      const sorted = Object.entries(pickCounts).sort(([, a], [, b]) => {
+        if (b.firstPicks !== a.firstPicks) return b.firstPicks - a.firstPicks
+        return (a.totalRank / a.count) - (b.totalRank / b.count)
+      })
+
+      if (sorted.length > 0) {
+        await assignPrize(prize.id, sorted[0][0])
       }
     }
   }

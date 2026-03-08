@@ -95,7 +95,13 @@ export const dashboardJudgeDisplayRoutes = new Elysia()
         metadata: { hackathonId: params.id },
       })
 
-      return { id: judge.id, name: judge.name }
+      return {
+        id: judge.id,
+        name: judge.name,
+        headshotUrl: judge.headshot_url,
+        clerkUserId: judge.clerk_user_id,
+        displayOrder: judge.display_order,
+      }
     },
     {
       detail: {

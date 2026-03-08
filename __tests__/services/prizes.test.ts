@@ -15,6 +15,7 @@ const {
   removePrizeAssignment,
   listPrizeAssignments,
   autoAssignPrizes,
+  reorderPrizes,
 } = await import("@/lib/services/prizes")
 
 const mockPrize: Prize = {
@@ -25,6 +26,12 @@ const mockPrize: Prize = {
   value: "$5000",
   type: "score",
   rank: 1,
+  kind: "cash",
+  monetary_value: 5000,
+  currency: "USD",
+  distribution_method: null,
+  display_value: "$5,000 USD",
+  criteria_id: null,
   display_order: 0,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
@@ -510,6 +517,44 @@ describe("Prizes Service", () => {
       setMockFromImplementation(() => chain)
 
       await autoAssignPrizes("h1")
+    })
+  })
+
+  describe("reorderPrizes", () => {
+    it("reorders prizes successfully", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await reorderPrizes("h1", ["p2", "p1", "p3"])
+
+      expect(result).toBe(true)
+    })
+
+    it("returns false when update fails", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "DB error" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await reorderPrizes("h1", ["p1", "p2"])
+
+      expect(result).toBe(false)
+    })
+
+    it("handles empty array", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await reorderPrizes("h1", [])
+
+      expect(result).toBe(true)
     })
   })
 })

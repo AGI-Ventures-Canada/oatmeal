@@ -41,6 +41,12 @@ export const dashboardPrizesRoutes = new Elysia()
         value: p.value,
         type: p.type,
         rank: p.rank,
+        kind: p.kind,
+        monetaryValue: p.monetary_value,
+        currency: p.currency,
+        distributionMethod: p.distribution_method,
+        displayValue: p.display_value,
+        criteriaId: p.criteria_id,
         displayOrder: p.display_order,
         createdAt: p.created_at,
       })),
@@ -88,6 +94,12 @@ export const dashboardPrizesRoutes = new Elysia()
         value: body.value,
         type: body.type,
         rank: body.rank,
+        kind: body.kind,
+        monetaryValue: body.monetaryValue,
+        currency: body.currency,
+        distributionMethod: body.distributionMethod,
+        displayValue: body.displayValue,
+        criteriaId: body.criteriaId,
         displayOrder: body.displayOrder,
       })
 
@@ -117,8 +129,14 @@ export const dashboardPrizesRoutes = new Elysia()
         name: t.String({ minLength: 1 }),
         description: t.Optional(t.Union([t.String(), t.Null()])),
         value: t.Optional(t.Union([t.String(), t.Null()])),
-        type: t.Optional(t.Union([t.Literal("score"), t.Literal("favorite"), t.Literal("crowd")])),
+        type: t.Optional(t.Union([t.Literal("score"), t.Literal("favorite"), t.Literal("crowd"), t.Literal("criteria")])),
         rank: t.Optional(t.Union([t.Number(), t.Null()])),
+        kind: t.Optional(t.String()),
+        monetaryValue: t.Optional(t.Union([t.Number(), t.Null()])),
+        currency: t.Optional(t.Union([t.String(), t.Null()])),
+        distributionMethod: t.Optional(t.Union([t.String(), t.Null()])),
+        displayValue: t.Optional(t.Union([t.String(), t.Null()])),
+        criteriaId: t.Optional(t.Union([t.String(), t.Null()])),
         displayOrder: t.Optional(t.Number()),
       }),
     }
@@ -151,6 +169,12 @@ export const dashboardPrizesRoutes = new Elysia()
         value: body.value,
         type: body.type,
         rank: body.rank,
+        kind: body.kind,
+        monetaryValue: body.monetaryValue,
+        currency: body.currency,
+        distributionMethod: body.distributionMethod,
+        displayValue: body.displayValue,
+        criteriaId: body.criteriaId,
         displayOrder: body.displayOrder,
       })
 
@@ -172,9 +196,58 @@ export const dashboardPrizesRoutes = new Elysia()
         name: t.Optional(t.String()),
         description: t.Optional(t.Union([t.String(), t.Null()])),
         value: t.Optional(t.Union([t.String(), t.Null()])),
-        type: t.Optional(t.Union([t.Literal("score"), t.Literal("favorite"), t.Literal("crowd")])),
+        type: t.Optional(t.Union([t.Literal("score"), t.Literal("favorite"), t.Literal("crowd"), t.Literal("criteria")])),
         rank: t.Optional(t.Union([t.Number(), t.Null()])),
+        kind: t.Optional(t.String()),
+        monetaryValue: t.Optional(t.Union([t.Number(), t.Null()])),
+        currency: t.Optional(t.Union([t.String(), t.Null()])),
+        distributionMethod: t.Optional(t.Union([t.String(), t.Null()])),
+        displayValue: t.Optional(t.Union([t.String(), t.Null()])),
+        criteriaId: t.Optional(t.Union([t.String(), t.Null()])),
         displayOrder: t.Optional(t.Number()),
+      }),
+    }
+  )
+  .post(
+    "/hackathons/:id/prizes/reorder",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { reorderPrizes } = await import("@/lib/services/prizes")
+      const success = await reorderPrizes(params.id, body.orderedIds)
+
+      if (!success) {
+        return new Response(JSON.stringify({ error: "Failed to reorder" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      return { success: true }
+    },
+    {
+      detail: {
+        summary: "Reorder prizes",
+        description: "Reorders prizes by setting display_order. Requires hackathons:write scope.",
+      },
+      body: t.Object({
+        orderedIds: t.Array(t.String()),
       }),
     }
   )
