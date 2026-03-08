@@ -20,9 +20,10 @@ interface RulesEditFormProps {
     rules: string | null
   }
   onSaveAndNext?: () => void
+  onSave?: (data: { rules: string | null }) => Promise<boolean>
 }
 
-export function RulesEditForm({ hackathonId, initialData, onSaveAndNext }: RulesEditFormProps) {
+export function RulesEditForm({ hackathonId, initialData, onSaveAndNext, onSave }: RulesEditFormProps) {
   const router = useRouter()
   const { closeDrawer } = useEdit()
   const [saving, setSaving] = useState(false)
@@ -41,6 +42,10 @@ export function RulesEditForm({ hackathonId, initialData, onSaveAndNext }: Rules
     setError(null)
 
     try {
+      if (onSave) {
+        return await onSave({ rules: rules || null })
+      }
+
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

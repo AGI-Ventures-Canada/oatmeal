@@ -65,6 +65,10 @@ RESEND_FROM_EMAIL=noreply@getoatmeal.com
 # App URL (used for email links, invite URLs, etc.)
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
+# Tavily (optional - enables rich content extraction from Luma event pages)
+# Without this, Luma imports still work but won't extract sponsors, rules, or prizes
+TAVILY_API_KEY=tvly-...
+
 # Supabase (auto-filled by bun dev for local)
 # NEXT_PUBLIC_SUPABASE_URL=...
 # NEXT_PUBLIC_SUPABASE_ANON_KEY=...

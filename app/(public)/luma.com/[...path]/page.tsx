@@ -1,11 +1,13 @@
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
 import { extractLumaEventData } from "@/lib/services/luma-import"
-import { createHackathonFromImport } from "@/lib/services/luma-import-create"
+import { extractLumaRichContent } from "@/lib/services/luma-extract"
+import { createHackathonFromImport, createSponsorsFromImport, createPrizesFromImport } from "@/lib/services/luma-import-create"
 import { getOrCreateTenant } from "@/lib/services/tenants"
 import { logAudit } from "@/lib/services/audit"
 import { scopesForRole } from "@/lib/auth/types"
 import { LumaImportEditor } from "@/components/hackathon/luma-import-editor"
+import { ImportComplete } from "@/components/hackathon/import-complete"
 import type { Metadata } from "next"
 
 type PageProps = {
@@ -32,7 +34,11 @@ export default async function LumaImportPage({ params, searchParams }: PageProps
   const { path } = await params
   const query = await searchParams
   const slug = path.join("/")
-  const eventData = await extractLumaEventData(slug)
+
+  const [eventData, richContent] = await Promise.all([
+    extractLumaEventData(slug),
+    extractLumaRichContent(slug),
+  ])
 
   if (!eventData) {
     notFound()
@@ -53,9 +59,18 @@ export default async function LumaImportPage({ params, searchParams }: PageProps
       locationName: eventData.locationName,
       locationUrl: eventData.locationUrl,
       imageUrl: eventData.imageUrl,
+      rules: richContent?.rules ?? null,
     })
 
     if (hackathon) {
+      if (richContent?.sponsors?.length) {
+        await createSponsorsFromImport(hackathon.id, richContent.sponsors)
+      }
+
+      if (richContent?.prizes?.length) {
+        await createPrizesFromImport(hackathon.id, richContent.prizes)
+      }
+
       const principal = {
         kind: "user" as const,
         tenantId: tenant.id,
@@ -80,9 +95,9 @@ export default async function LumaImportPage({ params, searchParams }: PageProps
         data: { hackathonId: hackathon.id, source: "luma_import" },
       }).catch(console.error)
 
-      redirect(`/e/${hackathon.slug}/manage`)
+      return <ImportComplete slug={hackathon.slug} />
     }
   }
 
-  return <LumaImportEditor eventData={eventData} lumaSlug={slug} />
+  return <LumaImportEditor eventData={eventData} richContent={richContent} lumaSlug={slug} />
 }

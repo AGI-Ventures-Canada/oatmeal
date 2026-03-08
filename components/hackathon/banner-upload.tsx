@@ -281,7 +281,8 @@ export function BannerUpload({
                   <Button
                     type="button"
                     size="icon"
-                    className="size-12 rounded-full shadow-lg pointer-events-auto"
+                    variant="secondary"
+                    className="size-12 rounded-full shadow-lg pointer-events-auto bg-background/80 hover:bg-background backdrop-blur-sm"
                     onClick={() => inputRef.current?.click()}
                   >
                     <Upload className="size-5" />
@@ -290,7 +291,8 @@ export function BannerUpload({
                     <Button
                       type="button"
                       size="icon"
-                      className="size-12 rounded-full shadow-lg pointer-events-auto"
+                      variant="secondary"
+                      className="size-12 rounded-full shadow-lg pointer-events-auto bg-background/80 hover:bg-background backdrop-blur-sm"
                       onClick={onAuthRequired}
                     >
                       <Trash2 className="size-5" />
@@ -301,7 +303,8 @@ export function BannerUpload({
                         <Button
                           type="button"
                           size="icon"
-                          className="size-12 rounded-full shadow-lg pointer-events-auto"
+                          variant="secondary"
+                          className="size-12 rounded-full shadow-lg pointer-events-auto bg-background/80 hover:bg-background backdrop-blur-sm cursor-pointer"
                           disabled={deleting}
                         >
                           <Trash2 className="size-5" />
