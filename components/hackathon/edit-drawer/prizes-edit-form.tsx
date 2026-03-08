@@ -29,7 +29,12 @@ import { Field, FieldLabel, FieldGroup } from "@/components/ui/field"
 import { useEdit } from "@/components/hackathon/preview/edit-context"
 import { Badge } from "@/components/ui/badge"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { Trash2, Loader2, Undo2, Check, ChevronsUpDown } from "lucide-react"
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
+import { Trash2, Loader2, Undo2, Check, ChevronsUpDown, Trophy, Heart, Star, BarChart3 } from "lucide-react"
 import type { PrizeType, JudgingCriteria, JudgingMode } from "@/lib/db/hackathon-types"
 import type { PublicPrize } from "@/lib/services/public-hackathons"
 
@@ -52,6 +57,126 @@ type PendingChange =
   | { type: "add"; prize: Prize; tempId: string }
   | { type: "delete"; prizeId: string; originalPrize: Prize }
   | { type: "update"; prizeId: string; field: string; newValue: unknown; oldValue: unknown }
+
+type PresetContext = {
+  currentPrizes: Prize[]
+  criteria: JudgingCriteria[]
+  judgingMode: JudgingMode
+}
+
+type PresetPrize = {
+  name: string
+  type: PrizeType
+  rank: number | null
+  kind: string
+  criteria_id: string | null
+}
+
+type PresetDef = {
+  id: string
+  label: string | ((ctx: PresetContext) => string)
+  description: string | ((ctx: PresetContext) => string)
+  icon: React.ComponentType<{ className?: string }>
+  prizes: (ctx: PresetContext) => PresetPrize[]
+}
+
+const STATIC_PRESETS: PresetDef[] = [
+  {
+    id: "podium",
+    label: "1st, 2nd, 3rd Place",
+    description:
+      "Creates three prizes awarded to the highest-scoring submissions based on overall judge scores.",
+    icon: Trophy,
+    prizes: ({ currentPrizes }) => {
+      const existingRanks = new Set(
+        currentPrizes
+          .filter((p) => p.type === "score" && p.rank != null)
+          .map((p) => p.rank!)
+      )
+      const podium = [
+        { rank: 1, name: "1st Place" },
+        { rank: 2, name: "2nd Place" },
+        { rank: 3, name: "3rd Place" },
+      ]
+      return podium
+        .filter((p) => !existingRanks.has(p.rank))
+        .map((p) => ({
+          name: p.name,
+          type: "score" as PrizeType,
+          rank: p.rank,
+          kind: "cash",
+          criteria_id: null,
+        }))
+    },
+  },
+  {
+    id: "audience",
+    label: "Audience Favorite",
+    description:
+      "One prize decided by audience voting. Participants and spectators vote for their favorite.",
+    icon: Heart,
+    prizes: ({ currentPrizes }) => {
+      const hasCrowd = currentPrizes.some((p) => p.type === "crowd")
+      if (hasCrowd) return []
+      return [
+        {
+          name: "Audience Favorite",
+          type: "crowd" as PrizeType,
+          rank: null,
+          kind: "other",
+          criteria_id: null,
+        },
+      ]
+    },
+  },
+  {
+    id: "judges-choice",
+    label: (ctx) =>
+      ctx.judgingMode === "subjective" ? "Judge's Choice" : "Organizer's Pick",
+    description: (ctx) =>
+      ctx.judgingMode === "subjective"
+        ? "Judges vote for their top pick — most votes wins."
+        : "One prize where you hand-pick the winner.",
+    icon: Star,
+    prizes: ({ currentPrizes }) => {
+      const hasFavorite = currentPrizes.some((p) => p.type === "favorite")
+      if (hasFavorite) return []
+      return [
+        {
+          name: "Judge's Choice",
+          type: "favorite" as PrizeType,
+          rank: null,
+          kind: "other",
+          criteria_id: null,
+        },
+      ]
+    },
+  },
+]
+
+function getCriteriaPresets(criteria: JudgingCriteria[]): PresetDef[] {
+  return criteria.map((c) => ({
+    id: `criteria-${c.id}`,
+    label: `Best in ${c.name}`,
+    description: `Awarded to the submission with the highest score in ${c.name}.`,
+    icon: BarChart3,
+    prizes: ({ currentPrizes }) => {
+      const exists = currentPrizes.some(
+        (p) => p.type === "criteria" && p.criteria_id === c.id
+      )
+      if (exists) return []
+      return [
+        {
+          name: `Best in ${c.name}`,
+          type: "criteria" as PrizeType,
+          rank: null,
+          kind: "other",
+          criteria_id: c.id,
+        },
+      ]
+    },
+  }))
+}
 
 const KIND_PRESETS = [
   { value: "cash", label: "Cash" },
@@ -152,6 +277,49 @@ export function PrizesEditForm({
 
     setPendingChanges([...pendingChanges, { type: "add", prize: newPrize, tempId }])
     setNameInput("")
+  }
+
+  const presetCtx: PresetContext = useMemo(
+    () => ({ currentPrizes, criteria, judgingMode }),
+    [currentPrizes, criteria, judgingMode]
+  )
+
+  const allPresets = useMemo(
+    () => [...STATIC_PRESETS, ...getCriteriaPresets(criteria)],
+    [criteria]
+  )
+
+  function handleAddPreset(preset: PresetDef) {
+    const prizes = preset.prizes(presetCtx)
+    if (prizes.length === 0) return
+
+    const newChanges: PendingChange[] = prizes.map((p) => {
+      const tempId = `temp-${++tempIdCounter.current}`
+      return {
+        type: "add" as const,
+        tempId,
+        prize: {
+          id: tempId,
+          hackathon_id: hackathonId,
+          name: p.name,
+          description: null,
+          value: null,
+          type: p.type,
+          rank: p.rank,
+          kind: p.kind,
+          monetary_value: null,
+          currency: "USD",
+          distribution_method: null,
+          display_value: null,
+          criteria_id: p.criteria_id,
+          display_order: currentPrizes.length,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      }
+    })
+
+    setPendingChanges([...pendingChanges, ...newChanges])
   }
 
   function handleDeletePrize(prizeId: string) {
@@ -349,7 +517,50 @@ export function PrizesEditForm({
     <div className="space-y-6" onKeyDown={handleKeyDown}>
       <FieldGroup>
         <Field>
-          <FieldLabel>Add Prize</FieldLabel>
+          <FieldLabel>Quick Add</FieldLabel>
+          <div className="flex flex-wrap gap-2">
+            {allPresets.map((preset) => {
+              const remaining = preset.prizes(presetCtx)
+              const fullyUsed = remaining.length === 0
+              const label =
+                typeof preset.label === "function"
+                  ? preset.label(presetCtx)
+                  : preset.label
+              const description =
+                typeof preset.description === "function"
+                  ? preset.description(presetCtx)
+                  : preset.description
+              const Icon = preset.icon
+
+              return (
+                <HoverCard key={preset.id} openDelay={300}>
+                  <HoverCardTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={fullyUsed}
+                      onClick={() => handleAddPreset(preset)}
+                    >
+                      {fullyUsed ? (
+                        <Check className="size-3 mr-1" />
+                      ) : (
+                        <Icon className="size-3 mr-1" />
+                      )}
+                      {label}
+                    </Button>
+                  </HoverCardTrigger>
+                  <HoverCardContent side="bottom" align="start">
+                    {description}
+                  </HoverCardContent>
+                </HoverCard>
+              )
+            })}
+          </div>
+        </Field>
+
+        <Field>
+          <FieldLabel>Or add manually</FieldLabel>
           <Input
             placeholder="Prize name..."
             value={nameInput}
