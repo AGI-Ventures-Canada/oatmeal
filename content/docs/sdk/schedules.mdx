@@ -21,14 +21,26 @@ All endpoints require an API key with `schedules:read` or `schedules:write` scop
 
 `POST /api/dashboard/schedules` — requires `schedules:write` scope.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/dashboard/schedules`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    name: \"Daily report\",\n    frequency: \"daily\",\n    timezone: \"America/New_York\",\n    jobType: \"generate-report\",\n    input: { format: \"pdf\" },\n  }),\n})\n\nconst schedule = await res.json()\nconsole.log(\"Schedule ID:\", schedule.id)\nconsole.log(\"Next run:\", schedule.nextRunAt)"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>create-schedule.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="create-schedule.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/schedules`, {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "Daily report",
+    frequency: "daily",
+    timezone: "America/New_York",
+    jobType: "generate-report",
+    input: { format: "pdf" },
+  }),
+})
+
+const schedule = await res.json()
+console.log("Schedule ID:", schedule.id)
+console.log("Next run:", schedule.nextRunAt)
+```
 
 ### Request Body
 
@@ -55,14 +67,13 @@ All endpoints require an API key with `schedules:read` or `schedules:write` scop
 
 ### Response
 
-<CodeBlock language="json" code={"{\n  \"id\": \"sched_abc123\",\n  \"name\": \"Daily report\",\n  \"nextRunAt\": \"2026-02-11T14:00:00Z\"\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>response.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="response.json"
+{
+  "id": "sched_abc123",
+  "name": "Daily report",
+  "nextRunAt": "2026-02-11T14:00:00Z"
+}
+```
 
 ## List Schedules
 
@@ -70,49 +81,76 @@ All endpoints require an API key with `schedules:read` or `schedules:write` scop
 
 Supports optional query parameters: `limit` (number) and `activeOnly` (`true`/`false`).
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/dashboard/schedules?activeOnly=true`, {\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst { schedules } = await res.json()\n\nfor (const s of schedules) {\n  console.log(`${s.name} (${s.frequency}) - next: ${s.nextRunAt}`)\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>list-schedules.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="list-schedules.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/schedules?activeOnly=true`, {
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+const { schedules } = await res.json()
+
+for (const s of schedules) {
+  console.log(`${s.name} (${s.frequency}) - next: ${s.nextRunAt}`)
+}
+```
 
 ### Response
 
-<CodeBlock language="json" code={"{\n  \"schedules\": [\n    {\n      \"id\": \"sched_abc123\",\n      \"name\": \"Daily report\",\n      \"frequency\": \"daily\",\n      \"cronExpression\": null,\n      \"timezone\": \"America/New_York\",\n      \"jobType\": \"generate-report\",\n      \"isActive\": true,\n      \"nextRunAt\": \"2026-02-11T14:00:00Z\",\n      \"lastRunAt\": \"2026-02-10T14:00:00Z\",\n      \"runCount\": 5,\n      \"createdAt\": \"2026-02-05T10:00:00Z\"\n    }\n  ]\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>response.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="response.json"
+{
+  "schedules": [
+    {
+      "id": "sched_abc123",
+      "name": "Daily report",
+      "frequency": "daily",
+      "cronExpression": null,
+      "timezone": "America/New_York",
+      "jobType": "generate-report",
+      "isActive": true,
+      "nextRunAt": "2026-02-11T14:00:00Z",
+      "lastRunAt": "2026-02-10T14:00:00Z",
+      "runCount": 5,
+      "createdAt": "2026-02-05T10:00:00Z"
+    }
+  ]
+}
+```
 
 ## Get Schedule Details
 
 `GET /api/dashboard/schedules/:id` — requires `schedules:read` scope.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst schedule = await res.json()\nconsole.log(schedule.name, schedule.isActive)"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>get-schedule.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="get-schedule.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+const schedule = await res.json()
+console.log(schedule.name, schedule.isActive)
+```
 
 ### Response
 
-<CodeBlock language="json" code={"{\n  \"id\": \"sched_abc123\",\n  \"name\": \"Daily report\",\n  \"frequency\": \"daily\",\n  \"cronExpression\": null,\n  \"timezone\": \"America/New_York\",\n  \"jobType\": \"generate-report\",\n  \"input\": { \"format\": \"pdf\" },\n  \"isActive\": true,\n  \"nextRunAt\": \"2026-02-11T14:00:00Z\",\n  \"lastRunAt\": \"2026-02-10T14:00:00Z\",\n  \"runCount\": 5,\n  \"createdAt\": \"2026-02-05T10:00:00Z\",\n  \"updatedAt\": \"2026-02-10T14:00:00Z\"\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>response.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="response.json"
+{
+  "id": "sched_abc123",
+  "name": "Daily report",
+  "frequency": "daily",
+  "cronExpression": null,
+  "timezone": "America/New_York",
+  "jobType": "generate-report",
+  "input": { "format": "pdf" },
+  "isActive": true,
+  "nextRunAt": "2026-02-11T14:00:00Z",
+  "lastRunAt": "2026-02-10T14:00:00Z",
+  "runCount": 5,
+  "createdAt": "2026-02-05T10:00:00Z",
+  "updatedAt": "2026-02-10T14:00:00Z"
+}
+```
 
 ## Update a Schedule
 
@@ -120,14 +158,21 @@ Supports optional query parameters: `limit` (number) and `activeOnly` (`true`/`f
 
 All fields are optional. Only provided fields are updated.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {\n  method: \"PATCH\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    isActive: false,\n  }),\n})\n\nconst data = await res.json()\nconsole.log(\"Updated:\", data.updatedAt)"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>update-schedule.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="update-schedule.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {
+  method: "PATCH",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    isActive: false,
+  }),
+})
+
+const data = await res.json()
+console.log("Updated:", data.updatedAt)
+```
 
 ### Updatable Fields
 
@@ -143,27 +188,31 @@ All fields are optional. Only provided fields are updated.
 
 ### Response
 
-<CodeBlock language="json" code={"{\n  \"id\": \"sched_abc123\",\n  \"nextRunAt\": null,\n  \"updatedAt\": \"2026-02-10T16:00:00Z\"\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>response.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="response.json"
+{
+  "id": "sched_abc123",
+  "nextRunAt": null,
+  "updatedAt": "2026-02-10T16:00:00Z"
+}
+```
 
 ## Delete a Schedule
 
 `DELETE /api/dashboard/schedules/:id` — requires `schedules:write` scope.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {\n  method: \"DELETE\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst data = await res.json()\nif (data.success) {\n  console.log(\"Schedule deleted\")\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>delete-schedule.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="delete-schedule.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {
+  method: "DELETE",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+const data = await res.json()
+if (data.success) {
+  console.log("Schedule deleted")
+}
+```
 
 ## Cron Expression Examples
 

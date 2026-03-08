@@ -18,27 +18,52 @@ All endpoints require an API key with `hackathons:read` or `hackathons:write` sc
 
 ## Response Types
 
-<CodeBlock language="typescript" showLineNumbers code={"type JobStatus = \"queued\" | \"running\" | \"succeeded\" | \"failed\" | \"canceled\"\n\ninterface Job {\n  id: string\n  type: string\n  status: JobStatus\n  createdAt: string\n  updatedAt?: string\n  completedAt?: string | null\n}\n\ninterface JobResult {\n  id: string\n  status: JobStatus\n  result: unknown\n  error: unknown\n  completedAt: string\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>types.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="types.ts"
+type JobStatus = "queued" | "running" | "succeeded" | "failed" | "canceled"
+
+interface Job {
+  id: string
+  type: string
+  status: JobStatus
+  createdAt: string
+  updatedAt?: string
+  completedAt?: string | null
+}
+
+interface JobResult {
+  id: string
+  status: JobStatus
+  result: unknown
+  error: unknown
+  completedAt: string
+}
+```
 
 ## Create a Job
 
 `POST /api/v1/jobs` — requires `hackathons:write` scope.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/jobs`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    type: \"process-document\",\n    input: {\n      url: \"https://example.com/document.pdf\",\n      options: { extractTables: true },\n    },\n    idempotencyKey: \"doc-abc-123\",\n  }),\n})\n\nconst job = await res.json()\nconsole.log(\"Job created:\", job.id)\nconsole.log(\"Status:\", job.status) // \"queued\""}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>create-job.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="create-job.ts"
+const res = await fetch(`${BASE_URL}/api/v1/jobs`, {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    type: "process-document",
+    input: {
+      url: "https://example.com/document.pdf",
+      options: { extractTables: true },
+    },
+    idempotencyKey: "doc-abc-123",
+  }),
+})
+
+const job = await res.json()
+console.log("Job created:", job.id)
+console.log("Status:", job.status) // "queued"
+```
 
 ### Request Body
 
@@ -52,38 +77,43 @@ The idempotency key can also be sent as an `Idempotency-Key` HTTP header.
 
 ### Response
 
-<CodeBlock language="json" code={"{\n  \"id\": \"job_abc123\",\n  \"type\": \"process-document\",\n  \"status\": \"queued\",\n  \"createdAt\": \"2026-02-10T15:30:00Z\"\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>response.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="response.json"
+{
+  "id": "job_abc123",
+  "type": "process-document",
+  "status": "queued",
+  "createdAt": "2026-02-10T15:30:00Z"
+}
+```
 
 ## Get Job Status
 
 `GET /api/v1/jobs/:id` — requires `hackathons:read` scope.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}`, {\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst job = await res.json()\nconsole.log(\"Status:\", job.status)\nconsole.log(\"Created:\", job.createdAt)"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>get-status.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="get-status.ts"
+const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}`, {
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+const job = await res.json()
+console.log("Status:", job.status)
+console.log("Created:", job.createdAt)
+```
 
 ### Response
 
-<CodeBlock language="json" code={"{\n  \"id\": \"job_abc123\",\n  \"type\": \"process-document\",\n  \"status\": \"running\",\n  \"createdAt\": \"2026-02-10T15:30:00Z\",\n  \"updatedAt\": \"2026-02-10T15:30:05Z\",\n  \"completedAt\": null\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>response.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="response.json"
+{
+  "id": "job_abc123",
+  "type": "process-document",
+  "status": "running",
+  "createdAt": "2026-02-10T15:30:00Z",
+  "updatedAt": "2026-02-10T15:30:05Z",
+  "completedAt": null
+}
+```
 
 ## Get Job Result
 
@@ -91,38 +121,59 @@ The idempotency key can also be sent as an `Idempotency-Key` HTTP header.
 
 Returns `202` with `{ "error": "Job not completed", "status": "running" }` if the job is still in progress.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}/result`, {\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nif (res.status === 202) {\n  console.log(\"Job still processing...\")\n} else {\n  const data = await res.json()\n  console.log(\"Result:\", data.result)\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>get-result.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="get-result.ts"
+const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}/result`, {
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+if (res.status === 202) {
+  console.log("Job still processing...")
+} else {
+  const data = await res.json()
+  console.log("Result:", data.result)
+}
+```
 
 ### Response (completed)
 
-<CodeBlock language="json" code={"{\n  \"id\": \"job_abc123\",\n  \"status\": \"succeeded\",\n  \"result\": { \"pages\": 12, \"tables\": 3 },\n  \"error\": null,\n  \"completedAt\": \"2026-02-10T15:31:00Z\"\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>response.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="response.json"
+{
+  "id": "job_abc123",
+  "status": "succeeded",
+  "result": { "pages": 12, "tables": 3 },
+  "error": null,
+  "completedAt": "2026-02-10T15:31:00Z"
+}
+```
 
 ## Polling Helper
 
 For convenience, here is a simple polling function you can use to wait for job completion:
 
-<CodeBlock language="typescript" showLineNumbers code={"async function waitForResult(\n  jobId: string,\n  options?: { maxAttempts?: number; intervalMs?: number }\n) {\n  const { maxAttempts = 60, intervalMs = 1000 } = options ?? {}\n\n  for (let i = 0; i < maxAttempts; i++) {\n    const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}/result`, {\n      headers: { \"Authorization\": `Bearer ${API_KEY}` },\n    })\n\n    if (res.status !== 202) {\n      return await res.json()\n    }\n\n    await new Promise((r) => setTimeout(r, intervalMs))\n  }\n\n  throw new Error(`Job ${jobId} did not complete within ${maxAttempts} attempts`)\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>polling-helper.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="polling-helper.ts"
+async function waitForResult(
+  jobId: string,
+  options?: { maxAttempts?: number; intervalMs?: number }
+) {
+  const { maxAttempts = 60, intervalMs = 1000 } = options ?? {}
+
+  for (let i = 0; i < maxAttempts; i++) {
+    const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}/result`, {
+      headers: { "Authorization": `Bearer ${API_KEY}` },
+    })
+
+    if (res.status !== 202) {
+      return await res.json()
+    }
+
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
+
+  throw new Error(`Job ${jobId} did not complete within ${maxAttempts} attempts`)
+}
+```
 
 ## Cancel a Job
 
@@ -130,22 +181,52 @@ For convenience, here is a simple polling function you can use to wait for job c
 
 Cancels a queued or running job. Cannot cancel already-completed jobs.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}/cancel`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst data = await res.json()\nif (data.success) {\n  console.log(\"Job canceled\")\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>cancel-job.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="cancel-job.ts"
+const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}/cancel`, {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+const data = await res.json()
+if (data.success) {
+  console.log("Job canceled")
+}
+```
 
 ## Full Example
 
-<CodeBlock language="typescript" showLineNumbers code={"const API_KEY = process.env.OATMEAL_API_KEY!\nconst BASE_URL = process.env.OATMEAL_BASE_URL!\n\nasync function processDocument(url: string) {\n  const res = await fetch(`${BASE_URL}/api/v1/jobs`, {\n    method: \"POST\",\n    headers: {\n      \"Authorization\": `Bearer ${API_KEY}`,\n      \"Content-Type\": \"application/json\",\n    },\n    body: JSON.stringify({\n      type: \"process-document\",\n      input: { url },\n    }),\n  })\n\n  if (!res.ok) {\n    const err = await res.json()\n    throw new Error(err.error)\n  }\n\n  const job = await res.json()\n\n  const result = await waitForResult(job.id)\n\n  if (result.status === \"failed\") {\n    throw new Error(String(result.error))\n  }\n\n  return result.result\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>full-example.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="full-example.ts"
+const API_KEY = process.env.OATMEAL_API_KEY!
+const BASE_URL = process.env.OATMEAL_BASE_URL!
+
+async function processDocument(url: string) {
+  const res = await fetch(`${BASE_URL}/api/v1/jobs`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      type: "process-document",
+      input: { url },
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.error)
+  }
+
+  const job = await res.json()
+
+  const result = await waitForResult(job.id)
+
+  if (result.status === "failed") {
+    throw new Error(String(result.error))
+  }
+
+  return result.result
+}
+```

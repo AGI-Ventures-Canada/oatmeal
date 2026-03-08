@@ -8,13 +8,6 @@ import {
 import { notFound } from "next/navigation"
 import defaultMdxComponents from "fumadocs-ui/mdx"
 import { Tab, Tabs } from "fumadocs-ui/components/tabs"
-import {
-  CodeBlock,
-  CodeBlockHeader,
-  CodeBlockFilename,
-  CodeBlockActions,
-  CodeBlockCopyButton,
-} from "@/components/ai-elements/code-block"
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>
@@ -37,11 +30,6 @@ export default async function Page(props: PageProps) {
             ...defaultMdxComponents,
             Tab,
             Tabs,
-            CodeBlock,
-            CodeBlockHeader,
-            CodeBlockFilename,
-            CodeBlockActions,
-            CodeBlockCopyButton,
           }}
         />
       </DocsBody>

@@ -9,123 +9,156 @@ The Oatmeal CLI is designed for automation. Every command supports `--json` outp
 
 Use the `OATMEAL_API_KEY` environment variable — no `oatmeal login` needed:
 
-<CodeBlock language="bash" showLineNumbers code={"export OATMEAL_API_KEY=sk_live_your_key_here\noatmeal hackathons list --json"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Environment variable auth</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Environment variable auth"
+export OATMEAL_API_KEY=sk_live_your_key_here
+oatmeal hackathons list --json
+```
 
 In CI platforms, set `OATMEAL_API_KEY` as a secret:
 
-<CodeBlock language="yaml" showLineNumbers code={"# GitHub Actions\nenv:\n  OATMEAL_API_KEY: ${{ secrets.OATMEAL_API_KEY }}\n\nsteps:\n  - run: npx @oatmeal/cli hackathons list --json"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>.github/workflows/example.yml</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```yaml title=".github/workflows/example.yml"
+# GitHub Actions
+env:
+  OATMEAL_API_KEY: ${{ secrets.OATMEAL_API_KEY }}
+
+steps:
+  - run: npx @oatmeal/cli hackathons list --json
+```
 
 To point at a local dev server instead of production:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"export OATMEAL_BASE_URL=http://localhost:3000"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Local development</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Local development"
+export OATMEAL_BASE_URL=http://localhost:3000
+```
 
 ## JSON Output
 
 Every command supports `--json` for machine-readable output:
 
-<CodeBlock language="bash" showLineNumbers code={"# Pipe to jq for filtering\noatmeal hackathons list --json | jq '.[0].id'\n\n# Save to file\noatmeal results get <hackathon> --json > results.json\n\n# Use in shell scripts\nHACK_ID=$(oatmeal hackathons list --json | jq -r '.[0].id')\noatmeal prizes list $HACK_ID --json"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>JSON examples</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="JSON examples"
+# Pipe to jq for filtering
+oatmeal hackathons list --json | jq '.[0].id'
+
+# Save to file
+oatmeal results get <hackathon> --json > results.json
+
+# Use in shell scripts
+HACK_ID=$(oatmeal hackathons list --json | jq -r '.[0].id')
+oatmeal prizes list $HACK_ID --json
+```
 
 ## Skip Confirmation Prompts
 
 Destructive commands (delete, publish, unpublish) require confirmation by default. Use `--yes` to skip:
 
-<CodeBlock language="bash" showLineNumbers code={"oatmeal hackathons delete <id> --yes\noatmeal results publish <hackathon> --yes\noatmeal prizes unassign <hackathon> <prize-id> <submission-id> --yes"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Non-interactive mode</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Non-interactive mode"
+oatmeal hackathons delete <id> --yes
+oatmeal results publish <hackathon> --yes
+oatmeal prizes unassign <hackathon> <prize-id> <submission-id> --yes
+```
 
 ## Example: Automated Hackathon Setup
 
 Create a script that sets up a hackathon with standard criteria and prizes:
 
-<CodeBlock language="bash" showLineNumbers code={"#!/bin/bash\nset -euo pipefail\n\nSLUG=\"$1\"\nNAME=\"$2\"\n\n# Create hackathon\noatmeal hackathons create --name \"$NAME\" --slug \"$SLUG\"\n\n# Add standard criteria\noatmeal judging criteria create \"$SLUG\" \\\n  --name \"Innovation\" --max-score 10 --weight 30\noatmeal judging criteria create \"$SLUG\" \\\n  --name \"Technical Execution\" --max-score 10 --weight 40\noatmeal judging criteria create \"$SLUG\" \\\n  --name \"Presentation\" --max-score 10 --weight 30\n\n# Add standard prizes\noatmeal prizes create \"$SLUG\" \\\n  --name \"Grand Prize\" --type monetary --value 5000\noatmeal prizes create \"$SLUG\" \\\n  --name \"Runner Up\" --type monetary --value 2500\noatmeal prizes create \"$SLUG\" \\\n  --name \"Best Design\" --type custom --value \"Design toolkit\"\n\necho \"Hackathon '$NAME' created with criteria and prizes.\""}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>setup-hackathon.sh</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="setup-hackathon.sh"
+#!/bin/bash
+set -euo pipefail
+
+SLUG="$1"
+NAME="$2"
+
+# Create hackathon
+oatmeal hackathons create --name "$NAME" --slug "$SLUG"
+
+# Add standard criteria
+oatmeal judging criteria create "$SLUG" \
+  --name "Innovation" --max-score 10 --weight 30
+oatmeal judging criteria create "$SLUG" \
+  --name "Technical Execution" --max-score 10 --weight 40
+oatmeal judging criteria create "$SLUG" \
+  --name "Presentation" --max-score 10 --weight 30
+
+# Add standard prizes
+oatmeal prizes create "$SLUG" \
+  --name "Grand Prize" --type monetary --value 5000
+oatmeal prizes create "$SLUG" \
+  --name "Runner Up" --type monetary --value 2500
+oatmeal prizes create "$SLUG" \
+  --name "Best Design" --type custom --value "Design toolkit"
+
+echo "Hackathon '$NAME' created with criteria and prizes."
+```
 
 Run it:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"chmod +x setup-hackathon.sh\n./setup-hackathon.sh spring-hack-2026 \"Spring Hack 2026\""}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Terminal</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Terminal"
+chmod +x setup-hackathon.sh
+./setup-hackathon.sh spring-hack-2026 "Spring Hack 2026"
+```
 
 ## Example: Post-Judging Workflow
 
 Automate the results flow after judging completes:
 
-<CodeBlock language="bash" showLineNumbers code={"#!/bin/bash\nset -euo pipefail\n\nHACKATHON=\"$1\"\n\n# Calculate results\noatmeal results calculate \"$HACKATHON\" --yes\n\n# Export results for review\noatmeal results get \"$HACKATHON\" --json > \"results-$HACKATHON.json\"\n\necho \"Results calculated and saved to results-$HACKATHON.json\"\necho \"Review the file, then run:\"\necho \"  oatmeal results publish $HACKATHON\""}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>finalize-results.sh</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="finalize-results.sh"
+#!/bin/bash
+set -euo pipefail
+
+HACKATHON="$1"
+
+# Calculate results
+oatmeal results calculate "$HACKATHON" --yes
+
+# Export results for review
+oatmeal results get "$HACKATHON" --json > "results-$HACKATHON.json"
+
+echo "Results calculated and saved to results-$HACKATHON.json"
+echo "Review the file, then run:"
+echo "  oatmeal results publish $HACKATHON"
+```
 
 ## Example: GitHub Actions — Publish Results on Schedule
 
-<CodeBlock language="yaml" showLineNumbers code={"name: Check & Publish Results\n\non:\n  schedule:\n    - cron: '0 */6 * * *'  # Every 6 hours\n  workflow_dispatch:\n\njobs:\n  check-results:\n    runs-on: ubuntu-latest\n    env:\n      OATMEAL_API_KEY: ${{ secrets.OATMEAL_API_KEY }}\n    steps:\n      - name: Check judging progress\n        run: |\n          PROGRESS=$(npx @oatmeal/cli judging judges list ${{ vars.HACKATHON_ID }} --json)\n          echo \"$PROGRESS\" | jq '.[] | {name, completed, total}'\n\n      - name: Calculate results if all scored\n        run: |\n          npx @oatmeal/cli results calculate ${{ vars.HACKATHON_ID }} --yes || true"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>.github/workflows/check-results.yml</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```yaml title=".github/workflows/check-results.yml"
+name: Check & Publish Results
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+
+jobs:
+  check-results:
+    runs-on: ubuntu-latest
+    env:
+      OATMEAL_API_KEY: ${{ secrets.OATMEAL_API_KEY }}
+    steps:
+      - name: Check judging progress
+        run: |
+          PROGRESS=$(npx @oatmeal/cli judging judges list ${{ vars.HACKATHON_ID }} --json)
+          echo "$PROGRESS" | jq '.[] | {name, completed, total}'
+
+      - name: Calculate results if all scored
+        run: |
+          npx @oatmeal/cli results calculate ${{ vars.HACKATHON_ID }} --yes || true
+```
 
 ## Example: Webhook + CLI Integration
 
 Use webhooks to trigger CLI commands when events occur:
 
-<CodeBlock language="bash" showLineNumbers code={"# Set up a webhook for submission events\noatmeal webhooks create \\\n  --url https://your-server.com/hooks/oatmeal \\\n  --events submission.submitted\n\n# In your webhook handler, trigger auto-assign when all submissions are in\n# (pseudocode)\ncurl -X POST your-server.com/hooks/oatmeal\n# → handler runs: oatmeal judging auto-assign $HACKATHON --per-judge 5"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Webhook-triggered automation</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Webhook-triggered automation"
+# Set up a webhook for submission events
+oatmeal webhooks create \
+  --url https://your-server.com/hooks/oatmeal \
+  --events submission.submitted
+
+# In your webhook handler, trigger auto-assign when all submissions are in
+# (pseudocode)
+curl -X POST your-server.com/hooks/oatmeal
+# → handler runs: oatmeal judging auto-assign $HACKATHON --per-judge 5
+```
 
 ## Tips
 
