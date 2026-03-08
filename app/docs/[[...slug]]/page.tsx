@@ -8,6 +8,7 @@ import {
 import { notFound } from "next/navigation"
 import defaultMdxComponents from "fumadocs-ui/mdx"
 import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { LLMCopyButton, ViewOptions } from "@/components/page-actions"
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>
@@ -24,6 +25,13 @@ export default async function Page(props: PageProps) {
     <DocsPage toc={toc}>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
+      <div className="flex flex-row gap-2 items-center border-b pt-2 pb-6">
+        <LLMCopyButton markdownUrl={`${page.url}.mdx`} />
+        <ViewOptions
+          markdownUrl={`${page.url}.mdx`}
+          githubUrl={`https://github.com/AGI-Ventures-Canada/oatmeal/blob/staging/content/docs/${page.path}`}
+        />
+      </div>
       <DocsBody>
         <MDX
           components={{

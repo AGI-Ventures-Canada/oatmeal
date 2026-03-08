@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
     "ai",
     "zod",
   ],
+  async rewrites() {
+    return [
+      {
+        source: "/docs/:path*.mdx",
+        destination: "/llms.mdx/docs/:path*",
+      },
+    ]
+  },
   images: {
     remotePatterns: [
       {
