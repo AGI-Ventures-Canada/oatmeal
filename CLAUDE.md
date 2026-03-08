@@ -22,6 +22,9 @@ bun test:all         # Run all tests (unit + integration)
 bun db:sync          # Reset DB + regenerate types
 bun db:diff name     # Capture Studio changes as migration
 bun update-types     # Regenerate TypeScript types from DB
+bun cli <args>       # Run CLI package (dev mode, TypeScript)
+bun cli:test         # Run CLI tests
+bun cli:build        # Build CLI for npm distribution
 ```
 
 ### Test Scenarios
@@ -52,6 +55,7 @@ Next.js 16 App Router with:
 - Elysia (API routes)
 - AI SDK 6
 - Shadcn/ui components
+- `@oatmeal/cli` — standalone CLI package (`packages/cli/`), published to npm, no server-side imports
 
 ### Route Structure
 
@@ -80,6 +84,7 @@ See domain-specific CLAUDE.md files for detailed patterns:
 - `lib/email/CLAUDE.md` - Resend email sending and receiving
 - `supabase/CLAUDE.md` - Database development, migrations, branching
 - `scripts/CLAUDE.md` - Test scenario scripts for seeding dev database
+- `packages/cli/CLAUDE.md` - CLI package architecture, adding commands, testing
 
 ### External Documentation Links
 
