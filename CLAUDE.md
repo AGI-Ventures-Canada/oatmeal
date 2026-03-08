@@ -431,6 +431,10 @@ If that shows commits you didn't write, **do not force-push**. Instead:
 
 If you're unsure how to resolve a conflict, **ask for help** rather than force-pushing or blindly accepting one side.
 
+### Auto-Push After Committing
+
+**When the user says "push" or "push to PR", always commit and push in one flow.** If an open PR already exists for the current branch, push immediately after committing — do not ask for confirmation. Check for an existing PR with `gh pr view` before pushing.
+
 ### Check PR Status Before Pushing
 
 ```bash
