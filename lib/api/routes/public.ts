@@ -1498,6 +1498,37 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       description: "Removes user's vote for a hackathon. Requires Clerk session.",
     },
   })
+  .get("/cli-auth/poll", async ({ query }) => {
+    if (query.token.length < 32) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { createCliAuthSession, pollCliAuthSession } = await import("@/lib/services/cli-auth")
+
+    let result = await pollCliAuthSession(query.token)
+
+    if (result.status === "expired") {
+      try {
+        await createCliAuthSession(query.token)
+        result = { status: "pending" }
+      } catch {
+        return { status: "pending" }
+      }
+    }
+
+    return result
+  }, {
+    detail: {
+      summary: "Poll CLI auth session",
+      description: "Polls for CLI authentication completion. Creates session on first call. Returns status and API key when complete.",
+    },
+    query: t.Object({
+      token: t.String({ minLength: 1, description: "The device token from the CLI" }),
+    }),
+  })
   .get("/hackathons/:slug/vote", async ({ params }) => {
     const { userId } = await auth()
 

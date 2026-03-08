@@ -57,6 +57,7 @@ export type AuditAction =
   | "results.calculated"
   | "results.published"
   | "results.unpublished"
+  | "cli_auth.completed"
 
 export type LogAuditInput = {
   principal: Exclude<Principal, { kind: "anon" }>

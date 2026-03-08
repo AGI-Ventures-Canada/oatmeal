@@ -2031,6 +2031,44 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       description: "Cancels a pending team invitation. Clerk-only.",
     },
   })
+  .post("/cli-auth/complete", async ({ principal, body }) => {
+    requirePrincipal(principal, ["user"])
+
+    if (body.deviceToken.length < 32) {
+      return new Response(
+        JSON.stringify({ error: "Invalid device token" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { completeCliAuthSession } = await import("@/lib/services/cli-auth")
+    const result = await completeCliAuthSession(body.deviceToken, principal.tenantId, body.hostname)
+
+    if (!result.success) {
+      return new Response(
+        JSON.stringify({ error: result.error }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    await logAudit({
+      principal,
+      action: "cli_auth.completed",
+      resourceType: "cli_auth_session",
+      resourceId: body.deviceToken.slice(0, 12),
+    })
+
+    return { success: true }
+  }, {
+    detail: {
+      summary: "Complete CLI auth",
+      description: "Completes a CLI authentication session by creating an API key. Clerk-only.",
+    },
+    body: t.Object({
+      deviceToken: t.String({ minLength: 1, description: "The device token from the CLI" }),
+      hostname: t.Optional(t.String({ description: "The hostname where auth was completed" })),
+    }),
+  })
   .use(dashboardJudgingRoutes)
   .use(dashboardPrizesRoutes)
   .use(dashboardResultsRoutes)
