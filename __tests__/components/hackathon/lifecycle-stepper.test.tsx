@@ -51,7 +51,7 @@ describe("LifecycleStepper", () => {
     render(<LifecycleStepper {...baseProps} />)
     expect(screen.getByText("Draft")).toBeDefined()
     expect(screen.getByText("Go Live")).toBeDefined()
-    expect(screen.getByText("Judging")).toBeDefined()
+    expect(screen.getByText("Closed for submissions")).toBeDefined()
     expect(screen.getByText("Completed")).toBeDefined()
   })
 
@@ -86,47 +86,6 @@ describe("LifecycleStepper", () => {
     expect(screen.queryByText("Complete Event")).toBeNull()
   })
 
-  describe("judges node", () => {
-    it("shows 'Assign Judges' when no judges", () => {
-      render(
-        <LifecycleStepper
-          {...baseProps}
-          judgingSetupStatus={{ judgeCount: 0, hasUnassignedSubmissions: false }}
-        />
-      )
-      expect(screen.getByText("Assign Judges")).toBeDefined()
-    })
-
-    it("shows singular count when 1 judge", () => {
-      render(
-        <LifecycleStepper
-          {...baseProps}
-          status="published"
-          judgingSetupStatus={{ judgeCount: 1, hasUnassignedSubmissions: true }}
-        />
-      )
-      expect(screen.getByText("1 judge")).toBeDefined()
-    })
-
-    it("shows plural count when multiple judges", () => {
-      render(
-        <LifecycleStepper
-          {...baseProps}
-          status="published"
-          judgingSetupStatus={{ judgeCount: 5, hasUnassignedSubmissions: true }}
-        />
-      )
-      expect(screen.getByText("5 judges")).toBeDefined()
-    })
-
-    it("navigates to judging page on click", () => {
-      render(<LifecycleStepper {...baseProps} />)
-      const judgesNode = screen.getByText("Assign Judges").closest("button")
-      fireEvent.click(judgesNode!)
-      expect(mockPush).toHaveBeenCalledWith("/e/test-hack/manage/judging")
-    })
-  })
-
   describe("node coloring", () => {
     function findCircle(label: string) {
       return findPhaseNode(label)?.querySelector(".size-8")
@@ -146,20 +105,6 @@ describe("LifecycleStepper", () => {
     it("uses outline for future nodes", () => {
       render(<LifecycleStepper {...baseProps} />)
       expect(findCircle("Completed")?.className).toContain("border-muted-foreground/30")
-    })
-
-    it("uses muted-foreground for judges circle when past Draft", () => {
-      render(<LifecycleStepper {...baseProps} status="published" />)
-      const judgesBtn = screen.getByText("Assign Judges").closest("button")
-      const circle = judgesBtn?.querySelector("div")
-      expect(circle?.className).toContain("bg-muted-foreground")
-    })
-
-    it("uses outline for judges circle when in Draft", () => {
-      render(<LifecycleStepper {...baseProps} />)
-      const judgesBtn = screen.getByText("Assign Judges").closest("button")
-      const circle = judgesBtn?.querySelector("div")
-      expect(circle?.className).toContain("border-muted-foreground/30")
     })
 
     it("applies opacity-50 to distant future nodes only", () => {
@@ -215,7 +160,7 @@ describe("LifecycleStepper", () => {
       render(<LifecycleStepper {...baseProps} status="completed" />)
       expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
       expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
-      expect(findPhaseNode("Judging")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Closed for submissions")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
 
     it("does not wrap current completed node", () => {

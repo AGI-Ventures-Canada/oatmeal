@@ -1,0 +1,35 @@
+{
+  "name": "@oatmeal/cli",
+  "version": "0.1.0",
+  "description": "CLI for the Oatmeal hackathon platform",
+  "type": "module",
+  "bin": {
+    "oatmeal": "./bin/cli.mjs"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "obuild",
+    "dev": "bun run src/cli.ts",
+    "test": "bun test",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.10.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "obuild": "^0.4.32",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

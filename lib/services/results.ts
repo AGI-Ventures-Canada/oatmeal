@@ -36,6 +36,16 @@ export async function calculateResults(
 ): Promise<CalculateResultsResponse> {
   const client = getSupabase() as unknown as SupabaseClient
 
+  const { data: hackathon } = await client
+    .from("hackathons")
+    .select("judging_mode")
+    .eq("id", hackathonId)
+    .single()
+
+  if (hackathon?.judging_mode === "subjective") {
+    return calculateSubjectiveResults(hackathonId)
+  }
+
   const { data, error } = await client.rpc("calculate_results", {
     p_hackathon_id: hackathonId,
   })
@@ -55,6 +65,69 @@ export async function calculateResults(
   }
 
   return { success: true, count: result.results_count }
+}
+
+async function calculateSubjectiveResults(
+  hackathonId: string
+): Promise<CalculateResultsResponse> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: picks, error: picksError } = await client
+    .from("judge_picks")
+    .select("submission_id, prize_id, rank, judge_participant_id")
+    .eq("hackathon_id", hackathonId)
+
+  if (picksError) {
+    console.error("Failed to get picks for results:", picksError)
+    return { success: false, error: "Failed to get picks", code: "query_failed" }
+  }
+
+  if (!picks || picks.length === 0) {
+    return { success: false, error: "No judge picks found", code: "no_picks" }
+  }
+
+  const submissionStats: Record<string, { totalPicks: number; firstPicks: number; totalRank: number }> = {}
+
+  for (const pick of picks) {
+    if (!submissionStats[pick.submission_id]) {
+      submissionStats[pick.submission_id] = { totalPicks: 0, firstPicks: 0, totalRank: 0 }
+    }
+    submissionStats[pick.submission_id].totalPicks++
+    if (pick.rank === 1) submissionStats[pick.submission_id].firstPicks++
+    submissionStats[pick.submission_id].totalRank += pick.rank
+  }
+
+  const uniqueJudges = new Set(picks.map((p) => p.judge_participant_id)).size
+
+  const ranked = Object.entries(submissionStats)
+    .sort(([, a], [, b]) => {
+      if (b.firstPicks !== a.firstPicks) return b.firstPicks - a.firstPicks
+      const avgA = a.totalRank / a.totalPicks
+      const avgB = b.totalRank / b.totalPicks
+      return avgA - avgB
+    })
+
+  await client.from("hackathon_results").delete().eq("hackathon_id", hackathonId)
+
+  const results = ranked.map(([submissionId, stats], index) => ({
+    hackathon_id: hackathonId,
+    submission_id: submissionId,
+    rank: index + 1,
+    total_score: stats.firstPicks,
+    weighted_score: stats.totalPicks > 0 ? stats.firstPicks / stats.totalPicks : 0,
+    judge_count: uniqueJudges,
+  }))
+
+  const { error: insertError } = await client
+    .from("hackathon_results")
+    .insert(results)
+
+  if (insertError) {
+    console.error("Failed to insert subjective results:", insertError)
+    return { success: false, error: "Failed to save results", code: "insert_failed" }
+  }
+
+  return { success: true, count: results.length }
 }
 
 export async function getResults(hackathonId: string): Promise<ResultWithDetails[]> {

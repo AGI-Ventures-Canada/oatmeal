@@ -10,6 +10,8 @@ export type EditSection =
   | "timeline"
   | "location"
   | "sponsors"
+  | "judges"
+  | "prizes"
   | null
 
 export const SECTION_ORDER: Exclude<EditSection, null>[] = [
@@ -17,6 +19,8 @@ export const SECTION_ORDER: Exclude<EditSection, null>[] = [
   "dates",
   "location",
   "sponsors",
+  "judges",
+  "prizes",
   "timeline",
   "about",
   "rules",
@@ -62,7 +66,6 @@ export function EditProvider({ children, isEditable, defaultEditMode = true }: E
     if (!activeSection) return
     const el = document.querySelector(`[data-edit-section="${activeSection}"]`)
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" })
       requestAnimationFrame(() => {
         const input = el.querySelector<HTMLElement>(
           "input:not([type=\"hidden\"]), textarea, select, [contenteditable=\"true\"]"

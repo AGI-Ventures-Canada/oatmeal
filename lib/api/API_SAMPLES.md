@@ -909,13 +909,27 @@ curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/settings" \
     "startsAt": "2026-03-01T00:00:00Z",
     "endsAt": "2026-03-15T23:59:59Z",
     "registrationOpensAt": "2026-02-15T00:00:00Z",
-    "registrationClosesAt": "2026-02-28T23:59:59Z"
+    "registrationClosesAt": "2026-02-28T23:59:59Z",
+    "maxParticipants": 200,
+    "minTeamSize": 2,
+    "maxTeamSize": 5,
+    "allowSolo": false,
+    "judgingMode": "points"
   }'
 ```
 
 Requires scope: `hackathons:write`
 
 **Valid statuses:** `draft`, `published`, `registration_open`, `active`, `judging`, `completed`, `archived`
+
+**Team/participant fields:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `maxParticipants` | `number \| null` | Maximum number of participants (null = unlimited) |
+| `minTeamSize` | `number` | Minimum team size |
+| `maxTeamSize` | `number` | Maximum team size |
+| `allowSolo` | `boolean` | Whether solo participation is allowed |
+| `judgingMode` | `"points" \| "subjective"` | Judging mode |
 
 #### POST /api/dashboard/hackathons/:id/banner
 
@@ -932,6 +946,124 @@ Accepted types: PNG, JPEG, WebP. Max size: 50MB.
 #### DELETE /api/dashboard/hackathons/:id/banner
 
 Removes the hackathon banner.
+
+---
+
+### Judge Display Profiles
+
+Manage the public-facing judge profiles shown on hackathon pages. These are separate from judge operational records (assignments, invitations).
+
+#### GET /api/dashboard/hackathons/:id/judges/display
+
+Lists all judge display profiles. Requires scope: `hackathons:read`
+
+```bash
+curl "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+**Response:**
+```json
+{
+  "judges": [
+    {
+      "id": "uuid",
+      "name": "Jane Smith",
+      "title": "VP of Engineering",
+      "organization": "Acme Corp",
+      "headshotUrl": "https://storage.example.com/headshots/uuid.webp",
+      "clerkUserId": "user_abc123",
+      "participantId": null,
+      "displayOrder": 0,
+      "createdAt": "2026-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### POST /api/dashboard/hackathons/:id/judges/display
+
+Creates a judge display profile. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Smith",
+    "title": "VP of Engineering",
+    "organization": "Acme Corp",
+    "email": "jane@acme.com"
+  }'
+```
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "name": "Jane Smith",
+  "headshotUrl": null,
+  "clerkUserId": null,
+  "displayOrder": 0
+}
+```
+
+#### PATCH /api/dashboard/hackathons/:id/judges/display/:judgeId
+
+Updates a judge display profile. Requires scope: `hackathons:write`
+
+```bash
+curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display/{judgeId}" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "title": "CTO", "organization": "New Corp" }'
+```
+
+#### DELETE /api/dashboard/hackathons/:id/judges/display/:judgeId
+
+Deletes a judge display profile. Requires scope: `hackathons:write`
+
+```bash
+curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display/{judgeId}" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### POST /api/dashboard/hackathons/:id/judges/display/reorder
+
+Reorders judge display profiles. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display/reorder" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "orderedIds": ["judge-id-2", "judge-id-1", "judge-id-3"] }'
+```
+
+#### POST /api/dashboard/hackathons/:id/judges/display/:judgeId/headshot
+
+Uploads a headshot for a judge display profile (form data). Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display/{judgeId}/headshot" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -F "file=@headshot.jpg"
+```
+
+Accepted types: PNG, JPEG, WebP. Max size: 5MB.
+
+**Response:**
+```json
+{ "success": true, "headshotUrl": "https://storage.example.com/headshots/uuid.webp" }
+```
+
+#### DELETE /api/dashboard/hackathons/:id/judges/display/:judgeId/headshot
+
+Removes the headshot from a judge display profile. Requires scope: `hackathons:write`
+
+```bash
+curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display/{judgeId}/headshot" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
 
 ---
 
@@ -1567,6 +1699,17 @@ Deletes a prize. Requires scope: `hackathons:write`
 ```bash
 curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/prizes/{prizeId}" \
   -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### POST /api/dashboard/hackathons/:id/prizes/reorder
+
+Reorders prizes by setting display order. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/prizes/reorder" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "orderedIds": ["prize-id-3", "prize-id-1", "prize-id-2"] }'
 ```
 
 #### POST /api/dashboard/hackathons/:id/prizes/:prizeId/assign

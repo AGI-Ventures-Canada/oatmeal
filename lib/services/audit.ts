@@ -49,12 +49,15 @@ export type AuditAction =
   | "judge.invited"
   | "judge_invitation.cancelled"
   | "judging.auto_assigned"
+  | "judge_display.created"
+  | "judge_display.deleted"
   | "prize.created"
   | "prize.deleted"
   | "prize.assigned"
   | "results.calculated"
   | "results.published"
   | "results.unpublished"
+  | "cli_auth.completed"
 
 export type LogAuditInput = {
   principal: Exclude<Principal, { kind: "anon" }>

@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia"
+import { normalizeUrl } from "@/lib/utils/url"
 import { resolvePrincipal, requirePrincipal, AuthError } from "@/lib/auth/principal"
 import { createApiKey, listApiKeys, revokeApiKey, getApiKeyById } from "@/lib/services/api-keys"
 import { listJobs, getJobById } from "@/lib/services/jobs"
@@ -7,6 +8,7 @@ import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/servi
 import { dashboardJudgingRoutes } from "./dashboard-judging"
 import { dashboardPrizesRoutes } from "./dashboard-prizes"
 import { dashboardResultsRoutes } from "./dashboard-results"
+import { dashboardJudgeDisplayRoutes } from "./dashboard-judge-display"
 import { getEffectiveStatus } from "@/lib/utils/timeline"
 import type { Scope } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
@@ -1017,6 +1019,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       maxTeamSize: hackathon.max_team_size,
       allowSolo: hackathon.allow_solo,
       anonymousJudging: hackathon.anonymous_judging,
+      judgingMode: hackathon.judging_mode,
       resultsPublishedAt: hackathon.results_published_at,
       createdAt: hackathon.created_at,
       updatedAt: hackathon.updated_at,
@@ -1044,9 +1047,14 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         registrationClosesAt: body.registrationClosesAt,
         status: body.status as "draft" | "published" | "registration_open" | "active" | "judging" | "completed" | "archived" | undefined,
         anonymousJudging: body.anonymousJudging,
+        judgingMode: body.judgingMode as "points" | "subjective" | undefined,
         locationType: body.locationType as "in_person" | "virtual" | null | undefined,
         locationName: body.locationName,
         locationUrl: body.locationUrl,
+        maxParticipants: body.maxParticipants,
+        minTeamSize: body.minTeamSize,
+        maxTeamSize: body.maxTeamSize,
+        allowSolo: body.allowSolo,
       })
 
       if (!hackathon) {
@@ -1099,9 +1107,14 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
           t.Literal("archived"),
         ])),
         anonymousJudging: t.Optional(t.Boolean()),
+        judgingMode: t.Optional(t.Union([t.Literal("points"), t.Literal("subjective")])),
         locationType: t.Optional(t.Union([t.Literal("in_person"), t.Literal("virtual"), t.Null()])),
         locationName: t.Optional(t.Union([t.String(), t.Null()])),
         locationUrl: t.Optional(t.Union([t.String(), t.Null()])),
+        maxParticipants: t.Optional(t.Union([t.Number(), t.Null()])),
+        minTeamSize: t.Optional(t.Number()),
+        maxTeamSize: t.Optional(t.Number()),
+        allowSolo: t.Optional(t.Boolean()),
       }),
     }
   )
@@ -1295,12 +1308,14 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
       const { addSponsor } = await import("@/lib/services/sponsors")
 
+      const websiteUrl = body.websiteUrl ? normalizeUrl(body.websiteUrl) : body.websiteUrl
+
       let tenantSponsorId: string | null = null
       if (!body.sponsorTenantId) {
         const { upsertTenantSponsor } = await import("@/lib/services/tenant-sponsors")
         const tenantSponsor = await upsertTenantSponsor(principal.tenantId, {
           name: body.name,
-          websiteUrl: body.websiteUrl,
+          websiteUrl,
         })
         tenantSponsorId = tenantSponsor?.id ?? null
         if (!tenantSponsorId) {
@@ -1312,7 +1327,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         hackathonId: params.id,
         name: body.name,
         logoUrl: body.logoUrl,
-        websiteUrl: body.websiteUrl,
+        websiteUrl,
         tier: body.tier as "title" | "gold" | "silver" | "bronze" | "partner" | undefined,
         sponsorTenantId: body.sponsorTenantId,
         tenantSponsorId,
@@ -1378,10 +1393,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
 
       const { updateSponsor } = await import("@/lib/services/sponsors")
+      const sponsorWebsiteUrl = body.websiteUrl ? normalizeUrl(body.websiteUrl) : body.websiteUrl
       const sponsor = await updateSponsor(params.sponsorId, {
         name: body.name,
         logoUrl: body.logoUrl,
-        websiteUrl: body.websiteUrl,
+        websiteUrl: sponsorWebsiteUrl,
         tier: body.tier as "title" | "gold" | "silver" | "bronze" | "partner" | undefined,
         sponsorTenantId: body.sponsorTenantId,
         displayOrder: body.displayOrder,
@@ -1714,7 +1730,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         logoUrl: body.logoUrl,
         logoUrlDark: body.logoUrlDark,
         description: body.description,
-        websiteUrl: body.websiteUrl,
+        websiteUrl: body.websiteUrl ? normalizeUrl(body.websiteUrl) : body.websiteUrl,
         name: body.name,
       })
 
@@ -2015,6 +2031,45 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       description: "Cancels a pending team invitation. Clerk-only.",
     },
   })
+  .post("/cli-auth/complete", async ({ principal, body }) => {
+    requirePrincipal(principal, ["user"])
+
+    if (body.deviceToken.length < 32) {
+      return new Response(
+        JSON.stringify({ error: "Invalid device token" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { completeCliAuthSession } = await import("@/lib/services/cli-auth")
+    const result = await completeCliAuthSession(body.deviceToken, principal.tenantId, body.hostname)
+
+    if (!result.success) {
+      return new Response(
+        JSON.stringify({ error: result.error }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    await logAudit({
+      principal,
+      action: "cli_auth.completed",
+      resourceType: "cli_auth_session",
+      resourceId: body.deviceToken.slice(0, 12),
+    })
+
+    return { success: true }
+  }, {
+    detail: {
+      summary: "Complete CLI auth",
+      description: "Completes a CLI authentication session by creating an API key. Clerk-only.",
+    },
+    body: t.Object({
+      deviceToken: t.String({ minLength: 1, description: "The device token from the CLI" }),
+      hostname: t.Optional(t.String({ description: "The hostname where auth was completed" })),
+    }),
+  })
   .use(dashboardJudgingRoutes)
   .use(dashboardPrizesRoutes)
   .use(dashboardResultsRoutes)
+  .use(dashboardJudgeDisplayRoutes)

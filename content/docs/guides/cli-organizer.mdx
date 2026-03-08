@@ -1,0 +1,195 @@
+---
+title: CLI for Event Organizers
+description: Run a hackathon end-to-end from the command line.
+---
+
+This guide walks through the full lifecycle of a hackathon using the Oatmeal CLI — from creation to publishing results.
+
+## Prerequisites
+
+Install the CLI and sign in:
+
+<CodeBlock language="bash" showLineNumbers code={"npm install -g @oatmeal/cli\noatmeal login"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Setup</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Step 1: Create a Hackathon
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal hackathons create --name \"Spring Hack 2026\" --slug spring-hack-2026"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Terminal</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+Save the hackathon ID from the output — you'll need it for subsequent commands. Or use the slug directly:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal hackathons get spring-hack-2026"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Verify</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Step 2: Define Judging Criteria
+
+Set up how submissions will be scored:
+
+<CodeBlock language="bash" showLineNumbers code={"oatmeal judging criteria create spring-hack-2026 \\\n  --name \"Innovation\" --description \"How novel is the approach?\" \\\n  --max-score 10 --weight 30\n\noatmeal judging criteria create spring-hack-2026 \\\n  --name \"Technical Execution\" --description \"Code quality and architecture\" \\\n  --max-score 10 --weight 40\n\noatmeal judging criteria create spring-hack-2026 \\\n  --name \"Presentation\" --description \"Demo quality and clarity\" \\\n  --max-score 10 --weight 30"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Create criteria</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+Verify your criteria:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal judging criteria list spring-hack-2026"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>List criteria</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Step 3: Add Judges
+
+Invite judges by email or add them directly:
+
+<CodeBlock language="bash" showLineNumbers code={"oatmeal judging judges add spring-hack-2026 --email alice@example.com\noatmeal judging judges add spring-hack-2026 --email bob@example.com\noatmeal judging judges add spring-hack-2026 --email carol@example.com"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Add judges</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+Check invitation status:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal judging invitations list spring-hack-2026"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Check invitations</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Step 4: Set Up Prizes
+
+Create prizes for winners:
+
+<CodeBlock language="bash" showLineNumbers code={"oatmeal prizes create spring-hack-2026 \\\n  --name \"Grand Prize\" --type monetary --value 5000\n\noatmeal prizes create spring-hack-2026 \\\n  --name \"Runner Up\" --type monetary --value 2500\n\noatmeal prizes create spring-hack-2026 \\\n  --name \"Best Design\" --type custom --value \"Design toolkit license\""}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Create prizes</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+Reorder if needed:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal prizes reorder spring-hack-2026 --ids prize1-id,prize2-id,prize3-id"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Reorder prizes</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Step 5: Assign Judges to Submissions
+
+Once the submission deadline passes, distribute submissions to judges:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal judging auto-assign spring-hack-2026 --per-judge 5"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Auto-assign</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+This evenly distributes submissions so each judge reviews approximately 5 projects. Check the assignment breakdown:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal judging judges list spring-hack-2026"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Check progress</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+The output shows each judge's completion progress (e.g., "3/5 scored").
+
+## Step 6: Monitor Judging Progress
+
+While judges are scoring, monitor their progress:
+
+<CodeBlock language="bash" showLineNumbers code={"# See overall progress\noatmeal judging judges list spring-hack-2026\n\n# View all assignments\noatmeal judging assignments list spring-hack-2026"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Monitor</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Step 7: Calculate and Publish Results
+
+Once all judges have scored, calculate the final rankings:
+
+<CodeBlock language="bash" showLineNumbers code={"# Calculate rankings from scores\noatmeal results calculate spring-hack-2026\n\n# Review the results before publishing\noatmeal results get spring-hack-2026\n\n# Publish when ready\noatmeal results publish spring-hack-2026"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Results workflow</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Step 8: Assign Prizes
+
+Award prizes to winning submissions:
+
+<CodeBlock language="bash" showLineNumbers code={"# Get the prize and submission IDs\noatmeal prizes list spring-hack-2026 --json\noatmeal results get spring-hack-2026 --json\n\n# Assign prizes\noatmeal prizes assign spring-hack-2026 <grand-prize-id> --submission <winner-id>\noatmeal prizes assign spring-hack-2026 <runner-up-id> --submission <second-place-id>"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Assign prizes</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Quick Reference
+
+Here's the complete organizer workflow in one block:
+
+<CodeBlock language="bash" showLineNumbers code={"# Create event\noatmeal hackathons create --name \"My Hack\" --slug my-hack\n\n# Set up judging\noatmeal judging criteria create my-hack --name \"Innovation\" --max-score 10 --weight 50\noatmeal judging criteria create my-hack --name \"Execution\" --max-score 10 --weight 50\noatmeal judging judges add my-hack --email judge@example.com\n\n# Set up prizes\noatmeal prizes create my-hack --name \"Grand Prize\" --type monetary --value 5000\n\n# After submissions close\noatmeal judging auto-assign my-hack --per-judge 5\n\n# After judging completes\noatmeal results calculate my-hack\noatmeal results publish my-hack\noatmeal prizes assign my-hack <prize-id> --submission <winner-id>"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Full workflow</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+<Callout type="info">
+If you need to fix a mistake after publishing, use `oatmeal results unpublish` to take results down, make changes, recalculate, and republish.
+</Callout>

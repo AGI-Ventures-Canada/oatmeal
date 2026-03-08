@@ -247,6 +247,7 @@ export async function getParticipantCount(hackathonId: string): Promise<number> 
 
 export type RegistrationInfo = {
   isRegistered: boolean
+  participantId: string | null
   participantRole: string | null
   participantCount: number
 }
@@ -280,6 +281,7 @@ export async function getRegistrationInfo(
 
   return {
     isRegistered: registrationResult.data !== null,
+    participantId: registrationResult.data?.id ?? null,
     participantRole: registrationResult.data?.role ?? null,
     participantCount: countResult.count ?? 0,
   }

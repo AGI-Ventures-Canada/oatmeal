@@ -66,12 +66,22 @@ jobs:
             - Prefer server components; extract client logic to separate components
             - Next.js 16: use proxy.ts (not middleware.ts), await async APIs
 
+            ### CLI Package (`packages/cli/`)
+            - CLI is a standalone HTTP client — must NOT import from the main app (`lib/`, `app/`, `components/`)
+            - All types are CLI-local in `src/types.ts` — never import from `lib/db/` or `lib/auth/`
+            - Commands follow the pattern: `src/commands/<resource>/<action>.ts` exporting `run<Action>(client, args)`
+            - Tests live in `__tests__/commands/<resource>.test.ts` and mock `global.fetch`
+            - `src/output.ts` formatting functions must use `object` constraint (not `Record<string, unknown>`) for generic types
+            - CLI build (`bun cli:build`) must produce `dist/cli.mjs` — verify no server-side imports leak into the bundle
+            - `bin/cli.mjs` uses `#!/usr/bin/env node` (not bun) for cross-platform npm distribution
+
             ## Review Focus
 
             1. **Breaking changes** to existing functionality
             2. **Missing tests** - new code without accompanying tests
             3. **Security** - exposed secrets, SQL injection, XSS
             4. **TypeScript** - proper types, no `any`
+            5. **CLI isolation** - CLI package must not import from main app code
 
             ## Response Format
 
@@ -97,4 +107,4 @@ jobs:
 
             Use `gh pr comment ${{ github.event.pull_request.number }} --body "YOUR_REVIEW"` to post your review.
 
-          claude_args: '--model claude-opus-4-5-20251101 --allowed-tools "Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Glob,Grep"'
+          claude_args: '--model claude-sonnet-4-6 --allowed-tools "Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Glob,Grep"'

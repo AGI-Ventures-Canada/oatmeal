@@ -1,4 +1,4 @@
 {
   "title": "Guides",
-  "pages": ["webhooks"]
+  "pages": ["webhooks", "cli-organizer", "cli-browsing", "cli-judging", "cli-automation"]
 }

@@ -1,0 +1,165 @@
+---
+title: Oatmeal CLI
+description: Install and use the Oatmeal CLI to manage hackathons from your terminal.
+---
+
+The Oatmeal CLI lets you manage hackathons, judges, prizes, and results directly from your terminal. It works on Mac, Linux, and Windows — no Bun required.
+
+## Installation
+
+Install globally or run directly with `npx`:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"npx @oatmeal/cli --version"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Run without installing</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+<CodeBlock language="bash" showLineNumbers={false} code={"npm install -g @oatmeal/cli"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Install globally</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+Or with Bun:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"bunx @oatmeal/cli --version"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Using Bun</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Two Modes
+
+The CLI supports two modes of operation:
+
+| Mode | Auth Required | Commands |
+|------|---------------|----------|
+| **Browse** | No | Search hackathons, view submissions, check results |
+| **Manage** | Yes | Create events, manage judges, assign prizes, publish results |
+
+Browse commands work immediately — no login needed:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal browse hackathons\noatmeal browse results my-hackathon"}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Public browsing</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+Management commands require authentication:
+
+<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal login\noatmeal hackathons list\noatmeal prizes create <hackathon-id> --name \"Best AI App\""}>
+  <CodeBlockHeader>
+    <CodeBlockFilename>Authenticated management</CodeBlockFilename>
+    <CodeBlockActions>
+      <CodeBlockCopyButton />
+    </CodeBlockActions>
+  </CodeBlockHeader>
+</CodeBlock>
+
+## Command Reference
+
+### Global Flags
+
+| Flag | Description |
+|------|-------------|
+| `--help` | Show help for any command |
+| `--version` | Show CLI version |
+| `--json` | Output raw JSON (for scripting) |
+| `--yes` | Skip confirmation prompts |
+| `--base-url <url>` | Override the API URL |
+| `--api-key <key>` | Use a specific API key |
+
+### Auth
+
+| Command | Description |
+|---------|-------------|
+| `oatmeal login` | Sign in via browser (auto-creates API key) |
+| `oatmeal login --api-key sk_live_...` | Sign in with an existing API key |
+| `oatmeal login --no-browser` | Paste an API key manually |
+| `oatmeal logout` | Clear saved credentials |
+| `oatmeal whoami` | Show current tenant and scopes |
+
+### Browse (No Auth)
+
+| Command | Description |
+|---------|-------------|
+| `oatmeal browse hackathons` | Search public hackathons |
+| `oatmeal browse hackathon <slug>` | View hackathon details |
+| `oatmeal browse submissions <slug>` | List submissions |
+| `oatmeal browse results <slug>` | View published results |
+| `oatmeal browse org <slug>` | View organization profile |
+
+### Hackathons
+
+| Command | Description |
+|---------|-------------|
+| `oatmeal hackathons list` | List your hackathons |
+| `oatmeal hackathons get <id>` | Get hackathon details |
+| `oatmeal hackathons create` | Create a new hackathon |
+| `oatmeal hackathons update <id>` | Update hackathon settings |
+| `oatmeal hackathons delete <id>` | Delete a hackathon |
+
+### Judging
+
+| Command | Description |
+|---------|-------------|
+| `oatmeal judging criteria list <id>` | List judging criteria |
+| `oatmeal judging criteria create <id>` | Add a criterion |
+| `oatmeal judging judges list <id>` | List judges with progress |
+| `oatmeal judging judges add <id>` | Add a judge |
+| `oatmeal judging auto-assign <id>` | Auto-distribute submissions |
+| `oatmeal judging pick-results <id>` | View subjective judging tallies |
+
+### Prizes
+
+| Command | Description |
+|---------|-------------|
+| `oatmeal prizes list <id>` | List prizes |
+| `oatmeal prizes create <id>` | Create a prize |
+| `oatmeal prizes assign <id> <prize-id>` | Assign prize to submission |
+| `oatmeal prizes reorder <id>` | Reorder prizes |
+
+### Results
+
+| Command | Description |
+|---------|-------------|
+| `oatmeal results calculate <id>` | Calculate rankings from scores |
+| `oatmeal results get <id>` | View detailed results |
+| `oatmeal results publish <id>` | Publish results |
+| `oatmeal results unpublish <id>` | Unpublish results |
+
+### Webhooks, Jobs, Schedules
+
+| Command | Description |
+|---------|-------------|
+| `oatmeal webhooks list` | List webhooks |
+| `oatmeal webhooks create` | Create a webhook |
+| `oatmeal jobs list` | List jobs |
+| `oatmeal jobs create` | Create a job |
+| `oatmeal schedules list` | List schedules |
+| `oatmeal schedules create` | Create a schedule |
+
+<Callout type="info">
+Use `oatmeal <command> --help` for full flag details on any command.
+</Callout>
+
+## Next Steps
+
+- [Getting Started](/docs/cli/getting-started) — Authentication and your first commands
+- [Organizer Guide](/docs/guides/cli-organizer) — Run a hackathon end-to-end from the CLI
+- [Browsing Guide](/docs/guides/cli-browsing) — Discover hackathons and view results
+- [Judging Guide](/docs/guides/cli-judging) — Manage judges, criteria, and assignments
+- [CI/CD Guide](/docs/guides/cli-automation) — Automate workflows with the CLI

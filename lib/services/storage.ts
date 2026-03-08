@@ -4,6 +4,7 @@ import { supabase as getSupabase } from "@/lib/db/client"
 const LOGOS_BUCKET = "logos"
 const BANNERS_BUCKET = "banners"
 const SCREENSHOTS_BUCKET = "screenshots"
+const HEADSHOTS_BUCKET = "headshots"
 const MAX_LOGO_WIDTH = 800
 const MAX_LOGO_HEIGHT = 400
 const MAX_BANNER_WIDTH = 1200
@@ -449,4 +450,100 @@ export async function downloadAndUploadBanner(
     console.error(`Failed to process/upload banner for hackathon ${hackathonId}:`, err)
     return null
   }
+}
+
+export interface UploadHeadshotResult {
+  url: string
+  path: string
+}
+
+const MAX_HEADSHOT_WIDTH = 400
+const MAX_HEADSHOT_HEIGHT = 400
+
+export async function optimizeHeadshot(
+  buffer: Buffer
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  const image = sharp(buffer)
+  const metadata = await image.metadata()
+
+  const needsResize =
+    (metadata.width && metadata.width > MAX_HEADSHOT_WIDTH) ||
+    (metadata.height && metadata.height > MAX_HEADSHOT_HEIGHT)
+
+  let pipeline = image
+
+  if (needsResize) {
+    pipeline = pipeline.resize(MAX_HEADSHOT_WIDTH, MAX_HEADSHOT_HEIGHT, {
+      fit: "cover",
+      withoutEnlargement: true,
+    })
+  }
+
+  const outputMimeType = "image/webp"
+  const qualityLevels = [QUALITY, 70, 50]
+
+  for (const quality of qualityLevels) {
+    const optimized = await pipeline.clone().webp({ quality }).toBuffer()
+    if (optimized.length <= MAX_OPTIMIZED_SIZE) {
+      return { buffer: optimized, mimeType: outputMimeType }
+    }
+  }
+
+  const finalBuffer = await pipeline.clone().webp({ quality: 50 }).toBuffer()
+  throw new ImageTooLargeError(finalBuffer.length)
+}
+
+export async function uploadJudgeHeadshot(
+  hackathonId: string,
+  judgeDisplayId: string,
+  file: Buffer
+): Promise<UploadHeadshotResult | null> {
+  const client = getSupabase()
+
+  const { buffer, mimeType } = await optimizeHeadshot(file)
+
+  const path = `${hackathonId}/${judgeDisplayId}/headshot.webp`
+
+  const { error } = await client.storage
+    .from(HEADSHOTS_BUCKET)
+    .upload(path, buffer, {
+      contentType: mimeType,
+      upsert: true,
+      cacheControl: "3600",
+    })
+
+  if (error) {
+    console.error("Failed to upload judge headshot:", error)
+    return null
+  }
+
+  const { data: urlData } = client.storage
+    .from(HEADSHOTS_BUCKET)
+    .getPublicUrl(path)
+
+  return {
+    url: `${urlData.publicUrl}?v=${Date.now()}`,
+    path,
+  }
+}
+
+export async function deleteJudgeHeadshot(
+  hackathonId: string,
+  judgeDisplayId: string
+): Promise<boolean> {
+  const client = getSupabase()
+
+  const extensions = ["webp", "png", "jpg"]
+  const paths = extensions.map((ext) => `${hackathonId}/${judgeDisplayId}/headshot.${ext}`)
+
+  const { error } = await client.storage
+    .from(HEADSHOTS_BUCKET)
+    .remove(paths)
+
+  if (error) {
+    console.error("Failed to delete judge headshot:", error)
+    return false
+  }
+
+  return true
 }

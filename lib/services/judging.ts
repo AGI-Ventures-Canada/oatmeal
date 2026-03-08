@@ -594,6 +594,7 @@ export type JudgeAssignmentForJudge = {
   teamName: string | null
   isComplete: boolean
   notes: string
+  viewedAt: string | null
 }
 
 export async function getJudgeAssignments(
@@ -615,7 +616,7 @@ export async function getJudgeAssignments(
   const { data: assignments, error } = await client
     .from("judge_assignments")
     .select(`
-      id, submission_id, is_complete, notes,
+      id, submission_id, is_complete, notes, viewed_at,
       submission:submissions!submission_id(title, description, github_url, live_app_url, screenshot_url, team_id)
     `)
     .eq("hackathon_id", hackathonId)
@@ -663,6 +664,7 @@ export async function getJudgeAssignments(
       teamName: sub.team_id ? teamsMap[sub.team_id] ?? null : null,
       isComplete: a.is_complete as boolean,
       notes: a.notes as string,
+      viewedAt: (a.viewed_at as string | null) ?? null,
     }
   })
 }
@@ -835,6 +837,38 @@ export async function saveNotes(
 
   if (error) {
     console.error("Failed to save notes:", error)
+    return false
+  }
+
+  return true
+}
+
+export async function markAssignmentViewed(
+  assignmentId: string,
+  clerkUserId: string
+): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: assignment } = await client
+    .from("judge_assignments")
+    .select("id, viewed_at, judge:hackathon_participants!judge_participant_id(clerk_user_id)")
+    .eq("id", assignmentId)
+    .single()
+
+  if (!assignment) return false
+
+  const judge = assignment.judge as unknown as { clerk_user_id: string } | null
+  if (judge?.clerk_user_id !== clerkUserId) return false
+
+  if (assignment.viewed_at) return true
+
+  const { error } = await client
+    .from("judge_assignments")
+    .update({ viewed_at: new Date().toISOString() })
+    .eq("id", assignmentId)
+
+  if (error) {
+    console.error("Failed to mark assignment viewed:", error)
     return false
   }
 
