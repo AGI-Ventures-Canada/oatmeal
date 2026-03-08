@@ -9,34 +9,19 @@ The Oatmeal CLI lets you manage hackathons, judges, prizes, and results directly
 
 Install globally or run directly with `npx`:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"npx @oatmeal/cli --version"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Run without installing</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Run without installing"
+npx @oatmeal/cli --version
+```
 
-<CodeBlock language="bash" showLineNumbers={false} code={"npm install -g @oatmeal/cli"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Install globally</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Install globally"
+npm install -g @oatmeal/cli
+```
 
 Or with Bun:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"bunx @oatmeal/cli --version"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Using Bun</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Using Bun"
+bunx @oatmeal/cli --version
+```
 
 ## Two Modes
 
@@ -49,25 +34,18 @@ The CLI supports two modes of operation:
 
 Browse commands work immediately — no login needed:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal browse hackathons\noatmeal browse results my-hackathon"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Public browsing</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Public browsing"
+oatmeal browse hackathons
+oatmeal browse results my-hackathon
+```
 
 Management commands require authentication:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal login\noatmeal hackathons list\noatmeal prizes create <hackathon-id> --name \"Best AI App\""}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Authenticated management</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Authenticated management"
+oatmeal login
+oatmeal hackathons list
+oatmeal prizes create <hackathon-id> --name "Best AI App"
+```
 
 ## Command Reference
 

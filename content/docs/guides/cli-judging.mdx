@@ -9,14 +9,25 @@ This guide covers the complete judging workflow — defining criteria, inviting 
 
 Criteria define how judges score submissions. Each criterion has a name, maximum score, and weight (percentage of the final score):
 
-<CodeBlock language="bash" showLineNumbers code={"oatmeal judging criteria create <hackathon> \\\n  --name \"Innovation\" \\\n  --description \"Novelty and creativity of the solution\" \\\n  --max-score 10 \\\n  --weight 30\n\noatmeal judging criteria create <hackathon> \\\n  --name \"Technical Execution\" \\\n  --description \"Code quality, architecture, and completeness\" \\\n  --max-score 10 \\\n  --weight 40\n\noatmeal judging criteria create <hackathon> \\\n  --name \"Presentation\" \\\n  --description \"Demo quality and clarity of explanation\" \\\n  --max-score 10 \\\n  --weight 30"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Create criteria</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Create criteria"
+oatmeal judging criteria create <hackathon> \
+  --name "Innovation" \
+  --description "Novelty and creativity of the solution" \
+  --max-score 10 \
+  --weight 30
+
+oatmeal judging criteria create <hackathon> \
+  --name "Technical Execution" \
+  --description "Code quality, architecture, and completeness" \
+  --max-score 10 \
+  --weight 40
+
+oatmeal judging criteria create <hackathon> \
+  --name "Presentation" \
+  --description "Demo quality and clarity of explanation" \
+  --max-score 10 \
+  --weight 30
+```
 
 <Callout type="warn">
 Weights should add up to 100. The platform uses weights to calculate the final weighted score for each submission.
@@ -24,62 +35,50 @@ Weights should add up to 100. The platform uses weights to calculate the final w
 
 ### Manage Criteria
 
-<CodeBlock language="bash" showLineNumbers code={"# List all criteria\noatmeal judging criteria list <hackathon>\n\n# Update a criterion\noatmeal judging criteria update <hackathon> <criteria-id> --weight 35\n\n# Delete a criterion\noatmeal judging criteria delete <hackathon> <criteria-id>"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Criteria management</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Criteria management"
+# List all criteria
+oatmeal judging criteria list <hackathon>
+
+# Update a criterion
+oatmeal judging criteria update <hackathon> <criteria-id> --weight 35
+
+# Delete a criterion
+oatmeal judging criteria delete <hackathon> <criteria-id>
+```
 
 ## Invite Judges
 
 Add judges by email address. They'll receive an invitation to join:
 
-<CodeBlock language="bash" showLineNumbers code={"oatmeal judging judges add <hackathon> --email alice@example.com\noatmeal judging judges add <hackathon> --email bob@example.com\noatmeal judging judges add <hackathon> --email carol@example.com"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Invite judges</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Invite judges"
+oatmeal judging judges add <hackathon> --email alice@example.com
+oatmeal judging judges add <hackathon> --email bob@example.com
+oatmeal judging judges add <hackathon> --email carol@example.com
+```
 
 If you have a user's Clerk ID, you can add them directly:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal judging judges add <hackathon> --user-id user_abc123"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Add by user ID</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Add by user ID"
+oatmeal judging judges add <hackathon> --user-id user_abc123
+```
 
 ### Track Invitations
 
-<CodeBlock language="bash" showLineNumbers code={"# See pending invitations\noatmeal judging invitations list <hackathon>\n\n# Cancel an invitation\noatmeal judging invitations cancel <hackathon> <invitation-id>"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Manage invitations</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Manage invitations"
+# See pending invitations
+oatmeal judging invitations list <hackathon>
+
+# Cancel an invitation
+oatmeal judging invitations cancel <hackathon> <invitation-id>
+```
 
 ## Distribute Submissions
 
 After the submission deadline, assign submissions to judges. Auto-assign distributes them evenly:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal judging auto-assign <hackathon> --per-judge 5"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Auto-assign</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Auto-assign"
+oatmeal judging auto-assign <hackathon> --per-judge 5
+```
 
 The `--per-judge` flag controls how many submissions each judge receives. The algorithm distributes evenly so every submission gets reviewed by roughly the same number of judges.
 
@@ -87,66 +86,58 @@ The `--per-judge` flag controls how many submissions each judge receives. The al
 
 For special cases, create individual assignments:
 
-<CodeBlock language="bash" showLineNumbers code={"# Assign a specific judge to a specific submission\noatmeal judging assignments create <hackathon> \\\n  --judge <judge-participant-id> \\\n  --submission <submission-id>\n\n# Remove an assignment\noatmeal judging assignments delete <hackathon> <assignment-id>"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Manual assignments</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Manual assignments"
+# Assign a specific judge to a specific submission
+oatmeal judging assignments create <hackathon> \
+  --judge <judge-participant-id> \
+  --submission <submission-id>
+
+# Remove an assignment
+oatmeal judging assignments delete <hackathon> <assignment-id>
+```
 
 ## Monitor Scoring Progress
 
 Track how judging is progressing:
 
-<CodeBlock language="bash" showLineNumbers code={"# See each judge's progress (e.g., \"3/5 scored\")\noatmeal judging judges list <hackathon>\n\n# View all assignments with scores\noatmeal judging assignments list <hackathon>"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Track progress</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Track progress"
+# See each judge's progress (e.g., "3/5 scored")
+oatmeal judging judges list <hackathon>
+
+# View all assignments with scores
+oatmeal judging assignments list <hackathon>
+```
 
 ## Subjective Judging (Judge Picks)
 
 If your hackathon uses subjective judging (where judges pick favorites rather than scoring numerically), view the tallies:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal judging pick-results <hackathon>"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>View pick results</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="View pick results"
+oatmeal judging pick-results <hackathon>
+```
 
 ## Calculate Results
 
 Once all judges have finished scoring:
 
-<CodeBlock language="bash" showLineNumbers code={"# Calculate final rankings\noatmeal results calculate <hackathon>\n\n# Review before publishing\noatmeal results get <hackathon>\n\n# Publish results\noatmeal results publish <hackathon>"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Finalize</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Finalize"
+# Calculate final rankings
+oatmeal results calculate <hackathon>
+
+# Review before publishing
+oatmeal results get <hackathon>
+
+# Publish results
+oatmeal results publish <hackathon>
+```
 
 ## Remove a Judge
 
 If a judge can no longer participate:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal judging judges remove <hackathon> <judge-participant-id>"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Remove judge</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Remove judge"
+oatmeal judging judges remove <hackathon> <judge-participant-id>
+```
 
 <Callout type="warn">
 Removing a judge also removes their assignments. You may need to re-run auto-assign to redistribute their submissions.
@@ -156,11 +147,13 @@ Removing a judge also removes their assignments. You may need to re-run auto-ass
 
 Export judging data as JSON for spreadsheets or custom reporting:
 
-<CodeBlock language="bash" showLineNumbers code={"# Export judge progress\noatmeal judging judges list <hackathon> --json > judges.json\n\n# Export all assignments with scores\noatmeal judging assignments list <hackathon> --json > assignments.json\n\n# Export final results\noatmeal results get <hackathon> --json > results.json"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Export data</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Export data"
+# Export judge progress
+oatmeal judging judges list <hackathon> --json > judges.json
+
+# Export all assignments with scores
+oatmeal judging assignments list <hackathon> --json > assignments.json
+
+# Export final results
+oatmeal results get <hackathon> --json > results.json
+```

@@ -14,14 +14,24 @@ Webhooks allow you to:
 
 ## Creating a Webhook
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    url: \"https://your-app.com/webhooks/oatmeal\",\n    events: [\"hackathon.created\", \"submission.created\"],\n  }),\n})\n\nconst webhook = await res.json()\n\n// Save the secret for verifying signatures\nconsole.log(`Webhook secret: ${webhook.secret}`)"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>create-webhook.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="create-webhook.ts"
+const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    url: "https://your-app.com/webhooks/oatmeal",
+    events: ["hackathon.created", "submission.created"],
+  }),
+})
+
+const webhook = await res.json()
+
+// Save the secret for verifying signatures
+console.log(`Webhook secret: ${webhook.secret}`)
+```
 
 <Callout type="warn">
 The webhook secret is only shown once. Store it securely for signature verification.
@@ -46,14 +56,17 @@ Webhook requests include:
 - `timestamp` - ISO 8601 timestamp of when the event occurred
 - `data` - Event-specific data including resource IDs and metadata
 
-<CodeBlock language="json" code={"{\n  \"event\": \"submission.created\",\n  \"timestamp\": \"2026-02-10T15:30:00Z\",\n  \"data\": {\n    \"hackathonId\": \"hack_abc123\",\n    \"submissionId\": \"sub_xyz456\",\n    \"title\": \"AI Code Review Bot\"\n  }\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>payload.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="payload.json"
+{
+  "event": "submission.created",
+  "timestamp": "2026-02-10T15:30:00Z",
+  "data": {
+    "hackathonId": "hack_abc123",
+    "submissionId": "sub_xyz456",
+    "title": "AI Code Review Bot"
+  }
+}
+```
 
 ## Verifying Signatures
 
@@ -61,49 +74,104 @@ Webhook requests include an `X-Webhook-Signature` header containing an HMAC-SHA2
 
 ### Express Example
 
-<CodeBlock language="typescript" showLineNumbers code={"import express from \"express\"\nimport crypto from \"crypto\"\n\nconst app = express()\napp.use(express.json())\n\nconst WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!\n\napp.post(\"/webhooks/oatmeal\", (req, res) => {\n  const signature = req.headers[\"x-webhook-signature\"] as string\n  const payload = JSON.stringify(req.body)\n  const expected = crypto\n    .createHmac(\"sha256\", WEBHOOK_SECRET)\n    .update(payload)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return res.status(401).send(\"Invalid signature\")\n  }\n\n  const { event, data } = req.body\n\n  switch (event) {\n    case \"hackathon.created\":\n      console.log(`Hackathon created: ${data.hackathonId}`)\n      break\n    case \"submission.created\":\n      console.log(`Submission received: ${data.submissionId}`)\n      break\n  }\n\n  res.status(200).send(\"OK\")\n})"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>express-webhook.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="express-webhook.ts"
+import express from "express"
+import crypto from "crypto"
+
+const app = express()
+app.use(express.json())
+
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!
+
+app.post("/webhooks/oatmeal", (req, res) => {
+  const signature = req.headers["x-webhook-signature"] as string
+  const payload = JSON.stringify(req.body)
+  const expected = crypto
+    .createHmac("sha256", WEBHOOK_SECRET)
+    .update(payload)
+    .digest("hex")
+
+  if (signature !== expected) {
+    return res.status(401).send("Invalid signature")
+  }
+
+  const { event, data } = req.body
+
+  switch (event) {
+    case "hackathon.created":
+      console.log(`Hackathon created: ${data.hackathonId}`)
+      break
+    case "submission.created":
+      console.log(`Submission received: ${data.submissionId}`)
+      break
+  }
+
+  res.status(200).send("OK")
+})
+```
 
 ### Next.js API Route
 
-<CodeBlock language="typescript" showLineNumbers code={"import { NextRequest, NextResponse } from \"next/server\"\nimport crypto from \"crypto\"\n\nexport async function POST(req: NextRequest) {\n  const signature = req.headers.get(\"x-webhook-signature\")\n  const body = await req.text()\n\n  const expected = crypto\n    .createHmac(\"sha256\", process.env.WEBHOOK_SECRET!)\n    .update(body)\n    .digest(\"hex\")\n\n  if (signature !== expected) {\n    return NextResponse.json({ error: \"Invalid signature\" }, { status: 401 })\n  }\n\n  const { event, data } = JSON.parse(body)\n\n  if (event === \"submission.created\") {\n    await processSubmission(data.submissionId, data.title)\n  }\n\n  return NextResponse.json({ received: true })\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>app/api/webhooks/route.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="app/api/webhooks/route.ts"
+import { NextRequest, NextResponse } from "next/server"
+import crypto from "crypto"
+
+export async function POST(req: NextRequest) {
+  const signature = req.headers.get("x-webhook-signature")
+  const body = await req.text()
+
+  const expected = crypto
+    .createHmac("sha256", process.env.WEBHOOK_SECRET!)
+    .update(body)
+    .digest("hex")
+
+  if (signature !== expected) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+  }
+
+  const { event, data } = JSON.parse(body)
+
+  if (event === "submission.created") {
+    await processSubmission(data.submissionId, data.title)
+  }
+
+  return NextResponse.json({ received: true })
+}
+```
 
 ## Managing Webhooks
 
 ### List Webhooks
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst { webhooks } = await res.json()\n\nfor (const wh of webhooks) {\n  console.log(`${wh.url} - ${wh.events.join(\", \")}`)\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>list-webhooks.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="list-webhooks.ts"
+const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+const { webhooks } = await res.json()
+
+for (const wh of webhooks) {
+  console.log(`${wh.url} - ${wh.events.join(", ")}`)
+}
+```
 
 ### Delete a Webhook
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks/${webhookId}`, {\n  method: \"DELETE\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst data = await res.json()\nif (data.success) {\n  console.log(\"Webhook deleted\")\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>delete-webhook.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="delete-webhook.ts"
+const res = await fetch(`${BASE_URL}/api/v1/webhooks/${webhookId}`, {
+  method: "DELETE",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+const data = await res.json()
+if (data.success) {
+  console.log("Webhook deleted")
+}
+```
 
 ## Best Practices
 

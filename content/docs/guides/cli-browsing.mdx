@@ -9,14 +9,16 @@ The CLI's `browse` commands let you explore public hackathons without an account
 
 Find public hackathons by keyword:
 
-<CodeBlock language="bash" showLineNumbers code={"# List all public hackathons\noatmeal browse hackathons\n\n# Search by keyword\noatmeal browse hackathons --search \"AI\"\n\n# Paginate through results\noatmeal browse hackathons --page 2 --limit 10"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Search</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Search"
+# List all public hackathons
+oatmeal browse hackathons
+
+# Search by keyword
+oatmeal browse hackathons --search "AI"
+
+# Paginate through results
+oatmeal browse hackathons --page 2 --limit 10
+```
 
 The output shows a table with hackathon names, slugs, status, and key dates.
 
@@ -24,14 +26,9 @@ The output shows a table with hackathon names, slugs, status, and key dates.
 
 Get full details for a specific hackathon by its slug:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal browse hackathon spring-hack-2026"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Terminal</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Terminal"
+oatmeal browse hackathon spring-hack-2026
+```
 
 This shows the hackathon description, dates, registration status, and submission count.
 
@@ -39,27 +36,17 @@ This shows the hackathon description, dates, registration status, and submission
 
 See what teams have built:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal browse submissions spring-hack-2026"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Terminal</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Terminal"
+oatmeal browse submissions spring-hack-2026
+```
 
 ## Check Results
 
 View published results for a hackathon:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal browse results spring-hack-2026"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Terminal</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Terminal"
+oatmeal browse results spring-hack-2026
+```
 
 <Callout type="info">
 Results are only visible after the organizer publishes them. If results haven't been published yet, you'll see a message indicating they're not available.
@@ -69,59 +56,52 @@ Results are only visible after the organizer publishes them. If results haven't 
 
 See an organization's public profile and their hackathons:
 
-<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal browse org acme-labs"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Terminal</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Terminal"
+oatmeal browse org acme-labs
+```
 
 ## JSON Output
 
 All browse commands support `--json` for machine-readable output. This is useful for piping to other tools:
 
-<CodeBlock language="bash" showLineNumbers code={"# Get hackathon list as JSON\noatmeal browse hackathons --json\n\n# Pipe to jq for filtering\noatmeal browse hackathons --json | jq '.[] | select(.status == \"active\")'\n\n# Save results to a file\noatmeal browse results spring-hack-2026 --json > results.json"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>JSON and piping</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="JSON and piping"
+# Get hackathon list as JSON
+oatmeal browse hackathons --json
+
+# Pipe to jq for filtering
+oatmeal browse hackathons --json | jq '.[] | select(.status == "active")'
+
+# Save results to a file
+oatmeal browse results spring-hack-2026 --json > results.json
+```
 
 ## Common Workflows
 
 ### Find an upcoming hackathon to join
 
-<CodeBlock language="bash" showLineNumbers code={"# Search for AI-related hackathons\noatmeal browse hackathons --search \"AI\"\n\n# Check details of one that looks interesting\noatmeal browse hackathon cool-ai-hack\n\n# See what others have submitted in past events\noatmeal browse submissions cool-ai-hack"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Finding events</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Finding events"
+# Search for AI-related hackathons
+oatmeal browse hackathons --search "AI"
+
+# Check details of one that looks interesting
+oatmeal browse hackathon cool-ai-hack
+
+# See what others have submitted in past events
+oatmeal browse submissions cool-ai-hack
+```
 
 ### Check if results are out
 
-<CodeBlock language="bash" showLineNumbers={false} code={"oatmeal browse results the-hackathon-i-entered"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Check results</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Check results"
+oatmeal browse results the-hackathon-i-entered
+```
 
 ### Explore an organization's events
 
-<CodeBlock language="bash" showLineNumbers code={"# View the org\noatmeal browse org techcorp\n\n# See their hackathons\noatmeal browse hackathons --search \"techcorp\""}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>Explore org</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title="Explore org"
+# View the org
+oatmeal browse org techcorp
+
+# See their hackathons
+oatmeal browse hackathons --search "techcorp"
+```
