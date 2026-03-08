@@ -4,6 +4,8 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import {
   Field,
   FieldLabel,
@@ -12,6 +14,7 @@ import {
 } from "@/components/ui/field"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { useEditOptional } from "@/components/hackathon/preview/edit-context"
+import { AddressAutocomplete } from "@/components/ui/address-autocomplete"
 import { MapPin, Video, Undo2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -23,12 +26,18 @@ interface LocationEditFormProps {
     locationType: LocationType
     locationName: string | null
     locationUrl: string | null
+    locationLatitude?: number | null
+    locationLongitude?: number | null
+    requireLocationVerification?: boolean
   }
   onSaveAndNext?: () => void
   onSave?: (data: {
     locationType: LocationType
     locationName: string | null
     locationUrl: string | null
+    locationLatitude?: number | null
+    locationLongitude?: number | null
+    requireLocationVerification?: boolean
   }) => Promise<boolean>
   onCancel?: () => void
 }
@@ -43,16 +52,25 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
   const [locationType, setLocationType] = useState<LocationType>(initialData.locationType)
   const [locationName, setLocationName] = useState(initialData.locationName || "")
   const [locationUrl, setLocationUrl] = useState(initialData.locationUrl || "")
+  const [locationLatitude, setLocationLatitude] = useState<number | null>(initialData.locationLatitude ?? null)
+  const [locationLongitude, setLocationLongitude] = useState<number | null>(initialData.locationLongitude ?? null)
+  const [requireLocationVerification, setRequireLocationVerification] = useState(initialData.requireLocationVerification ?? false)
 
   const isDirty =
     locationType !== initialData.locationType ||
     locationName !== (initialData.locationName || "") ||
-    locationUrl !== (initialData.locationUrl || "")
+    locationUrl !== (initialData.locationUrl || "") ||
+    locationLatitude !== (initialData.locationLatitude ?? null) ||
+    locationLongitude !== (initialData.locationLongitude ?? null) ||
+    requireLocationVerification !== (initialData.requireLocationVerification ?? false)
 
   function handleReset() {
     setLocationType(initialData.locationType)
     setLocationName(initialData.locationName || "")
     setLocationUrl(initialData.locationUrl || "")
+    setLocationLatitude(initialData.locationLatitude ?? null)
+    setLocationLongitude(initialData.locationLongitude ?? null)
+    setRequireLocationVerification(initialData.requireLocationVerification ?? false)
     setError(null)
   }
 
@@ -66,6 +84,9 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
           locationType,
           locationName: locationName.trim() || null,
           locationUrl: locationUrl.trim() || null,
+          locationLatitude,
+          locationLongitude,
+          requireLocationVerification,
         })
       }
 
@@ -76,6 +97,9 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
           locationType,
           locationName: locationName.trim() || null,
           locationUrl: locationUrl.trim() || null,
+          locationLatitude,
+          locationLongitude,
+          requireLocationVerification,
         }),
       })
 
@@ -123,10 +147,16 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
       setLocationType(null)
       setLocationName("")
       setLocationUrl("")
+      setLocationLatitude(null)
+      setLocationLongitude(null)
+      setRequireLocationVerification(false)
     } else {
       setLocationType(type)
       setLocationName("")
       setLocationUrl("")
+      setLocationLatitude(null)
+      setLocationLongitude(null)
+      if (type !== "in_person") setRequireLocationVerification(false)
     }
   }
 
@@ -169,21 +199,48 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
         </Field>
 
         {locationType === "in_person" && (
-          <Field>
-            <FieldLabel htmlFor="location-name">Venue Name & Address</FieldLabel>
-            <Input
-              id="location-name"
-              name="location-name"
-              placeholder="e.g. Moscone Center, San Francisco"
-              value={locationName}
-              onChange={(e) => setLocationName(e.target.value)}
-              autoFocus
-              autoComplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-form-type="other"
-            />
-          </Field>
+          <>
+            <Field>
+              <FieldLabel htmlFor="location-name">Venue Name & Address</FieldLabel>
+              <AddressAutocomplete
+                id="location-name"
+                value={locationName}
+                onChange={setLocationName}
+                onSelect={(result) => {
+                  setLocationName(result.displayName)
+                  setLocationLatitude(result.latitude)
+                  setLocationLongitude(result.longitude)
+                }}
+                placeholder="e.g. Moscone Center, San Francisco"
+                autoFocus
+              />
+              <FieldDescription>
+                Start typing for address suggestions
+              </FieldDescription>
+            </Field>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="require-location" className="text-sm font-medium">
+                  Require location verification
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Attendees must share their location when registering
+                </p>
+              </div>
+              <Switch
+                id="require-location"
+                checked={requireLocationVerification}
+                onCheckedChange={setRequireLocationVerification}
+                disabled={!locationLatitude}
+              />
+            </div>
+            {requireLocationVerification && !locationLatitude && (
+              <p className="text-xs text-muted-foreground">
+                Select an address from the suggestions to enable verification
+              </p>
+            )}
+          </>
         )}
 
         {locationType === "virtual" && (

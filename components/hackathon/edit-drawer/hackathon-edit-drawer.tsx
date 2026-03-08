@@ -164,6 +164,9 @@ export function HackathonEditDrawer({ hackathon }: HackathonEditDrawerProps) {
                 locationType: hackathon.location_type,
                 locationName: hackathon.location_name,
                 locationUrl: hackathon.location_url,
+                locationLatitude: hackathon.location_latitude,
+                locationLongitude: hackathon.location_longitude,
+                requireLocationVerification: hackathon.require_location_verification,
               }}
               onSaveAndNext={handleSaveAndNext}
             />

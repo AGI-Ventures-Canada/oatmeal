@@ -77,6 +77,9 @@ export interface Hackathon {
   location_type: "in_person" | "virtual" | null
   location_name: string | null
   location_url: string | null
+  location_latitude: number | null
+  location_longitude: number | null
+  require_location_verification: boolean
   anonymous_judging: boolean
   judging_mode: JudgingMode
   results_published_at: string | null

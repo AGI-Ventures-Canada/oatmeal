@@ -17,6 +17,7 @@ interface RegistrationButtonProps {
   maxParticipants: number | null
   participantCount: number
   isRegistered: boolean
+  requireLocationVerification?: boolean
   onRegistrationSuccess?: () => void
 }
 
@@ -32,6 +33,7 @@ export function RegistrationButton({
   maxParticipants,
   participantCount,
   isRegistered: initialIsRegistered,
+  requireLocationVerification,
   onRegistrationSuccess,
 }: RegistrationButtonProps) {
   const { isSignedIn, isLoaded } = useUser()
@@ -151,6 +153,8 @@ export function RegistrationButton({
       registration_closed: "Registration has closed.",
       event_ended: "This event has ended.",
       at_capacity: "This event has reached maximum capacity.",
+      location_required: "Location verification required. Please share your location.",
+      location_too_far: fallback,
     }
     return errorMessages[code] || fallback
   }
@@ -160,8 +164,30 @@ export function RegistrationButton({
     setError(null)
 
     try {
+      let fetchBody: string | undefined
+      let fetchHeaders: Record<string, string> | undefined
+
+      if (requireLocationVerification) {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
+          })
+          fetchBody = JSON.stringify({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          })
+          fetchHeaders = { "Content-Type": "application/json" }
+        } catch {
+          setError("Location access is required for this in-person event. Please enable location permissions and try again.")
+          setIsLoading(false)
+          return
+        }
+      }
+
       const response = await fetch(`/api/public/hackathons/${hackathonSlug}/register`, {
         method: "POST",
+        headers: fetchHeaders,
+        body: fetchBody,
       })
 
       let data
