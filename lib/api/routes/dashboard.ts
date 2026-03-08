@@ -1035,6 +1035,29 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     async ({ principal, params, body }) => {
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
+      const hasDateUpdate = body.startsAt !== undefined || body.endsAt !== undefined ||
+        body.registrationOpensAt !== undefined || body.registrationClosesAt !== undefined
+
+      if (hasDateUpdate) {
+        const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
+        const current = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
+        if (current) {
+          const { validateTimelineDates } = await import("@/lib/utils/timeline")
+          const dateError = validateTimelineDates({
+            registrationOpensAt: body.registrationOpensAt !== undefined ? body.registrationOpensAt : current.registration_opens_at,
+            registrationClosesAt: body.registrationClosesAt !== undefined ? body.registrationClosesAt : current.registration_closes_at,
+            startsAt: body.startsAt !== undefined ? body.startsAt : current.starts_at,
+            endsAt: body.endsAt !== undefined ? body.endsAt : current.ends_at,
+          })
+          if (dateError) {
+            return new Response(JSON.stringify({ error: dateError }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            })
+          }
+        }
+      }
+
       const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
       const hackathon = await updateHackathonSettings(params.id, principal.tenantId, {
         bannerUrl: body.bannerUrl,
