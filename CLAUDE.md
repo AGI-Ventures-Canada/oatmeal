@@ -362,9 +362,19 @@ For RPC calls, use `setMockRpcImplementation()` instead.
 
 ## Git Workflow
 
-### Build Before Pushing
+### Run CI Checks Before Pushing
 
-**CRITICAL: Always run `bun run build` before pushing to verify there are no TypeScript errors.** The Vercel build will fail on any type error, so catch them locally first. Do not push code that doesn't build.
+**CRITICAL: Before pushing, run the same checks CI runs.** Catch failures locally instead of waiting for the pipeline.
+
+```bash
+bun lint && bun run build && bun test:all
+```
+
+- `bun lint` — ESLint (CI `lint` job)
+- `bun run build` — TypeScript type check + Next.js build (CI `test` job runs `tsc --noEmit`; build implies the same)
+- `bun test:all` — unit + integration tests (CI `test` job)
+
+If any command fails, fix the issue before pushing. Do not push code that doesn't pass all three.
 
 ### Never Push to Main
 
