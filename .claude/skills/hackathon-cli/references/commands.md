@@ -1,38 +1,60 @@
 # Oatmeal CLI — Command Reference
 
-Complete reference for all `oatmeal` CLI commands.
+Complete reference for all `oatmeal` CLI commands. Source: `packages/cli/src/`.
 
 ## Global Flags
 
 | Flag | Description |
 |------|-------------|
-| `--help`, `-h` | Show help for any command |
+| `--help`, `-h` | Show help / banner |
 | `--version`, `-v` | Show CLI version |
 | `--json` | Output as JSON instead of formatted table |
-| `--quiet`, `-q` | Suppress non-essential output |
+| `--yes`, `-y` | Skip confirmation prompts |
+| `--base-url` | Override API base URL for this command |
+| `--api-key` | Override API key for this command |
 
-## Configuration
+## Auth
 
 ### `oatmeal login`
 
-Interactive login flow. Prompts for API key and instance URL.
+Interactive login flow. Opens browser for Clerk sign-in, auto-creates an API key, and saves config to `~/.oatmeal/config.json`.
 
-### `oatmeal config set <key> <value>`
+| Flag | Description |
+|------|-------------|
+| `--api-key` | Skip browser flow, validate and save this key directly |
+| `--base-url` | Target instance URL (saved to config) |
+| `--no-browser` | Paste API key manually instead of opening browser |
+| `--yes`, `-y` | Overwrite existing config without prompting |
 
-Set configuration values:
+Environment variables `OATMEAL_API_KEY` and `OATMEAL_BASE_URL` override config when set.
 
-| Key | Description | Default |
-|-----|-------------|---------|
-| `api-key` | Your Oatmeal API key (`sk_live_...`) | — |
-| `url` | Oatmeal instance URL | `https://getoatmeal.com` |
+### `oatmeal logout`
 
-### `oatmeal config get <key>`
-
-Display a configuration value.
+Remove saved credentials (`~/.oatmeal/config.json`).
 
 ### `oatmeal whoami`
 
-Show current user, organization, and API key scopes.
+Show current auth info: tenant ID, key ID, and scopes.
+
+---
+
+## Browse (public, no auth required)
+
+### `oatmeal browse hackathons`
+
+Search public hackathons.
+
+### `oatmeal browse submissions <slug>`
+
+View submissions for a hackathon by slug.
+
+### `oatmeal browse results <slug>`
+
+View published results for a hackathon by slug.
+
+### `oatmeal browse org <slug>`
+
+View organization profile by slug.
 
 ---
 
@@ -42,118 +64,101 @@ Show current user, organization, and API key scopes.
 
 List all hackathons for your organization.
 
-| Flag | Description |
-|------|-------------|
-| `--search`, `-q` | Filter by name |
-| `--status` | Filter by status |
-
 ### `oatmeal hackathons create`
 
-Create a new hackathon.
+Create a new hackathon. Prompts interactively if flags omitted in TTY.
 
 | Flag | Required | Description |
 |------|----------|-------------|
 | `--name` | Yes | Hackathon name |
-| `--slug` | Yes | URL-safe identifier |
+| `--slug` | Yes | URL-safe identifier (auto-suggested from name in interactive mode) |
 | `--description` | No | Short description |
-| `--starts` | No | Start datetime (ISO 8601) |
-| `--ends` | No | End datetime (ISO 8601) |
-| `--registration-opens` | No | Registration open datetime |
-| `--registration-closes` | No | Registration close datetime |
-| `--location` | No | Venue or "Virtual" |
 
-### `oatmeal hackathons get <id>`
+### `oatmeal hackathons get <id-or-slug>`
 
-Get full details for a hackathon.
+Get full details for a hackathon. Supports both UUID and slug.
 
-### `oatmeal hackathons update <id>`
+### `oatmeal hackathons update <id-or-slug>`
 
-Update hackathon settings. All flags optional:
+Update hackathon settings.
 
 | Flag | Description |
 |------|-------------|
 | `--name` | Update name |
 | `--slug` | Update slug |
 | `--description` | Update description |
-| `--rules` | Update rules (markdown) |
-| `--status` | Change status |
-| `--starts` | Update start time |
-| `--ends` | Update end time |
-| `--registration-opens` | Update registration open |
-| `--registration-closes` | Update registration close |
-| `--location` | Update location |
-| `--anonymous-judging` | Enable/disable anonymous judging (true/false) |
-| `--min-team-size` | Minimum team size |
-| `--max-team-size` | Maximum team size |
 
-### `oatmeal hackathons delete <id>`
+At least one flag is required.
 
-Delete a hackathon. Prompts for confirmation.
+### `oatmeal hackathons delete <id-or-slug>`
+
+Delete a hackathon. Prompts for confirmation (skip with `--yes`).
 
 ---
 
-## Judges
+## Judging — Criteria
 
-### `oatmeal judges list --hackathon <id>`
+### `oatmeal judging criteria list <hackathon-id>`
+
+List all judging criteria.
+
+### `oatmeal judging criteria create <hackathon-id>`
+
+Create a criterion. Prompts interactively if flags omitted.
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--name` | Yes | Criterion name (e.g., "Innovation") |
+| `--description` | No | What judges should evaluate |
+| `--max-score` | No | Maximum score (default 10, prompted in TTY) |
+| `--weight` | No | Weight multiplier (default 1, prompted in TTY) |
+
+### `oatmeal judging criteria update <hackathon-id> <criteria-id>`
+
+Update a criterion. Same flags as `create`, all optional.
+
+### `oatmeal judging criteria delete <hackathon-id> <criteria-id>`
+
+Delete a criterion. Prompts for confirmation.
+
+---
+
+## Judging — Judges
+
+### `oatmeal judging judges list <hackathon-id>`
 
 List all judges with assignment and completion counts.
 
-### `oatmeal judges add --hackathon <id>`
+### `oatmeal judging judges add <hackathon-id>`
 
-Add a judge. Specify one of:
+Add a judge. Provide one of:
 
 | Flag | Description |
 |------|-------------|
 | `--email` | Judge's email (sends invitation if not found on platform) |
 | `--user-id` | Clerk user ID (if known) |
 
-### `oatmeal judges remove --hackathon <id> --judge <participant-id>`
+### `oatmeal judging judges remove <hackathon-id> <participant-id>`
 
-Remove a judge. Returns warning if results may become stale.
+Remove a judge. Prompts for confirmation.
 
-### `oatmeal judges invitations --hackathon <id>`
+---
+
+## Judging — Invitations
+
+### `oatmeal judging invitations list <hackathon-id>`
 
 List pending judge invitations.
 
-### `oatmeal judges cancel-invite --hackathon <id> --invitation <invitation-id>`
+### `oatmeal judging invitations cancel <hackathon-id> <invitation-id>`
 
-Cancel a pending judge invitation.
-
-### `oatmeal judges search --hackathon <id> --query <name>`
-
-Search for users to add as judges.
+Cancel a pending judge invitation. Prompts for confirmation.
 
 ---
 
-## Judging Criteria
+## Judging — Assignments
 
-### `oatmeal criteria list --hackathon <id>`
-
-List all judging criteria.
-
-### `oatmeal criteria add --hackathon <id>`
-
-| Flag | Required | Description |
-|------|----------|-------------|
-| `--name` | Yes | Criterion name (e.g., "Innovation") |
-| `--description` | No | What judges should evaluate |
-| `--max-score` | Yes | Maximum score (e.g., 10) |
-| `--weight` | No | Weight multiplier (default 1.0) |
-| `--order` | No | Display order |
-
-### `oatmeal criteria update --hackathon <id> --criteria <criteria-id>`
-
-Update a criterion. Same flags as `add`, all optional.
-
-### `oatmeal criteria delete --hackathon <id> --criteria <criteria-id>`
-
-Delete a criterion.
-
----
-
-## Judging Assignments
-
-### `oatmeal judging auto-assign --hackathon <id>`
+### `oatmeal judging auto-assign <hackathon-id>`
 
 Auto-distribute submissions across judges.
 
@@ -161,11 +166,11 @@ Auto-distribute submissions across judges.
 |------|----------|-------------|
 | `--per-judge` | Yes | Number of submissions per judge |
 
-### `oatmeal judging assignments --hackathon <id>`
+### `oatmeal judging assignments list <hackathon-id>`
 
 List all assignments with progress stats.
 
-### `oatmeal judging assign --hackathon <id>`
+### `oatmeal judging assignments create <hackathon-id>`
 
 Manually assign a judge to a submission.
 
@@ -174,87 +179,100 @@ Manually assign a judge to a submission.
 | `--judge` | Yes | Judge participant ID |
 | `--submission` | Yes | Submission ID |
 
-### `oatmeal judging unassign --hackathon <id> --assignment <assignment-id>`
+### `oatmeal judging assignments delete <hackathon-id> <assignment-id>`
 
-Remove an assignment.
+Remove an assignment. Prompts for confirmation.
+
+### `oatmeal judging pick-results <hackathon-id>`
+
+View pick-based judging results.
 
 ---
 
 ## Prizes
 
-### `oatmeal prizes list --hackathon <id>`
+### `oatmeal prizes list <hackathon-id>`
 
 List all prizes and their assignments.
 
-### `oatmeal prizes create --hackathon <id>`
+### `oatmeal prizes create <hackathon-id>`
+
+Create a prize. Prompts for name interactively if omitted.
 
 | Flag | Required | Description |
 |------|----------|-------------|
 | `--name` | Yes | Prize name (e.g., "First Place") |
 | `--description` | No | Prize description |
+| `--type` | No | Prize type |
 | `--value` | No | Prize value (e.g., "$5,000") |
-| `--order` | No | Display order |
 
-### `oatmeal prizes update --hackathon <id> --prize <prize-id>`
+### `oatmeal prizes update <hackathon-id> <prize-id>`
 
 Update a prize. Same flags as `create`, all optional.
 
-### `oatmeal prizes delete --hackathon <id> --prize <prize-id>`
+### `oatmeal prizes delete <hackathon-id> <prize-id>`
 
-Delete a prize.
+Delete a prize. Prompts for confirmation.
 
-### `oatmeal prizes assign --hackathon <id> --prize <prize-id> --submission <submission-id>`
+### `oatmeal prizes reorder <hackathon-id> <id-1> <id-2> ...`
+
+Reorder prizes by passing prize IDs in desired order.
+
+### `oatmeal prizes assign <hackathon-id> <prize-id>`
 
 Assign a prize to a winning submission.
 
-### `oatmeal prizes unassign --hackathon <id> --prize <prize-id> --submission <submission-id>`
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--submission` | Yes | Submission ID |
 
-Remove a prize assignment.
+### `oatmeal prizes unassign <hackathon-id> <prize-id> <submission-id>`
+
+Remove a prize assignment. Prompts for confirmation.
 
 ---
 
-## Sponsors
+## Judge Display
 
-### `oatmeal sponsors list --hackathon <id>`
+### `oatmeal judge-display list <hackathon-id>`
 
-List all sponsors.
+List judge display profiles.
 
-### `oatmeal sponsors add --hackathon <id>`
+### `oatmeal judge-display create <hackathon-id>`
 
-| Flag | Required | Description |
-|------|----------|-------------|
-| `--name` | Yes | Sponsor name |
-| `--tier` | No | Tier: `title`, `gold`, `silver`, `bronze`, `partner` |
-| `--website` | No | Sponsor website URL |
-| `--logo-url` | No | Logo URL |
+Create a judge display profile.
 
-### `oatmeal sponsors update --hackathon <id> --sponsor <sponsor-id>`
+### `oatmeal judge-display update <hackathon-id> <display-id>`
 
-Update a sponsor. Same flags as `add`, all optional.
+Update a judge display profile.
 
-### `oatmeal sponsors remove --hackathon <id> --sponsor <sponsor-id>`
+### `oatmeal judge-display delete <hackathon-id> <display-id>`
 
-Remove a sponsor.
+Delete a judge display profile. Prompts for confirmation.
+
+### `oatmeal judge-display reorder <hackathon-id> <id-1> <id-2> ...`
+
+Reorder judge display profiles.
 
 ---
 
 ## Results
 
-### `oatmeal results calculate --hackathon <id>`
+### `oatmeal results calculate <hackathon-id>`
 
 Calculate rankings from submitted scores.
 
-### `oatmeal results get --hackathon <id>`
+### `oatmeal results get <hackathon-id>`
 
 View detailed results with scores (organizer view).
 
-### `oatmeal results publish --hackathon <id>`
+### `oatmeal results publish <hackathon-id>`
 
-Make results public. Transitions hackathon to `completed` status. Triggers `results.published` webhook.
+Make results public. Transitions hackathon to `completed` status. Prompts for confirmation.
 
-### `oatmeal results unpublish --hackathon <id>`
+### `oatmeal results unpublish <hackathon-id>`
 
-Hide results from public view.
+Hide results from public view. Prompts for confirmation.
 
 ---
 
@@ -273,25 +291,54 @@ List all webhooks.
 
 Available events: `hackathon.created`, `hackathon.updated`, `submission.submitted`, `submission.updated`, `results.published`, `participant.registered`
 
-Returns a webhook secret (shown only once).
-
 ### `oatmeal webhooks delete <id>`
 
-Delete a webhook.
+Delete a webhook. Prompts for confirmation.
 
 ---
 
-## Organization
+## Jobs
 
-### `oatmeal org get`
+### `oatmeal jobs list`
 
-View organization profile.
+List jobs. Supports filtering via additional flags.
 
-### `oatmeal org update`
+### `oatmeal jobs get <id>`
 
-| Flag | Description |
-|------|-------------|
-| `--name` | Organization name |
-| `--slug` | Organization slug |
-| `--description` | Description |
-| `--website` | Website URL |
+Get job details and status.
+
+### `oatmeal jobs create`
+
+Create a job (supports idempotency).
+
+### `oatmeal jobs result <id>`
+
+Get job result. Returns 202 if still running.
+
+### `oatmeal jobs cancel <id>`
+
+Cancel a running job. Prompts for confirmation.
+
+---
+
+## Schedules
+
+### `oatmeal schedules list`
+
+List all schedules.
+
+### `oatmeal schedules create`
+
+Create a schedule.
+
+### `oatmeal schedules get <id>`
+
+Get schedule details.
+
+### `oatmeal schedules update <id>`
+
+Update a schedule.
+
+### `oatmeal schedules delete <id>`
+
+Delete a schedule. Prompts for confirmation.

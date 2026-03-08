@@ -6,73 +6,62 @@ Natural language commands mapped to CLI command sequences.
 
 | User Says | CLI Commands |
 |-----------|-------------|
-| "Make me a hackathon on Sunday from 7am to 9pm" | `oatmeal hackathons create --name "..." --starts ... --ends ...` |
-| "Add judge@example.com as a judge" | `oatmeal hackathons list` → `oatmeal judges add --hackathon <id> --email judge@example.com` |
-| "Set up 3 judging criteria" | 3x `oatmeal criteria add --hackathon <id> ...` |
-| "Create prizes: 1st $5k, 2nd $2.5k, 3rd $1k" | 3x `oatmeal prizes create --hackathon <id> ...` |
-| "Auto-assign judges" | `oatmeal judging auto-assign --hackathon <id> --per-judge 5` |
-| "Calculate results and publish" | `oatmeal results calculate --hackathon <id>` → `oatmeal results publish --hackathon <id>` |
-| "Change hackathon name to AI Summit" | `oatmeal hackathons update <id> --name "AI Summit"` |
-| "Open registration" | `oatmeal hackathons update <id> --status registration_open` |
-| "Add TechCorp as gold sponsor" | `oatmeal sponsors add --hackathon <id> --name "TechCorp" --tier gold` |
+| "Make me a hackathon" | `oatmeal hackathons create --name "..." --slug "..."` |
+| "Add judge@example.com as a judge" | `oatmeal hackathons list` → `oatmeal judging judges add <id> --email judge@example.com` |
+| "Set up 3 judging criteria" | 3x `oatmeal judging criteria create <id> --name "..." --max-score 10` |
+| "Create prizes: 1st $5k, 2nd $2.5k, 3rd $1k" | 3x `oatmeal prizes create <id> --name "..." --value "..."` |
+| "Auto-assign judges" | `oatmeal judging auto-assign <id> --per-judge 5` |
+| "Calculate results and publish" | `oatmeal results calculate <id>` → `oatmeal results publish <id>` |
+| "Change hackathon name to AI Summit" | `oatmeal hackathons update <id-or-slug> --name "AI Summit"` |
 | "What hackathons do I have?" | `oatmeal hackathons list` |
-| "Show me the results" | `oatmeal results get --hackathon <id>` |
+| "Show me the results" | `oatmeal results get <id>` |
+| "Browse public hackathons" | `oatmeal browse hackathons` |
 
 ## End-to-End: Set Up a Full Hackathon
 
-When a user says "Set up a hackathon called AI Builders this Saturday 9am-6pm with 3 prizes and innovation/execution/design criteria":
+When a user says "Set up a hackathon called AI Builders with 3 prizes and innovation/execution/design criteria":
 
 ### Step 1: Create the Hackathon
 
 ```bash
-oatmeal hackathons create \
-  --name "AI Builders" \
-  --slug "ai-builders" \
-  --description "AI Builders Hackathon" \
-  --starts "2026-03-14T09:00:00-05:00" \
-  --ends "2026-03-14T18:00:00-05:00" \
-  --registration-opens "2026-03-08T00:00:00-05:00" \
-  --registration-closes "2026-03-14T08:00:00-05:00"
+oatmeal hackathons create --name "AI Builders" --slug "ai-builders" --json
 ```
 
-Save the returned ID.
+Save the returned `id` from the JSON output.
 
 ### Step 2: Add Judging Criteria
 
 ```bash
-oatmeal criteria add --hackathon <id> \
+oatmeal judging criteria create <id> \
   --name "Innovation" \
   --description "How novel and creative is the solution?" \
-  --max-score 10 --weight 1.0 --order 1
+  --max-score 10 --weight 1.0
 
-oatmeal criteria add --hackathon <id> \
+oatmeal judging criteria create <id> \
   --name "Execution" \
   --description "How well is the solution built and polished?" \
-  --max-score 10 --weight 1.0 --order 2
+  --max-score 10 --weight 1.0
 
-oatmeal criteria add --hackathon <id> \
+oatmeal judging criteria create <id> \
   --name "Design" \
   --description "How good is the UX and visual design?" \
-  --max-score 10 --weight 1.0 --order 3
+  --max-score 10 --weight 1.0
 ```
 
 ### Step 3: Create Prizes
 
 ```bash
-oatmeal prizes create --hackathon <id> \
-  --name "First Place" --value "\$5,000" --order 1
-
-oatmeal prizes create --hackathon <id> \
-  --name "Second Place" --value "\$2,500" --order 2
-
-oatmeal prizes create --hackathon <id> \
-  --name "Third Place" --value "\$1,000" --order 3
+oatmeal prizes create <id> --name "First Place" --value "$5,000"
+oatmeal prizes create <id> --name "Second Place" --value "$2,500"
+oatmeal prizes create <id> --name "Third Place" --value "$1,000"
 ```
 
-### Step 4: Publish
+### Step 4: Verify Setup
 
 ```bash
-oatmeal hackathons update <id> --status published
+oatmeal hackathons get <id>
+oatmeal judging criteria list <id>
+oatmeal prizes list <id>
 ```
 
 ## End-to-End: Add Judges and Run Judging
@@ -88,21 +77,21 @@ oatmeal hackathons list
 ### Step 2: Add Judges
 
 ```bash
-oatmeal judges add --hackathon <id> --email alice@co.com
-oatmeal judges add --hackathon <id> --email bob@co.com
-oatmeal judges add --hackathon <id> --email charlie@co.com
+oatmeal judging judges add <id> --email alice@co.com
+oatmeal judging judges add <id> --email bob@co.com
+oatmeal judging judges add <id> --email charlie@co.com
 ```
 
 ### Step 3: Auto-Assign
 
 ```bash
-oatmeal judging auto-assign --hackathon <id> --per-judge 5
+oatmeal judging auto-assign <id> --per-judge 5
 ```
 
 ### Step 4: Check Progress
 
 ```bash
-oatmeal judging assignments --hackathon <id>
+oatmeal judging assignments list <id>
 ```
 
 ## End-to-End: Calculate and Publish Results
@@ -111,32 +100,16 @@ When a user says "close judging and announce winners":
 
 ```bash
 # Calculate rankings
-oatmeal results calculate --hackathon <id>
+oatmeal results calculate <id>
 
 # Review before publishing
-oatmeal results get --hackathon <id>
+oatmeal results get <id>
 
 # Assign prizes to top submissions
-oatmeal prizes assign --hackathon <id> \
-  --prize <first-prize-id> --submission <winner-id>
+oatmeal prizes assign <id> <first-prize-id> --submission <winner-id>
 
 # Publish (makes public, transitions to completed)
-oatmeal results publish --hackathon <id>
-```
-
-## End-to-End: Add Sponsors
-
-When a user says "add sponsors: TechCorp (gold), StartupFund (silver), DevTools (bronze)":
-
-```bash
-oatmeal sponsors add --hackathon <id> \
-  --name "TechCorp" --tier gold --website "https://techcorp.com"
-
-oatmeal sponsors add --hackathon <id> \
-  --name "StartupFund" --tier silver --website "https://startupfund.com"
-
-oatmeal sponsors add --hackathon <id> \
-  --name "DevTools" --tier bronze --website "https://devtools.com"
+oatmeal results publish <id>
 ```
 
 ## End-to-End: Set Up Webhooks
@@ -149,33 +122,48 @@ oatmeal webhooks create \
   --events "submission.submitted,participant.registered"
 ```
 
-Save the returned secret — it's shown only once.
-
 ## Hackathon Lifecycle
+
+The typical lifecycle managed through the dashboard:
 
 ```
 draft → published → registration_open → active → judging → completed → archived
 ```
 
-Each transition:
+## Using JSON Output for Scripting
+
+Use `--json` to capture IDs programmatically:
 
 ```bash
-oatmeal hackathons update <id> --status <target-status>
+# Create and capture ID
+HACKATHON_ID=$(oatmeal hackathons create --name "Test" --slug "test" --json | jq -r '.id')
+
+# Use in subsequent commands
+oatmeal judging criteria create $HACKATHON_ID --name "Innovation" --max-score 10
+oatmeal prizes create $HACKATHON_ID --name "First Place" --value "$1,000"
 ```
 
-## Date Handling
+## Local Development
 
-When converting natural language dates:
+When working on the Oatmeal codebase, use `bun cli` instead of `oatmeal`:
 
-| User Says | Interpretation |
-|-----------|---------------|
-| "this Sunday" | Next upcoming Sunday from today |
-| "next Friday" | Friday of next week |
-| "tomorrow at 9am" | Tomorrow 09:00 in user's timezone |
-| "7am to 9pm" | `--starts` 07:00, `--ends` 21:00 |
-| "all day" | `--starts` 00:00, `--ends` 23:59 |
-| "weekend hackathon" | Saturday 09:00 to Sunday 18:00 |
+```bash
+# Start local server
+bun dev
 
-Always use ISO 8601 with timezone: `2026-03-15T09:00:00-05:00`
+# Auth against local instance
+bun cli login --base-url http://localhost:3000
 
-If the user's timezone is unknown, ask before creating.
+# Run commands
+bun cli hackathons list
+bun cli prizes create <hackathon-id> --name "Best AI App"
+bun cli judging judges list <hackathon-id>
+```
+
+Seed test data for different scenarios:
+
+```bash
+bun run scripts/test-scenario.ts judging   # Seeds judges + submissions
+bun cli judging judges list <hackathon-id>
+bun cli judging auto-assign <hackathon-id> --per-judge 3
+```
