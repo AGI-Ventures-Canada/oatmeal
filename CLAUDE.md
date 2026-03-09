@@ -109,7 +109,7 @@ Skills in `.claude/skills/`:
 - `hackathon-organizer/` - Tips, tricks, and best practices for organizing successful hackathons
 - `hackathon-attendee/` - Tips, tricks, and best practices for hackathon participants
 
-User-facing hackathon skills are also published at [AGI-Ventures-Canada/oatmeal-skills](https://github.com/AGI-Ventures-Canada/oatmeal-skills) for external installation via `npx skills add AGI-Ventures-Canada/oatmeal-skills`.
+User-facing hackathon skills are also published at [AGI-Ventures-Canada/hackathon-skills](https://github.com/AGI-Ventures-Canada/hackathon-skills) for external installation via `npx skills add AGI-Ventures-Canada/hackathon-skills`.
 
 ## Next.js 16 Specifics
 
