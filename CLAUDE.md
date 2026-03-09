@@ -104,10 +104,8 @@ When developers include external documentation links in requests, save them to t
 
 Skills in `.claude/skills/`:
 - `local-dev-setup.md` - Developer onboarding and local environment setup
-- `hackathon-cli/` - Use the Oatmeal CLI tool to manage hackathons from the terminal
-- `hackathon-api/` - Direct REST API access to the Oatmeal platform via curl commands
-- `hackathon-organizer/` - Tips, tricks, and best practices for organizing successful hackathons
-- `hackathon-attendee/` - Tips, tricks, and best practices for hackathon participants
+
+Hackathon-specific skills (CLI, API, organizer, attendee) live in the [hackathon-skills](https://github.com/AGI-Ventures-Canada/hackathon-skills) repo.
 
 ## Next.js 16 Specifics
 
