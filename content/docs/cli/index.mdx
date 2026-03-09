@@ -10,17 +10,17 @@ The Oatmeal CLI lets you manage hackathons, judges, prizes, and results directly
 Install globally or run directly with `npx`:
 
 ```bash title="Run without installing"
-npx @oatmeal/cli --version
+npx @agi-ventures-canada/hackathon-cli --version
 ```
 
 ```bash title="Install globally"
-npm install -g @oatmeal/cli
+npm install -g @agi-ventures-canada/hackathon-cli
 ```
 
 Or with Bun:
 
 ```bash title="Using Bun"
-bunx @oatmeal/cli --version
+bunx @agi-ventures-canada/hackathon-cli --version
 ```
 
 ## Two Modes
@@ -35,16 +35,16 @@ The CLI supports two modes of operation:
 Browse commands work immediately — no login needed:
 
 ```bash title="Public browsing"
-oatmeal browse hackathons
-oatmeal browse results my-hackathon
+hackathon browse hackathons
+hackathon browse results my-hackathon
 ```
 
 Management commands require authentication:
 
 ```bash title="Authenticated management"
-oatmeal login
-oatmeal hackathons list
-oatmeal prizes create <hackathon-id> --name "Best AI App"
+hackathon login
+hackathon events list
+hackathon prizes create <hackathon-id> --name "Best AI App"
 ```
 
 ## Command Reference
@@ -64,74 +64,112 @@ oatmeal prizes create <hackathon-id> --name "Best AI App"
 
 | Command | Description |
 |---------|-------------|
-| `oatmeal login` | Sign in via browser (auto-creates API key) |
-| `oatmeal login --api-key sk_live_...` | Sign in with an existing API key |
-| `oatmeal login --no-browser` | Paste an API key manually |
-| `oatmeal logout` | Clear saved credentials |
-| `oatmeal whoami` | Show current tenant and scopes |
+| `hackathon login` | Sign in via browser (auto-creates API key) |
+| `hackathon login --api-key sk_live_...` | Sign in with an existing API key |
+| `hackathon login --no-browser` | Paste an API key manually |
+| `hackathon logout` | Clear saved credentials |
+| `hackathon whoami` | Show current tenant and scopes |
+| `hackathon update` | Update CLI to latest version |
 
 ### Browse (No Auth)
 
 | Command | Description |
 |---------|-------------|
-| `oatmeal browse hackathons` | Search public hackathons |
-| `oatmeal browse hackathon <slug>` | View hackathon details |
-| `oatmeal browse submissions <slug>` | List submissions |
-| `oatmeal browse results <slug>` | View published results |
-| `oatmeal browse org <slug>` | View organization profile |
+| `hackathon browse hackathons` | Search public hackathons |
+| `hackathon browse submissions <slug>` | List submissions |
+| `hackathon browse results <slug>` | View published results |
+| `hackathon browse org <slug>` | View organization profile |
 
-### Hackathons
+### Events
 
 | Command | Description |
 |---------|-------------|
-| `oatmeal hackathons list` | List your hackathons |
-| `oatmeal hackathons get <id>` | Get hackathon details |
-| `oatmeal hackathons create` | Create a new hackathon |
-| `oatmeal hackathons update <id>` | Update hackathon settings |
-| `oatmeal hackathons delete <id>` | Delete a hackathon |
+| `hackathon events list` | List your hackathons |
+| `hackathon events get <id>` | Get hackathon details |
+| `hackathon events create` | Create a new hackathon |
+| `hackathon events update <id>` | Update hackathon settings |
+| `hackathon events delete <id>` | Delete a hackathon |
 
 ### Judging
 
 | Command | Description |
 |---------|-------------|
-| `oatmeal judging criteria list <id>` | List judging criteria |
-| `oatmeal judging criteria create <id>` | Add a criterion |
-| `oatmeal judging judges list <id>` | List judges with progress |
-| `oatmeal judging judges add <id>` | Add a judge |
-| `oatmeal judging auto-assign <id>` | Auto-distribute submissions |
-| `oatmeal judging pick-results <id>` | View subjective judging tallies |
+| `hackathon judging criteria list <id>` | List judging criteria |
+| `hackathon judging criteria create <id>` | Add a criterion |
+| `hackathon judging criteria update <id> <cid>` | Update a criterion |
+| `hackathon judging criteria delete <id> <cid>` | Delete a criterion |
+| `hackathon judging judges list <id>` | List judges with progress |
+| `hackathon judging judges add <id>` | Add a judge |
+| `hackathon judging judges remove <id> <pid>` | Remove a judge |
+| `hackathon judging assignments list <id>` | List judge assignments |
+| `hackathon judging assignments create <id>` | Create an assignment |
+| `hackathon judging assignments delete <id> <aid>` | Delete an assignment |
+| `hackathon judging auto-assign <id>` | Auto-distribute submissions |
+| `hackathon judging invitations list <id>` | List pending invitations |
+| `hackathon judging invitations cancel <id> <iid>` | Cancel an invitation |
+| `hackathon judging pick-results <id>` | View subjective judging tallies |
 
 ### Prizes
 
 | Command | Description |
 |---------|-------------|
-| `oatmeal prizes list <id>` | List prizes |
-| `oatmeal prizes create <id>` | Create a prize |
-| `oatmeal prizes assign <id> <prize-id>` | Assign prize to submission |
-| `oatmeal prizes reorder <id>` | Reorder prizes |
+| `hackathon prizes list <id>` | List prizes |
+| `hackathon prizes create <id>` | Create a prize |
+| `hackathon prizes update <id> <pid>` | Update a prize |
+| `hackathon prizes delete <id> <pid>` | Delete a prize |
+| `hackathon prizes reorder <id>` | Reorder prizes |
+| `hackathon prizes assign <id> <pid>` | Assign prize to submission |
+| `hackathon prizes unassign <id> <pid> <sid>` | Unassign prize from submission |
+
+### Judge Display
+
+| Command | Description |
+|---------|-------------|
+| `hackathon judge-display list <id>` | List display profiles |
+| `hackathon judge-display create <id>` | Create a display profile |
+| `hackathon judge-display update <id> <jid>` | Update a display profile |
+| `hackathon judge-display delete <id> <jid>` | Delete a display profile |
+| `hackathon judge-display reorder <id>` | Reorder display profiles |
 
 ### Results
 
 | Command | Description |
 |---------|-------------|
-| `oatmeal results calculate <id>` | Calculate rankings from scores |
-| `oatmeal results get <id>` | View detailed results |
-| `oatmeal results publish <id>` | Publish results |
-| `oatmeal results unpublish <id>` | Unpublish results |
+| `hackathon results calculate <id>` | Calculate rankings from scores |
+| `hackathon results get <id>` | View detailed results |
+| `hackathon results publish <id>` | Publish results |
+| `hackathon results unpublish <id>` | Unpublish results |
 
-### Webhooks, Jobs, Schedules
+### Webhooks
 
 | Command | Description |
 |---------|-------------|
-| `oatmeal webhooks list` | List webhooks |
-| `oatmeal webhooks create` | Create a webhook |
-| `oatmeal jobs list` | List jobs |
-| `oatmeal jobs create` | Create a job |
-| `oatmeal schedules list` | List schedules |
-| `oatmeal schedules create` | Create a schedule |
+| `hackathon webhooks list` | List webhooks |
+| `hackathon webhooks create` | Create a webhook |
+| `hackathon webhooks delete <id>` | Delete a webhook |
+
+### Jobs
+
+| Command | Description |
+|---------|-------------|
+| `hackathon jobs list` | List jobs |
+| `hackathon jobs get <id>` | Get job details |
+| `hackathon jobs create` | Create a job |
+| `hackathon jobs result <id>` | Get job result |
+| `hackathon jobs cancel <id>` | Cancel a job |
+
+### Schedules
+
+| Command | Description |
+|---------|-------------|
+| `hackathon schedules list` | List schedules |
+| `hackathon schedules create` | Create a schedule |
+| `hackathon schedules get <id>` | Get schedule details |
+| `hackathon schedules update <id>` | Update a schedule |
+| `hackathon schedules delete <id>` | Delete a schedule |
 
 <Callout type="info">
-Use `oatmeal <command> --help` for full flag details on any command.
+Use `hackathon <command> --help` for full flag details on any command.
 </Callout>
 
 ## Next Steps

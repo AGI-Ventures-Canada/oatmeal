@@ -58,13 +58,13 @@ View organization profile by slug.
 
 ---
 
-## Hackathons
+## Events
 
-### `hackathon hackathons list`
+### `hackathon events list`
 
 List all hackathons for your organization.
 
-### `hackathon hackathons create`
+### `hackathon events create`
 
 Create a new hackathon. Prompts interactively if flags omitted in TTY.
 
@@ -74,11 +74,11 @@ Create a new hackathon. Prompts interactively if flags omitted in TTY.
 | `--slug` | Yes | URL-safe identifier (auto-suggested from name in interactive mode) |
 | `--description` | No | Short description |
 
-### `hackathon hackathons get <id-or-slug>`
+### `hackathon events get <id-or-slug>`
 
 Get full details for a hackathon. Supports both UUID and slug.
 
-### `hackathon hackathons update <id-or-slug>`
+### `hackathon events update <id-or-slug>`
 
 Update hackathon settings.
 
@@ -90,7 +90,7 @@ Update hackathon settings.
 
 At least one flag is required.
 
-### `hackathon hackathons delete <id-or-slug>`
+### `hackathon events delete <id-or-slug>`
 
 Delete a hackathon. Prompts for confirmation (skip with `--yes`).
 

@@ -6,14 +6,14 @@ Natural language commands mapped to CLI command sequences.
 
 | User Says | CLI Commands |
 |-----------|-------------|
-| "Make me a hackathon" | `hackathon hackathons create --name "..." --slug "..."` |
-| "Add judge@example.com as a judge" | `hackathon hackathons list` → `hackathon judging judges add <id> --email judge@example.com` |
+| "Make me a hackathon" | `hackathon events create --name "..." --slug "..."` |
+| "Add judge@example.com as a judge" | `hackathon events list` → `hackathon judging judges add <id> --email judge@example.com` |
 | "Set up 3 judging criteria" | 3x `hackathon judging criteria create <id> --name "..." --max-score 10` |
 | "Create prizes: 1st $5k, 2nd $2.5k, 3rd $1k" | 3x `hackathon prizes create <id> --name "..." --value "..."` |
 | "Auto-assign judges" | `hackathon judging auto-assign <id> --per-judge 5` |
 | "Calculate results and publish" | `hackathon results calculate <id>` → `hackathon results publish <id>` |
-| "Change hackathon name to AI Summit" | `hackathon hackathons update <id-or-slug> --name "AI Summit"` |
-| "What hackathons do I have?" | `hackathon hackathons list` |
+| "Change hackathon name to AI Summit" | `hackathon events update <id-or-slug> --name "AI Summit"` |
+| "What hackathons do I have?" | `hackathon events list` |
 | "Show me the results" | `hackathon results get <id>` |
 | "Browse public hackathons" | `hackathon browse hackathons` |
 
@@ -24,7 +24,7 @@ When a user says "Set up a hackathon called AI Builders with 3 prizes and innova
 ### Step 1: Create the Hackathon
 
 ```bash
-hackathon hackathons create --name "AI Builders" --slug "ai-builders" --json
+hackathon events create --name "AI Builders" --slug "ai-builders" --json
 ```
 
 Save the returned `id` from the JSON output.
@@ -59,7 +59,7 @@ hackathon prizes create <id> --name "Third Place" --value "$1,000"
 ### Step 4: Verify Setup
 
 ```bash
-hackathon hackathons get <id>
+hackathon events get <id>
 hackathon judging criteria list <id>
 hackathon prizes list <id>
 ```
@@ -71,7 +71,7 @@ When a user says "Add these judges: alice@co.com, bob@co.com, charlie@co.com":
 ### Step 1: Find the Hackathon
 
 ```bash
-hackathon hackathons list
+hackathon events list
 ```
 
 ### Step 2: Add Judges
@@ -136,7 +136,7 @@ Use `--json` to capture IDs programmatically:
 
 ```bash
 # Create and capture ID
-HACKATHON_ID=$(hackathon hackathons create --name "Test" --slug "test" --json | jq -r '.id')
+HACKATHON_ID=$(hackathon events create --name "Test" --slug "test" --json | jq -r '.id')
 
 # Use in subsequent commands
 hackathon judging criteria create $HACKATHON_ID --name "Innovation" --max-score 10
@@ -155,7 +155,7 @@ bun dev
 bun cli login --base-url http://localhost:3000
 
 # Run commands
-bun cli hackathons list
+bun cli events list
 bun cli prizes create <hackathon-id> --name "Best AI App"
 bun cli judging judges list <hackathon-id>
 ```

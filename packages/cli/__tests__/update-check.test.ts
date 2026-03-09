@@ -1,27 +1,23 @@
 import { describe, expect, it, mock, beforeEach, afterEach, spyOn } from "bun:test"
-import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "node:fs"
+import { existsSync, unlinkSync, mkdirSync } from "node:fs"
 import { join } from "node:path"
-import { tmpdir } from "node:os"
+import { homedir } from "node:os"
 
-const TEST_CONFIG_DIR = join(tmpdir(), `.hackathon-test-${Date.now()}`)
-const TEST_CHECK_FILE = join(TEST_CONFIG_DIR, "update-check.json")
+const REAL_CHECK_FILE = join(homedir(), ".hackathon", "update-check.json")
 
 let originalFetch: typeof globalThis.fetch
 
 beforeEach(() => {
   originalFetch = globalThis.fetch
-  if (!existsSync(TEST_CONFIG_DIR)) {
-    mkdirSync(TEST_CONFIG_DIR, { recursive: true })
-  }
-  if (existsSync(TEST_CHECK_FILE)) {
-    unlinkSync(TEST_CHECK_FILE)
+  if (existsSync(REAL_CHECK_FILE)) {
+    unlinkSync(REAL_CHECK_FILE)
   }
 })
 
 afterEach(() => {
   globalThis.fetch = originalFetch
-  if (existsSync(TEST_CHECK_FILE)) {
-    unlinkSync(TEST_CHECK_FILE)
+  if (existsSync(REAL_CHECK_FILE)) {
+    unlinkSync(REAL_CHECK_FILE)
   }
 })
 

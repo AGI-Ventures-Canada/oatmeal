@@ -9,7 +9,7 @@ export async function runHackathonsGet(
   options: { json?: boolean }
 ): Promise<void> {
   if (!idOrSlug) {
-    console.error("Usage: hackathon hackathons get <id-or-slug>")
+    console.error("Usage: hackathon events get <id-or-slug>")
     process.exit(1)
   }
 

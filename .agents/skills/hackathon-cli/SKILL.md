@@ -116,23 +116,23 @@ hackathon browse results <slug>            # View published results
 hackathon browse org <slug>                # View organization profile
 ```
 
-### Hackathon Management
+### Event Management
 
 ```bash
 # List your hackathons
-hackathon hackathons list
+hackathon events list
 
 # Create a new hackathon (interactive prompts if flags omitted)
-hackathon hackathons create --name "Sunday AI Hackathon" --slug "sunday-ai-hackathon"
+hackathon events create --name "Sunday AI Hackathon" --slug "sunday-ai-hackathon"
 
 # Get hackathon details (supports ID or slug)
-hackathon hackathons get <id-or-slug>
+hackathon events get <id-or-slug>
 
 # Update settings
-hackathon hackathons update <id-or-slug> --name "Updated Name" --description "New description"
+hackathon events update <id-or-slug> --name "Updated Name" --description "New description"
 
 # Delete a hackathon
-hackathon hackathons delete <id-or-slug>
+hackathon events delete <id-or-slug>
 ```
 
 ### Judging — Judges
@@ -301,12 +301,12 @@ hackathon schedules delete <schedule-id>
 When a user says "my current hackathon" or "my hackathon":
 
 ```bash
-hackathon hackathons list
+hackathon events list
 ```
 
 Look for the hackathon with `active` or `published` status. If ambiguous, ask which one they mean.
 
-The CLI supports **slug resolution** — most commands that take a hackathon ID also accept a slug (e.g., `hackathon hackathons get my-hackathon-slug`).
+The CLI supports **slug resolution** — most commands that take a hackathon ID also accept a slug (e.g., `hackathon events get my-hackathon-slug`).
 
 ## Date Handling
 
