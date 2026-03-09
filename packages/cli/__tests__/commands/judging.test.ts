@@ -4,6 +4,13 @@ import { OatmealClient } from "../../src/client"
 const mockFetch = mock<typeof globalThis.fetch>()
 const originalFetch = globalThis.fetch
 
+const mockConfirm = mock(() => Promise.resolve(false))
+mock.module("@clack/prompts", () => ({
+  confirm: mockConfirm,
+  isCancel: () => false,
+  log: { info: () => {} },
+}))
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -111,6 +118,209 @@ describe("judging commands", () => {
       const { runPickResults } = await import("../../src/commands/judging/pick-results")
       await runPickResults(client, hackathonId, { json: false })
       expect(consoleLogSpy.mock.calls[0][0]).toContain("Project A")
+    })
+  })
+
+  describe("criteria update", () => {
+    it("sends PATCH with updated fields", async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ id: "c1", name: "Innovation v2" }))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runCriteriaUpdate } = await import("../../src/commands/judging/criteria-update")
+      await runCriteriaUpdate(client, hackathonId, "c1", ["--name", "Innovation v2", "--weight", "2.0"])
+
+      const url = mockFetch.mock.calls[0][0] as string
+      const init = mockFetch.mock.calls[0][1] as RequestInit
+      expect(url).toContain(`/judging/criteria/c1`)
+      expect(init.method).toBe("PATCH")
+      const body = JSON.parse(init.body as string)
+      expect(body.name).toBe("Innovation v2")
+      expect(body.weight).toBe(2.0)
+    })
+
+    it("--json outputs updated criteria", async () => {
+      const criteria = { id: "c1", name: "Innovation v2", maxScore: 10, weight: 2.0 }
+      mockFetch.mockResolvedValueOnce(jsonResponse(criteria))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runCriteriaUpdate } = await import("../../src/commands/judging/criteria-update")
+      await runCriteriaUpdate(client, hackathonId, "c1", ["--name", "Innovation v2", "--json"])
+
+      expect(JSON.parse(consoleLogSpy.mock.calls[0][0])).toEqual(criteria)
+    })
+
+    it("exits with error when no fields provided", async () => {
+      const exitSpy = spyOn(process, "exit").mockImplementation(() => { throw new Error("exit") })
+      const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {})
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runCriteriaUpdate } = await import("../../src/commands/judging/criteria-update")
+      await expect(runCriteriaUpdate(client, hackathonId, "c1", [])).rejects.toThrow()
+      exitSpy.mockRestore()
+      consoleErrorSpy.mockRestore()
+    })
+  })
+
+  describe("criteria delete", () => {
+    it("sends DELETE with --yes flag", async () => {
+      mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runCriteriaDelete } = await import("../../src/commands/judging/criteria-delete")
+      await runCriteriaDelete(client, hackathonId, "c1", { yes: true })
+
+      const url = mockFetch.mock.calls[0][0] as string
+      const init = mockFetch.mock.calls[0][1] as RequestInit
+      expect(url).toContain(`/judging/criteria/c1`)
+      expect(init.method).toBe("DELETE")
+    })
+
+    it("skips delete when user declines confirmation", async () => {
+      mockConfirm.mockResolvedValueOnce(false)
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runCriteriaDelete } = await import("../../src/commands/judging/criteria-delete")
+      await runCriteriaDelete(client, hackathonId, "c1", { yes: false })
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("judges remove", () => {
+    it("sends DELETE with --yes flag", async () => {
+      mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runJudgesRemove } = await import("../../src/commands/judging/judges-remove")
+      await runJudgesRemove(client, hackathonId, "p1", { yes: true })
+
+      const url = mockFetch.mock.calls[0][0] as string
+      const init = mockFetch.mock.calls[0][1] as RequestInit
+      expect(url).toContain(`/judging/judges/p1`)
+      expect(init.method).toBe("DELETE")
+    })
+
+    it("skips remove when user declines confirmation", async () => {
+      mockConfirm.mockResolvedValueOnce(false)
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runJudgesRemove } = await import("../../src/commands/judging/judges-remove")
+      await runJudgesRemove(client, hackathonId, "p1", { yes: false })
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("assignments list", () => {
+    it("displays assignments table", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          assignments: [{ judge_name: "Alice", submission_name: "Project X", status: "pending" }],
+        })
+      )
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runAssignmentsList } = await import("../../src/commands/judging/assignments-list")
+      await runAssignmentsList(client, hackathonId, { json: false })
+      expect(consoleLogSpy.mock.calls[0][0]).toContain("Alice")
+      expect(consoleLogSpy.mock.calls[0][0]).toContain("Project X")
+    })
+
+    it("--json outputs raw data", async () => {
+      const data = { assignments: [{ judge_name: "Alice", submission_name: "Project X" }] }
+      mockFetch.mockResolvedValueOnce(jsonResponse(data))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runAssignmentsList } = await import("../../src/commands/judging/assignments-list")
+      await runAssignmentsList(client, hackathonId, { json: true })
+      expect(JSON.parse(consoleLogSpy.mock.calls[0][0])).toEqual(data)
+    })
+
+    it("shows empty message when no assignments", async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ assignments: [] }))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runAssignmentsList } = await import("../../src/commands/judging/assignments-list")
+      await runAssignmentsList(client, hackathonId, { json: false })
+      expect(consoleLogSpy.mock.calls[0][0]).toContain("No assignments found")
+    })
+  })
+
+  describe("assignments create", () => {
+    it("sends POST with --judge and --submission", async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ id: "a1" }))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runAssignmentsCreate } = await import("../../src/commands/judging/assignments-create")
+      await runAssignmentsCreate(client, hackathonId, ["--judge", "j1", "--submission", "s1"])
+
+      const init = mockFetch.mock.calls[0][1] as RequestInit
+      const body = JSON.parse(init.body as string)
+      expect(body.judge_id).toBe("j1")
+      expect(body.submission_id).toBe("s1")
+    })
+
+    it("exits when --judge or --submission missing", async () => {
+      const exitSpy = spyOn(process, "exit").mockImplementation(() => { throw new Error("exit") })
+      const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {})
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runAssignmentsCreate } = await import("../../src/commands/judging/assignments-create")
+      await expect(runAssignmentsCreate(client, hackathonId, ["--judge", "j1"])).rejects.toThrow()
+      exitSpy.mockRestore()
+      consoleErrorSpy.mockRestore()
+    })
+  })
+
+  describe("assignments delete", () => {
+    it("sends DELETE with --yes flag", async () => {
+      mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runAssignmentsDelete } = await import("../../src/commands/judging/assignments-delete")
+      await runAssignmentsDelete(client, hackathonId, "a1", { yes: true })
+
+      const url = mockFetch.mock.calls[0][0] as string
+      const init = mockFetch.mock.calls[0][1] as RequestInit
+      expect(url).toContain(`/judging/assignments/a1`)
+      expect(init.method).toBe("DELETE")
+    })
+
+    it("skips delete when user declines confirmation", async () => {
+      mockConfirm.mockResolvedValueOnce(false)
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runAssignmentsDelete } = await import("../../src/commands/judging/assignments-delete")
+      await runAssignmentsDelete(client, hackathonId, "a1", { yes: false })
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("invitations list", () => {
+    it("displays pending invitations", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          invitations: [{ email: "pending@test.com", status: "pending", created_at: "2026-01-01" }],
+        })
+      )
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runInvitationsList } = await import("../../src/commands/judging/invitations-list")
+      await runInvitationsList(client, hackathonId, { json: false })
+      expect(consoleLogSpy.mock.calls[0][0]).toContain("pending@test.com")
+    })
+
+    it("shows empty message when no invitations", async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ invitations: [] }))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runInvitationsList } = await import("../../src/commands/judging/invitations-list")
+      await runInvitationsList(client, hackathonId, { json: false })
+      expect(consoleLogSpy.mock.calls[0][0]).toContain("No pending invitations")
+    })
+  })
+
+  describe("invitations cancel", () => {
+    it("sends DELETE with --yes flag", async () => {
+      mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runInvitationsCancel } = await import("../../src/commands/judging/invitations-cancel")
+      await runInvitationsCancel(client, hackathonId, "inv1", { yes: true })
+
+      const url = mockFetch.mock.calls[0][0] as string
+      const init = mockFetch.mock.calls[0][1] as RequestInit
+      expect(url).toContain(`/judging/invitations/inv1`)
+      expect(init.method).toBe("DELETE")
+    })
+
+    it("skips cancel when user declines confirmation", async () => {
+      mockConfirm.mockResolvedValueOnce(false)
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runInvitationsCancel } = await import("../../src/commands/judging/invitations-cancel")
+      await runInvitationsCancel(client, hackathonId, "inv1", { yes: false })
+      expect(mockFetch).not.toHaveBeenCalled()
     })
   })
 })

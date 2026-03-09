@@ -4,6 +4,11 @@ const mockExtractLumaEventData = mock(() => Promise.resolve(null))
 
 mock.module("@/lib/services/luma-import", () => ({
   extractLumaEventData: mockExtractLumaEventData,
+  normalizeEventDate: (s: string | null) => {
+    if (!s) return null
+    const match = s.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/)
+    return match ? match[1] : s
+  },
 }))
 
 const { api } = await import("@/lib/api")

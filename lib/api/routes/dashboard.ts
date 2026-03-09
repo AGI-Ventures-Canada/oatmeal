@@ -1030,6 +1030,40 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       description: "Returns full hackathon details for organizers. Requires hackathons:read scope.",
     },
   })
+  .delete("/hackathons/:id", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+    const { checkHackathonOrganizer, deleteHackathon } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+    if (result.status === "not_found") {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    const success = await deleteHackathon(params.id, principal.tenantId)
+    if (!success) {
+      return new Response(JSON.stringify({ error: "Failed to delete hackathon" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    return { success: true }
+  }, {
+    detail: {
+      summary: "Delete hackathon",
+      description: "Permanently deletes a hackathon and all associated data. Requires hackathons:write scope.",
+    },
+  })
   .patch(
     "/hackathons/:id/settings",
     async ({ principal, params, body }) => {
@@ -1106,6 +1140,24 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
       return {
         id: hackathon.id,
+        name: hackathon.name,
+        slug: hackathon.slug,
+        description: hackathon.description,
+        rules: hackathon.rules,
+        bannerUrl: hackathon.banner_url,
+        status: getEffectiveStatus(hackathon),
+        startsAt: hackathon.starts_at,
+        endsAt: hackathon.ends_at,
+        registrationOpensAt: hackathon.registration_opens_at,
+        registrationClosesAt: hackathon.registration_closes_at,
+        maxParticipants: hackathon.max_participants,
+        minTeamSize: hackathon.min_team_size,
+        maxTeamSize: hackathon.max_team_size,
+        allowSolo: hackathon.allow_solo,
+        anonymousJudging: hackathon.anonymous_judging,
+        judgingMode: hackathon.judging_mode,
+        resultsPublishedAt: hackathon.results_published_at,
+        createdAt: hackathon.created_at,
         updatedAt: hackathon.updated_at,
       }
     },

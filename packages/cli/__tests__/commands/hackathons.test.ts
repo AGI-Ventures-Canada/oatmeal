@@ -4,6 +4,13 @@ import { OatmealClient } from "../../src/client"
 const mockFetch = mock<typeof globalThis.fetch>()
 const originalFetch = globalThis.fetch
 
+const mockConfirm = mock(() => Promise.resolve(false))
+mock.module("@clack/prompts", () => ({
+  confirm: mockConfirm,
+  isCancel: () => false,
+  log: { info: () => {} },
+}))
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -103,32 +110,92 @@ describe("hackathons commands", () => {
   })
 
   describe("update", () => {
-    it("sends PATCH with provided fields", async () => {
+    it("sends PATCH to /settings endpoint with provided fields", async () => {
       const uuid = "12345678-1234-1234-1234-123456789012"
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ id: uuid, name: "Updated Hack" })
-      )
+      mockFetch.mockResolvedValueOnce(jsonResponse({ id: uuid, updatedAt: "2026-01-01" }))
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
       const { runHackathonsUpdate } = await import("../../src/commands/hackathons/update")
       await runHackathonsUpdate(client, uuid, ["--name", "Updated Hack"])
 
+      const url = mockFetch.mock.calls[0][0] as string
       const init = mockFetch.mock.calls[0][1] as RequestInit
+      expect(url).toContain(`/hackathons/${uuid}/settings`)
       expect(init.method).toBe("PATCH")
-      const body = JSON.parse(init.body as string)
-      expect(body.name).toBe("Updated Hack")
+      expect(JSON.parse(init.body as string).name).toBe("Updated Hack")
+    })
+
+    it("--json outputs full hackathon returned by PATCH", async () => {
+      const uuid = "12345678-1234-1234-1234-123456789012"
+      const hackathon = { id: uuid, name: "Updated Hack", slug: "updated-hack" }
+      mockFetch.mockResolvedValueOnce(jsonResponse(hackathon))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runHackathonsUpdate } = await import("../../src/commands/hackathons/update")
+      await runHackathonsUpdate(client, uuid, ["--name", "Updated Hack", "--json"])
+
+      expect(JSON.parse(consoleLogSpy.mock.calls[0][0])).toEqual(hackathon)
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+    })
+
+    it("exits with error when no fields provided", async () => {
+      const uuid = "12345678-1234-1234-1234-123456789012"
+      const exitSpy = spyOn(process, "exit").mockImplementation(() => { throw new Error("exit") })
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runHackathonsUpdate } = await import("../../src/commands/hackathons/update")
+      await expect(runHackathonsUpdate(client, uuid, [])).rejects.toThrow()
+      exitSpy.mockRestore()
     })
   })
 
   describe("delete", () => {
     it("sends DELETE request with --yes flag", async () => {
       const uuid = "12345678-1234-1234-1234-123456789012"
-      mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }))
+      mockFetch.mockResolvedValueOnce(jsonResponse({ success: true }))
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
       const { runHackathonsDelete } = await import("../../src/commands/hackathons/delete")
       await runHackathonsDelete(client, uuid, { yes: true })
 
+      const url = mockFetch.mock.calls[0][0] as string
       const init = mockFetch.mock.calls[0][1] as RequestInit
+      expect(url).toContain(`/hackathons/${uuid}`)
       expect(init.method).toBe("DELETE")
+    })
+
+    it("skips delete when user declines confirmation", async () => {
+      mockConfirm.mockResolvedValueOnce(false)
+      const uuid = "12345678-1234-1234-1234-123456789012"
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runHackathonsDelete } = await import("../../src/commands/hackathons/delete")
+      await runHackathonsDelete(client, uuid, { yes: false })
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("resolve", () => {
+    it("returns UUID directly without fetching", async () => {
+      const uuid = "12345678-1234-1234-1234-123456789012"
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { resolveHackathonId } = await import("../../src/commands/hackathons/resolve")
+      const result = await resolveHackathonId(client, uuid)
+      expect(result).toBe(uuid)
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+
+    it("resolves slug by listing all hackathons", async () => {
+      const uuid = "12345678-1234-1234-1234-123456789012"
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ hackathons: [{ id: uuid, slug: "my-hackathon" }] })
+      )
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { resolveHackathonId } = await import("../../src/commands/hackathons/resolve")
+      const result = await resolveHackathonId(client, "my-hackathon")
+      expect(result).toBe(uuid)
+    })
+
+    it("throws when slug not found", async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ hackathons: [] }))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { resolveHackathonId } = await import("../../src/commands/hackathons/resolve")
+      await expect(resolveHackathonId(client, "no-such-slug")).rejects.toThrow("Hackathon not found")
     })
   })
 })
