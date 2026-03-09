@@ -14,12 +14,15 @@
     "test": "bun test __tests__/api __tests__/components __tests__/services __tests__/lib/*.test.ts",
     "test:integration": "bun scripts/run-integration-tests.ts",
     "test:email": "bun test --test-name-pattern '.*' __tests__/integration/*.email.test.ts",
-    "test:all": "bun run test && bun run test:integration && bun run test:email",
+    "test:all": "bun run test && bun run test:integration && bun run test:email && bun run cli:test",
     "db:sync": "supabase db reset && supabase gen types typescript --local > lib/db/types.ts",
     "db:diff": "supabase db diff -f",
     "update-types": "supabase gen types typescript --local > lib/db/types.ts",
     "update-types:remote": "supabase gen types typescript --project-id \"$PROJECT_REF\" > lib/db/types.ts",
-    "gen:secret": "openssl rand -hex 32"
+    "gen:secret": "openssl rand -hex 32",
+    "cli": "bun run packages/cli/src/cli.ts",
+    "cli:test": "bun test packages/cli/__tests__",
+    "cli:build": "cd packages/cli && bun run build"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.12",

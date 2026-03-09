@@ -122,6 +122,150 @@ export type Database = {
           },
         ]
       }
+      cli_auth_sessions: {
+        Row: {
+          created_at: string
+          device_token: string
+          encrypted_api_key: string | null
+          expires_at: string
+          id: string
+          key_id: string | null
+          status: string
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_token: string
+          encrypted_api_key?: string | null
+          expires_at?: string
+          id?: string
+          key_id?: string | null
+          status?: string
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_token?: string
+          encrypted_api_key?: string | null
+          expires_at?: string
+          id?: string
+          key_id?: string | null
+          status?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cli_auth_sessions_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cli_auth_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crowd_votes: {
+        Row: {
+          clerk_user_id: string
+          created_at: string
+          hackathon_id: string
+          id: string
+          submission_id: string
+        }
+        Insert: {
+          clerk_user_id: string
+          created_at?: string
+          hackathon_id: string
+          id?: string
+          submission_id: string
+        }
+        Update: {
+          clerk_user_id?: string
+          created_at?: string
+          hackathon_id?: string
+          id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crowd_votes_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crowd_votes_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hackathon_judges_display: {
+        Row: {
+          clerk_user_id: string | null
+          created_at: string
+          display_order: number
+          hackathon_id: string
+          headshot_url: string | null
+          id: string
+          name: string
+          organization: string | null
+          participant_id: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          clerk_user_id?: string | null
+          created_at?: string
+          display_order?: number
+          hackathon_id: string
+          headshot_url?: string | null
+          id?: string
+          name: string
+          organization?: string | null
+          participant_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clerk_user_id?: string | null
+          created_at?: string
+          display_order?: number
+          hackathon_id?: string
+          headshot_url?: string | null
+          id?: string
+          name?: string
+          organization?: string | null
+          participant_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hackathon_judges_display_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathon_judges_display_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hackathon_participants: {
         Row: {
           clerk_user_id: string
@@ -288,6 +432,9 @@ export type Database = {
           description: string | null
           ends_at: string | null
           id: string
+          judging_mode: Database["public"]["Enums"]["judging_mode"]
+          location_latitude: number | null
+          location_longitude: number | null
           location_name: string | null
           location_type: Database["public"]["Enums"]["location_type"] | null
           location_url: string | null
@@ -298,6 +445,7 @@ export type Database = {
           name: string
           registration_closes_at: string | null
           registration_opens_at: string | null
+          require_location_verification: boolean
           results_published_at: string | null
           rules: string | null
           slug: string
@@ -315,6 +463,9 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
+          judging_mode?: Database["public"]["Enums"]["judging_mode"]
+          location_latitude?: number | null
+          location_longitude?: number | null
           location_name?: string | null
           location_type?: Database["public"]["Enums"]["location_type"] | null
           location_url?: string | null
@@ -325,6 +476,7 @@ export type Database = {
           name: string
           registration_closes_at?: string | null
           registration_opens_at?: string | null
+          require_location_verification?: boolean
           results_published_at?: string | null
           rules?: string | null
           slug: string
@@ -342,6 +494,9 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
+          judging_mode?: Database["public"]["Enums"]["judging_mode"]
+          location_latitude?: number | null
+          location_longitude?: number | null
           location_name?: string | null
           location_type?: Database["public"]["Enums"]["location_type"] | null
           location_url?: string | null
@@ -352,6 +507,7 @@ export type Database = {
           name?: string
           registration_closes_at?: string | null
           registration_opens_at?: string | null
+          require_location_verification?: boolean
           results_published_at?: string | null
           rules?: string | null
           slug?: string
@@ -371,6 +527,69 @@ export type Database = {
           },
         ]
       }
+      jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by_key_id: string | null
+          error: Json | null
+          id: string
+          idempotency_key: string | null
+          input: Json | null
+          result: Json | null
+          status_cache: Database["public"]["Enums"]["job_status"]
+          tenant_id: string
+          type: string
+          updated_at: string
+          workflow_run_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by_key_id?: string | null
+          error?: Json | null
+          id?: string
+          idempotency_key?: string | null
+          input?: Json | null
+          result?: Json | null
+          status_cache?: Database["public"]["Enums"]["job_status"]
+          tenant_id: string
+          type: string
+          updated_at?: string
+          workflow_run_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by_key_id?: string | null
+          error?: Json | null
+          id?: string
+          idempotency_key?: string | null
+          input?: Json | null
+          result?: Json | null
+          status_cache?: Database["public"]["Enums"]["job_status"]
+          tenant_id?: string
+          type?: string
+          updated_at?: string
+          workflow_run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_created_by_key_id_fkey"
+            columns: ["created_by_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       judge_assignments: {
         Row: {
           assigned_at: string
@@ -381,6 +600,7 @@ export type Database = {
           judge_participant_id: string
           notes: string
           submission_id: string
+          viewed_at: string | null
         }
         Insert: {
           assigned_at?: string
@@ -391,6 +611,7 @@ export type Database = {
           judge_participant_id: string
           notes?: string
           submission_id: string
+          viewed_at?: string | null
         }
         Update: {
           assigned_at?: string
@@ -401,6 +622,7 @@ export type Database = {
           judge_participant_id?: string
           notes?: string
           submission_id?: string
+          viewed_at?: string | null
         }
         Relationships: [
           {
@@ -469,6 +691,71 @@ export type Database = {
             columns: ["hackathon_id"]
             isOneToOne: false
             referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      judge_picks: {
+        Row: {
+          created_at: string
+          hackathon_id: string
+          id: string
+          judge_participant_id: string
+          prize_id: string
+          rank: number
+          reason: string | null
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hackathon_id: string
+          id?: string
+          judge_participant_id: string
+          prize_id: string
+          rank?: number
+          reason?: string | null
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hackathon_id?: string
+          id?: string
+          judge_participant_id?: string
+          prize_id?: string
+          rank?: number
+          reason?: string | null
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "judge_picks_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_picks_judge_participant_id_fkey"
+            columns: ["judge_participant_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_picks_prize_id_fkey"
+            columns: ["prize_id"]
+            isOneToOne: false
+            referencedRelation: "prizes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_picks_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
             referencedColumns: ["id"]
           },
         ]
@@ -656,35 +943,66 @@ export type Database = {
       prizes: {
         Row: {
           created_at: string
+          criteria_id: string | null
+          currency: string | null
           description: string | null
           display_order: number
+          display_value: string | null
+          distribution_method: string | null
           hackathon_id: string
           id: string
+          kind: string
+          monetary_value: number | null
           name: string
+          rank: number | null
+          type: Database["public"]["Enums"]["prize_type"]
           updated_at: string
           value: string | null
         }
         Insert: {
           created_at?: string
+          criteria_id?: string | null
+          currency?: string | null
           description?: string | null
           display_order?: number
+          display_value?: string | null
+          distribution_method?: string | null
           hackathon_id: string
           id?: string
+          kind?: string
+          monetary_value?: number | null
           name: string
+          rank?: number | null
+          type?: Database["public"]["Enums"]["prize_type"]
           updated_at?: string
           value?: string | null
         }
         Update: {
           created_at?: string
+          criteria_id?: string | null
+          currency?: string | null
           description?: string | null
           display_order?: number
+          display_value?: string | null
+          distribution_method?: string | null
           hackathon_id?: string
           id?: string
+          kind?: string
+          monetary_value?: number | null
           name?: string
+          rank?: number | null
+          type?: Database["public"]["Enums"]["prize_type"]
           updated_at?: string
           value?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "prizes_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "judging_criteria"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "prizes_hackathon_id_fkey"
             columns: ["hackathon_id"]
@@ -708,6 +1026,7 @@ export type Database = {
           name: string
           next_run_at: string | null
           run_count: number | null
+          run_time: string | null
           tenant_id: string
           timezone: string | null
           updated_at: string
@@ -725,6 +1044,7 @@ export type Database = {
           name: string
           next_run_at?: string | null
           run_count?: number | null
+          run_time?: string | null
           tenant_id: string
           timezone?: string | null
           updated_at?: string
@@ -742,6 +1062,7 @@ export type Database = {
           name?: string
           next_run_at?: string | null
           run_count?: number | null
+          run_time?: string | null
           tenant_id?: string
           timezone?: string | null
           updated_at?: string
@@ -1253,8 +1574,11 @@ export type Database = {
         | "declined"
         | "expired"
         | "cancelled"
+      job_status: "queued" | "running" | "succeeded" | "failed" | "canceled"
+      judging_mode: "points" | "subjective"
       location_type: "in_person" | "virtual"
       participant_role: "participant" | "judge" | "mentor" | "organizer"
+      prize_type: "score" | "favorite" | "crowd" | "criteria"
       schedule_frequency:
         | "once"
         | "hourly"
@@ -1427,8 +1751,11 @@ export const Constants = {
         "expired",
         "cancelled",
       ],
+      job_status: ["queued", "running", "succeeded", "failed", "canceled"],
+      judging_mode: ["points", "subjective"],
       location_type: ["in_person", "virtual"],
       participant_role: ["participant", "judge", "mentor", "organizer"],
+      prize_type: ["score", "favorite", "crowd", "criteria"],
       schedule_frequency: [
         "once",
         "hourly",

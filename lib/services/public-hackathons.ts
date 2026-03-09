@@ -361,3 +361,23 @@ export async function updateHackathonSettings(
 
   return data as unknown as Hackathon
 }
+
+export async function deleteHackathon(
+  hackathonId: string,
+  tenantId: string
+): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error } = await client
+    .from("hackathons")
+    .delete()
+    .eq("id", hackathonId)
+    .eq("tenant_id", tenantId)
+
+  if (error) {
+    console.error("Failed to delete hackathon:", error)
+    return false
+  }
+
+  return true
+}

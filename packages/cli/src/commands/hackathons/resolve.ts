@@ -11,9 +11,7 @@ export async function resolveHackathonId(
     return idOrSlug
   }
 
-  const data = await client.get<{ hackathons: Hackathon[] }>("/api/dashboard/hackathons", {
-    params: { q: idOrSlug, limit: 1 },
-  })
+  const data = await client.get<{ hackathons: Hackathon[] }>("/api/dashboard/hackathons")
 
   const match = data.hackathons?.find((h) => h.slug === idOrSlug)
   if (!match) {
