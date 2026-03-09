@@ -55,7 +55,7 @@ Next.js 16 App Router with:
 - Elysia (API routes)
 - AI SDK 6
 - Shadcn/ui components
-- `@oatmeal/cli` — standalone CLI package (`packages/cli/`), published to npm, no server-side imports
+- `@agi-ventures-canada/hackathon-cli` — standalone CLI package (`packages/cli/`), published to npm, no server-side imports
 
 ### Route Structure
 
