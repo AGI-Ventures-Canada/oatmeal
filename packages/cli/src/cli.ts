@@ -92,6 +92,7 @@ const BANNER = `
     login                      Sign in via browser or API key
     logout                     Remove saved credentials
     whoami                     Show current auth info
+    update                     Update CLI to latest version
 
   ${pc.dim("HACKATHON MANAGEMENT (auth required)")}
     hackathons list            List your hackathons
@@ -166,6 +167,18 @@ const BANNER = `
     --version, -v    Show version
 `
 
+async function notifyIfUpdateAvailable(): Promise<void> {
+  try {
+    const { checkForUpdate, formatUpdateNotice } = await import("./update-check.js")
+    const update = await checkForUpdate()
+    if (update) {
+      console.error(formatUpdateNotice(update))
+    }
+  } catch {
+    // Silently ignore update check failures
+  }
+}
+
 async function main() {
   const { flags, rest } = parseGlobalFlags(process.argv.slice(2))
 
@@ -197,6 +210,12 @@ async function main() {
         const { runWhoAmI } = await import("./commands/whoami.js")
         await runWhoAmI(client, { json: flags.json })
         break
+      }
+
+      case "update": {
+        const { runUpdate } = await import("./commands/update.js")
+        await runUpdate()
+        return
       }
 
       case "browse": {
@@ -604,6 +623,8 @@ async function main() {
     }
     process.exit(1)
   }
+
+  await notifyIfUpdateAvailable()
 }
 
 main()
