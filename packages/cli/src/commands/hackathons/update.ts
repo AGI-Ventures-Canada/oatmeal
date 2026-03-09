@@ -54,10 +54,9 @@ export async function runHackathonsUpdate(
     process.exit(1)
   }
 
-  await client.patch(`/api/dashboard/hackathons/${id}/settings`, body)
+  const hackathon = await client.patch<Hackathon>(`/api/dashboard/hackathons/${id}/settings`, body)
 
   if (options.json) {
-    const hackathon = await client.get<Hackathon>(`/api/dashboard/hackathons/${id}`)
     console.log(formatJson(hackathon))
     return
   }

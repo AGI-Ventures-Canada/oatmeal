@@ -124,17 +124,16 @@ describe("hackathons commands", () => {
       expect(JSON.parse(init.body as string).name).toBe("Updated Hack")
     })
 
-    it("--json fetches and outputs full hackathon after update", async () => {
+    it("--json outputs full hackathon returned by PATCH", async () => {
       const uuid = "12345678-1234-1234-1234-123456789012"
       const hackathon = { id: uuid, name: "Updated Hack", slug: "updated-hack" }
-      mockFetch
-        .mockResolvedValueOnce(jsonResponse({ id: uuid, updatedAt: "2026-01-01" }))
-        .mockResolvedValueOnce(jsonResponse(hackathon))
+      mockFetch.mockResolvedValueOnce(jsonResponse(hackathon))
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
       const { runHackathonsUpdate } = await import("../../src/commands/hackathons/update")
       await runHackathonsUpdate(client, uuid, ["--name", "Updated Hack", "--json"])
 
       expect(JSON.parse(consoleLogSpy.mock.calls[0][0])).toEqual(hackathon)
+      expect(mockFetch).toHaveBeenCalledTimes(1)
     })
 
     it("exits with error when no fields provided", async () => {

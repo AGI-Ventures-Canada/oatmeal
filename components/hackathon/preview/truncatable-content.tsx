@@ -11,7 +11,6 @@ export function TruncatableContent({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const el = contentRef.current
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setState({ isExpanded: false, isOverflowing: el ? el.scrollHeight > MAX_HEIGHT : false })
   }, [children])
 
