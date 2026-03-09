@@ -104,10 +104,10 @@ When developers include external documentation links in requests, save them to t
 
 Skills in `.claude/skills/`:
 - `local-dev-setup.md` - Developer onboarding and local environment setup
-- `hackathon-cli/` - Use the Oatmeal CLI tool to manage hackathons from the terminal
-- `hackathon-api/` - Direct REST API access to the Oatmeal platform via curl commands
-- `hackathon-organizer/` - Tips, tricks, and best practices for organizing successful hackathons
-- `hackathon-attendee/` - Tips, tricks, and best practices for hackathon participants
+
+Hackathon-specific skills (CLI, API, organizer, attendee) live in the [hackathon-skills](https://github.com/AGI-Ventures-Canada/hackathon-skills) repo.
+
+User-facing hackathon skills are also published at [AGI-Ventures-Canada/hackathon-skills](https://github.com/AGI-Ventures-Canada/hackathon-skills) for external installation via `npx skills add AGI-Ventures-Canada/hackathon-skills`.
 
 ## Next.js 16 Specifics
 
@@ -415,6 +415,8 @@ gh pr create --base main --head staging --title "Release: description" --body "R
 # BAD - migrations won't run
 git checkout main && git merge staging && git push
 ```
+
+**Wait at least 10 minutes after merging a feature PR to staging before creating the staging→main PR.** Supabase's GitHub integration needs time to process preview branch migrations. Merging too quickly can cause migrations to be skipped on the production database.
 
 ### Rebase Feature Branches
 

@@ -22,6 +22,7 @@ import {
   Globe,
   ExternalLink,
   Plus,
+  Download,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -56,6 +57,7 @@ import {
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { CreateHackathonMenu } from "@/components/hackathon/create-hackathon-menu"
 import { CreateOrganizationDialog } from "@/components/create-organization-dialog"
+import { InstallSkillButton } from "@/components/install-skill-button"
 
 const mainItems = [
   { title: "Dashboard", href: "/home", icon: Home },
@@ -323,6 +325,16 @@ export function AppSidebarSimple() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
+                  <SidebarMenuItem>
+                    <InstallSkillButton
+                      trigger={
+                        <SidebarMenuButton className="h-10">
+                          <Download />
+                          <span className="text-sm">Install Skill</span>
+                        </SidebarMenuButton>
+                      }
+                    />
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

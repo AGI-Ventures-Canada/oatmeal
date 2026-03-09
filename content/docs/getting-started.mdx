@@ -17,64 +17,75 @@ Never expose your API key in client-side code. Use environment variables and ser
 
 Store your API key and base URL in an environment variable:
 
-<CodeBlock language="bash" code={"OATMEAL_API_KEY=sk_live_...\nOATMEAL_BASE_URL=https://your-app.com"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>.env.local</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```bash title=".env.local"
+OATMEAL_API_KEY=sk_live_...
+OATMEAL_BASE_URL=https://your-app.com
+```
 
 ## Authentication
 
 All API requests require an `Authorization` header with your API key:
 
-<CodeBlock language="typescript" showLineNumbers={false} code={"Authorization: Bearer sk_live_your_api_key_here"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>HTTP Header</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="HTTP Header"
+Authorization: Bearer sk_live_your_api_key_here
+```
 
 ## Verify Connection
 
 Test your API key with the `whoami` endpoint:
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${process.env.OATMEAL_BASE_URL}/api/v1/whoami`, {\n  headers: {\n    \"Authorization\": `Bearer ${process.env.OATMEAL_API_KEY}`,\n  },\n})\n\nif (!res.ok) {\n  console.error(\"Authentication failed:\", res.status)\n  process.exit(1)\n}\n\nconst data = await res.json()\nconsole.log(\"Connected as tenant:\", data.tenantId)\nconsole.log(\"Key ID:\", data.keyId)\nconsole.log(\"Scopes:\", data.scopes)"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>verify.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="verify.ts"
+const res = await fetch(`${process.env.OATMEAL_BASE_URL}/api/v1/whoami`, {
+  headers: {
+    "Authorization": `Bearer ${process.env.OATMEAL_API_KEY}`,
+  },
+})
+
+if (!res.ok) {
+  console.error("Authentication failed:", res.status)
+  process.exit(1)
+}
+
+const data = await res.json()
+console.log("Connected as tenant:", data.tenantId)
+console.log("Key ID:", data.keyId)
+console.log("Scopes:", data.scopes)
+```
 
 ### Response
 
-<CodeBlock language="json" code={"{\n  \"tenantId\": \"org_abc123\",\n  \"keyId\": \"key_xyz\",\n  \"scopes\": [\"hackathons:read\", \"hackathons:write\", \"webhooks:read\", \"webhooks:write\"]\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>response.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="response.json"
+{
+  "tenantId": "org_abc123",
+  "keyId": "key_xyz",
+  "scopes": ["hackathons:read", "hackathons:write", "webhooks:read", "webhooks:write"]
+}
+```
 
 ## Error Handling
 
 API errors return JSON with an `error` field. Use standard `fetch()` error handling:
 
-<CodeBlock language="typescript" showLineNumbers code={"async function apiCall(path: string, options?: RequestInit) {\n  const res = await fetch(`${process.env.OATMEAL_BASE_URL}${path}`, {\n    ...options,\n    headers: {\n      \"Authorization\": `Bearer ${process.env.OATMEAL_API_KEY}`,\n      \"Content-Type\": \"application/json\",\n      ...options?.headers,\n    },\n  })\n\n  const data = await res.json()\n\n  if (!res.ok) {\n    throw new Error(`API error ${res.status}: ${data.error}`)\n  }\n\n  return data\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>api-helper.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="api-helper.ts"
+async function apiCall(path: string, options?: RequestInit) {
+  const res = await fetch(`${process.env.OATMEAL_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      "Authorization": `Bearer ${process.env.OATMEAL_API_KEY}`,
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+  })
+
+  const data = await res.json()
+
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}: ${data.error}`)
+  }
+
+  return data
+}
+```
 
 ## API Endpoints
 

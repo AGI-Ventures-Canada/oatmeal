@@ -31,14 +31,23 @@ All endpoints require an API key with `webhooks:read` or `webhooks:write` scope.
 
 `POST /api/v1/webhooks` — requires `webhooks:write` scope.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  method: \"POST\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify({\n    url: \"https://your-app.com/webhooks/oatmeal\",\n    events: [\"hackathon.created\", \"submission.created\"],\n  }),\n})\n\nconst webhook = await res.json()\nconsole.log(\"Webhook ID:\", webhook.id)\nconsole.log(\"Secret:\", webhook.secret)"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>create-webhook.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="create-webhook.ts"
+const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    url: "https://your-app.com/webhooks/oatmeal",
+    events: ["hackathon.created", "submission.created"],
+  }),
+})
+
+const webhook = await res.json()
+console.log("Webhook ID:", webhook.id)
+console.log("Secret:", webhook.secret)
+```
 
 <Callout type="warn">
 The webhook `secret` is only returned once at creation time. Store it securely for signature verification.
@@ -53,63 +62,84 @@ The webhook `secret` is only returned once at creation time. Store it securely f
 
 ### Response
 
-<CodeBlock language="json" code={"{\n  \"id\": \"wh_abc123\",\n  \"url\": \"https://your-app.com/webhooks/oatmeal\",\n  \"events\": [\"hackathon.created\", \"submission.created\"],\n  \"secret\": \"whsec_...\",\n  \"createdAt\": \"2026-02-10T15:30:00Z\"\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>response.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="response.json"
+{
+  "id": "wh_abc123",
+  "url": "https://your-app.com/webhooks/oatmeal",
+  "events": ["hackathon.created", "submission.created"],
+  "secret": "whsec_...",
+  "createdAt": "2026-02-10T15:30:00Z"
+}
+```
 
 ## List Webhooks
 
 `GET /api/v1/webhooks` — requires `webhooks:read` scope.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst { webhooks } = await res.json()\n\nfor (const wh of webhooks) {\n  console.log(`${wh.url} - ${wh.events.join(\", \")}`)\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>list-webhooks.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="list-webhooks.ts"
+const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+const { webhooks } = await res.json()
+
+for (const wh of webhooks) {
+  console.log(`${wh.url} - ${wh.events.join(", ")}`)
+}
+```
 
 ### Response
 
-<CodeBlock language="json" code={"{\n  \"webhooks\": [\n    {\n      \"id\": \"wh_abc123\",\n      \"url\": \"https://your-app.com/webhooks/oatmeal\",\n      \"events\": [\"hackathon.created\", \"submission.created\"],\n      \"isActive\": true,\n      \"failureCount\": 0,\n      \"lastTriggeredAt\": \"2026-02-10T16:00:00Z\",\n      \"createdAt\": \"2026-02-10T15:30:00Z\"\n    }\n  ]\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>response.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="response.json"
+{
+  "webhooks": [
+    {
+      "id": "wh_abc123",
+      "url": "https://your-app.com/webhooks/oatmeal",
+      "events": ["hackathon.created", "submission.created"],
+      "isActive": true,
+      "failureCount": 0,
+      "lastTriggeredAt": "2026-02-10T16:00:00Z",
+      "createdAt": "2026-02-10T15:30:00Z"
+    }
+  ]
+}
+```
 
 ## Delete a Webhook
 
 `DELETE /api/v1/webhooks/:id` — requires `webhooks:write` scope.
 
-<CodeBlock language="typescript" showLineNumbers code={"const res = await fetch(`${BASE_URL}/api/v1/webhooks/${webhookId}`, {\n  method: \"DELETE\",\n  headers: {\n    \"Authorization\": `Bearer ${API_KEY}`,\n  },\n})\n\nconst data = await res.json()\nif (data.success) {\n  console.log(\"Webhook deleted\")\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>delete-webhook.ts</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```typescript title="delete-webhook.ts"
+const res = await fetch(`${BASE_URL}/api/v1/webhooks/${webhookId}`, {
+  method: "DELETE",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+const data = await res.json()
+if (data.success) {
+  console.log("Webhook deleted")
+}
+```
 
 ## Webhook Payload Format
 
 Webhook requests are sent as `POST` with a JSON body:
 
-<CodeBlock language="json" code={"{\n  \"event\": \"submission.created\",\n  \"timestamp\": \"2026-02-10T15:30:00Z\",\n  \"data\": {\n    \"hackathonId\": \"hack_abc123\",\n    \"submissionId\": \"sub_xyz456\",\n    \"title\": \"AI Code Review Bot\"\n  }\n}"}>
-  <CodeBlockHeader>
-    <CodeBlockFilename>payload.json</CodeBlockFilename>
-    <CodeBlockActions>
-      <CodeBlockCopyButton />
-    </CodeBlockActions>
-  </CodeBlockHeader>
-</CodeBlock>
+```json title="payload.json"
+{
+  "event": "submission.created",
+  "timestamp": "2026-02-10T15:30:00Z",
+  "data": {
+    "hackathonId": "hack_abc123",
+    "submissionId": "sub_xyz456",
+    "title": "AI Code Review Bot"
+  }
+}
+```
 
 Requests include an `X-Webhook-Signature` header containing an HMAC-SHA256 hex digest of the request body, signed with your webhook secret. See the [Webhooks Guide](/docs/guides/webhooks) for verification examples.

@@ -3,7 +3,10 @@ import { defineDocs, defineConfig } from "fumadocs-mdx/config";
 var docs = defineDocs({
   dir: "content/docs",
   docs: {
-    async: true
+    async: true,
+    postprocess: {
+      includeProcessedMarkdown: true
+    }
   }
 });
 var source_config_default = defineConfig({

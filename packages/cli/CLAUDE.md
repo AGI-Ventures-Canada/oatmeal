@@ -87,3 +87,7 @@ The workflow needs an `NPM_TOKEN` GitHub secret to publish. Must be a **classic 
 3. Click **Generate token** and copy the value
 4. Go to https://github.com/AGI-Ventures-Canada/oatmeal/settings/secrets/actions
 5. Create (or update) a secret named `NPM_TOKEN` with the copied value
+
+## Related: Hackathon Skills
+
+User-facing Claude Code skills for the CLI and API are maintained in the [hackathon-skills](https://github.com/AGI-Ventures-Canada/hackathon-skills) repo (not in this codebase).
