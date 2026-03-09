@@ -8,8 +8,8 @@ let testConfigDir: string
 let testConfigFile: string
 
 function setTestPaths() {
-  testDir = join(tmpdir(), `oatmeal-test-${Date.now()}`)
-  testConfigDir = join(testDir, ".oatmeal")
+  testDir = join(tmpdir(), `hackathon-test-${Date.now()}`)
+  testConfigDir = join(testDir, ".hackathon")
   testConfigFile = join(testConfigDir, "config.json")
 }
 
@@ -22,10 +22,10 @@ describe("config", () => {
   beforeEach(async () => {
     setTestPaths()
 
-    originalApiKey = process.env.OATMEAL_API_KEY
-    originalBaseUrl = process.env.OATMEAL_BASE_URL
-    delete process.env.OATMEAL_API_KEY
-    delete process.env.OATMEAL_BASE_URL
+    originalApiKey = process.env.HACKATHON_API_KEY
+    originalBaseUrl = process.env.HACKATHON_BASE_URL
+    delete process.env.HACKATHON_API_KEY
+    delete process.env.HACKATHON_BASE_URL
 
     mkdirSync(testDir, { recursive: true })
 
@@ -33,10 +33,10 @@ describe("config", () => {
   })
 
   afterEach(() => {
-    if (originalApiKey !== undefined) process.env.OATMEAL_API_KEY = originalApiKey
-    else delete process.env.OATMEAL_API_KEY
-    if (originalBaseUrl !== undefined) process.env.OATMEAL_BASE_URL = originalBaseUrl
-    else delete process.env.OATMEAL_BASE_URL
+    if (originalApiKey !== undefined) process.env.HACKATHON_API_KEY = originalApiKey
+    else delete process.env.HACKATHON_API_KEY
+    if (originalBaseUrl !== undefined) process.env.HACKATHON_BASE_URL = originalBaseUrl
+    else delete process.env.HACKATHON_BASE_URL
 
     try { rmSync(testDir, { recursive: true, force: true }) } catch {}
   })
@@ -49,25 +49,25 @@ describe("config", () => {
     expect(result === null || typeof result === "object").toBe(true)
   })
 
-  it("env var OATMEAL_API_KEY overrides config file", () => {
-    process.env.OATMEAL_API_KEY = "sk_live_test123"
+  it("env var HACKATHON_API_KEY overrides config file", () => {
+    process.env.HACKATHON_API_KEY = "sk_live_test123"
     const { loadConfig } = require("../src/config")
     const config = loadConfig()
     expect(config).not.toBeNull()
     expect(config!.apiKey).toBe("sk_live_test123")
   })
 
-  it("env var OATMEAL_BASE_URL overrides default", () => {
-    process.env.OATMEAL_API_KEY = "sk_live_test123"
-    process.env.OATMEAL_BASE_URL = "http://localhost:3000"
+  it("env var HACKATHON_BASE_URL overrides default", () => {
+    process.env.HACKATHON_API_KEY = "sk_live_test123"
+    process.env.HACKATHON_BASE_URL = "http://localhost:3000"
     const { loadConfig } = require("../src/config")
     const config = loadConfig()
     expect(config!.baseUrl).toBe("http://localhost:3000")
   })
 
   it("both env vars work simultaneously", () => {
-    process.env.OATMEAL_API_KEY = "sk_live_env"
-    process.env.OATMEAL_BASE_URL = "http://custom:3000"
+    process.env.HACKATHON_API_KEY = "sk_live_env"
+    process.env.HACKATHON_BASE_URL = "http://custom:3000"
     const { loadConfig } = require("../src/config")
     const config = loadConfig()
     expect(config!.apiKey).toBe("sk_live_env")
@@ -78,7 +78,7 @@ describe("config", () => {
     const { writeFileSync, mkdirSync, existsSync, readFileSync, unlinkSync } = require("node:fs")
     const { join } = require("node:path")
 
-    const dir = join(testDir, ".oatmeal-save-test")
+    const dir = join(testDir, ".hackathon-save-test")
     const file = join(dir, "config.json")
 
     mkdirSync(dir, { recursive: true, mode: 0o700 })

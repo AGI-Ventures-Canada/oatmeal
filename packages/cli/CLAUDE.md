@@ -26,7 +26,7 @@ bun cli prizes create <hackathon-id> --name "Best AI App"
 bun cli judging judges list <hackathon-id>
 ```
 
-The `--base-url` is saved in `~/.oatmeal/config.json` after login — you only set it once. To switch back to production later, just `bun cli login` (no flag = default prod URL).
+The `--base-url` is saved in `~/.hackathon/config.json` after login — you only set it once. To switch back to production later, just `bun cli login` (no flag = default prod URL).
 
 Edit any `.ts` file in `packages/cli/src/` and re-run `bun cli` — changes are picked up instantly since Bun executes TypeScript directly.
 
@@ -41,7 +41,7 @@ bun cli judging auto-assign <hackathon-id> --per-judge 3
 ## Architecture
 - `src/cli.ts` — argv dispatch → command handlers
 - `src/client.ts` — HTTP client (no server imports)
-- `src/config.ts` — `~/.oatmeal/config.json` management
+- `src/config.ts` — `~/.hackathon/config.json` management
 - All types are CLI-local (no imports from main app)
 
 ## Adding a Command
@@ -53,14 +53,37 @@ bun cli judging auto-assign <hackathon-id> --per-judge 3
 
 ## Environment Targets
 - Local: `--base-url http://localhost:3000`
-- Staging: `--base-url https://staging.oatmeal.app`
-- Production: default (`https://oatmeal.app`)
+- Staging: `--base-url https://staging.getoatmeal.com`
+- Production: default (`https://getoatmeal.com`)
 
 ## Build & Distribution
 
-End users install via npm (`npx @oatmeal/cli` or `npm install -g @oatmeal/cli`). The build step (`bun cli:build`) uses `obuild` to bundle all TypeScript + dependencies into a single `dist/cli.mjs` file (~11 kB gzipped). Only Node.js builtins remain external — no Bun required at runtime.
+End users install via npm (`npx @agi-ventures-canada/hackathon-cli` or `npm install -g @agi-ventures-canada/hackathon-cli`). The build step (`bun cli:build`) uses `obuild` to bundle all TypeScript + dependencies into a single `dist/cli.mjs` file (~11 kB gzipped). Only Node.js builtins remain external — no Bun required at runtime.
 
 ```bash
 bun cli:build                                    # Bundle → dist/cli.mjs
 node packages/cli/bin/cli.mjs --version          # Verify built artifact
 ```
+
+### Auto-publish on merge to main
+
+The `publish-cli.yml` workflow runs on every push to `main`. It compares `packages/cli/` against the last `cli-v*` tag — if files changed, it auto-bumps the patch version, publishes to npm, and creates a new git tag. No manual tagging required.
+
+Manual override: push a `cli-v*` tag to publish a specific version (e.g., for major/minor bumps):
+```bash
+# Edit packages/cli/package.json version manually first
+git add packages/cli/package.json
+git commit -m "chore(cli): bump version to 0.2.0"
+git tag cli-v0.2.0
+git push origin main --tags
+```
+
+### NPM_TOKEN setup
+
+The workflow needs an `NPM_TOKEN` GitHub secret to publish. Must be a **classic automation token** (not granular) to bypass 2FA.
+
+1. Go to https://www.npmjs.com/settings/toastedshibe/tokens → **Generate New Token** → **Classic Token**
+2. Select type: **Automation** (bypasses 2FA, required for CI)
+3. Click **Generate token** and copy the value
+4. Go to https://github.com/AGI-Ventures-Canada/oatmeal/settings/secrets/actions
+5. Create (or update) a secret named `NPM_TOKEN` with the copied value

@@ -9,7 +9,7 @@ export async function runInvitationsCancel(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!invitationId) {
-    console.error("Usage: oatmeal judging invitations cancel <hackathon-id> <invitation-id>")
+    console.error("Usage: hackathon judging invitations cancel <hackathon-id> <invitation-id>")
     process.exit(1)
   }
 

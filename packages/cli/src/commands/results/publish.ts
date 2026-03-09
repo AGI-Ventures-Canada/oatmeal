@@ -8,7 +8,7 @@ export async function runResultsPublish(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!hackathonId) {
-    console.error("Usage: oatmeal results publish <hackathon-id>")
+    console.error("Usage: hackathon results publish <hackathon-id>")
     process.exit(1)
   }
 

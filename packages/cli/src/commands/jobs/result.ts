@@ -28,7 +28,7 @@ export async function runJobsResult(
   args: string[]
 ): Promise<void> {
   if (!jobId) {
-    console.error("Usage: oatmeal jobs result <job-id>")
+    console.error("Usage: hackathon jobs result <job-id>")
     process.exit(1)
   }
 

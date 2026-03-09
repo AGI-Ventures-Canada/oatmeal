@@ -1,10 +1,10 @@
 {
-  "name": "@oatmeal/cli",
+  "name": "@agi-ventures-canada/hackathon-cli",
   "version": "0.1.0",
   "description": "CLI for the Oatmeal hackathon platform",
   "type": "module",
   "bin": {
-    "oatmeal": "./bin/cli.mjs"
+    "hackathon": "./bin/cli.mjs"
   },
   "files": [
     "dist",

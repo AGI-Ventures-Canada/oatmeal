@@ -8,7 +8,7 @@ export async function runJobsGet(
   options: { json?: boolean }
 ): Promise<void> {
   if (!jobId) {
-    console.error("Usage: oatmeal jobs get <job-id>")
+    console.error("Usage: hackathon jobs get <job-id>")
     process.exit(1)
   }
 

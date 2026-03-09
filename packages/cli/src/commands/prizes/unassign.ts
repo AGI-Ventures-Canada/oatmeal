@@ -10,7 +10,7 @@ export async function runPrizesUnassign(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!prizeId || !submissionId) {
-    console.error("Usage: oatmeal prizes unassign <hackathon-id> <prize-id> <submission-id>")
+    console.error("Usage: hackathon prizes unassign <hackathon-id> <prize-id> <submission-id>")
     process.exit(1)
   }
 

@@ -28,7 +28,7 @@ export async function runPrizesAssign(
   args: string[]
 ): Promise<void> {
   if (!prizeId) {
-    console.error("Usage: oatmeal prizes assign <hackathon-id> <prize-id> --submission <id>")
+    console.error("Usage: hackathon prizes assign <hackathon-id> <prize-id> --submission <id>")
     process.exit(1)
   }
 

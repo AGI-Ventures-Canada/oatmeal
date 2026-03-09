@@ -8,7 +8,7 @@ export async function runBrowseResults(
   options: { json?: boolean }
 ): Promise<void> {
   if (!slug) {
-    console.error("Usage: oatmeal browse results <slug>")
+    console.error("Usage: hackathon browse results <slug>")
     process.exit(1)
   }
 

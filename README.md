@@ -42,7 +42,7 @@ Interactive documentation is available at `/docs` with:
 
 ## AI Agent Integration
 
-Use the Oatmeal CLI agent skill to manage the platform from any AI coding agent (Claude Code, Cursor, etc.):
+Use the [hackathon-skills](https://github.com/AGI-Ventures-Canada/hackathon-skills) to manage the platform from any AI coding agent (Claude Code, Cursor, etc.):
 
 ```bash
 claude
@@ -50,12 +50,6 @@ claude
 # Or: "Add judge@example.com as a judge to my hackathon"
 # Or: "Set up prizes: 1st $5k, 2nd $2.5k, 3rd $1k"
 ```
-
-Available skills in `.claude/skills/`:
-- **hackathon-cli** — manage hackathons via the Oatmeal CLI tool
-- **hackathon-api** — direct REST API access via curl commands
-- **hackathon-organizer** — tips and best practices for organizing hackathons
-- **hackathon-attendee** — tips and best practices for hackathon participants
 
 ## New Developer Setup
 

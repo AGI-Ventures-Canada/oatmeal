@@ -57,7 +57,7 @@ function createPublicClient(flags: GlobalFlags): OatmealClient {
 }
 
 function createAuthenticatedClient(flags: GlobalFlags): OatmealClient {
-  const apiKey = flags.apiKey ?? process.env.OATMEAL_API_KEY
+  const apiKey = flags.apiKey ?? process.env.HACKATHON_API_KEY
   if (apiKey) {
     return new OatmealClient({
       baseUrl: flags.baseUrl ?? DEFAULT_BASE_URL,
@@ -77,10 +77,10 @@ function createAuthenticatedClient(flags: GlobalFlags): OatmealClient {
 }
 
 const BANNER = `
-  ${pc.bold("oatmeal")} — CLI for the Oatmeal hackathon platform
+  ${pc.bold("hackathon")} — CLI for the Oatmeal hackathon platform
 
   ${pc.dim("USAGE")}
-    oatmeal <command> [options]
+    hackathon <command> [options]
 
   ${pc.dim("PUBLIC COMMANDS (no auth required)")}
     browse hackathons          Search public hackathons
@@ -223,7 +223,7 @@ async function main() {
             break
           }
           default:
-            console.error(`Unknown browse command: ${sub}. Run "oatmeal browse --help" for usage.`)
+            console.error(`Unknown browse command: ${sub}. Run "hackathon browse --help" for usage.`)
             process.exit(1)
         }
         break
@@ -258,7 +258,7 @@ async function main() {
             break
           }
           default:
-            console.error(`Unknown hackathons command: ${sub}. Run "oatmeal hackathons --help" for usage.`)
+            console.error(`Unknown hackathons command: ${sub}. Run "hackathon hackathons --help" for usage.`)
             process.exit(1)
         }
         break
@@ -585,7 +585,7 @@ async function main() {
       }
 
       default:
-        console.error(`Unknown command: ${command}. Run "oatmeal --help" for usage.`)
+        console.error(`Unknown command: ${command}. Run "hackathon --help" for usage.`)
         process.exit(1)
     }
   } catch (error) {

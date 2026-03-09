@@ -37,7 +37,7 @@ export async function runJudgeDisplayUpdate(
   args: string[]
 ): Promise<void> {
   if (!profileId) {
-    console.error("Usage: oatmeal judge-display update <hackathon-id> <profile-id> [--name ...]")
+    console.error("Usage: hackathon judge-display update <hackathon-id> <profile-id> [--name ...]")
     process.exit(1)
   }
 

@@ -15,7 +15,7 @@ export class ApiError extends Error {
 
 export class AuthError extends Error {
   constructor(message?: string) {
-    super(message ?? 'Not authenticated. Run "oatmeal login" first.')
+    super(message ?? 'Not authenticated. Run "hackathon login" first.')
     this.name = "AuthError"
   }
 }

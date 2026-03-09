@@ -9,7 +9,7 @@ export async function runJudgesRemove(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!participantId) {
-    console.error("Usage: oatmeal judging judges remove <hackathon-id> <participant-id>")
+    console.error("Usage: hackathon judging judges remove <hackathon-id> <participant-id>")
     process.exit(1)
   }
 

@@ -55,7 +55,7 @@ Next.js 16 App Router with:
 - Elysia (API routes)
 - AI SDK 6
 - Shadcn/ui components
-- `@oatmeal/cli` — standalone CLI package (`packages/cli/`), published to npm, no server-side imports
+- `@agi-ventures-canada/hackathon-cli` — standalone CLI package (`packages/cli/`), published to npm, no server-side imports
 
 ### Route Structure
 
@@ -104,10 +104,8 @@ When developers include external documentation links in requests, save them to t
 
 Skills in `.claude/skills/`:
 - `local-dev-setup.md` - Developer onboarding and local environment setup
-- `hackathon-cli/` - Use the Oatmeal CLI tool to manage hackathons from the terminal
-- `hackathon-api/` - Direct REST API access to the Oatmeal platform via curl commands
-- `hackathon-organizer/` - Tips, tricks, and best practices for organizing successful hackathons
-- `hackathon-attendee/` - Tips, tricks, and best practices for hackathon participants
+
+Hackathon-specific skills (CLI, API, organizer, attendee) live in the [hackathon-skills](https://github.com/AGI-Ventures-Canada/hackathon-skills) repo.
 
 User-facing hackathon skills are also published at [AGI-Ventures-Canada/hackathon-skills](https://github.com/AGI-Ventures-Canada/hackathon-skills) for external installation via `npx skills add AGI-Ventures-Canada/hackathon-skills`.
 

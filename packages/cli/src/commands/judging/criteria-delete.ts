@@ -9,7 +9,7 @@ export async function runCriteriaDelete(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!criteriaId) {
-    console.error("Usage: oatmeal judging criteria delete <hackathon-id> <criteria-id>")
+    console.error("Usage: hackathon judging criteria delete <hackathon-id> <criteria-id>")
     process.exit(1)
   }
 

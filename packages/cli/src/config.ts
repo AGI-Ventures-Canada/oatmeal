@@ -4,8 +4,8 @@ import { ConfigError } from "./errors.js"
 import type { CliConfig } from "./types.js"
 
 export function loadConfig(): CliConfig | null {
-  const envKey = process.env.OATMEAL_API_KEY
-  const envUrl = process.env.OATMEAL_BASE_URL
+  const envKey = process.env.HACKATHON_API_KEY
+  const envUrl = process.env.HACKATHON_BASE_URL
 
   if (envKey) {
     return {
@@ -28,7 +28,7 @@ export function loadConfig(): CliConfig | null {
     }
   } catch {
     throw new ConfigError(
-      `Invalid config file at ${CONFIG_FILE}. Delete it and run "oatmeal login" again.`
+      `Invalid config file at ${CONFIG_FILE}. Delete it and run "hackathon login" again.`
     )
   }
 }
