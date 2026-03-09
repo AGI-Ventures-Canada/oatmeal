@@ -9,7 +9,7 @@ export async function runPrizesDelete(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!prizeId) {
-    console.error("Usage: oatmeal prizes delete <hackathon-id> <prize-id>")
+    console.error("Usage: hackathon prizes delete <hackathon-id> <prize-id>")
     process.exit(1)
   }
 

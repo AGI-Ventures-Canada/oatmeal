@@ -39,7 +39,7 @@ export async function runSchedulesUpdate(
   args: string[]
 ): Promise<void> {
   if (!scheduleId) {
-    console.error("Usage: oatmeal schedules update <schedule-id> [--name ...] [--cron ...]")
+    console.error("Usage: hackathon schedules update <schedule-id> [--name ...] [--cron ...]")
     process.exit(1)
   }
 

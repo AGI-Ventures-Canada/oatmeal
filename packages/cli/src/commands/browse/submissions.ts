@@ -8,7 +8,7 @@ export async function runBrowseSubmissions(
   options: { json?: boolean }
 ): Promise<void> {
   if (!slug) {
-    console.error("Usage: oatmeal browse submissions <slug>")
+    console.error("Usage: hackathon browse submissions <slug>")
     process.exit(1)
   }
 

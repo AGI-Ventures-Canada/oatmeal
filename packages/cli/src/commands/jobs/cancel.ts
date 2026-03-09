@@ -8,7 +8,7 @@ export async function runJobsCancel(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!jobId) {
-    console.error("Usage: oatmeal jobs cancel <job-id>")
+    console.error("Usage: hackathon jobs cancel <job-id>")
     process.exit(1)
   }
 

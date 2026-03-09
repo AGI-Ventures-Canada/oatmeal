@@ -9,7 +9,7 @@ export async function runAssignmentsDelete(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!assignmentId) {
-    console.error("Usage: oatmeal judging assignments delete <hackathon-id> <assignment-id>")
+    console.error("Usage: hackathon judging assignments delete <hackathon-id> <assignment-id>")
     process.exit(1)
   }
 

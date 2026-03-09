@@ -26,7 +26,7 @@ bun cli prizes create <hackathon-id> --name "Best AI App"
 bun cli judging judges list <hackathon-id>
 ```
 
-The `--base-url` is saved in `~/.oatmeal/config.json` after login — you only set it once. To switch back to production later, just `bun cli login` (no flag = default prod URL).
+The `--base-url` is saved in `~/.hackathon/config.json` after login — you only set it once. To switch back to production later, just `bun cli login` (no flag = default prod URL).
 
 Edit any `.ts` file in `packages/cli/src/` and re-run `bun cli` — changes are picked up instantly since Bun executes TypeScript directly.
 
@@ -41,7 +41,7 @@ bun cli judging auto-assign <hackathon-id> --per-judge 3
 ## Architecture
 - `src/cli.ts` — argv dispatch → command handlers
 - `src/client.ts` — HTTP client (no server imports)
-- `src/config.ts` — `~/.oatmeal/config.json` management
+- `src/config.ts` — `~/.hackathon/config.json` management
 - All types are CLI-local (no imports from main app)
 
 ## Adding a Command
@@ -53,8 +53,8 @@ bun cli judging auto-assign <hackathon-id> --per-judge 3
 
 ## Environment Targets
 - Local: `--base-url http://localhost:3000`
-- Staging: `--base-url https://staging.oatmeal.app`
-- Production: default (`https://oatmeal.app`)
+- Staging: `--base-url https://staging.getoatmeal.com`
+- Production: default (`https://getoatmeal.com`)
 
 ## Build & Distribution
 

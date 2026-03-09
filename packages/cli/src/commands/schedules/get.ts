@@ -8,7 +8,7 @@ export async function runSchedulesGet(
   options: { json?: boolean }
 ): Promise<void> {
   if (!scheduleId) {
-    console.error("Usage: oatmeal schedules get <schedule-id>")
+    console.error("Usage: hackathon schedules get <schedule-id>")
     process.exit(1)
   }
 

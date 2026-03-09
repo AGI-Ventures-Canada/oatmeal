@@ -8,7 +8,7 @@ export async function runWebhooksDelete(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!webhookId) {
-    console.error("Usage: oatmeal webhooks delete <webhook-id>")
+    console.error("Usage: hackathon webhooks delete <webhook-id>")
     process.exit(1)
   }
 

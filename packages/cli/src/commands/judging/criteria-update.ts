@@ -41,7 +41,7 @@ export async function runCriteriaUpdate(
   args: string[]
 ): Promise<void> {
   if (!criteriaId) {
-    console.error("Usage: oatmeal judging criteria update <hackathon-id> <criteria-id> [--name ...] [--max-score ...]")
+    console.error("Usage: hackathon judging criteria update <hackathon-id> <criteria-id> [--name ...] [--max-score ...]")
     process.exit(1)
   }
 

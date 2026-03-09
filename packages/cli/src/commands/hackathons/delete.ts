@@ -9,7 +9,7 @@ export async function runHackathonsDelete(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!idOrSlug) {
-    console.error("Usage: oatmeal hackathons delete <id-or-slug>")
+    console.error("Usage: hackathon hackathons delete <id-or-slug>")
     process.exit(1)
   }
 

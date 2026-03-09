@@ -8,7 +8,7 @@ export async function runSchedulesDelete(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!scheduleId) {
-    console.error("Usage: oatmeal schedules delete <schedule-id>")
+    console.error("Usage: hackathon schedules delete <schedule-id>")
     process.exit(1)
   }
 

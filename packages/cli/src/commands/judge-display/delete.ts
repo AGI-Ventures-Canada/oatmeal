@@ -9,7 +9,7 @@ export async function runJudgeDisplayDelete(
   options: { yes?: boolean }
 ): Promise<void> {
   if (!profileId) {
-    console.error("Usage: oatmeal judge-display delete <hackathon-id> <profile-id>")
+    console.error("Usage: hackathon judge-display delete <hackathon-id> <profile-id>")
     process.exit(1)
   }
 

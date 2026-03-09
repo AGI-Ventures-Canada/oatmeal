@@ -4,7 +4,7 @@
   "description": "CLI for the Oatmeal hackathon platform",
   "type": "module",
   "bin": {
-    "oatmeal": "./bin/cli.mjs"
+    "hackathon": "./bin/cli.mjs"
   },
   "files": [
     "dist",

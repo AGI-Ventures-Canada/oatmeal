@@ -7,7 +7,7 @@ export async function runResultsCalculate(
   options: { json?: boolean }
 ): Promise<void> {
   if (!hackathonId) {
-    console.error("Usage: oatmeal results calculate <hackathon-id>")
+    console.error("Usage: hackathon results calculate <hackathon-id>")
     process.exit(1)
   }
 

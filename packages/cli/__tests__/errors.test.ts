@@ -23,7 +23,7 @@ describe("ApiError", () => {
 describe("AuthError", () => {
   it("has default message suggesting login", () => {
     const err = new AuthError()
-    expect(err.message).toContain("oatmeal login")
+    expect(err.message).toContain("hackathon login")
     expect(err.name).toBe("AuthError")
   })
 

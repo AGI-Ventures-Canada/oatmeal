@@ -8,7 +8,7 @@ export async function runResultsGet(
   options: { json?: boolean }
 ): Promise<void> {
   if (!hackathonId) {
-    console.error("Usage: oatmeal results get <hackathon-id>")
+    console.error("Usage: hackathon results get <hackathon-id>")
     process.exit(1)
   }
 
@@ -22,7 +22,7 @@ export async function runResultsGet(
   }
 
   if (!data.rankings?.length) {
-    console.log("No results available. Run 'oatmeal results calculate <id>' first.")
+    console.log("No results available. Run 'hackathon results calculate <id>' first.")
     return
   }
 

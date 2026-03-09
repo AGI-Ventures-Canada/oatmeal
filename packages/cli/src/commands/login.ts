@@ -40,7 +40,7 @@ export async function runLogin(args: string[]): Promise<void> {
   const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL
 
   const existingConfig = loadConfig()
-  if (existingConfig && !options.yes && !options.apiKey && !process.env.OATMEAL_API_KEY) {
+  if (existingConfig && !options.yes && !options.apiKey && !process.env.HACKATHON_API_KEY) {
     const overwrite = await p.confirm({
       message: "You are already logged in. Overwrite existing config?",
     })
@@ -50,7 +50,7 @@ export async function runLogin(args: string[]): Promise<void> {
     }
   }
 
-  const key = options.apiKey ?? process.env.OATMEAL_API_KEY
+  const key = options.apiKey ?? process.env.HACKATHON_API_KEY
   if (key) {
     await validateAndSaveKey(key, baseUrl)
     return
@@ -146,7 +146,7 @@ async function validateAndSaveKey(apiKey: string, baseUrl: string): Promise<void
 
     saveConfig(config)
 
-    p.log.success(`Logged in! Key saved to ~/.oatmeal/config.json`)
+    p.log.success(`Logged in! Key saved to ~/.hackathon/config.json`)
     p.log.info(`Tenant: ${whoami.tenantId}`)
     p.log.info(`Scopes: ${whoami.scopes.join(", ")}`)
   } catch (error) {

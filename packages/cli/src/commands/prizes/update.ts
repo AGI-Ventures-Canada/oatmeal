@@ -41,7 +41,7 @@ export async function runPrizesUpdate(
   args: string[]
 ): Promise<void> {
   if (!prizeId) {
-    console.error("Usage: oatmeal prizes update <hackathon-id> <prize-id> [--name ...]")
+    console.error("Usage: hackathon prizes update <hackathon-id> <prize-id> [--name ...]")
     process.exit(1)
   }
 
