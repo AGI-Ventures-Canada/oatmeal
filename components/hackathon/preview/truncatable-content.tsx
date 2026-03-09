@@ -6,15 +6,13 @@ const MAX_HEIGHT = 400
 
 export function TruncatableContent({ children }: { children: ReactNode }) {
   const contentRef = useRef<HTMLDivElement>(null)
-  const [isOverflowing, setIsOverflowing] = useState(false)
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [state, setState] = useState({ isOverflowing: false, isExpanded: false })
+  const { isOverflowing, isExpanded } = state
 
   useEffect(() => {
-    setIsExpanded(false)
     const el = contentRef.current
-    if (el) {
-      setIsOverflowing(el.scrollHeight > MAX_HEIGHT)
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState({ isExpanded: false, isOverflowing: el ? el.scrollHeight > MAX_HEIGHT : false })
   }, [children])
 
   return (
@@ -33,7 +31,7 @@ export function TruncatableContent({ children }: { children: ReactNode }) {
             className="text-base text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             onClick={(e) => {
               e.stopPropagation()
-              setIsExpanded(true)
+              setState((s) => ({ ...s, isExpanded: true }))
             }}
           >
             Show more

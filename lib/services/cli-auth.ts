@@ -31,9 +31,8 @@ interface CliAuthSession {
 }
 
 function db() {
-  return getSupabase() as unknown as {
-    from: (table: string) => any
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return getSupabase() as unknown as { from: (table: string) => any }
 }
 
 export async function createCliAuthSession(deviceToken: string) {
