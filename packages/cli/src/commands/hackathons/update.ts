@@ -61,5 +61,5 @@ export async function runHackathonsUpdate(
     return
   }
 
-  console.log(formatSuccess(`Updated hackathon "${options.name ?? id}"`))
+  console.log(formatSuccess(`Updated hackathon "${hackathon.name ?? id}"`))
 }
