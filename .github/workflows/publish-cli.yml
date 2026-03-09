@@ -57,37 +57,6 @@ jobs:
           echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           echo "Bumped $CURRENT → $NEW_VERSION"
 
-      - name: Check for CLI changes since last release
-        id: changes
-        if: "!startsWith(github.ref, 'refs/tags/cli-v')"
-        run: |
-          LAST_TAG=$(git tag -l 'cli-v*' --sort=-v:refname | head -1)
-          if [ -z "$LAST_TAG" ]; then
-            echo "No previous tag found, will publish"
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            CHANGED=$(git diff --name-only "$LAST_TAG"..HEAD -- packages/cli/ | head -1)
-            if [ -n "$CHANGED" ]; then
-              echo "CLI files changed since $LAST_TAG"
-              echo "changed=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "No CLI changes since $LAST_TAG, skipping"
-              echo "changed=false" >> "$GITHUB_OUTPUT"
-            fi
-          fi
-
-      - name: Bump patch version
-        if: "!startsWith(github.ref, 'refs/tags/cli-v') && steps.changes.outputs.changed == 'true'"
-        id: version
-        run: |
-          cd packages/cli
-          CURRENT=$(node -p "require('./package.json').version")
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-          NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
-          node -e "const p=require('./package.json'); p.version='$NEW_VERSION'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2)+'\n')"
-          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-          echo "Bumped $CURRENT → $NEW_VERSION"
-
       - name: Run CLI tests
         if: "startsWith(github.ref, 'refs/tags/cli-v') || steps.changes.outputs.changed == 'true'"
         run: bun test packages/cli/__tests__/
