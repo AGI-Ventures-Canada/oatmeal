@@ -11,13 +11,13 @@ Find public hackathons by keyword:
 
 ```bash title="Search"
 # List all public hackathons
-oatmeal browse hackathons
+hackathon browse hackathons
 
 # Search by keyword
-oatmeal browse hackathons --search "AI"
+hackathon browse hackathons --search "AI"
 
 # Paginate through results
-oatmeal browse hackathons --page 2 --limit 10
+hackathon browse hackathons --page 2 --limit 10
 ```
 
 The output shows a table with hackathon names, slugs, status, and key dates.
@@ -27,7 +27,7 @@ The output shows a table with hackathon names, slugs, status, and key dates.
 Get full details for a specific hackathon by its slug:
 
 ```bash title="Terminal"
-oatmeal browse hackathon spring-hack-2026
+hackathon browse hackathon spring-hack-2026
 ```
 
 This shows the hackathon description, dates, registration status, and submission count.
@@ -37,7 +37,7 @@ This shows the hackathon description, dates, registration status, and submission
 See what teams have built:
 
 ```bash title="Terminal"
-oatmeal browse submissions spring-hack-2026
+hackathon browse submissions spring-hack-2026
 ```
 
 ## Check Results
@@ -45,7 +45,7 @@ oatmeal browse submissions spring-hack-2026
 View published results for a hackathon:
 
 ```bash title="Terminal"
-oatmeal browse results spring-hack-2026
+hackathon browse results spring-hack-2026
 ```
 
 <Callout type="info">
@@ -57,7 +57,7 @@ Results are only visible after the organizer publishes them. If results haven't 
 See an organization's public profile and their hackathons:
 
 ```bash title="Terminal"
-oatmeal browse org acme-labs
+hackathon browse org acme-labs
 ```
 
 ## JSON Output
@@ -66,13 +66,13 @@ All browse commands support `--json` for machine-readable output. This is useful
 
 ```bash title="JSON and piping"
 # Get hackathon list as JSON
-oatmeal browse hackathons --json
+hackathon browse hackathons --json
 
 # Pipe to jq for filtering
-oatmeal browse hackathons --json | jq '.[] | select(.status == "active")'
+hackathon browse hackathons --json | jq '.[] | select(.status == "active")'
 
 # Save results to a file
-oatmeal browse results spring-hack-2026 --json > results.json
+hackathon browse results spring-hack-2026 --json > results.json
 ```
 
 ## Common Workflows
@@ -81,27 +81,27 @@ oatmeal browse results spring-hack-2026 --json > results.json
 
 ```bash title="Finding events"
 # Search for AI-related hackathons
-oatmeal browse hackathons --search "AI"
+hackathon browse hackathons --search "AI"
 
 # Check details of one that looks interesting
-oatmeal browse hackathon cool-ai-hack
+hackathon browse hackathon cool-ai-hack
 
 # See what others have submitted in past events
-oatmeal browse submissions cool-ai-hack
+hackathon browse submissions cool-ai-hack
 ```
 
 ### Check if results are out
 
 ```bash title="Check results"
-oatmeal browse results the-hackathon-i-entered
+hackathon browse results the-hackathon-i-entered
 ```
 
 ### Explore an organization's events
 
 ```bash title="Explore org"
 # View the org
-oatmeal browse org techcorp
+hackathon browse org techcorp
 
 # See their hackathons
-oatmeal browse hackathons --search "techcorp"
+hackathon browse hackathons --search "techcorp"
 ```

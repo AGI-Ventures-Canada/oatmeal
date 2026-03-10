@@ -94,12 +94,12 @@ const BANNER = `
     whoami                     Show current auth info
     update                     Update CLI to latest version
 
-  ${pc.dim("HACKATHON MANAGEMENT (auth required)")}
-    hackathons list            List your hackathons
-    hackathons get <id>        Get hackathon details
-    hackathons create          Create a hackathon
-    hackathons update <id>     Update a hackathon
-    hackathons delete <id>     Delete a hackathon
+  ${pc.dim("EVENT MANAGEMENT (auth required)")}
+    events list                List your hackathons
+    events get <id>            Get hackathon details
+    events create              Create a hackathon
+    events update <id>         Update a hackathon
+    events delete <id>         Delete a hackathon
 
   ${pc.dim("JUDGING")}
     judging criteria list <id>              List criteria
@@ -248,7 +248,7 @@ async function main() {
         break
       }
 
-      case "hackathons": {
+      case "events": {
         const client = createAuthenticatedClient(flags)
         switch (sub) {
           case "list": {
@@ -277,7 +277,7 @@ async function main() {
             break
           }
           default:
-            console.error(`Unknown hackathons command: ${sub}. Run "hackathon hackathons --help" for usage.`)
+            console.error(`Unknown events command: ${sub}. Run "hackathon events --help" for usage.`)
             process.exit(1)
         }
         break

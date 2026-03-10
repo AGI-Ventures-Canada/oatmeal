@@ -7,13 +7,13 @@ This guide walks you through signing in, verifying your setup, and running your 
 
 ## Sign In
 
-The fastest way to authenticate is the browser flow. Run `oatmeal login` and a browser window opens for you to sign in:
+The fastest way to authenticate is the browser flow. Run `hackathon login` and a browser window opens for you to sign in:
 
 ```bash title="Terminal"
-oatmeal login
+hackathon login
 ```
 
-The CLI automatically creates an API key named "Oatmeal CLI" with full management scopes and saves it to `~/.oatmeal/config.json`.
+The CLI automatically creates an API key named "Hackathon CLI" with full management scopes and saves it to `~/.hackathon/config.json`.
 
 ### Alternative Auth Methods
 
@@ -21,14 +21,14 @@ If you can't open a browser (e.g., SSH session or CI), use one of these alternat
 
 ```bash title="Alternative auth"
 # Paste an existing API key interactively
-oatmeal login --no-browser
+hackathon login --no-browser
 
 # Provide an API key directly
-oatmeal login --api-key sk_live_your_key_here
+hackathon login --api-key sk_live_your_key_here
 
 # Use an environment variable (no login needed)
-export OATMEAL_API_KEY=sk_live_your_key_here
-oatmeal hackathons list
+export HACKATHON_API_KEY=sk_live_your_key_here
+hackathon events list
 ```
 
 ## Verify Your Connection
@@ -36,7 +36,7 @@ oatmeal hackathons list
 Check that you're authenticated:
 
 ```bash title="Terminal"
-oatmeal whoami
+hackathon whoami
 ```
 
 This shows your tenant ID, key prefix, and available scopes:
@@ -53,16 +53,16 @@ Browse commands work without authentication. Try searching for hackathons:
 
 ```bash title="Browsing commands"
 # List all public hackathons
-oatmeal browse hackathons
+hackathon browse hackathons
 
 # Search by keyword
-oatmeal browse hackathons --search "AI"
+hackathon browse hackathons --search "AI"
 
 # View a specific hackathon
-oatmeal browse hackathon my-hackathon-slug
+hackathon browse hackathon my-hackathon-slug
 
 # View published results
-oatmeal browse results my-hackathon-slug
+hackathon browse results my-hackathon-slug
 ```
 
 ## List Your Hackathons
@@ -70,13 +70,13 @@ oatmeal browse results my-hackathon-slug
 Once authenticated, list hackathons your organization manages:
 
 ```bash title="Terminal"
-oatmeal hackathons list
+hackathon events list
 ```
 
 The output shows a table with hackathon names, slugs, and statuses. Use `--json` for machine-readable output:
 
 ```bash title="JSON output"
-oatmeal hackathons list --json
+hackathon events list --json
 ```
 
 ## Create Your First Hackathon
@@ -84,13 +84,13 @@ oatmeal hackathons list --json
 Run the create command interactively:
 
 ```bash title="Terminal"
-oatmeal hackathons create
+hackathon events create
 ```
 
 The CLI prompts for name, slug, and description. Or provide everything via flags:
 
 ```bash title="Non-interactive"
-oatmeal hackathons create --name "Spring Hack 2026" --slug spring-hack-2026 --description "Build something amazing"
+hackathon events create --name "Spring Hack 2026" --slug spring-hack-2026 --description "Build something amazing"
 ```
 
 ## Using Slugs vs IDs
@@ -99,16 +99,16 @@ Most commands accept either a UUID or a slug. The CLI automatically resolves slu
 
 ```bash title="Slug resolution"
 # Both work:
-oatmeal hackathons get spring-hack-2026
-oatmeal hackathons get 550e8400-e29b-41d4-a716-446655440000
+hackathon events get spring-hack-2026
+hackathon events get 550e8400-e29b-41d4-a716-446655440000
 ```
 
 ## Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OATMEAL_API_KEY` | API key (overrides saved config) | — |
-| `OATMEAL_BASE_URL` | API base URL | `https://oatmeal.app` |
+| `HACKATHON_API_KEY` | API key (overrides saved config) | — |
+| `HACKATHON_BASE_URL` | API base URL | `https://getoatmeal.com` |
 | `NO_COLOR` | Disable colored output | — |
 
 ## Connecting to Different Environments
@@ -117,10 +117,10 @@ The base URL is saved after login. To switch environments:
 
 ```bash title="Environments"
 # Local development
-oatmeal login --base-url http://localhost:3000
+hackathon login --base-url http://localhost:3000
 
 # Production (default)
-oatmeal login
+hackathon login
 ```
 
 ## Sign Out
@@ -128,10 +128,10 @@ oatmeal login
 Remove saved credentials:
 
 ```bash title="Terminal"
-oatmeal logout
+hackathon logout
 ```
 
-This deletes `~/.oatmeal/config.json`. It does not revoke the API key — you can do that from the dashboard under Settings > API Keys.
+This deletes `~/.hackathon/config.json`. It does not revoke the API key — you can do that from the dashboard under Settings > API Keys.
 
 ## Next Steps
 

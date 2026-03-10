@@ -37,7 +37,7 @@ export async function runHackathonsUpdate(
   args: string[]
 ): Promise<void> {
   if (!idOrSlug) {
-    console.error("Usage: hackathon hackathons update <id-or-slug> [--name ...] [--slug ...] [--description ...]")
+    console.error("Usage: hackathon events update <id-or-slug> [--name ...] [--slug ...] [--description ...]")
     process.exit(1)
   }
 
