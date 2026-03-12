@@ -119,7 +119,7 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
 
       <Dialog open={orgGateOpen} onOpenChange={(open) => {
         setOrgGateOpen(open)
-        if (!open) setPendingAction(null)
+        if (!open && !createOrgOpen) setPendingAction(null)
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -132,9 +132,9 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
             {userMemberships?.data && userMemberships.data.length > 0 && (
               <div className="space-y-1">
                 {userMemberships.data.map((mem) => (
-                  <button
+                  <Button
                     key={mem.organization.id}
-                    type="button"
+                    variant="ghost"
                     onClick={async () => {
                       await setActive?.({ organization: mem.organization.id })
                       setOrgGateOpen(false)
@@ -142,7 +142,6 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
                       else if (pendingAction === "luma") setLumaDialogOpen(true)
                       setPendingAction(null)
                     }}
-                    className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted"
                   >
                     {mem.organization.imageUrl ? (
                       <Image
@@ -158,28 +157,37 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
                       </div>
                     )}
                     <span>{mem.organization.name}</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setOrgGateOpen(false)
-                setCreateOrgOpen(true)
-              }}
-            >
-              <Plus className="size-4 mr-2" />
-              Create New Organization
-            </Button>
+            <div className="w-full">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setOrgGateOpen(false)
+                  setCreateOrgOpen(true)
+                }}
+              >
+                <Plus className="size-4 mr-2" />
+                Create New Organization
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
       <CreateOrganizationDialog
         open={createOrgOpen}
-        onOpenChange={setCreateOrgOpen}
+        onOpenChange={(open) => {
+          setCreateOrgOpen(open)
+          if (!open) setPendingAction(null)
+        }}
+        onSuccess={() => {
+          if (pendingAction === "scratch") setDrawerOpen(true)
+          else if (pendingAction === "luma") setLumaDialogOpen(true)
+          setPendingAction(null)
+        }}
       />
     </>
   )
