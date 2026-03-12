@@ -1,24 +1,24 @@
 "use client"
 
-import { useRef, useState, useEffect, type ReactNode } from "react"
+import { useCallback, useState, type ReactNode } from "react"
 
 const MAX_HEIGHT = 400
 
 export function TruncatableContent({ children }: { children: ReactNode }) {
-  const contentRef = useRef<HTMLDivElement>(null)
-  const [state, setState] = useState({ isOverflowing: false, isExpanded: false })
-  const { isOverflowing, isExpanded } = state
+  const [isOverflowing, setIsOverflowing] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
 
-  useEffect(() => {
-    const el = contentRef.current
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- measuring DOM requires effect + setState
-    setState({ isExpanded: false, isOverflowing: el ? el.scrollHeight > MAX_HEIGHT : false })
-  }, [children])
+  const measureRef = useCallback((el: HTMLDivElement | null) => {
+    if (el) {
+      setIsOverflowing(el.scrollHeight > MAX_HEIGHT)
+      setIsExpanded(false)
+    }
+  }, [children]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="relative">
       <div
-        ref={contentRef}
+        ref={measureRef}
         className={!isExpanded && isOverflowing ? "overflow-hidden" : undefined}
         style={!isExpanded && isOverflowing ? { maxHeight: MAX_HEIGHT } : undefined}
       >
@@ -31,7 +31,7 @@ export function TruncatableContent({ children }: { children: ReactNode }) {
             className="text-base text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             onClick={(e) => {
               e.stopPropagation()
-              setState((s) => ({ ...s, isExpanded: true }))
+              setIsExpanded(true)
             }}
           >
             Show more

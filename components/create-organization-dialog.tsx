@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label"
 interface CreateOrganizationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
 function generateSlug(name: string): string {
@@ -35,6 +36,7 @@ function isValidSlugFormat(slug: string): boolean {
 export function CreateOrganizationDialog({
   open,
   onOpenChange,
+  onSuccess,
 }: CreateOrganizationDialogProps) {
   const router = useRouter()
   const { createOrganization, setActive } = useOrganizationList()
@@ -109,7 +111,11 @@ export function CreateOrganizationDialog({
 
       onOpenChange(false)
       resetForm()
-      router.push("/home")
+      if (onSuccess) {
+        onSuccess()
+      } else {
+        router.push("/home")
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create organization")
     } finally {
