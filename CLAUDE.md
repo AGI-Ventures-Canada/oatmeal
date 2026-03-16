@@ -105,9 +105,11 @@ When developers include external documentation links in requests, save them to t
 Skills in `.claude/skills/`:
 - `local-dev-setup.md` - Developer onboarding and local environment setup
 
-Hackathon-specific skills (CLI, API, organizer, attendee) live in the [hackathon-skills](https://github.com/AGI-Ventures-Canada/hackathon-skills) repo.
-
-User-facing hackathon skills are also published at [AGI-Ventures-Canada/hackathon-skills](https://github.com/AGI-Ventures-Canada/hackathon-skills) for external installation via `npx skills add AGI-Ventures-Canada/hackathon-skills`.
+Hackathon-specific skills (CLI, API, organizer, attendee) live in `skills/` at the project root (picked up by skills.sh):
+- `hackathon-api` - API route patterns and workflow examples
+- `hackathon-attendee` - Attendee building, strategy, and networking
+- `hackathon-cli` - CLI commands and workflow examples
+- `hackathon-organizer` - Organizer judging, prizes, planning, and logistics
 
 ## Next.js 16 Specifics
 
