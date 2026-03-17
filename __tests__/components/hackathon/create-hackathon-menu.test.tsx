@@ -8,6 +8,7 @@ let mockMemberships: Array<{
 }> = []
 
 mock.module("@clerk/nextjs", () => ({
+  useAuth: () => ({ isSignedIn: true }),
   useOrganization: () => ({ organization: mockOrganization }),
   useOrganizationList: () => ({
     userMemberships: { data: mockMemberships },

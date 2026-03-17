@@ -1,12 +1,8 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
-import Image from "next/image"
 import { Plus, Sparkles } from "lucide-react"
-import {
-  useOrganization,
-  useOrganizationList,
-} from "@clerk/nextjs"
+import { useOrganization } from "@clerk/nextjs"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,9 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { CreateHackathonDrawer } from "./create-hackathon-drawer"
-import { CreateOrganizationDialog } from "@/components/create-organization-dialog"
+import { OrgGateDialog } from "@/components/org-gate-dialog"
 import { LumaPasteInput } from "./luma-paste-input"
 
 type CreateHackathonMenuProps = {
@@ -34,14 +29,10 @@ type PendingAction = "scratch" | "luma" | null
 
 export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
   const { organization } = useOrganization()
-  const { userMemberships, setActive } = useOrganizationList({
-    userMemberships: { infinite: true },
-  })
   const [menuOpen, setMenuOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [lumaDialogOpen, setLumaDialogOpen] = useState(false)
   const [orgGateOpen, setOrgGateOpen] = useState(false)
-  const [createOrgOpen, setCreateOrgOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const closeTimeout = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -117,73 +108,13 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={orgGateOpen} onOpenChange={(open) => {
-        setOrgGateOpen(open)
-        if (!open && !createOrgOpen) setPendingAction(null)
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Organization Required</DialogTitle>
-            <DialogDescription>
-              Hackathons are created under organizations. Switch to an organization or create a new one to get started.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {userMemberships?.data && userMemberships.data.length > 0 && (
-              <div className="space-y-1">
-                {userMemberships.data.map((mem) => (
-                  <Button
-                    key={mem.organization.id}
-                    variant="ghost"
-                    onClick={async () => {
-                      await setActive?.({ organization: mem.organization.id })
-                      setOrgGateOpen(false)
-                      if (pendingAction === "scratch") setDrawerOpen(true)
-                      else if (pendingAction === "luma") setLumaDialogOpen(true)
-                      setPendingAction(null)
-                    }}
-                  >
-                    {mem.organization.imageUrl ? (
-                      <Image
-                        src={mem.organization.imageUrl}
-                        alt={mem.organization.name}
-                        width={24}
-                        height={24}
-                        className="size-6 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
-                        {mem.organization.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <span>{mem.organization.name}</span>
-                  </Button>
-                ))}
-              </div>
-            )}
-            <div className="w-full">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setOrgGateOpen(false)
-                  setCreateOrgOpen(true)
-                }}
-              >
-                <Plus className="size-4 mr-2" />
-                Create New Organization
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <CreateOrganizationDialog
-        open={createOrgOpen}
+      <OrgGateDialog
+        open={orgGateOpen}
         onOpenChange={(open) => {
-          setCreateOrgOpen(open)
+          setOrgGateOpen(open)
           if (!open) setPendingAction(null)
         }}
-        onSuccess={() => {
+        onOrgSelected={() => {
           if (pendingAction === "scratch") setDrawerOpen(true)
           else if (pendingAction === "luma") setLumaDialogOpen(true)
           setPendingAction(null)

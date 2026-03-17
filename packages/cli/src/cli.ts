@@ -100,6 +100,7 @@ const BANNER = `
     events create              Create a hackathon
     events update <id>         Update a hackathon
     events delete <id>         Delete a hackathon
+    ${pc.dim("(alias: hackathons)")}
 
   ${pc.dim("JUDGING")}
     judging criteria list <id>              List criteria
@@ -248,6 +249,7 @@ async function main() {
         break
       }
 
+      case "hackathons":
       case "events": {
         const client = createAuthenticatedClient(flags)
         switch (sub) {

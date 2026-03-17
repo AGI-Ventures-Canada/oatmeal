@@ -1,21 +1,13 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
-import Image from "next/image"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth, useOrganization, useOrganizationList } from "@clerk/nextjs"
+import { useAuth, useOrganization } from "@clerk/nextjs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { SignInRequiredDialog } from "@/components/sign-in-required-dialog"
-import { CreateOrganizationDialog } from "@/components/create-organization-dialog"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { OrgGateDialog } from "@/components/org-gate-dialog"
 import { Button } from "@/components/ui/button"
-import { Loader2, Plus } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
 
 const STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000
@@ -141,9 +133,6 @@ export function HackathonDraftEditor({
   const router = useRouter()
   const { isSignedIn } = useAuth()
   const { organization } = useOrganization()
-  const { userMemberships, setActive } = useOrganizationList({
-    userMemberships: { infinite: true },
-  })
 
   const [state, setState] = useState<DraftState>(() => {
     return loadSavedState(storageKey) ?? initialState
@@ -152,13 +141,31 @@ export function HackathonDraftEditor({
   const [error, setError] = useState<string | null>(null)
   const [showSignInDialog, setShowSignInDialog] = useState(false)
   const [orgGateOpen, setOrgGateOpen] = useState(false)
-  const [createOrgOpen, setCreateOrgOpen] = useState(false)
+  const pendingSubmit = useRef(false)
 
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify({ state, savedAt: Date.now() }))
   }, [state, storageKey])
 
   const hackathon = stateToHackathon(state)
+
+  const doSubmit = useCallback(async () => {
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const { slug } = await onSubmit(state)
+      localStorage.removeItem(storageKey)
+      router.push(`/e/${slug}/manage`)
+    } catch (err) {
+      console.error("Failed to create hackathon:", err)
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [state, router, storageKey, onSubmit])
+
+  const doSubmitRef = useRef(doSubmit)
+  doSubmitRef.current = doSubmit
 
   const handleSubmit = useCallback(async () => {
     if (!state.name.trim()) {
@@ -172,24 +179,13 @@ export function HackathonDraftEditor({
     }
 
     if (!organization) {
+      pendingSubmit.current = true
       setOrgGateOpen(true)
       return
     }
 
-    setIsSubmitting(true)
-    setError(null)
-
-    try {
-      const { slug } = await onSubmit(state)
-      localStorage.removeItem(storageKey)
-      router.push(`/e/${slug}/manage`)
-    } catch (err) {
-      console.error("Failed to create hackathon:", err)
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [state, isSignedIn, organization, router, storageKey, onSubmit])
+    await doSubmit()
+  }, [state, isSignedIn, organization, doSubmit])
 
   const handleFormSave = useCallback(async (data: Record<string, unknown>) => {
     setState(prev => {
@@ -247,65 +243,18 @@ export function HackathonDraftEditor({
         redirectQuery="edit=true"
       />
 
-      <Dialog open={orgGateOpen} onOpenChange={(open) => {
-        setOrgGateOpen(open)
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Organization Required</DialogTitle>
-            <DialogDescription>
-              Hackathons are created under organizations. Switch to an organization or create a new one to get started.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {userMemberships?.data && userMemberships.data.length > 0 && (
-              <div className="space-y-1">
-                {userMemberships.data.map((mem) => (
-                  <Button
-                    key={mem.organization.id}
-                    variant="ghost"
-                    onClick={async () => {
-                      await setActive?.({ organization: mem.organization.id })
-                      setOrgGateOpen(false)
-                    }}
-                  >
-                    {mem.organization.imageUrl ? (
-                      <Image
-                        src={mem.organization.imageUrl}
-                        alt={mem.organization.name}
-                        width={24}
-                        height={24}
-                        className="size-6 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
-                        {mem.organization.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <span>{mem.organization.name}</span>
-                  </Button>
-                ))}
-              </div>
-            )}
-            <div className="w-full">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setOrgGateOpen(false)
-                  setCreateOrgOpen(true)
-                }}
-              >
-                <Plus className="size-4 mr-2" />
-                Create New Organization
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <CreateOrganizationDialog
-        open={createOrgOpen}
-        onOpenChange={setCreateOrgOpen}
+      <OrgGateDialog
+        open={orgGateOpen}
+        onOpenChange={(open) => {
+          setOrgGateOpen(open)
+          if (!open) pendingSubmit.current = false
+        }}
+        onOrgSelected={() => {
+          if (pendingSubmit.current) {
+            pendingSubmit.current = false
+            doSubmitRef.current()
+          }
+        }}
       />
     </div>
   )
