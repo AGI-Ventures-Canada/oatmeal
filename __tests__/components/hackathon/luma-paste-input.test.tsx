@@ -8,9 +8,12 @@ mock.module("next/navigation", () => ({
   usePathname: () => "/home",
 }))
 
-// Import the real component directly by file path to avoid mock.module pollution
-// from other test files (e.g. create-hackathon-menu.test.tsx mocks this module).
-const { LumaPasteInput } = await import("../../../components/hackathon/luma-paste-input")
+// Undo mock.module pollution from create-hackathon-menu.test.tsx which stubs
+// this module with a simple div. Re-register the real module to restore it.
+const realModule = await import("../../../components/hackathon/luma-paste-input")
+mock.module("@/components/hackathon/luma-paste-input", () => realModule)
+
+const { LumaPasteInput } = realModule
 
 afterEach(() => {
   cleanup()
