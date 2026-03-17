@@ -5,7 +5,7 @@ AI agent skills for hackathon management on the [Oatmeal](https://github.com/AGI
 ## Install
 
 ```bash
-npx skills add AGI-Ventures-Canada/hackathon-skills
+npx skills add AGI-Ventures-Canada/oatmeal
 ```
 
 ## Skills
