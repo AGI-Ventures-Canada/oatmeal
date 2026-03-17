@@ -59,10 +59,6 @@ mock.module("@/components/create-organization-dialog", () => ({
   },
 }))
 
-mock.module("@/components/hackathon/luma-paste-input", () => ({
-  LumaPasteInput: () => <div data-testid="luma-paste-input">Luma Input</div>,
-}))
-
 const { CreateHackathonMenu } = await import(
   "@/components/hackathon/create-hackathon-menu"
 )

@@ -8,12 +8,7 @@ mock.module("next/navigation", () => ({
   usePathname: () => "/home",
 }))
 
-// Undo mock.module pollution from create-hackathon-menu.test.tsx which stubs
-// this module with a simple div. Re-register the real module to restore it.
-const realModule = await import("../../../components/hackathon/luma-paste-input")
-mock.module("@/components/hackathon/luma-paste-input", () => realModule)
-
-const { LumaPasteInput } = realModule
+const { LumaPasteInput } = await import("@/components/hackathon/luma-paste-input")
 
 afterEach(() => {
   cleanup()
