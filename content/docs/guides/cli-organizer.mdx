@@ -10,20 +10,20 @@ This guide walks through the full lifecycle of a hackathon using the Oatmeal CLI
 Install the CLI and sign in:
 
 ```bash title="Setup"
-npm install -g @oatmeal/cli
-oatmeal login
+npm install -g @agi-ventures-canada/hackathon-cli
+hackathon login
 ```
 
 ## Step 1: Create a Hackathon
 
 ```bash title="Terminal"
-oatmeal hackathons create --name "Spring Hack 2026" --slug spring-hack-2026
+hackathon events create --name "Spring Hack 2026" --slug spring-hack-2026
 ```
 
 Save the hackathon ID from the output — you'll need it for subsequent commands. Or use the slug directly:
 
 ```bash title="Verify"
-oatmeal hackathons get spring-hack-2026
+hackathon events get spring-hack-2026
 ```
 
 ## Step 2: Define Judging Criteria
@@ -31,15 +31,15 @@ oatmeal hackathons get spring-hack-2026
 Set up how submissions will be scored:
 
 ```bash title="Create criteria"
-oatmeal judging criteria create spring-hack-2026 \
+hackathon judging criteria create spring-hack-2026 \
   --name "Innovation" --description "How novel is the approach?" \
   --max-score 10 --weight 30
 
-oatmeal judging criteria create spring-hack-2026 \
+hackathon judging criteria create spring-hack-2026 \
   --name "Technical Execution" --description "Code quality and architecture" \
   --max-score 10 --weight 40
 
-oatmeal judging criteria create spring-hack-2026 \
+hackathon judging criteria create spring-hack-2026 \
   --name "Presentation" --description "Demo quality and clarity" \
   --max-score 10 --weight 30
 ```
@@ -47,7 +47,7 @@ oatmeal judging criteria create spring-hack-2026 \
 Verify your criteria:
 
 ```bash title="List criteria"
-oatmeal judging criteria list spring-hack-2026
+hackathon judging criteria list spring-hack-2026
 ```
 
 ## Step 3: Add Judges
@@ -55,15 +55,15 @@ oatmeal judging criteria list spring-hack-2026
 Invite judges by email or add them directly:
 
 ```bash title="Add judges"
-oatmeal judging judges add spring-hack-2026 --email alice@example.com
-oatmeal judging judges add spring-hack-2026 --email bob@example.com
-oatmeal judging judges add spring-hack-2026 --email carol@example.com
+hackathon judging judges add spring-hack-2026 --email alice@example.com
+hackathon judging judges add spring-hack-2026 --email bob@example.com
+hackathon judging judges add spring-hack-2026 --email carol@example.com
 ```
 
 Check invitation status:
 
 ```bash title="Check invitations"
-oatmeal judging invitations list spring-hack-2026
+hackathon judging invitations list spring-hack-2026
 ```
 
 ## Step 4: Set Up Prizes
@@ -71,20 +71,20 @@ oatmeal judging invitations list spring-hack-2026
 Create prizes for winners:
 
 ```bash title="Create prizes"
-oatmeal prizes create spring-hack-2026 \
+hackathon prizes create spring-hack-2026 \
   --name "Grand Prize" --type monetary --value 5000
 
-oatmeal prizes create spring-hack-2026 \
+hackathon prizes create spring-hack-2026 \
   --name "Runner Up" --type monetary --value 2500
 
-oatmeal prizes create spring-hack-2026 \
+hackathon prizes create spring-hack-2026 \
   --name "Best Design" --type custom --value "Design toolkit license"
 ```
 
 Reorder if needed:
 
 ```bash title="Reorder prizes"
-oatmeal prizes reorder spring-hack-2026 --ids prize1-id,prize2-id,prize3-id
+hackathon prizes reorder spring-hack-2026 --ids prize1-id,prize2-id,prize3-id
 ```
 
 ## Step 5: Assign Judges to Submissions
@@ -92,13 +92,13 @@ oatmeal prizes reorder spring-hack-2026 --ids prize1-id,prize2-id,prize3-id
 Once the submission deadline passes, distribute submissions to judges:
 
 ```bash title="Auto-assign"
-oatmeal judging auto-assign spring-hack-2026 --per-judge 5
+hackathon judging auto-assign spring-hack-2026 --per-judge 5
 ```
 
 This evenly distributes submissions so each judge reviews approximately 5 projects. Check the assignment breakdown:
 
 ```bash title="Check progress"
-oatmeal judging judges list spring-hack-2026
+hackathon judging judges list spring-hack-2026
 ```
 
 The output shows each judge's completion progress (e.g., "3/5 scored").
@@ -109,10 +109,10 @@ While judges are scoring, monitor their progress:
 
 ```bash title="Monitor"
 # See overall progress
-oatmeal judging judges list spring-hack-2026
+hackathon judging judges list spring-hack-2026
 
 # View all assignments
-oatmeal judging assignments list spring-hack-2026
+hackathon judging assignments list spring-hack-2026
 ```
 
 ## Step 7: Calculate and Publish Results
@@ -121,13 +121,13 @@ Once all judges have scored, calculate the final rankings:
 
 ```bash title="Results workflow"
 # Calculate rankings from scores
-oatmeal results calculate spring-hack-2026
+hackathon results calculate spring-hack-2026
 
 # Review the results before publishing
-oatmeal results get spring-hack-2026
+hackathon results get spring-hack-2026
 
 # Publish when ready
-oatmeal results publish spring-hack-2026
+hackathon results publish spring-hack-2026
 ```
 
 ## Step 8: Assign Prizes
@@ -136,12 +136,12 @@ Award prizes to winning submissions:
 
 ```bash title="Assign prizes"
 # Get the prize and submission IDs
-oatmeal prizes list spring-hack-2026 --json
-oatmeal results get spring-hack-2026 --json
+hackathon prizes list spring-hack-2026 --json
+hackathon results get spring-hack-2026 --json
 
 # Assign prizes
-oatmeal prizes assign spring-hack-2026 <grand-prize-id> --submission <winner-id>
-oatmeal prizes assign spring-hack-2026 <runner-up-id> --submission <second-place-id>
+hackathon prizes assign spring-hack-2026 <grand-prize-id> --submission <winner-id>
+hackathon prizes assign spring-hack-2026 <runner-up-id> --submission <second-place-id>
 ```
 
 ## Quick Reference
@@ -150,25 +150,25 @@ Here's the complete organizer workflow in one block:
 
 ```bash title="Full workflow"
 # Create event
-oatmeal hackathons create --name "My Hack" --slug my-hack
+hackathon events create --name "My Hack" --slug my-hack
 
 # Set up judging
-oatmeal judging criteria create my-hack --name "Innovation" --max-score 10 --weight 50
-oatmeal judging criteria create my-hack --name "Execution" --max-score 10 --weight 50
-oatmeal judging judges add my-hack --email judge@example.com
+hackathon judging criteria create my-hack --name "Innovation" --max-score 10 --weight 50
+hackathon judging criteria create my-hack --name "Execution" --max-score 10 --weight 50
+hackathon judging judges add my-hack --email judge@example.com
 
 # Set up prizes
-oatmeal prizes create my-hack --name "Grand Prize" --type monetary --value 5000
+hackathon prizes create my-hack --name "Grand Prize" --type monetary --value 5000
 
 # After submissions close
-oatmeal judging auto-assign my-hack --per-judge 5
+hackathon judging auto-assign my-hack --per-judge 5
 
 # After judging completes
-oatmeal results calculate my-hack
-oatmeal results publish my-hack
-oatmeal prizes assign my-hack <prize-id> --submission <winner-id>
+hackathon results calculate my-hack
+hackathon results publish my-hack
+hackathon prizes assign my-hack <prize-id> --submission <winner-id>
 ```
 
 <Callout type="info">
-If you need to fix a mistake after publishing, use `oatmeal results unpublish` to take results down, make changes, recalculate, and republish.
+If you need to fix a mistake after publishing, use `hackathon results unpublish` to take results down, make changes, recalculate, and republish.
 </Callout>

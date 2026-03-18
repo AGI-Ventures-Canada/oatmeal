@@ -21,7 +21,7 @@ bun cli login --base-url http://localhost:3000
 # → Opens browser → sign in via Clerk → API key auto-created and saved
 
 # Now run commands against your local instance
-bun cli hackathons list
+bun cli events list
 bun cli prizes create <hackathon-id> --name "Best AI App"
 bun cli judging judges list <hackathon-id>
 ```

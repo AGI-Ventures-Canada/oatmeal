@@ -22,6 +22,10 @@ const mockCreateApiKey = mock(() =>
 
 mock.module("@/lib/services/api-keys", () => ({
   createApiKey: mockCreateApiKey,
+  verifyApiKey: mock(() => Promise.resolve(null)),
+  listApiKeys: mock(() => Promise.resolve([])),
+  revokeApiKey: mock(() => Promise.resolve(true)),
+  getApiKeyById: mock(() => Promise.resolve(null)),
 }))
 
 const { createCliAuthSession, pollCliAuthSession, completeCliAuthSession } =

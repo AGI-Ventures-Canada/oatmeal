@@ -1,21 +1,16 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test"
-import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, statSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, unlinkSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
+import { loadConfig } from "../src/config"
 
 let testDir: string
-let testConfigDir: string
-let testConfigFile: string
 
 function setTestPaths() {
   testDir = join(tmpdir(), `hackathon-test-${Date.now()}`)
-  testConfigDir = join(testDir, ".hackathon")
-  testConfigFile = join(testConfigDir, "config.json")
 }
 
 describe("config", () => {
-  let originalConfigDir: string | undefined
-  let originalConfigFile: string | undefined
   let originalApiKey: string | undefined
   let originalBaseUrl: string | undefined
 
@@ -28,8 +23,6 @@ describe("config", () => {
     delete process.env.HACKATHON_BASE_URL
 
     mkdirSync(testDir, { recursive: true })
-
-    // We'll use dynamic imports and mock the constants
   })
 
   afterEach(() => {
@@ -42,16 +35,12 @@ describe("config", () => {
   })
 
   it("loadConfig returns null when no config and no env vars", async () => {
-    const { loadConfig } = await import("../src/config")
-    // With no env vars and (likely) no real config file, this tests the path
     const result = loadConfig()
-    // Result is either null (no file) or a valid config (user has one)
     expect(result === null || typeof result === "object").toBe(true)
   })
 
   it("env var HACKATHON_API_KEY overrides config file", () => {
     process.env.HACKATHON_API_KEY = "sk_live_test123"
-    const { loadConfig } = require("../src/config")
     const config = loadConfig()
     expect(config).not.toBeNull()
     expect(config!.apiKey).toBe("sk_live_test123")
@@ -60,7 +49,6 @@ describe("config", () => {
   it("env var HACKATHON_BASE_URL overrides default", () => {
     process.env.HACKATHON_API_KEY = "sk_live_test123"
     process.env.HACKATHON_BASE_URL = "http://localhost:3000"
-    const { loadConfig } = require("../src/config")
     const config = loadConfig()
     expect(config!.baseUrl).toBe("http://localhost:3000")
   })
@@ -68,16 +56,12 @@ describe("config", () => {
   it("both env vars work simultaneously", () => {
     process.env.HACKATHON_API_KEY = "sk_live_env"
     process.env.HACKATHON_BASE_URL = "http://custom:3000"
-    const { loadConfig } = require("../src/config")
     const config = loadConfig()
     expect(config!.apiKey).toBe("sk_live_env")
     expect(config!.baseUrl).toBe("http://custom:3000")
   })
 
   it("saveConfig and clearConfig work with a temp directory", () => {
-    const { writeFileSync, mkdirSync, existsSync, readFileSync, unlinkSync } = require("node:fs")
-    const { join } = require("node:path")
-
     const dir = join(testDir, ".hackathon-save-test")
     const file = join(dir, "config.json")
 

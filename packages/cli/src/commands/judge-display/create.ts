@@ -41,7 +41,7 @@ export async function runJudgeDisplayCreate(
   let name = options.name
 
   if (!name && process.stdout.isTTY) {
-    const result = await p.text({ message: "Judge name:", validate: (v) => (v ? undefined : "Required") })
+    const result = await p.text({ message: "Judge name:", validate: (v: string) => (v ? undefined : "Required") })
     if (p.isCancel(result)) return
     name = result
   }

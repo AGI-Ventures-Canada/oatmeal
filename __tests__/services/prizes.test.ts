@@ -430,7 +430,7 @@ describe("Prizes Service", () => {
 
   describe("autoAssignPrizes", () => {
     it("assigns score-based prizes by matching rank", async () => {
-      let insertedAssignments: { prize_id: string; submission_id: string }[] = []
+      const insertedAssignments: { prize_id: string; submission_id: string }[] = []
       setMockFromImplementation((table) => {
         if (table === "prizes") {
           return createChainableMock({
@@ -476,7 +476,7 @@ describe("Prizes Service", () => {
     })
 
     it("skips score prizes with no matching rank in results", async () => {
-      let insertedAssignments: { prize_id: string; submission_id: string }[] = []
+      const insertedAssignments: { prize_id: string; submission_id: string }[] = []
       setMockFromImplementation((table) => {
         if (table === "prizes") {
           return createChainableMock({

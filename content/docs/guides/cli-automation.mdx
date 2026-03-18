@@ -7,28 +7,28 @@ The Oatmeal CLI is designed for automation. Every command supports `--json` outp
 
 ## Authentication in CI
 
-Use the `OATMEAL_API_KEY` environment variable — no `oatmeal login` needed:
+Use the `HACKATHON_API_KEY` environment variable — no `hackathon login` needed:
 
 ```bash title="Environment variable auth"
-export OATMEAL_API_KEY=sk_live_your_key_here
-oatmeal hackathons list --json
+export HACKATHON_API_KEY=sk_live_your_key_here
+hackathon events list --json
 ```
 
-In CI platforms, set `OATMEAL_API_KEY` as a secret:
+In CI platforms, set `HACKATHON_API_KEY` as a secret:
 
 ```yaml title=".github/workflows/example.yml"
 # GitHub Actions
 env:
-  OATMEAL_API_KEY: ${{ secrets.OATMEAL_API_KEY }}
+  HACKATHON_API_KEY: ${{ secrets.HACKATHON_API_KEY }}
 
 steps:
-  - run: npx @oatmeal/cli hackathons list --json
+  - run: npx @agi-ventures-canada/hackathon-cli events list --json
 ```
 
 To point at a local dev server instead of production:
 
 ```bash title="Local development"
-export OATMEAL_BASE_URL=http://localhost:3000
+export HACKATHON_BASE_URL=http://localhost:3000
 ```
 
 ## JSON Output
@@ -37,14 +37,14 @@ Every command supports `--json` for machine-readable output:
 
 ```bash title="JSON examples"
 # Pipe to jq for filtering
-oatmeal hackathons list --json | jq '.[0].id'
+hackathon events list --json | jq '.[0].id'
 
 # Save to file
-oatmeal results get <hackathon> --json > results.json
+hackathon results get <hackathon> --json > results.json
 
 # Use in shell scripts
-HACK_ID=$(oatmeal hackathons list --json | jq -r '.[0].id')
-oatmeal prizes list $HACK_ID --json
+HACK_ID=$(hackathon events list --json | jq -r '.[0].id')
+hackathon prizes list $HACK_ID --json
 ```
 
 ## Skip Confirmation Prompts
@@ -52,9 +52,9 @@ oatmeal prizes list $HACK_ID --json
 Destructive commands (delete, publish, unpublish) require confirmation by default. Use `--yes` to skip:
 
 ```bash title="Non-interactive mode"
-oatmeal hackathons delete <id> --yes
-oatmeal results publish <hackathon> --yes
-oatmeal prizes unassign <hackathon> <prize-id> <submission-id> --yes
+hackathon events delete <id> --yes
+hackathon results publish <hackathon> --yes
+hackathon prizes unassign <hackathon> <prize-id> <submission-id> --yes
 ```
 
 ## Example: Automated Hackathon Setup
@@ -69,22 +69,22 @@ SLUG="$1"
 NAME="$2"
 
 # Create hackathon
-oatmeal hackathons create --name "$NAME" --slug "$SLUG"
+hackathon events create --name "$NAME" --slug "$SLUG"
 
 # Add standard criteria
-oatmeal judging criteria create "$SLUG" \
+hackathon judging criteria create "$SLUG" \
   --name "Innovation" --max-score 10 --weight 30
-oatmeal judging criteria create "$SLUG" \
+hackathon judging criteria create "$SLUG" \
   --name "Technical Execution" --max-score 10 --weight 40
-oatmeal judging criteria create "$SLUG" \
+hackathon judging criteria create "$SLUG" \
   --name "Presentation" --max-score 10 --weight 30
 
 # Add standard prizes
-oatmeal prizes create "$SLUG" \
+hackathon prizes create "$SLUG" \
   --name "Grand Prize" --type monetary --value 5000
-oatmeal prizes create "$SLUG" \
+hackathon prizes create "$SLUG" \
   --name "Runner Up" --type monetary --value 2500
-oatmeal prizes create "$SLUG" \
+hackathon prizes create "$SLUG" \
   --name "Best Design" --type custom --value "Design toolkit"
 
 echo "Hackathon '$NAME' created with criteria and prizes."
@@ -108,14 +108,14 @@ set -euo pipefail
 HACKATHON="$1"
 
 # Calculate results
-oatmeal results calculate "$HACKATHON" --yes
+hackathon results calculate "$HACKATHON" --yes
 
 # Export results for review
-oatmeal results get "$HACKATHON" --json > "results-$HACKATHON.json"
+hackathon results get "$HACKATHON" --json > "results-$HACKATHON.json"
 
 echo "Results calculated and saved to results-$HACKATHON.json"
 echo "Review the file, then run:"
-echo "  oatmeal results publish $HACKATHON"
+echo "  hackathon results publish $HACKATHON"
 ```
 
 ## Example: GitHub Actions — Publish Results on Schedule
@@ -132,16 +132,16 @@ jobs:
   check-results:
     runs-on: ubuntu-latest
     env:
-      OATMEAL_API_KEY: ${{ secrets.OATMEAL_API_KEY }}
+      HACKATHON_API_KEY: ${{ secrets.HACKATHON_API_KEY }}
     steps:
       - name: Check judging progress
         run: |
-          PROGRESS=$(npx @oatmeal/cli judging judges list ${{ vars.HACKATHON_ID }} --json)
+          PROGRESS=$(npx @agi-ventures-canada/hackathon-cli judging judges list ${{ vars.HACKATHON_ID }} --json)
           echo "$PROGRESS" | jq '.[] | {name, completed, total}'
 
       - name: Calculate results if all scored
         run: |
-          npx @oatmeal/cli results calculate ${{ vars.HACKATHON_ID }} --yes || true
+          npx @agi-ventures-canada/hackathon-cli results calculate ${{ vars.HACKATHON_ID }} --yes || true
 ```
 
 ## Example: Webhook + CLI Integration
@@ -150,14 +150,14 @@ Use webhooks to trigger CLI commands when events occur:
 
 ```bash title="Webhook-triggered automation"
 # Set up a webhook for submission events
-oatmeal webhooks create \
+hackathon webhooks create \
   --url https://your-server.com/hooks/oatmeal \
   --events submission.submitted
 
 # In your webhook handler, trigger auto-assign when all submissions are in
 # (pseudocode)
 curl -X POST your-server.com/hooks/oatmeal
-# → handler runs: oatmeal judging auto-assign $HACKATHON --per-judge 5
+# → handler runs: hackathon judging auto-assign $HACKATHON --per-judge 5
 ```
 
 ## Tips

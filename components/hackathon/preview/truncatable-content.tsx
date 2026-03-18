@@ -1,26 +1,24 @@
 "use client"
 
-import { useRef, useState, useEffect, type ReactNode } from "react"
+import { useCallback, useState, type ReactNode } from "react"
 
 const MAX_HEIGHT = 400
 
 export function TruncatableContent({ children }: { children: ReactNode }) {
-  const contentRef = useRef<HTMLDivElement>(null)
   const [isOverflowing, setIsOverflowing] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
 
-  useEffect(() => {
-    setIsExpanded(false)
-    const el = contentRef.current
+  const measureRef = useCallback((el: HTMLDivElement | null) => {
     if (el) {
       setIsOverflowing(el.scrollHeight > MAX_HEIGHT)
+      setIsExpanded(false)
     }
-  }, [children])
+  }, [children]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="relative">
       <div
-        ref={contentRef}
+        ref={measureRef}
         className={!isExpanded && isOverflowing ? "overflow-hidden" : undefined}
         style={!isExpanded && isOverflowing ? { maxHeight: MAX_HEIGHT } : undefined}
       >

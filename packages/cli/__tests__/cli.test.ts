@@ -9,23 +9,23 @@ describe("CLI constants", () => {
 
 describe("CLI global flags parsing", () => {
   it("--json flag is recognized", () => {
-    const args = ["hackathons", "list", "--json"]
+    const args = ["events", "list", "--json"]
     const jsonIndex = args.indexOf("--json")
     expect(jsonIndex).toBeGreaterThan(-1)
   })
 
   it("--yes flag is recognized", () => {
-    const args = ["hackathons", "delete", "id", "--yes"]
+    const args = ["events", "delete", "id", "--yes"]
     expect(args.includes("--yes")).toBe(true)
   })
 
   it("-y shorthand is recognized", () => {
-    const args = ["hackathons", "delete", "id", "-y"]
+    const args = ["events", "delete", "id", "-y"]
     expect(args.includes("-y")).toBe(true)
   })
 
   it("--base-url flag captures next arg", () => {
-    const args = ["--base-url", "http://localhost:3000", "hackathons", "list"]
+    const args = ["--base-url", "http://localhost:3000", "events", "list"]
     const idx = args.indexOf("--base-url")
     expect(args[idx + 1]).toBe("http://localhost:3000")
   })
@@ -44,9 +44,9 @@ describe("command dispatch logic", () => {
     expect(publicCommands.includes(command)).toBe(true)
   })
 
-  it("hackathons routes to management commands", () => {
-    const command = "hackathons"
-    const authCommands = ["hackathons", "judging", "prizes", "results", "webhooks", "jobs", "schedules"]
+  it("events routes to management commands", () => {
+    const command = "events"
+    const authCommands = ["events", "judging", "prizes", "results", "webhooks", "jobs", "schedules"]
     expect(authCommands.includes(command)).toBe(true)
   })
 

@@ -7,7 +7,7 @@ import {
   mockMultiTableQuery,
 } from "../lib/supabase-mock"
 
-const { getPublicHackathon, listPublicHackathons, getHackathonByIdForOrganizer, checkHackathonOrganizer, updateHackathonSettings } = await import(
+const { getPublicHackathon, listPublicHackathons, getHackathonByIdForOrganizer, checkHackathonOrganizer, updateHackathonSettings, deleteHackathon } = await import(
   "@/lib/services/public-hackathons"
 )
 
@@ -322,6 +322,36 @@ describe("Public Hackathons Service", () => {
       })
 
       expect(result?.judging_mode).toBe("subjective")
+    })
+  })
+
+  describe("deleteHackathon", () => {
+    it("returns true on successful delete", async () => {
+      const chain = createChainableMock({ data: null, error: null })
+      setMockFromImplementation(() => chain)
+
+      const result = await deleteHackathon("h1", "t1")
+
+      expect(result).toBe(true)
+    })
+
+    it("returns false on error", async () => {
+      const chain = createChainableMock({ data: null, error: { message: "DB error" } })
+      setMockFromImplementation(() => chain)
+
+      const result = await deleteHackathon("h1", "t1")
+
+      expect(result).toBe(false)
+    })
+
+    it("filters by both hackathon id and tenant id", async () => {
+      const chain = createChainableMock({ data: null, error: null })
+      setMockFromImplementation(() => chain)
+
+      await deleteHackathon("h1", "t1")
+
+      expect(chain.eq).toHaveBeenCalledWith("id", "h1")
+      expect(chain.eq).toHaveBeenCalledWith("tenant_id", "t1")
     })
   })
 })

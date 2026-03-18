@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react"
 import { Plus, Sparkles } from "lucide-react"
+import { useOrganization } from "@clerk/nextjs"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,16 +18,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { CreateHackathonDrawer } from "./create-hackathon-drawer"
+import { OrgGateDialog } from "@/components/org-gate-dialog"
 import { LumaPasteInput } from "./luma-paste-input"
 
 type CreateHackathonMenuProps = {
   trigger: React.ReactNode
 }
 
+type PendingAction = "scratch" | "luma" | null
+
 export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
+  const { organization } = useOrganization()
   const [menuOpen, setMenuOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [lumaDialogOpen, setLumaDialogOpen] = useState(false)
+  const [orgGateOpen, setOrgGateOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const closeTimeout = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const openTimeout = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -42,6 +49,16 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
     clearTimeout(openTimeout.current)
     closeTimeout.current = setTimeout(() => setMenuOpen(false), 300)
   }, [])
+
+  function handleAction(action: PendingAction) {
+    if (organization) {
+      if (action === "scratch") setDrawerOpen(true)
+      else if (action === "luma") setLumaDialogOpen(true)
+    } else {
+      setPendingAction(action)
+      setOrgGateOpen(true)
+    }
+  }
 
   return (
     <>
@@ -61,12 +78,12 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          <DropdownMenuItem onSelect={() => setDrawerOpen(true)}>
+          <DropdownMenuItem onSelect={() => handleAction("scratch")}>
             <Plus className="size-4" />
             <span>From scratch</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setLumaDialogOpen(true)} className="text-primary">
+          <DropdownMenuItem onSelect={() => handleAction("luma")} className="text-primary">
             <Sparkles className="size-4" />
             <span>From Luma URL</span>
           </DropdownMenuItem>
@@ -90,6 +107,19 @@ export function CreateHackathonMenu({ trigger }: CreateHackathonMenuProps) {
           <LumaPasteInput onClose={() => setLumaDialogOpen(false)} />
         </DialogContent>
       </Dialog>
+
+      <OrgGateDialog
+        open={orgGateOpen}
+        onOpenChange={(open) => {
+          setOrgGateOpen(open)
+          if (!open) setPendingAction(null)
+        }}
+        onOrgSelected={() => {
+          if (pendingAction === "scratch") setDrawerOpen(true)
+          else if (pendingAction === "luma") setLumaDialogOpen(true)
+          setPendingAction(null)
+        }}
+      />
     </>
   )
 }

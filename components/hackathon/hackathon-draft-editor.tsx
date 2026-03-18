@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth, useOrganization } from "@clerk/nextjs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { SignInRequiredDialog } from "@/components/sign-in-required-dialog"
+import { OrgGateDialog } from "@/components/org-gate-dialog"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
@@ -139,6 +140,8 @@ export function HackathonDraftEditor({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showSignInDialog, setShowSignInDialog] = useState(false)
+  const [orgGateOpen, setOrgGateOpen] = useState(false)
+  const pendingSubmit = useRef(false)
 
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify({ state, savedAt: Date.now() }))
@@ -146,20 +149,9 @@ export function HackathonDraftEditor({
 
   const hackathon = stateToHackathon(state)
 
-  const handleSubmit = useCallback(async () => {
-    if (!state.name.trim()) {
-      setError("Hackathon name is required")
-      return
-    }
-
-    if (!isSignedIn || !organization) {
-      setShowSignInDialog(true)
-      return
-    }
-
+  const doSubmit = useCallback(async () => {
     setIsSubmitting(true)
     setError(null)
-
     try {
       const { slug } = await onSubmit(state)
       localStorage.removeItem(storageKey)
@@ -170,7 +162,30 @@ export function HackathonDraftEditor({
     } finally {
       setIsSubmitting(false)
     }
-  }, [state, isSignedIn, organization, router, storageKey, onSubmit])
+  }, [state, router, storageKey, onSubmit])
+
+  const doSubmitRef = useRef(doSubmit)
+  doSubmitRef.current = doSubmit
+
+  const handleSubmit = useCallback(async () => {
+    if (!state.name.trim()) {
+      setError("Hackathon name is required")
+      return
+    }
+
+    if (!isSignedIn) {
+      setShowSignInDialog(true)
+      return
+    }
+
+    if (!organization) {
+      pendingSubmit.current = true
+      setOrgGateOpen(true)
+      return
+    }
+
+    await doSubmit()
+  }, [state, isSignedIn, organization, doSubmit])
 
   const handleFormSave = useCallback(async (data: Record<string, unknown>) => {
     setState(prev => {
@@ -226,6 +241,20 @@ export function HackathonDraftEditor({
         onOpenChange={setShowSignInDialog}
         description={signInDescription}
         redirectQuery="edit=true"
+      />
+
+      <OrgGateDialog
+        open={orgGateOpen}
+        onOpenChange={(open) => {
+          setOrgGateOpen(open)
+          if (!open) pendingSubmit.current = false
+        }}
+        onOrgSelected={() => {
+          if (pendingSubmit.current) {
+            pendingSubmit.current = false
+            doSubmitRef.current()
+          }
+        }}
       />
     </div>
   )

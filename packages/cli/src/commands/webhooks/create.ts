@@ -37,7 +37,7 @@ export async function runWebhooksCreate(
   let events = options.events
 
   if (!url && process.stdout.isTTY) {
-    const result = await p.text({ message: "Webhook URL:", validate: (v) => (v ? undefined : "Required") })
+    const result = await p.text({ message: "Webhook URL:", validate: (v: string) => (v ? undefined : "Required") })
     if (p.isCancel(result)) return
     url = result
   }
@@ -50,7 +50,7 @@ export async function runWebhooksCreate(
   if (!events?.length && process.stdout.isTTY) {
     const result = await p.text({ message: "Events (comma-separated):" })
     if (p.isCancel(result)) return
-    events = result.split(",").map((s) => s.trim())
+    events = result.split(",").map((s: string) => s.trim())
   }
 
   const webhook = await client.post<Webhook>("/api/v1/webhooks", { url, events })

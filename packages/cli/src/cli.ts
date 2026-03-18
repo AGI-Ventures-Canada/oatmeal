@@ -92,13 +92,15 @@ const BANNER = `
     login                      Sign in via browser or API key
     logout                     Remove saved credentials
     whoami                     Show current auth info
+    update                     Update CLI to latest version
 
-  ${pc.dim("HACKATHON MANAGEMENT (auth required)")}
-    hackathons list            List your hackathons
-    hackathons get <id>        Get hackathon details
-    hackathons create          Create a hackathon
-    hackathons update <id>     Update a hackathon
-    hackathons delete <id>     Delete a hackathon
+  ${pc.dim("EVENT MANAGEMENT (auth required)")}
+    events list                List your hackathons
+    events get <id>            Get hackathon details
+    events create              Create a hackathon
+    events update <id>         Update a hackathon
+    events delete <id>         Delete a hackathon
+    ${pc.dim("(alias: hackathons)")}
 
   ${pc.dim("JUDGING")}
     judging criteria list <id>              List criteria
@@ -166,6 +168,18 @@ const BANNER = `
     --version, -v    Show version
 `
 
+async function notifyIfUpdateAvailable(): Promise<void> {
+  try {
+    const { checkForUpdate, formatUpdateNotice } = await import("./update-check.js")
+    const update = await checkForUpdate()
+    if (update) {
+      console.error(formatUpdateNotice(update))
+    }
+  } catch {
+    // Silently ignore update check failures
+  }
+}
+
 async function main() {
   const { flags, rest } = parseGlobalFlags(process.argv.slice(2))
 
@@ -199,6 +213,12 @@ async function main() {
         break
       }
 
+      case "update": {
+        const { runUpdate } = await import("./commands/update.js")
+        await runUpdate()
+        return
+      }
+
       case "browse": {
         const client = createPublicClient(flags)
         switch (sub) {
@@ -229,7 +249,8 @@ async function main() {
         break
       }
 
-      case "hackathons": {
+      case "hackathons":
+      case "events": {
         const client = createAuthenticatedClient(flags)
         switch (sub) {
           case "list": {
@@ -258,7 +279,7 @@ async function main() {
             break
           }
           default:
-            console.error(`Unknown hackathons command: ${sub}. Run "hackathon hackathons --help" for usage.`)
+            console.error(`Unknown events command: ${sub}. Run "hackathon events --help" for usage.`)
             process.exit(1)
         }
         break
@@ -603,6 +624,8 @@ async function main() {
       console.error(formatError({ message: String(error) }))
     }
     process.exit(1)
+  } finally {
+    await notifyIfUpdateAvailable()
   }
 }
 

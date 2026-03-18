@@ -3,21 +3,45 @@ import {
   createChainableMock,
   resetSupabaseMocks,
   setMockFromImplementation,
+  mockFrom,
+  mockRpc,
 } from "../lib/supabase-mock"
 
-const mockDownloadAndUploadBanner = mock(() => Promise.resolve(null))
-mock.module("@/lib/services/storage", () => ({
-  downloadAndUploadBanner: mockDownloadAndUploadBanner,
-  uploadBanner: mock(() => Promise.resolve(null)),
-  optimizeBanner: mock(() => Promise.resolve({ buffer: Buffer.from(""), mimeType: "image/webp" })),
+const mockFetch = mock(() =>
+  Promise.resolve(
+    new Response(Buffer.alloc(1024), {
+      status: 200,
+      headers: { "Content-Type": "image/jpeg" },
+    })
+  )
+)
+globalThis.fetch = mockFetch as unknown as typeof fetch
+
+const mockSharpInstance = {
+  metadata: mock(() => Promise.resolve({ width: 800, height: 400 })),
+  resize: mock(function (this: unknown) { return this }),
+  webp: mock(function (this: unknown) { return this }),
+  clone: mock(function (this: unknown) { return this }),
+  toBuffer: mock(() => Promise.resolve(Buffer.alloc(50 * 1024))),
+}
+mock.module("sharp", () => ({ default: mock(() => mockSharpInstance) }))
+
+const mockStorageUpload = mock(() => Promise.resolve({ data: { path: "h1/banner.webp" }, error: null }))
+const mockStorageGetPublicUrl = mock(() => ({
+  data: { publicUrl: "https://storage.test/banners/h1/banner.webp" },
+}))
+const mockStorageFrom = mock(() => ({
+  upload: mockStorageUpload,
+  getPublicUrl: mockStorageGetPublicUrl,
+  remove: mock(() => Promise.resolve({ error: null })),
 }))
 
-const mockCreatePrize = mock(() => Promise.resolve({ id: "p1", hackathon_id: "h1", name: "Test", description: null, value: null, display_order: 0, created_at: "" }))
-mock.module("@/lib/services/prizes", () => ({
-  createPrize: mockCreatePrize,
-  listPrizes: mock(() => Promise.resolve([])),
-  updatePrize: mock(() => Promise.resolve(null)),
-  deletePrize: mock(() => Promise.resolve(true)),
+mock.module("@/lib/db/client", () => ({
+  supabase: () => ({
+    from: (table: string) => mockFrom(table),
+    rpc: (fn: string, params: unknown) => mockRpc(fn, params),
+    storage: { from: mockStorageFrom },
+  }),
 }))
 
 const { createHackathonFromImport, createPrizesFromImport } = await import("@/lib/services/luma-import-create")
@@ -25,8 +49,17 @@ const { createHackathonFromImport, createPrizesFromImport } = await import("@/li
 describe("createHackathonFromImport", () => {
   beforeEach(() => {
     resetSupabaseMocks()
-    mockDownloadAndUploadBanner.mockClear()
-    mockCreatePrize.mockClear()
+    mockFetch.mockClear()
+    mockStorageUpload.mockClear()
+    mockSharpInstance.toBuffer.mockClear()
+    mockFetch.mockImplementation(() =>
+      Promise.resolve(
+        new Response(Buffer.alloc(1024), {
+          status: 200,
+          headers: { "Content-Type": "image/jpeg" },
+        })
+      )
+    )
   })
 
   it("creates hackathon with all imported fields", async () => {
@@ -48,11 +81,6 @@ describe("createHackathonFromImport", () => {
       return updateChain
     })
 
-    mockDownloadAndUploadBanner.mockResolvedValueOnce({
-      url: "https://storage.supabase.com/banners/h1/banner.webp",
-      path: "h1/banner.webp",
-    })
-
     const result = await createHackathonFromImport("tenant-1", {
       name: "Test Hackathon",
       description: "A test event",
@@ -66,7 +94,8 @@ describe("createHackathonFromImport", () => {
 
     expect(result).not.toBeNull()
     expect(result!.id).toBe("h1")
-    expect(mockDownloadAndUploadBanner).toHaveBeenCalledWith("h1", "https://images.lumacdn.com/test.png")
+    expect(mockFetch).toHaveBeenCalledWith("https://images.lumacdn.com/test.png")
+    expect(mockStorageUpload).toHaveBeenCalled()
   })
 
   it("creates hackathon even if banner download fails", async () => {
@@ -87,8 +116,6 @@ describe("createHackathonFromImport", () => {
       if (callCount === 2) return insertChain
       return updateChain
     })
-
-    mockDownloadAndUploadBanner.mockResolvedValueOnce(null)
 
     const result = await createHackathonFromImport("tenant-1", {
       name: "No Banner",
@@ -152,8 +179,6 @@ describe("createHackathonFromImport", () => {
       return updateChain
     })
 
-    mockDownloadAndUploadBanner.mockResolvedValueOnce(null)
-
     const result = await createHackathonFromImport("tenant-1", {
       name: "With Rules",
       description: null,
@@ -173,53 +198,69 @@ describe("createHackathonFromImport", () => {
 
 describe("createPrizesFromImport", () => {
   beforeEach(() => {
-    mockCreatePrize.mockClear()
+    resetSupabaseMocks()
   })
 
   it("creates prizes with correct display order", async () => {
+    const prizesChain = createChainableMock({
+      data: { id: "p1", hackathon_id: "h1", name: "Grand Prize", description: "Top team", value: "$5,000", display_order: 0, created_at: "" },
+      error: null,
+    })
+    setMockFromImplementation(() => prizesChain)
+
     await createPrizesFromImport("h1", [
       { name: "Grand Prize", description: "Top team", value: "$5,000" },
       { name: "Runner Up", description: null, value: "$2,500" },
       { name: "Best Design", description: "Most creative UI", value: null },
     ])
 
-    expect(mockCreatePrize).toHaveBeenCalledTimes(3)
-    expect(mockCreatePrize).toHaveBeenNthCalledWith(1, "h1", {
+    expect(prizesChain.insert).toHaveBeenCalledTimes(3)
+    expect(prizesChain.insert).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      hackathon_id: "h1",
       name: "Grand Prize",
       description: "Top team",
       value: "$5,000",
-      displayOrder: 0,
-    })
-    expect(mockCreatePrize).toHaveBeenNthCalledWith(2, "h1", {
+      display_order: 0,
+    }))
+    expect(prizesChain.insert).toHaveBeenNthCalledWith(2, expect.objectContaining({
       name: "Runner Up",
       description: null,
       value: "$2,500",
-      displayOrder: 1,
-    })
-    expect(mockCreatePrize).toHaveBeenNthCalledWith(3, "h1", {
+      display_order: 1,
+    }))
+    expect(prizesChain.insert).toHaveBeenNthCalledWith(3, expect.objectContaining({
       name: "Best Design",
       description: "Most creative UI",
       value: null,
-      displayOrder: 2,
-    })
+      display_order: 2,
+    }))
   })
 
   it("handles empty prizes array", async () => {
+    const prizesChain = createChainableMock({ data: null, error: null })
+    setMockFromImplementation(() => prizesChain)
+
     await createPrizesFromImport("h1", [])
 
-    expect(mockCreatePrize).not.toHaveBeenCalled()
+    expect(prizesChain.insert).not.toHaveBeenCalled()
   })
 
   it("defaults null description and value", async () => {
+    const prizesChain = createChainableMock({
+      data: { id: "p1", hackathon_id: "h1", name: "Participation Award", description: null, value: null, display_order: 0, created_at: "" },
+      error: null,
+    })
+    setMockFromImplementation(() => prizesChain)
+
     await createPrizesFromImport("h1", [
       { name: "Participation Award" },
     ])
 
-    expect(mockCreatePrize).toHaveBeenCalledWith("h1", {
+    expect(prizesChain.insert).toHaveBeenCalledWith(expect.objectContaining({
       name: "Participation Award",
       description: null,
       value: null,
-      displayOrder: 0,
-    })
+      display_order: 0,
+    }))
   })
 })
