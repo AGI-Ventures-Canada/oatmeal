@@ -28,6 +28,7 @@ import { InstallSkillButton } from "@/components/install-skill-button"
 import { CreateOrganizationDialog } from "@/components/create-organization-dialog"
 
 type NavSection = {
+  id?: string
   title: string
   href?: string
   children?: { title: string; href: string }[]
@@ -88,9 +89,16 @@ export function MobileHeader() {
   }, [open])
 
   const orgSection: NavSection = {
+    id: "org-switcher",
     title: organization?.name || "Personal Workspace",
     children: [],
   }
+
+  useEffect(() => {
+    if (activeSection?.id === "org-switcher") {
+      setActiveSection(orgSection)
+    }
+  }, [organization?.name])
 
   return (
     <>
@@ -203,7 +211,7 @@ export function MobileHeader() {
           {/* Sub-level: Organization switcher */}
           <nav
             className={`absolute inset-0 flex flex-col px-5 overflow-y-auto transition-transform duration-250 ease-in-out ${
-              activeSection?.title === orgSection.title ? "translate-x-0" : "translate-x-full"
+              activeSection?.id === "org-switcher" ? "translate-x-0" : "translate-x-full"
             }`}
           >
             <button
