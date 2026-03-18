@@ -1,9 +1,11 @@
 ---
+internal: true
 name: clerk-backend-api
 description: "Clerk backend REST API"
 argument-hint: "[endpointOrTag] [method]"
 allowed-tools: Bash, Read, Grep, Skill, WebFetch
 ---
+internal: true
 
 ## Options context
 

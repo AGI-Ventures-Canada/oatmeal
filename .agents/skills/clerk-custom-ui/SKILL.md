@@ -1,4 +1,5 @@
 ---
+internal: true
 name: clerk-custom-ui
 description: Custom authentication flows and component appearance - hooks (useSignIn, useSignUp), themes, colors, fonts, CSS. Use for custom sign-in/sign-up flows, appearance styling, visual customization, branding.
 allowed-tools: WebFetch
@@ -7,6 +8,7 @@ metadata:
   author: clerk
   version: "2.1.0"
 ---
+internal: true
 
 # Custom UI
 

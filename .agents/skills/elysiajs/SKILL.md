@@ -1,7 +1,9 @@
 ---
+internal: true
 name: elysiajs
 description: Create backend with ElysiaJS, a type-safe, high-performance framework.
 ---
+internal: true
 
 # ElysiaJS Development Skill
 
