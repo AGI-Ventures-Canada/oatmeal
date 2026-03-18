@@ -43,7 +43,6 @@ export function OrgGateDialog({ open, onOpenChange, onOrgSelected }: OrgGateDial
                   <Button
                     key={mem.organization.id}
                     variant="ghost"
-                    className="w-full justify-start"
                     onClick={async () => {
                       await setActive?.({ organization: mem.organization.id })
                       onOrgSelected()
@@ -68,10 +67,9 @@ export function OrgGateDialog({ open, onOpenChange, onOrgSelected }: OrgGateDial
                 ))}
               </div>
             )}
-            <div className="w-full">
+            <div>
               <Button
                 variant="outline"
-                className="w-full"
                 onClick={() => setCreateOrgOpen(true)}
               >
                 <Plus className="size-4 mr-2" />

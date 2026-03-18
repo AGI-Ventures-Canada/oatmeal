@@ -3,6 +3,16 @@ import pc from "picocolors"
 import { VERSION } from "../constants.js"
 import { checkForUpdate } from "../update-check.js"
 
+const PKG = "@agi-ventures-canada/hackathon-cli"
+
+function detectPackageManager(): { cmd: string; install: string } {
+  const execPath = process.env.npm_execpath ?? process.env._ ?? ""
+  if (/bun/.test(execPath)) return { cmd: "bun", install: `bun install -g ${PKG}@latest` }
+  if (/pnpm/.test(execPath)) return { cmd: "pnpm", install: `pnpm add -g ${PKG}@latest` }
+  if (/yarn/.test(execPath)) return { cmd: "yarn", install: `yarn global add ${PKG}@latest` }
+  return { cmd: "npm", install: `npm install -g ${PKG}@latest` }
+}
+
 export async function runUpdate(): Promise<void> {
   console.log(`Current version: ${VERSION}`)
   console.log("Checking for updates...")
@@ -13,17 +23,16 @@ export async function runUpdate(): Promise<void> {
     return
   }
 
+  const pm = detectPackageManager()
   console.log(`New version available: ${update.latest}`)
-  console.log("Updating...")
+  console.log(`Updating via ${pm.cmd}...`)
 
   try {
-    execSync("npm install -g @agi-ventures-canada/hackathon-cli@latest", {
-      stdio: "inherit",
-    })
+    execSync(pm.install, { stdio: "inherit" })
     console.log(pc.green(`\nUpdated to ${update.latest}`))
   } catch {
     console.error(pc.red("Update failed. Try manually:"))
-    console.error("  npm install -g @agi-ventures-canada/hackathon-cli@latest")
+    console.error(`  ${pm.install}`)
     process.exit(1)
   }
 }

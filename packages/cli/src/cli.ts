@@ -624,9 +624,9 @@ async function main() {
       console.error(formatError({ message: String(error) }))
     }
     process.exit(1)
+  } finally {
+    await notifyIfUpdateAvailable()
   }
-
-  await notifyIfUpdateAvailable()
 }
 
 main()
