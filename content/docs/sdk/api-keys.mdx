@@ -1,0 +1,128 @@
+---
+title: API Keys
+description: Create, list, and revoke API keys for programmatic access via the REST API.
+---
+
+The API Keys endpoints let you manage programmatic access credentials. Keys are scoped with specific permissions and can be revoked at any time.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/dashboard/keys` | List API keys |
+| `POST` | `/api/dashboard/keys` | Create an API key |
+| `POST` | `/api/dashboard/keys/:id/revoke` | Revoke an API key |
+
+<Callout type="info">
+API key management endpoints require a Clerk session — they cannot be accessed with an API key. This prevents keys from creating or revoking other keys.
+</Callout>
+
+## Key Format
+
+API keys use the format `sk_live_` followed by a random string. The full key is only shown once at creation — Oatmeal stores an HMAC-SHA256 hash, not the raw key.
+
+## Available Scopes
+
+| Scope | Description |
+|-------|-------------|
+| `hackathons:read` | Read hackathon data, submissions, results |
+| `hackathons:write` | Create, update, delete hackathons and related data |
+| `webhooks:read` | List webhooks |
+| `webhooks:write` | Create, delete webhooks |
+| `keys:read` | List API keys |
+| `keys:write` | Create and revoke API keys |
+| `org:read` | Read organization profile |
+| `org:write` | Update organization profile |
+
+## List API Keys
+
+`GET /api/dashboard/keys` — requires Clerk session with `keys:read` scope.
+
+```typescript title="list-keys.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/keys`, {
+  credentials: "include",
+})
+
+const { keys } = await res.json()
+
+for (const k of keys) {
+  const status = k.revokedAt ? "revoked" : "active"
+  console.log(`${k.name} (${k.prefix}...) [${status}] - ${k.scopes.join(", ")}`)
+}
+```
+
+### Response
+
+```json title="response.json"
+{
+  "keys": [
+    {
+      "id": "key_abc123",
+      "name": "CI/CD Pipeline",
+      "prefix": "sk_live_abc1",
+      "scopes": ["hackathons:read", "hackathons:write"],
+      "createdAt": "2026-02-15T10:00:00Z",
+      "lastUsedAt": "2026-03-18T08:30:00Z",
+      "revokedAt": null
+    }
+  ]
+}
+```
+
+## Create an API Key
+
+`POST /api/dashboard/keys` — requires Clerk session with `keys:write` scope.
+
+<Callout type="warn">
+The full API key is returned only once in the response. Store it securely — it cannot be retrieved again.
+</Callout>
+
+```typescript title="create-key.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/keys`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include",
+  body: JSON.stringify({
+    name: "CI/CD Pipeline",
+    scopes: ["hackathons:read", "hackathons:write", "webhooks:write"],
+  }),
+})
+
+const { key, id, prefix, scopes } = await res.json()
+console.log("Save this key:", key)
+console.log("Key ID:", id)
+console.log("Prefix:", prefix)
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | Yes | Descriptive name for the key |
+| `scopes` | `string[]` | No | Permission scopes (defaults to all scopes) |
+
+### Response
+
+```json title="response.json"
+{
+  "id": "key_abc123",
+  "name": "CI/CD Pipeline",
+  "prefix": "sk_live_abc1",
+  "scopes": ["hackathons:read", "hackathons:write", "webhooks:write"],
+  "createdAt": "2026-03-18T10:00:00Z",
+  "key": "oat_key_abc123def456ghi789jkl012mno345"
+}
+```
+
+## Revoke an API Key
+
+`POST /api/dashboard/keys/:id/revoke` — requires Clerk session with `keys:write` scope.
+
+Revoked keys immediately stop working. This action cannot be undone.
+
+```typescript title="revoke-key.ts"
+await fetch(`${BASE_URL}/api/dashboard/keys/${keyId}/revoke`, {
+  method: "POST",
+  credentials: "include",
+})
+```

@@ -1,0 +1,133 @@
+---
+title: Authentication
+description: Understand the authentication modes and choose the right one for your use case.
+---
+
+The Oatmeal API supports two authentication methods across three namespaces. This guide explains when to use each.
+
+## Authentication Methods
+
+### API Key
+
+API keys provide programmatic access for server-side integrations, CI/CD pipelines, and CLI usage. Keys use the format `sk_live_...` and are passed via the `Authorization` header.
+
+```typescript title="api-key-auth.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/hackathons`, {
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+```
+
+API keys are:
+- Created from the dashboard at **Settings > API Keys** or via the [API Keys endpoint](/docs/sdk/api-keys)
+- Scoped with specific permissions (e.g., `hackathons:read`, `webhooks:write`)
+- Tied to an organization — all actions are performed on behalf of that org
+- Shown only once at creation (stored as an HMAC hash)
+
+### Clerk Session
+
+Clerk sessions provide user-level authentication for browser-based interactions. They identify the logged-in user and their organization membership.
+
+```typescript title="clerk-session-auth.ts"
+const res = await fetch(`${BASE_URL}/api/public/hackathons/my-hack/register`, {
+  method: "POST",
+  credentials: "include",
+})
+```
+
+Clerk sessions are:
+- Automatically managed by the Clerk SDK in the browser
+- Required for participant actions (registration, submissions, voting)
+- Used to identify the user for per-user actions like "get my submission"
+
+## API Namespaces
+
+| Namespace | Auth | Use Case |
+|-----------|------|----------|
+| `/api/public/*` | None or Clerk session | Public data, participant actions |
+| `/api/dashboard/*` | API key or Clerk session | Organizer management |
+| `/api/v1/*` | API key only | Programmatic integrations |
+
+### `/api/public/*`
+
+Public endpoints serve two purposes:
+- **Unauthenticated reads** — Browse hackathons, view submissions, see results
+- **Authenticated participant actions** — Register, submit projects, vote, judge
+
+Most GET endpoints work without auth. POST/PATCH/DELETE endpoints require a Clerk session.
+
+### `/api/dashboard/*`
+
+Dashboard endpoints handle organizer operations — hackathon CRUD, judging configuration, sponsor management, etc. Most accept both API keys and Clerk sessions.
+
+Some endpoints are **Clerk-only** (no API key access):
+- API key management (`/api/dashboard/keys/*`)
+- Team invitations (`/api/dashboard/teams/*`)
+- Integration connections (`/api/dashboard/integrations/*`)
+
+### `/api/v1/*`
+
+V1 endpoints are API-key-only for pure programmatic use. Currently includes:
+- [Jobs API](/docs/sdk/jobs)
+- [Webhooks API](/docs/sdk/webhooks)
+- `whoami` endpoint for key verification
+
+## Choosing the Right Auth
+
+| Scenario | Method | Namespace |
+|----------|--------|-----------|
+| CI/CD pipeline automation | API key | `/api/dashboard/*` or `/api/v1/*` |
+| CLI tool usage | API key | `/api/dashboard/*` or `/api/v1/*` |
+| Server-side integration | API key | `/api/v1/*` |
+| User registers for hackathon | Clerk session | `/api/public/*` |
+| User submits project | Clerk session | `/api/public/*` |
+| Judge scores submissions | Clerk session | `/api/public/*` |
+| User votes for favorite | Clerk session | `/api/public/*` |
+| Organizer manages event (browser) | Clerk session | `/api/dashboard/*` |
+| Organizer manages event (script) | API key | `/api/dashboard/*` |
+
+## API Key Scopes
+
+| Scope | Access |
+|-------|--------|
+| `hackathons:read` | Read hackathons, submissions, judging, results |
+| `hackathons:write` | Create, update, delete hackathons and related data |
+| `webhooks:read` | List webhooks |
+| `webhooks:write` | Create and delete webhooks |
+| `keys:read` | List API keys |
+| `keys:write` | Create and revoke API keys |
+| `org:read` | Read organization profile |
+| `org:write` | Update organization profile |
+
+## Error Responses
+
+### 401 Unauthorized
+
+Returned when authentication is required but missing or invalid.
+
+```json title="401.json"
+{
+  "error": "Sign in required",
+  "code": "not_authenticated"
+}
+```
+
+### 403 Forbidden
+
+Returned when the authenticated principal lacks the required scope or permission.
+
+```json title="403.json"
+{
+  "error": "Insufficient permissions",
+  "code": "forbidden"
+}
+```
+
+## Security Best Practices
+
+1. **Never expose API keys in client-side code** — Use environment variables and server-side routes
+2. **Use minimal scopes** — Create keys with only the permissions they need
+3. **Rotate keys periodically** — Revoke old keys and create new ones
+4. **Use separate keys for different environments** — Don't share keys between staging and production
+5. **Monitor key usage** — Check `lastUsedAt` to identify unused keys for revocation

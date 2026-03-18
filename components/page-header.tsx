@@ -24,7 +24,7 @@ type BreadcrumbItemType = {
 }
 
 type PageHeaderProps = {
-  breadcrumbs: BreadcrumbItemType[]
+  breadcrumbs?: BreadcrumbItemType[]
   title?: string
   description?: string
   actions?: React.ReactNode
@@ -99,7 +99,7 @@ function CollapsedBreadcrumbs({ items }: { items: BreadcrumbItemType[] }) {
 }
 
 export function PageHeader({
-  breadcrumbs,
+  breadcrumbs = [],
   title,
   description,
   actions,

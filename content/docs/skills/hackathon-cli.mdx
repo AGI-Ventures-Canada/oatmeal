@@ -1,0 +1,46 @@
+---
+title: hackathon-cli
+description: AI skill for managing hackathons from the terminal using the Oatmeal CLI tool.
+---
+
+Manage the Oatmeal hackathon platform from the terminal using the `hackathon` CLI (`@agi-ventures-canada/hackathon-cli`). This skill guides AI agents through using the CLI to create hackathons, manage judges, set up prizes, and publish results.
+
+For direct REST API access (curl commands, debugging endpoints), use the [hackathon-api](/docs/skills/hackathon-api) skill instead.
+
+## When to Use
+
+- Create, update, or manage a hackathon from the terminal
+- Add or remove judges, sponsors, or prizes
+- Configure judging criteria or assignments
+- Calculate or publish results
+- Natural language commands like "make me a hackathon on Sunday from 7am to 9pm"
+
+## Installation
+
+```bash title="Install the CLI"
+npm install -g @agi-ventures-canada/hackathon-cli
+```
+
+```bash title="Or run without installing"
+npx @agi-ventures-canada/hackathon-cli --version
+```
+
+## Activation Keywords
+
+The skill activates when your prompt includes terms like:
+
+`hackathon cli`, `hackathon command`, `create a hackathon`, `add a judge`, `set up judging`, `add a prize`, `publish results`, `manage hackathon`
+
+## What's Included
+
+The skill bundles two reference files that the AI agent uses for context:
+
+- **commands.md** — Complete CLI command reference with all flags and options
+- **workflow-examples.md** — Natural language to CLI command mappings and end-to-end examples
+
+## Example Prompts
+
+- "Create a hackathon called AI Summit this Saturday from 9am to 6pm"
+- "Add three judges to my hackathon"
+- "Set up judging criteria for innovation, technical difficulty, and design"
+- "Auto-assign submissions to judges and publish the results"

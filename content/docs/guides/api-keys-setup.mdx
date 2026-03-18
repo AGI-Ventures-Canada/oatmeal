@@ -1,0 +1,130 @@
+---
+title: API Keys Setup
+description: Create, configure, and manage API keys for programmatic access to the Oatmeal platform.
+---
+
+API keys provide programmatic access to the Oatmeal platform. Use them for CI/CD pipelines, server-side integrations, CLI authentication, and automation scripts.
+
+## Creating a Key
+
+### From the Dashboard
+
+1. Go to **Settings > API Keys**
+2. Click **Create API Key**
+3. Enter a descriptive name and select the scopes you need
+4. Copy the key immediately — it's only shown once
+
+### From the API
+
+API keys can also be created via the [API Keys endpoint](/docs/sdk/api-keys), though this requires a Clerk session.
+
+### From the CLI
+
+```bash
+hackathon login
+```
+
+The CLI opens a browser window to authenticate, then stores the API key locally at `~/.hackathon/config.json`.
+
+## Scopes Reference
+
+Create keys with the minimum scopes needed:
+
+| Scope | Grants |
+|-------|--------|
+| `hackathons:read` | List and view hackathons, submissions, judging data, results |
+| `hackathons:write` | Create, update, delete hackathons and all related resources |
+| `webhooks:read` | List webhook endpoints |
+| `webhooks:write` | Create and delete webhook endpoints |
+| `keys:read` | List API keys |
+| `keys:write` | Create and revoke API keys |
+| `org:read` | Read organization profile |
+| `org:write` | Update organization profile and logos |
+
+### Common Scope Combinations
+
+| Use Case | Recommended Scopes |
+|----------|-------------------|
+| Read-only dashboard | `hackathons:read` |
+| Full hackathon management | `hackathons:read`, `hackathons:write` |
+| CI/CD automation | `hackathons:read`, `hackathons:write`, `webhooks:write` |
+| Monitoring / reporting | `hackathons:read`, `webhooks:read` |
+
+## Using Your Key
+
+Pass the API key in the `Authorization` header:
+
+```typescript title="usage.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/hackathons`, {
+  headers: {
+    "Authorization": `Bearer ${process.env.OATMEAL_API_KEY}`,
+  },
+})
+```
+
+### Verify Your Key
+
+Test that your key works with the `whoami` endpoint:
+
+```typescript title="verify.ts"
+const res = await fetch(`${BASE_URL}/api/v1/whoami`, {
+  headers: {
+    "Authorization": `Bearer ${process.env.OATMEAL_API_KEY}`,
+  },
+})
+
+const { tenantId, keyId, scopes } = await res.json()
+console.log(`Organization: ${tenantId}`)
+console.log(`Scopes: ${scopes.join(", ")}`)
+```
+
+## Environment Variables
+
+Store your key in environment variables, never in source code:
+
+```bash title=".env.local"
+OATMEAL_API_KEY=sk_live_...
+OATMEAL_BASE_URL=https://your-app.com
+```
+
+<Callout type="warn">
+Never commit API keys to version control. Add `.env.local` to your `.gitignore`.
+</Callout>
+
+## Revoking a Key
+
+Revoke a key immediately if it's compromised or no longer needed:
+
+```typescript title="revoke.ts"
+await fetch(`${BASE_URL}/api/dashboard/keys/${keyId}/revoke`, {
+  method: "POST",
+  credentials: "include",
+})
+```
+
+Revoked keys stop working immediately. This action cannot be undone — create a new key if needed.
+
+## Key Rotation
+
+To rotate a key without downtime:
+
+1. Create a new key with the same scopes
+2. Update your environment variables / secrets to use the new key
+3. Deploy the change
+4. Verify the new key works
+5. Revoke the old key
+
+## Security
+
+- **Keys are hashed** — Oatmeal stores an HMAC-SHA256 hash, not the raw key. If the database is compromised, keys cannot be extracted.
+- **Keys are shown once** — The full key is returned only at creation. Store it in a secrets manager.
+- **Prefix format** — Keys start with `sk_live_` for easy identification in logs and configs.
+- **Last used tracking** — Check `lastUsedAt` to identify stale keys that should be revoked.
+
+## Best Practices
+
+1. **One key per integration** — Use separate keys for CI/CD, monitoring, and development so you can revoke independently
+2. **Minimum scopes** — Only grant the permissions each integration actually needs
+3. **Rotate on team changes** — When a team member leaves, rotate any keys they had access to
+4. **Monitor usage** — Periodically review `lastUsedAt` timestamps and revoke unused keys
+5. **Use the CLI key for development** — `hackathon login` creates a properly scoped key for local development

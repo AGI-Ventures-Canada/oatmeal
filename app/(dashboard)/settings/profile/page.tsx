@@ -8,7 +8,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { ProfileForm, ClerkSettingsCard } from "./profile-form"
-import { PageHeader } from "@/components/page-header"
 
 export default async function SettingsProfilePage() {
   const tenant = await resolvePageTenant()
@@ -17,28 +16,24 @@ export default async function SettingsProfilePage() {
   if (!profile) {
     return (
       <div className="space-y-6">
-        <PageHeader
-          breadcrumbs={[
-            { label: "Settings", href: "/settings" },
-            { label: "Profile" },
-          ]}
-          title="Organization Profile"
-          description="Unable to load organization profile"
-        />
+        <div>
+          <h1 className="text-3xl font-bold">Organization Profile</h1>
+          <p className="text-muted-foreground">
+            Unable to load organization profile
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        breadcrumbs={[
-          { label: "Settings", href: "/settings" },
-          { label: "Profile" },
-        ]}
-        title="Organization Profile"
-        description="Customize your organization's public appearance"
-      />
+      <div>
+        <h1 className="text-3xl font-bold">Organization Profile</h1>
+        <p className="text-muted-foreground">
+          Customize your organization&apos;s public appearance
+        </p>
+      </div>
 
       <Card>
         <CardHeader>

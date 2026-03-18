@@ -1,0 +1,175 @@
+---
+title: Submissions
+description: Submit a project, upload screenshots, and manage your submission throughout the hackathon.
+---
+
+This guide covers the full submission lifecycle — from registering for a hackathon to submitting your project with screenshots and a live demo link.
+
+## Overview
+
+The submission flow for participants:
+
+1. **Register** for the hackathon
+2. **Build** your project during the event
+3. **Submit** with a title, description, and GitHub repo
+4. **Upload** a screenshot (optional but recommended)
+5. **Update** your submission before the deadline
+
+## Step 1: Register
+
+You must be registered before you can submit. Registration also creates your team.
+
+```typescript title="register.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/register`,
+  {
+    method: "POST",
+    credentials: "include",
+  }
+)
+
+const { participantId, teamId } = await res.json()
+console.log("Registered! Team:", teamId)
+```
+
+Check if you're already registered:
+
+```typescript title="check-registration.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/registration`,
+  { credentials: "include" }
+)
+
+const { isRegistered, participantCount } = await res.json()
+```
+
+## Step 2: Create Your Submission
+
+Submit your project with the required fields:
+
+```typescript title="submit.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/submissions`,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      title: "AI Code Review Bot",
+      description: "An AI-powered tool that automatically reviews pull requests",
+      githubUrl: "https://github.com/myteam/ai-review-bot",
+      liveAppUrl: "https://ai-review-bot.vercel.app",
+    }),
+  }
+)
+
+const { submissionId } = await res.json()
+```
+
+### Required Fields
+
+| Field | Constraints |
+|-------|-------------|
+| `title` | 1-100 characters |
+| `description` | 1-280 characters |
+| `githubUrl` | Must be a github.com URL |
+
+### Optional Fields
+
+| Field | Description |
+|-------|-------------|
+| `liveAppUrl` | Link to a deployed demo |
+
+## Step 3: Upload a Screenshot
+
+Add a screenshot to make your submission stand out in the gallery:
+
+```typescript title="upload-screenshot.ts"
+const formData = new FormData()
+formData.append("file", screenshotFile)
+
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/submissions/screenshot`,
+  {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  }
+)
+
+const { screenshotUrl } = await res.json()
+```
+
+Accepted formats: PNG, JPEG, WebP (max 10MB).
+
+## Step 4: Update Before the Deadline
+
+You can update your submission at any time while submissions are open:
+
+```typescript title="update.ts"
+await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/submissions`,
+  {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      title: "AI Code Review Bot v2",
+      description: "Now with auto-fix suggestions and multi-language support",
+      liveAppUrl: "https://ai-review-bot-v2.vercel.app",
+    }),
+  }
+)
+```
+
+## Checking Your Submission
+
+View your current submission at any time:
+
+```typescript title="check.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/submissions/me`,
+  { credentials: "include" }
+)
+
+const { submission } = await res.json()
+
+if (submission) {
+  console.log(`${submission.title} (${submission.status})`)
+} else {
+  console.log("No submission yet")
+}
+```
+
+## Browsing All Submissions
+
+View all submissions in the gallery (public, no auth required):
+
+```typescript title="browse.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/submissions`
+)
+
+const { submissions } = await res.json()
+
+for (const sub of submissions) {
+  console.log(`${sub.title} by ${sub.submitter}`)
+}
+```
+
+## Common Errors
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `not_registered` | Haven't registered yet | Register first via `/register` |
+| `submissions_closed` | Submission window closed | Check hackathon dates |
+| `already_submitted` | Already have a submission | Use PATCH to update instead |
+| `invalid_github_url` | URL isn't from github.com | Use a github.com repository URL |
+
+## Best Practices
+
+1. **Submit early** — Don't wait until the last minute. Submit a draft and update it as you go
+2. **Add a screenshot** — Submissions with screenshots stand out in the gallery and during judging
+3. **Include a live demo** — Judges appreciate being able to try your project
+4. **Keep the description concise** — 280 characters max, so focus on what makes your project unique
+5. **Update your GitHub repo** — Make sure the repo is public and the README explains how to run the project

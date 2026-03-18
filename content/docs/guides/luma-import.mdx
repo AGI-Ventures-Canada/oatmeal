@@ -1,0 +1,101 @@
+---
+title: Importing from Luma
+description: Create a hackathon by importing event details from a Luma event page.
+---
+
+If your hackathon is already listed on Luma, you can import the event details — name, dates, location, sponsors, and prizes — directly into Oatmeal.
+
+## Overview
+
+The import flow has two steps:
+
+1. **Extract** — Pull event metadata from the Luma event page
+2. **Create** — Review the data and create the hackathon
+
+## Step 1: Extract Event Data
+
+Use the Luma event slug (the part after `lu.ma/` in the event URL) to extract event details.
+
+```typescript title="extract.ts"
+const res = await fetch(`${BASE_URL}/api/public/import/luma`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ slug: "ai-hackathon-toronto-2026" }),
+})
+
+const eventData = await res.json()
+```
+
+The extract endpoint is public and doesn't require authentication. It returns the event's:
+- Name, description, and rules
+- Start and end dates
+- Location details
+- Banner image URL
+- Sponsor list (names and tiers)
+- Prize list (names, descriptions, values)
+
+## Step 2: Review and Create
+
+Review the extracted data, make any modifications, then create the hackathon.
+
+```typescript title="create.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/import/luma`, {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    ...eventData,
+    locationType: "in_person",
+  }),
+})
+
+const { id, name, slug } = await res.json()
+console.log(`Created: ${name} → /e/${slug}`)
+```
+
+The create endpoint automatically:
+- Downloads and uploads the banner image to Oatmeal storage
+- Creates sponsor entries with the imported tier assignments
+- Creates prize entries with descriptions and values
+- Generates a URL-friendly slug from the event name
+
+## Using the CLI
+
+The CLI provides a simpler workflow:
+
+```bash
+hackathon events create --from-luma ai-hackathon-toronto-2026
+```
+
+This runs both steps automatically and outputs the created hackathon details.
+
+## What Gets Imported
+
+| Field | Imported | Notes |
+|-------|----------|-------|
+| Name | Yes | Used as hackathon name |
+| Description | Yes | Imported as description |
+| Dates | Yes | Start, end, registration dates |
+| Location | Yes | Name and type |
+| Banner image | Yes | Downloaded and re-uploaded |
+| Sponsors | Yes | Names and tier assignments |
+| Prizes | Yes | Names, descriptions, values |
+| Rules | Yes | If available on the event page |
+
+## After Importing
+
+The imported hackathon starts in `draft` status. You'll typically want to:
+
+1. **Review settings** — Check dates, team sizes, and judging mode
+2. **Upload sponsor logos** — The import captures names but not logo images
+3. **Configure judging criteria** — Set up scoring criteria for your judging mode
+4. **Publish** — Set the status to `published` or `registration_open`
+
+## Best Practices
+
+1. **Import early** — Create the hackathon from Luma as soon as the event is listed, then customize in Oatmeal
+2. **Check dates** — Verify timezone handling on imported dates matches your expectations
+3. **Add sponsor logos** — Import captures sponsor names but logos need to be uploaded separately via the [Sponsors API](/docs/sdk/sponsors)
+4. **Customize prizes** — Imported prizes may need additional configuration like prize type (`score`, `favorite`, `crowd`) and monetary values

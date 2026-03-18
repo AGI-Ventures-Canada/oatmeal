@@ -1,0 +1,147 @@
+---
+title: Sponsor Management
+description: Set up and manage hackathon sponsors with tiered visibility and branding.
+---
+
+This guide walks through adding sponsors to your hackathon, configuring tiers, uploading logos, and controlling display order.
+
+## Overview
+
+Sponsors appear on the public event page grouped by tier. Each sponsor can have:
+- A name and website link
+- Light and dark mode logos
+- A tier assignment controlling prominence
+- A link to an Oatmeal organization (for co-hosted events)
+
+## Adding Sponsors
+
+Create sponsors with a name and tier assignment:
+
+```typescript title="add-sponsors.ts"
+const sponsors = [
+  { name: "Anthropic", tier: "title", websiteUrl: "https://anthropic.com" },
+  { name: "Vercel", tier: "gold", websiteUrl: "https://vercel.com" },
+  { name: "Supabase", tier: "gold", websiteUrl: "https://supabase.com" },
+  { name: "Clerk", tier: "silver", websiteUrl: "https://clerk.com" },
+  { name: "Local Startup Hub", tier: "partner" },
+]
+
+for (const sponsor of sponsors) {
+  await fetch(
+    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(sponsor),
+    }
+  )
+}
+```
+
+## Tier System
+
+Sponsors are grouped by tier on the event page, with higher tiers displayed more prominently:
+
+| Tier | Use case |
+|------|----------|
+| `title` | Primary sponsor — largest logo, top of page |
+| `gold` | Major sponsors |
+| `silver` | Supporting sponsors |
+| `bronze` | Contributing sponsors |
+| `partner` | Non-monetary partners (venues, media, communities) |
+
+## Uploading Logos
+
+Upload separate logos for light and dark themes:
+
+```typescript title="upload-logos.ts"
+async function uploadSponsorLogo(
+  hackathonId: string,
+  sponsorId: string,
+  file: File,
+  variant: "light" | "dark"
+) {
+  const formData = new FormData()
+  formData.append("file", file)
+  formData.append("variant", variant)
+
+  const res = await fetch(
+    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}/logo`,
+    {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${API_KEY}` },
+      body: formData,
+    }
+  )
+
+  const { url } = await res.json()
+  return url
+}
+
+await uploadSponsorLogo(hackathonId, sponsorId, lightLogo, "light")
+await uploadSponsorLogo(hackathonId, sponsorId, darkLogo, "dark")
+```
+
+Accepted formats: PNG, JPEG, WebP, SVG (max 5MB).
+
+## Controlling Display Order
+
+Within each tier, sponsors are displayed in a custom order. Use the reorder endpoint to set the exact position:
+
+```typescript title="reorder.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors`,
+  {
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+
+const { sponsors } = await res.json()
+
+const reordered = sponsors
+  .sort((a, b) => a.name.localeCompare(b.name))
+  .map((s) => s.id)
+
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/reorder`,
+  {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ sponsorIds: reordered }),
+  }
+)
+```
+
+## Linking to Organizations
+
+If a sponsor also has an Oatmeal organization, link them via `sponsorTenantId`. This shows the organization's profile information alongside the sponsor listing:
+
+```typescript title="link-org.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
+  {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      sponsorTenantId: "org_xyz",
+    }),
+  }
+)
+```
+
+## Best Practices
+
+1. **Confirm sponsors before publishing** — Add all sponsors while the hackathon is in draft, then publish once the sponsor page looks complete
+2. **Upload both logo variants** — Light and dark mode logos ensure sponsors look good regardless of the user's theme
+3. **Use SVG logos** when available — they scale cleanly at any display size
+4. **Order strategically** — Within a tier, order sponsors by commitment level or alphabetically for fairness
+5. **Link organizations** when possible — linked sponsors get richer profile cards on the event page

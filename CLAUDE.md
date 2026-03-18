@@ -105,11 +105,31 @@ When developers include external documentation links in requests, save them to t
 Skills in `.claude/skills/`:
 - `local-dev-setup.md` - Developer onboarding and local environment setup
 
-Hackathon-specific skills (CLI, API, organizer, attendee) live in `skills/` at the project root (picked up by skills.sh):
-- `hackathon-api` - API route patterns and workflow examples
-- `hackathon-attendee` - Attendee building, strategy, and networking
-- `hackathon-cli` - CLI commands and workflow examples
-- `hackathon-organizer` - Organizer judging, prizes, planning, and logistics
+#### Hackathon Skills (`skills/`)
+
+Hackathon-specific AI agent skills live in `skills/` at the project root, distributed via [skills.sh](https://skills.sh). These are **not** internal dev skills — they're public, installable skills that any AI agent can use to interact with the Oatmeal platform or get hackathon guidance.
+
+**Install (for external users):**
+```bash
+npx skills add AGI-Ventures-Canada/oatmeal
+```
+
+**Structure:** Each skill follows the standard skills.sh format:
+```
+skills/<skill-name>/
+├── SKILL.md              # Main skill file (YAML frontmatter + content)
+└── references/           # Supporting documentation
+    └── *.md
+```
+
+| Skill | Description | When It Activates |
+|-------|-------------|-------------------|
+| `hackathon-cli` | Manage hackathons from the terminal using the `hackathon` CLI tool. Covers creating hackathons, judges, criteria, prizes, assignments, results, webhooks, and schedules | User asks to create/manage hackathons via CLI or terminal |
+| `hackathon-api` | Interact with the Oatmeal REST API directly via `curl` commands. Complete endpoint catalog, auth setup, and error handling | User asks to make direct API calls, test endpoints, or debug API responses |
+| `hackathon-organizer` | Planning and running hackathons — timelines, budgets, sponsors, venue logistics, judging setup, marketing, day-of operations, and post-event follow-up | User asks how to organize, plan, or run a hackathon |
+| `hackathon-attendee` | Competing in hackathons — preparation, team formation, time management, technical strategy, presenting, what judges look for, and networking | User is preparing for or competing in a hackathon |
+
+**Skill routing:** The skills are designed to complement each other. If a user is organizing on the platform, `hackathon-cli` or `hackathon-api` handle the tooling while `hackathon-organizer` provides strategic advice. For participants, `hackathon-attendee` covers the human side while `hackathon-cli`/`hackathon-api` handle any platform interaction.
 
 ## Next.js 16 Specifics
 
