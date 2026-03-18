@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { PageHeader } from "@/components/page-header"
 import { ProfileForm, ClerkSettingsCard } from "./profile-form"
 
 export default async function SettingsProfilePage() {
@@ -16,24 +17,20 @@ export default async function SettingsProfilePage() {
   if (!profile) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Organization Profile</h1>
-          <p className="text-muted-foreground">
-            Unable to load organization profile
-          </p>
-        </div>
+        <PageHeader
+          title="Organization Profile"
+          description="Unable to load organization profile"
+        />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Organization Profile</h1>
-        <p className="text-muted-foreground">
-          Customize your organization&apos;s public appearance
-        </p>
-      </div>
+      <PageHeader
+        title="Organization Profile"
+        description="Customize your organization's public appearance"
+      />
 
       <Card>
         <CardHeader>

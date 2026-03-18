@@ -94,12 +94,6 @@ export function MobileHeader() {
     children: [],
   }
 
-  useEffect(() => {
-    if (activeSection?.id === "org-switcher") {
-      setActiveSection(orgSection)
-    }
-  }, [organization?.name])
-
   return (
     <>
       <header className="flex lg:hidden items-center gap-3 border-b px-4 py-3">
