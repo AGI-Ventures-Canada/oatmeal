@@ -74,6 +74,9 @@ jobs:
       - name: Run CLI tests
         run: bun test packages/cli/__tests__/
 
+      - name: Install CLI dependencies
+        run: cd packages/cli && bun install --frozen-lockfile
+
       - name: CLI type check
         run: cd packages/cli && bunx tsc --noEmit
 

@@ -37,7 +37,7 @@ export async function runSchedulesCreate(
   let cron = options.cron
 
   if (!name && process.stdout.isTTY) {
-    const result = await p.text({ message: "Schedule name:", validate: (v) => (v ? undefined : "Required") })
+    const result = await p.text({ message: "Schedule name:", validate: (v: string) => (v ? undefined : "Required") })
     if (p.isCancel(result)) return
     name = result
   }
@@ -48,7 +48,7 @@ export async function runSchedulesCreate(
   }
 
   if (!cron && process.stdout.isTTY) {
-    const result = await p.text({ message: "Cron expression:", validate: (v) => (v ? undefined : "Required") })
+    const result = await p.text({ message: "Cron expression:", validate: (v: string) => (v ? undefined : "Required") })
     if (p.isCancel(result)) return
     cron = result
   }

@@ -45,7 +45,7 @@ export async function runPrizesCreate(
   let name = options.name
 
   if (!name && process.stdout.isTTY) {
-    const result = await p.text({ message: "Prize name:", validate: (v) => (v ? undefined : "Required") })
+    const result = await p.text({ message: "Prize name:", validate: (v: string) => (v ? undefined : "Required") })
     if (p.isCancel(result)) return
     name = result
   }

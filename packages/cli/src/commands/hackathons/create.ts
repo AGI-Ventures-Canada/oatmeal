@@ -42,7 +42,7 @@ export async function runHackathonsCreate(
   let description = options.description
 
   if (!name && process.stdout.isTTY) {
-    const result = await p.text({ message: "Hackathon name:", validate: (v) => (v ? undefined : "Name is required") })
+    const result = await p.text({ message: "Hackathon name:", validate: (v: string) => (v ? undefined : "Name is required") })
     if (p.isCancel(result)) return
     name = result
   }
