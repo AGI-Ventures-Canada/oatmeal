@@ -1,4 +1,5 @@
 ---
+internal: true
 name: clerk-setup
 description: Add Clerk authentication to any project by following the official quickstart guides.
 license: MIT
@@ -7,6 +8,7 @@ metadata:
   author: clerk
   version: "2.1.0"
 ---
+internal: true
 
 # Adding Clerk
 

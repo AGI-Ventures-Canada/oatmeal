@@ -1,4 +1,5 @@
 ---
+internal: true
 name: clerk-nextjs-patterns
 description: Advanced Next.js patterns - middleware, Server Actions, caching with Clerk.
 license: MIT
@@ -7,6 +8,7 @@ metadata:
   author: clerk
   version: "2.1.0"
 ---
+internal: true
 
 # Next.js Patterns
 

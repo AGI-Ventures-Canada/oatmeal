@@ -1,4 +1,5 @@
 ---
+internal: true
 name: clerk-testing
 description: E2E testing for Clerk apps. Use with Playwright or Cypress for auth flow tests.
 allowed-tools: WebFetch
@@ -7,6 +8,7 @@ metadata:
   author: clerk
   version: "1.0.0"
 ---
+internal: true
 
 # Testing
 

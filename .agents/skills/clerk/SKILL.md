@@ -1,7 +1,9 @@
 ---
+internal: true
 name: clerk
 description: Clerk authentication router. Use when user asks about adding authentication, setting up Clerk, custom sign-in flows, Swift or native iOS auth, Next.js patterns, organizations, syncing users, or testing. Automatically routes to the specific skill based on their task.
 ---
+internal: true
 
 # Clerk Skills Router
 
