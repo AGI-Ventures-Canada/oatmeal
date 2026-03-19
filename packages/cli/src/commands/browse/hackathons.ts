@@ -62,8 +62,8 @@ export async function runBrowseHackathons(
       { key: "name", label: "Name" },
       { key: "slug", label: "Slug" },
       { key: "status", label: "Status" },
-      { key: "starts_at", label: "Starts" },
-      { key: "ends_at", label: "Ends" },
+      { key: "startsAt", label: "Starts" },
+      { key: "endsAt", label: "Ends" },
     ])
   )
 }

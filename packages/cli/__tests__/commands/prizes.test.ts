@@ -39,7 +39,7 @@ describe("prizes commands", () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
           prizes: [
-            { name: "Best Overall", type: "cash", value: "$1000", assigned_submission_name: "Winner" },
+            { name: "Best Overall", type: "cash", value: "$1000", assignedSubmissionName: "Winner" },
           ],
         })
       )
@@ -87,7 +87,7 @@ describe("prizes commands", () => {
 
       const init = mockFetch.mock.calls[0][1] as RequestInit
       const body = JSON.parse(init.body as string)
-      expect(body.submission_id).toBe("s1")
+      expect(body.submissionId).toBe("s1")
     })
   })
 
@@ -100,7 +100,7 @@ describe("prizes commands", () => {
 
       const init = mockFetch.mock.calls[0][1] as RequestInit
       const body = JSON.parse(init.body as string)
-      expect(body.prize_ids).toEqual(["p1", "p2", "p3"])
+      expect(body.orderedIds).toEqual(["p1", "p2", "p3"])
     })
   })
 

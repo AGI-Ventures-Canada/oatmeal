@@ -5,6 +5,7 @@ description: E2E testing for Clerk apps. Use with Playwright or Cypress for auth
 allowed-tools: WebFetch
 license: MIT
 metadata:
+  internal: true
   author: clerk
   version: "1.0.0"
 ---

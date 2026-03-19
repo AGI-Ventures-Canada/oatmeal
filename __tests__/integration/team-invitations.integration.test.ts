@@ -309,6 +309,26 @@ describe("Team Invitations API Routes", () => {
       expect(data.code).toBe("not_found")
     })
 
+    it("returns 400 with at_capacity when event is full", async () => {
+      mockAuth.mockResolvedValue({ userId: "user_123" })
+      mockAcceptTeamInvitation.mockResolvedValue({
+        success: false,
+        error: "Event is at full capacity",
+        code: "at_capacity",
+      })
+
+      const res = await publicApp.handle(
+        new Request("http://localhost/api/public/invitations/valid_token/accept", {
+          method: "POST",
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.code).toBe("at_capacity")
+      expect(data.error).toBe("Event is at full capacity")
+    })
+
     it("calls acceptTeamInvitation with correct params", async () => {
       mockAuth.mockResolvedValue({ userId: "user_456" })
       mockAcceptTeamInvitation.mockResolvedValue({

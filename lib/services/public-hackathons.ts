@@ -9,7 +9,10 @@ import { sortByStatusPriority } from "@/lib/utils/sort-hackathons"
 export type PublicHackathon = Hackathon & {
   organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark" | "clerk_org_id">
   sponsors: (HackathonSponsor & {
-    tenant?: Pick<TenantProfile, "slug" | "name" | "logo_url" | "logo_url_dark"> | null
+    tenant?: Pick<
+      TenantProfile,
+      "slug" | "name" | "logo_url" | "logo_url_dark" | "website_url" | "description"
+    > | null
   })[]
   judges: HackathonJudgeDisplay[]
   prizes: PublicPrize[]
@@ -64,7 +67,7 @@ export async function getPublicHackathon(
     .from("hackathon_sponsors")
     .select(`
       *,
-      tenant:tenants!sponsor_tenant_id(slug, name, logo_url, logo_url_dark)
+      tenant:tenants!sponsor_tenant_id(slug, name, logo_url, logo_url_dark, website_url, description)
     `)
     .eq("hackathon_id", hackathon.id)
     .order("tier")
@@ -94,7 +97,12 @@ export async function getPublicHackathon(
     console.error("Failed to get hackathon prizes:", prizesError)
   }
 
-  const publicPrizes = ((prizes || []) as unknown as Prize[]).map(({ distribution_method, monetary_value, currency, ...rest }) => rest)
+  const publicPrizes = ((prizes || []) as unknown as Prize[]).map(({
+    distribution_method: _distributionMethod,
+    monetary_value: _monetaryValue,
+    currency: _currency,
+    ...rest
+  }) => rest)
 
   return {
     ...hackathon,
@@ -235,7 +243,12 @@ export async function getHackathonByIdWithFullData(
     .eq("hackathon_id", hackathon.id)
     .order("display_order")
 
-  const fullPrizes = ((prizes || []) as unknown as Prize[]).map(({ distribution_method, monetary_value, currency, ...rest }) => rest)
+  const fullPrizes = ((prizes || []) as unknown as Prize[]).map(({
+    distribution_method: _distributionMethod,
+    monetary_value: _monetaryValue,
+    currency: _currency,
+    ...rest
+  }) => rest)
 
   return {
     ...hackathon,

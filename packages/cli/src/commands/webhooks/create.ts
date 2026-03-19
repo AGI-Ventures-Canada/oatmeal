@@ -9,6 +9,13 @@ interface WebhookCreateOptions {
   json?: boolean
 }
 
+function normalizeUrl(input: string): string {
+  const trimmed = input.trim()
+  if (!trimmed) return trimmed
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
 export function parseWebhookCreateOptions(args: string[]): WebhookCreateOptions {
   const options: WebhookCreateOptions = {}
   for (let i = 0; i < args.length; i++) {
@@ -53,7 +60,10 @@ export async function runWebhooksCreate(
     events = result.split(",").map((s: string) => s.trim())
   }
 
-  const webhook = await client.post<Webhook>("/api/v1/webhooks", { url, events })
+  const webhook = await client.post<Webhook>("/api/v1/webhooks", {
+    url: normalizeUrl(url),
+    events,
+  })
 
   if (options.json) {
     console.log(formatJson(webhook))
@@ -61,8 +71,8 @@ export async function runWebhooksCreate(
   }
 
   console.log(formatSuccess(`Created webhook ${webhook.id}`))
-  if (webhook.signing_secret) {
+  if (webhook.signingSecret) {
     console.log(formatWarning("Save this signing secret — it won't be shown again:"))
-    console.log(webhook.signing_secret)
+    console.log(webhook.signingSecret)
   }
 }

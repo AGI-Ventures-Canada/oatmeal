@@ -46,8 +46,8 @@ export async function runSchedulesUpdate(
   const options = parseScheduleUpdateOptions(args)
   const body: Record<string, unknown> = {}
   if (options.name) body.name = options.name
-  if (options.cron) body.cron_expression = options.cron
-  if (options.enabled !== undefined) body.enabled = options.enabled
+  if (options.cron) body.cronExpression = options.cron
+  if (options.enabled !== undefined) body.isActive = options.enabled
 
   if (Object.keys(body).length === 0) {
     console.error("Error: provide at least one field to update")

@@ -31,7 +31,7 @@ export async function runJobsList(
       { key: "id", label: "ID" },
       { key: "type", label: "Type" },
       { key: "status", label: "Status" },
-      { key: "created_at", label: "Created" },
+      { key: "createdAt", label: "Created" },
     ])
   )
 }

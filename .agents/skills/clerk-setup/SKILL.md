@@ -5,6 +5,7 @@ description: Add Clerk authentication to any project by following the official q
 license: MIT
 allowed-tools: WebFetch
 metadata:
+  internal: true
   author: clerk
   version: "2.1.0"
 ---

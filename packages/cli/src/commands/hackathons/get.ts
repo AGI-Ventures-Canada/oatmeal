@@ -28,11 +28,11 @@ export async function runHackathonsGet(
       { label: "Slug", value: hackathon.slug },
       { label: "Status", value: hackathon.status },
       { label: "Description", value: hackathon.description },
-      { label: "Starts", value: hackathon.starts_at },
-      { label: "Ends", value: hackathon.ends_at },
-      { label: "Registration Opens", value: hackathon.registration_opens_at },
-      { label: "Registration Closes", value: hackathon.registration_closes_at },
-      { label: "Created", value: hackathon.created_at },
+      { label: "Starts", value: hackathon.startsAt },
+      { label: "Ends", value: hackathon.endsAt },
+      { label: "Registration Opens", value: hackathon.registrationOpensAt },
+      { label: "Registration Closes", value: hackathon.registrationClosesAt },
+      { label: "Created", value: hackathon.createdAt },
     ])
   )
 }

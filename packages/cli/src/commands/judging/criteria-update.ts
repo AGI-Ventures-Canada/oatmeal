@@ -49,7 +49,7 @@ export async function runCriteriaUpdate(
   const body: Record<string, unknown> = {}
   if (options.name) body.name = options.name
   if (options.description) body.description = options.description
-  if (options.maxScore !== undefined) body.max_score = options.maxScore
+  if (options.maxScore !== undefined) body.maxScore = options.maxScore
   if (options.weight !== undefined) body.weight = options.weight
 
   if (Object.keys(body).length === 0) {

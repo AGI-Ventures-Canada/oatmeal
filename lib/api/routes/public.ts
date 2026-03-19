@@ -133,11 +133,15 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         logoUrl: s.logo_url,
         websiteUrl: s.website_url,
         tier: s.tier,
+        useOrgAssets: s.use_org_assets,
         tenant: s.tenant
           ? {
               slug: s.tenant.slug,
               name: s.tenant.name,
               logoUrl: s.tenant.logo_url,
+              logoUrlDark: s.tenant.logo_url_dark,
+              websiteUrl: s.tenant.website_url,
+              description: s.tenant.description,
             }
           : null,
       })),

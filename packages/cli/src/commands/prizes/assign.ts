@@ -41,7 +41,7 @@ export async function runPrizesAssign(
 
   const result = await client.post(
     `/api/dashboard/hackathons/${hackathonId}/prizes/${prizeId}/assign`,
-    { submission_id: options.submission }
+    { submissionId: options.submission }
   )
 
   if (options.json) {

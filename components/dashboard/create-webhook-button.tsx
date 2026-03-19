@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { normalizeUrl, normalizeUrlFieldValue, urlInputProps } from "@/lib/utils/url"
 
 const eventTypes = [
   { value: "hackathon.created", label: "Hackathon Created", description: "When a new hackathon is created" },
@@ -42,17 +43,19 @@ export function CreateWebhookButton() {
 
     setLoading(true)
     try {
+      const normalizedUrl = normalizeUrl(url)
       const response = await fetch("/api/dashboard/webhooks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          url: url.trim(),
+          url: normalizedUrl,
           events: selectedEvents,
         }),
       })
 
       if (response.ok) {
         const data = await response.json()
+        setUrl(normalizedUrl)
         setSecret(data.secret)
       }
     } finally {
@@ -125,7 +128,7 @@ export function CreateWebhookButton() {
                     onClick={handleCopySecret}
                   >
                     {copied ? (
-                      <Check className="size-4 text-green-500" />
+                      <Check className="size-4 text-primary" />
                     ) : (
                       <Copy className="size-4" />
                     )}
@@ -163,10 +166,11 @@ export function CreateWebhookButton() {
                 <Label htmlFor="url">Endpoint URL</Label>
                 <Input
                   id="url"
-                  type="url"
-                  placeholder="https://your-server.com/webhook"
+                  {...urlInputProps}
+                  placeholder="your-server.com/webhook"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
+                  onBlur={() => setUrl(normalizeUrlFieldValue(url))}
                   autoComplete="off"
                   data-form-type="other"
                   required

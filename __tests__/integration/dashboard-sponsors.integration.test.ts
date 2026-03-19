@@ -342,6 +342,45 @@ describe("Sponsor Logo API Integration Tests", () => {
     })
   })
 
+  describe("PATCH /api/dashboard/hackathons/:id/sponsors/:sponsorId", () => {
+    it("updates linked sponsor asset source", async () => {
+      mockResolvePrincipal.mockResolvedValue(mockUserPrincipal)
+      mockCheckHackathonOrganizer.mockResolvedValue({ status: "ok" })
+      mockUpdateSponsor.mockResolvedValue({
+        id: "s1",
+        hackathon_id: "h1",
+        sponsor_tenant_id: "org-1",
+        tenant_sponsor_id: null,
+        use_org_assets: true,
+        name: "Sponsor",
+        logo_url: null,
+        logo_url_dark: null,
+        website_url: "https://example.com",
+        tier: "gold",
+        display_order: 0,
+        created_at: "2026-03-19T00:00:00.000Z",
+      })
+
+      const res = await app.handle(
+        new Request("http://localhost/api/dashboard/hackathons/h1/sponsors/s1", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ useOrgAssets: true }),
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.id).toBe("s1")
+      expect(mockUpdateSponsor).toHaveBeenCalledWith(
+        "s1",
+        { useOrgAssets: true },
+        "h1"
+      )
+      expect(mockLogAudit).toHaveBeenCalled()
+    })
+  })
+
   describe("DELETE /api/dashboard/hackathons/:id/sponsors/:sponsorId/logo", () => {
     it("rejects unauthenticated requests", async () => {
       mockResolvePrincipal.mockResolvedValue({ kind: "anon" })

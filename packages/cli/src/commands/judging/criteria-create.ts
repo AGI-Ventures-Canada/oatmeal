@@ -79,7 +79,7 @@ export async function runCriteriaCreate(
     {
       name,
       description: options.description,
-      max_score: maxScore ?? 10,
+      maxScore: maxScore ?? 10,
       weight: weight ?? 1,
     }
   )

@@ -8,6 +8,8 @@ AI agent skills for hackathon management on the [Oatmeal](https://github.com/AGI
 npx skills add AGI-Ventures-Canada/oatmeal
 ```
 
+Only the public skills in this `skills/` directory are meant for normal installs; non-public repo helper skills elsewhere should use `metadata.internal: true` so they stay hidden unless `INSTALL_INTERNAL_SKILLS=1` is set.
+
 ## Skills
 
 | Skill | Description |

@@ -58,6 +58,9 @@ CLERK_SECRET_KEY=sk_test_...
 # API Key hashing (required for creating/verifying API keys)
 API_KEY_SECRET=<generate-with-openssl>
 
+# Encryption (required for CLI auth — encrypts API keys stored in cli_auth_sessions)
+ENCRYPTION_KEY=<generate-with-openssl>
+
 # Resend (email sending)
 RESEND_API_KEY=re_...
 RESEND_FROM_EMAIL=noreply@getoatmeal.com
@@ -77,10 +80,11 @@ TAVILY_API_KEY=tvly-...
 
 **Get Clerk keys from:** https://dashboard.clerk.com → API Keys
 
-**Generate API_KEY_SECRET:** This is a server-side secret used to securely hash API keys before storing them in the database. Generate a secure value with:
+**Generate API_KEY_SECRET and ENCRYPTION_KEY:** Both are 32-byte hex secrets. `API_KEY_SECRET` hashes API keys before storing them. `ENCRYPTION_KEY` encrypts API keys in CLI auth sessions (required for `hackathon login` to work). Generate both with:
 
 ```bash
-openssl rand -hex 32
+echo "API_KEY_SECRET=$(openssl rand -hex 32)" >> .env.local
+echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> .env.local
 ```
 
 **Supabase keys are auto-configured** when running `bun dev` (local Supabase).
@@ -267,9 +271,16 @@ CREATE POLICY "Deny all access" ON new_table FOR ALL USING (false);
 ### API key creation fails (500 error)
 If creating API keys fails with a 500 error, `API_KEY_SECRET` is likely missing from `.env.local`. Generate one:
 ```bash
-openssl rand -hex 32
+echo "API_KEY_SECRET=$(openssl rand -hex 32)" >> .env.local
 ```
-Add it to `.env.local` and restart the dev server.
+Restart the dev server after adding.
+
+### CLI login fails ("Authorization Failed / Internal server error")
+If `hackathon login` opens the browser but shows "Authorization Failed — Internal server error", `ENCRYPTION_KEY` is missing from `.env.local`. The CLI auth flow encrypts API keys before storing them in `cli_auth_sessions`, and this requires a 32-byte hex key:
+```bash
+echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> .env.local
+```
+Restart the dev server after adding.
 
 ### Port 3000 already in use
 ```bash
