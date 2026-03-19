@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useSearchParams, useRouter } from "next/navigation"
@@ -94,11 +94,11 @@ export function MobileHeader() {
     return () => { document.body.style.overflow = "" }
   }, [open])
 
-  const orgSection: NavSection = {
+  const orgSection: NavSection = useMemo(() => ({
     id: ORG_SWITCHER_ID,
     title: organization?.name || "Personal Workspace",
     children: [],
-  }
+  }), [organization])
 
   return (
     <>
@@ -208,7 +208,6 @@ export function MobileHeader() {
             )}
           </nav>
 
-          {/* Sub-level: Organization switcher */}
           <nav
             className={`absolute inset-0 flex flex-col px-5 overflow-y-auto transition-transform duration-250 ease-in-out ${
               activeSection?.id === ORG_SWITCHER_ID ? "translate-x-0" : "translate-x-full"
@@ -228,7 +227,7 @@ export function MobileHeader() {
               onClick={() => {
                 setActive?.({ organization: null })
                 close()
-                router.push("/home")
+                if (pathname !== "/home") router.push("/home")
               }}
               className="flex items-center gap-3 py-5 px-3 -mx-3 rounded-lg text-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
             >
@@ -246,7 +245,7 @@ export function MobileHeader() {
                 onClick={() => {
                   setActive?.({ organization: mem.organization.id })
                   close()
-                  router.push("/home")
+                  if (pathname !== "/home") router.push("/home")
                 }}
                 className="flex items-center gap-3 py-5 px-3 -mx-3 rounded-lg text-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
               >
@@ -283,7 +282,6 @@ export function MobileHeader() {
             </button>
           </nav>
 
-          {/* Sub-level: Regular sections */}
           {navSections
             .filter((s) => s.children)
             .map((section) => (
