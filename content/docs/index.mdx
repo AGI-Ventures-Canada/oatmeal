@@ -3,27 +3,42 @@ title: Introduction
 description: Documentation for the Oatmeal hackathon platform.
 ---
 
-Welcome to the Oatmeal documentation. This guide covers how to interact with the Oatmeal platform via the CLI and REST API.
+Welcome to the Oatmeal documentation. This guide covers how to interact with the Oatmeal platform via the CLI, REST API, and AI agent skills.
 
 ## Overview
 
-Oatmeal provides two ways to interact with the platform:
+Oatmeal provides three ways to interact with the platform:
 
-- **[CLI](/docs/cli)** - Manage hackathons, judges, prizes, and results from your terminal
-- **[REST API](/docs/getting-started)** - Programmatic access for jobs, webhooks, and schedules
+- **[CLI](/docs/cli)** — Manage hackathons, judges, prizes, and results from your terminal
+- **[REST API](/docs/getting-started)** — Full programmatic access to hackathons, submissions, judging, and more
+- **[Hackathon Skills](/docs/skills)** — Installable AI agent skills for managing, planning, and competing in hackathons
 
 ## Authentication
 
-All API endpoints require authentication via API key:
+API endpoints use either an API key or a Clerk session depending on the namespace:
 
-```bash title="HTTP Header"
+```bash title="API Key (programmatic access)"
 Authorization: Bearer sk_live_your_api_key_here
 ```
 
+See [Getting Started](/docs/getting-started) for details on authentication modes.
+
 ## Quick Links
 
-- [CLI Installation](/docs/cli) - Install and use the Oatmeal CLI
-- [Getting Started](/docs/getting-started) - Make your first API call
-- [Jobs API](/docs/sdk/jobs) - Create and manage async jobs
-- [Webhooks API](/docs/sdk/webhooks) - Register and manage webhook endpoints
-- [Schedules API](/docs/sdk/schedules) - Create recurring jobs
+### Core API
+
+- [Hackathons API](/docs/sdk/hackathons) — Create, configure, and manage hackathon events
+- [Submissions API](/docs/sdk/submissions) — Submit projects and upload screenshots
+- [Registration & Teams](/docs/sdk/registration) — Register participants and manage team invitations
+
+### Platform
+
+- [Jobs API](/docs/sdk/jobs) — Create and manage async jobs
+- [Webhooks API](/docs/sdk/webhooks) — Register and manage webhook endpoints
+- [Schedules API](/docs/sdk/schedules) — Create recurring jobs
+
+### Tools
+
+- [CLI Installation](/docs/cli) — Install and use the Oatmeal CLI
+- [Getting Started](/docs/getting-started) — Set up authentication and make your first API call
+- [Hackathon Skills](/docs/skills) — Installable AI agent skills for hackathon management

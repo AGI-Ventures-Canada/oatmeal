@@ -1,0 +1,263 @@
+---
+title: Results API
+description: Calculate, publish, and retrieve hackathon results and leaderboards via the REST API.
+---
+
+The Results API handles scoring aggregation, leaderboard generation, and publication of hackathon results.
+
+## Endpoints
+
+### Dashboard (API key or session)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/dashboard/hackathons/:id/results/calculate` | Calculate results |
+| `GET` | `/api/dashboard/hackathons/:id/results` | Get results (organizer view) |
+| `POST` | `/api/dashboard/hackathons/:id/results/publish` | Publish results |
+| `POST` | `/api/dashboard/hackathons/:id/results/unpublish` | Unpublish results |
+
+### Public (no auth required)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/public/hackathons/:slug/results` | Get published results |
+
+Dashboard endpoints require an API key with `hackathons:read` or `hackathons:write` scope.
+
+## Response Types
+
+```typescript title="types.ts"
+interface Result {
+  id: string
+  rank: number
+  submissionId: string
+  submissionTitle: string
+  submissionDescription: string | null
+  submissionGithubUrl: string | null
+  submissionLiveAppUrl: string | null
+  submissionScreenshotUrl: string | null
+  submissionTeamId: string | null
+  totalScore: number
+  weightedScore: number | null
+  judgeCount: number
+  publishedAt: string | null
+  teamName: string | null
+  prizes: { id: string; name: string; value: string | null }[]
+}
+```
+
+## Calculate Results
+
+`POST /api/dashboard/hackathons/:id/results/calculate` — requires `hackathons:write` scope.
+
+Aggregates judge scores (points mode) or judge picks (subjective mode) and generates rankings. Run this after judging is complete.
+
+```typescript title="calculate-results.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/calculate`,
+  {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+
+const { success, count } = await res.json()
+console.log(`Calculated rankings for ${count} submissions`)
+```
+
+### Response
+
+```json title="response.json"
+{
+  "success": true,
+  "count": 12
+}
+```
+
+<Callout type="info">
+You can recalculate results at any time. New calculations replace previous results. This is useful if you add or remove judges, or if scoring needs corrections.
+</Callout>
+
+## Get Results (Organizer)
+
+`GET /api/dashboard/hackathons/:id/results` — requires `hackathons:read` scope.
+
+Returns the full leaderboard with scores, regardless of publication status.
+
+```typescript title="get-results.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results`,
+  {
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+
+const { results, isPublished } = await res.json()
+console.log("Published:", isPublished)
+
+for (const r of results) {
+  const prizes = r.prizes.map((p) => p.name).join(", ")
+  console.log(`#${r.rank} ${r.submissionTitle} (${r.totalScore} pts) ${prizes}`)
+}
+```
+
+### Response
+
+```json title="response.json"
+{
+  "results": [
+    {
+      "id": "res_001",
+      "rank": 1,
+      "submissionId": "sub_xyz456",
+      "submissionTitle": "AI Code Review Bot",
+      "submissionDescription": "An AI-powered tool that reviews pull requests",
+      "submissionGithubUrl": "https://github.com/team/ai-review-bot",
+      "submissionLiveAppUrl": "https://ai-review-bot.vercel.app",
+      "submissionScreenshotUrl": "https://storage.example.com/screenshots/sub_xyz456.png",
+      "submissionTeamId": "team_xyz",
+      "totalScore": 87,
+      "weightedScore": 92.5,
+      "judgeCount": 3,
+      "publishedAt": null,
+      "teamName": "Team Alpha",
+      "prizes": [
+        { "id": "prize_001", "name": "Best Overall", "value": "$5,000 USD" }
+      ]
+    }
+  ],
+  "isPublished": false
+}
+```
+
+## Publish Results
+
+`POST /api/dashboard/hackathons/:id/results/publish` — requires `hackathons:write` scope.
+
+Makes results visible on the public hackathon page. This also:
+- Auto-assigns score-based prizes to top-ranked submissions
+- Sends winner notification emails
+- Triggers `results.published` webhooks
+
+```typescript title="publish-results.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/publish`,
+  {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+
+const { success } = await res.json()
+console.log("Results published!")
+```
+
+<Callout type="warn">
+Publishing triggers winner emails and webhooks. Make sure results are finalized before publishing.
+</Callout>
+
+## Unpublish Results
+
+`POST /api/dashboard/hackathons/:id/results/unpublish` — requires `hackathons:write` scope.
+
+Hides results from the public page and reverts the hackathon status to `"judging"`.
+
+```typescript title="unpublish-results.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/unpublish`,
+  {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+```
+
+## Get Published Results (Public)
+
+`GET /api/public/hackathons/:slug/results` — no authentication required.
+
+Returns the public leaderboard. Returns `404` if results are not yet published.
+
+```typescript title="public-results.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/results`
+)
+
+if (res.status === 404) {
+  console.log("Results not yet published")
+} else {
+  const { results } = await res.json()
+
+  for (const r of results) {
+    const prizes = r.prizes.map((p) => p.name).join(", ")
+    console.log(`#${r.rank} ${r.submissionTitle} - ${r.teamName} ${prizes}`)
+  }
+}
+```
+
+### Response
+
+```json title="response.json"
+{
+  "results": [
+    {
+      "rank": 1,
+      "submissionTitle": "AI Code Review Bot",
+      "submissionDescription": "An AI-powered tool that reviews pull requests",
+      "submissionGithubUrl": "https://github.com/team/ai-review-bot",
+      "submissionLiveAppUrl": "https://ai-review-bot.vercel.app",
+      "submissionScreenshotUrl": "https://storage.example.com/screenshots/sub_xyz456.png",
+      "teamName": "Team Alpha",
+      "weightedScore": 92.5,
+      "judgeCount": 3,
+      "prizes": [
+        { "id": "prize_001", "name": "Best Overall", "value": "$5,000 USD" }
+      ]
+    }
+  ]
+}
+```
+
+## Full Example
+
+```typescript title="full-example.ts"
+const API_KEY = process.env.OATMEAL_API_KEY!
+const BASE_URL = process.env.OATMEAL_BASE_URL!
+
+async function finalizeHackathon(hackathonId: string) {
+  const calcRes = await fetch(
+    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/calculate`,
+    {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${API_KEY}` },
+    }
+  )
+
+  const { count } = await calcRes.json()
+  console.log(`Ranked ${count} submissions`)
+
+  const resultsRes = await fetch(
+    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results`,
+    {
+      headers: { "Authorization": `Bearer ${API_KEY}` },
+    }
+  )
+
+  const { results } = await resultsRes.json()
+
+  console.log("\nLeaderboard preview:")
+  for (const r of results.slice(0, 5)) {
+    console.log(`  #${r.rank} ${r.submissionTitle} (${r.totalScore} pts)`)
+  }
+
+  await fetch(
+    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/publish`,
+    {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${API_KEY}` },
+    }
+  )
+
+  console.log("\nResults published!")
+}
+```

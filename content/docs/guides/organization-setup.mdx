@@ -1,0 +1,118 @@
+---
+title: Organization Setup
+description: Set up your organization profile, slug, logos, and public page.
+---
+
+Every hackathon in Oatmeal belongs to an organization. This guide covers setting up your organization profile, which appears on public event pages and your dedicated organization page at `/o/{slug}`.
+
+## Overview
+
+Your organization profile includes:
+- **Name and slug** — Displayed on event pages and in the `/o/{slug}` URL
+- **Description** — Shown on your public organization page
+- **Website URL** — Link to your website
+- **Logos** — Light and dark mode variants for proper theming
+
+## Setting Up Your Profile
+
+Update your organization details via the API:
+
+```typescript title="setup-profile.ts"
+await fetch(`${BASE_URL}/api/dashboard/org-profile`, {
+  method: "PATCH",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "AGI Ventures Canada",
+    slug: "agi-ventures",
+    description: "Building the future of hackathons in Canada",
+    websiteUrl: "https://agiventures.ca",
+  }),
+})
+```
+
+## Choosing a Slug
+
+The slug determines your public URL (`/o/{slug}`) and appears in various places across the platform. Slugs must be:
+- At least 3 characters
+- Lowercase letters, numbers, and hyphens only
+- Unique across all organizations
+
+Check availability before setting:
+
+```typescript title="check-slug.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/organizations/slug-available?slug=agi-ventures`,
+  { credentials: "include" }
+)
+
+const { available } = await res.json()
+if (available) {
+  console.log("Slug is available!")
+}
+```
+
+<Callout type="info">
+Slug availability check requires a Clerk session. This endpoint is not accessible via API key.
+</Callout>
+
+## Uploading Logos
+
+Upload separate logos for light and dark themes to ensure proper display across user preferences:
+
+```typescript title="upload-logos.ts"
+async function uploadLogo(file: File, variant: "light" | "dark") {
+  const formData = new FormData()
+  formData.append("file", file)
+  formData.append("variant", variant)
+
+  const res = await fetch(`${BASE_URL}/api/dashboard/upload-logo`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+    body: formData,
+  })
+
+  const { url } = await res.json()
+  console.log(`${variant} logo:`, url)
+}
+
+await uploadLogo(lightLogoFile, "light")
+await uploadLogo(darkLogoFile, "dark")
+```
+
+Accepted formats: PNG, JPEG, WebP, SVG (max 30MB).
+
+To remove a logo:
+
+```typescript title="delete-logo.ts"
+await fetch(`${BASE_URL}/api/dashboard/logo/dark`, {
+  method: "DELETE",
+  headers: { "Authorization": `Bearer ${API_KEY}` },
+})
+```
+
+## Public Organization Page
+
+Once your profile is set up, your public page at `/o/{slug}` automatically shows:
+- Organization name, description, and logo
+- All hackathons you've organized
+- All hackathons you've sponsored
+
+```typescript title="view-public.ts"
+const res = await fetch(`${BASE_URL}/api/public/orgs/agi-ventures`)
+
+const org = await res.json()
+console.log(`${org.name}`)
+console.log(`Organized: ${org.organizedHackathons.length} hackathons`)
+console.log(`Sponsored: ${org.sponsoredHackathons.length} hackathons`)
+```
+
+## Best Practices
+
+1. **Set up your profile early** — Your organization name and logo appear on every hackathon you create
+2. **Upload both logo variants** — Light and dark mode support ensures your branding looks good everywhere
+3. **Use a descriptive slug** — Keep it short, memorable, and matching your brand (e.g., `agi-ventures` not `agi-ventures-canada-inc`)
+4. **Add a website URL** — Visitors to your organization page can click through to learn more
+5. **Keep your description current** — The public page is a landing page for potential participants and sponsors

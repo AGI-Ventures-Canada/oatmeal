@@ -1,0 +1,460 @@
+---
+title: Hackathons API
+description: Create, manage, and discover hackathon events via the REST API.
+---
+
+The Hackathons API lets you create events, update settings, manage banners, and transition hackathons through their lifecycle.
+
+## Endpoints
+
+### Dashboard (API key or session)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/dashboard/hackathons` | Create a hackathon |
+| `GET` | `/api/dashboard/hackathons` | List your hackathons |
+| `GET` | `/api/dashboard/hackathons/:id` | Get hackathon details |
+| `PATCH` | `/api/dashboard/hackathons/:id/settings` | Update hackathon settings |
+| `DELETE` | `/api/dashboard/hackathons/:id` | Delete a hackathon |
+| `POST` | `/api/dashboard/hackathons/:id/banner` | Upload banner image |
+| `DELETE` | `/api/dashboard/hackathons/:id/banner` | Remove banner image |
+
+### Public (no auth required)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/public/hackathons` | List public hackathons |
+| `GET` | `/api/public/hackathons/:slug` | Get hackathon by slug |
+
+Dashboard endpoints require an API key with `hackathons:read` or `hackathons:write` scope. Public endpoints are unauthenticated.
+
+## Status Lifecycle
+
+Hackathons progress through these statuses:
+
+```typescript title="types.ts"
+type HackathonStatus =
+  | "draft"              // Initial state, not visible to public
+  | "published"          // Visible but registration not yet open
+  | "registration_open"  // Accepting registrations
+  | "active"             // Hackathon is running
+  | "judging"            // Judging phase
+  | "completed"          // Judging finished
+  | "archived"           // Historic record
+```
+
+Transition between statuses by updating the `status` field via the settings endpoint.
+
+## Response Types
+
+```typescript title="types.ts"
+interface Hackathon {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  rules: string | null
+  bannerUrl: string | null
+  status: HackathonStatus
+  startsAt: string | null
+  endsAt: string | null
+  registrationOpensAt: string | null
+  registrationClosesAt: string | null
+  maxParticipants: number | null
+  minTeamSize: number
+  maxTeamSize: number
+  allowSolo: boolean
+  anonymousJudging: boolean
+  judgingMode: "points" | "subjective"
+  resultsPublishedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+```
+
+## Create a Hackathon
+
+`POST /api/dashboard/hackathons` — requires `hackathons:write` scope.
+
+```typescript title="create-hackathon.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/hackathons`, {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "AI Innovation Challenge 2026",
+    description: "Build the future of AI-powered tools",
+  }),
+})
+
+const hackathon = await res.json()
+console.log("Created:", hackathon.id)
+console.log("Slug:", hackathon.slug)
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | Yes | Hackathon name (min 1 character) |
+| `description` | `string` | No | Short description |
+
+### Response
+
+```json title="response.json"
+{
+  "id": "hack_abc123",
+  "name": "AI Innovation Challenge 2026",
+  "slug": "ai-innovation-challenge-2026"
+}
+```
+
+## List Your Hackathons
+
+`GET /api/dashboard/hackathons` — requires `hackathons:read` scope.
+
+```typescript title="list-hackathons.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/hackathons?q=innovation`, {
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+const { hackathons } = await res.json()
+
+for (const h of hackathons) {
+  console.log(`${h.name} (${h.status}) - ${h.slug}`)
+}
+```
+
+### Query Parameters
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `q` | `string` | No | Search query to filter by name |
+
+### Response
+
+```json title="response.json"
+{
+  "hackathons": [
+    {
+      "id": "hack_abc123",
+      "name": "AI Innovation Challenge 2026",
+      "slug": "ai-innovation-challenge-2026",
+      "description": "Build the future of AI-powered tools",
+      "status": "registration_open",
+      "startsAt": "2026-04-01T09:00:00Z",
+      "endsAt": "2026-04-03T17:00:00Z",
+      "registrationOpensAt": "2026-03-01T00:00:00Z",
+      "registrationClosesAt": "2026-03-28T23:59:59Z",
+      "createdAt": "2026-02-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Get Hackathon Details
+
+`GET /api/dashboard/hackathons/:id` — requires `hackathons:read` scope.
+
+```typescript title="get-hackathon.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/hackathons/${hackathonId}`, {
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+  },
+})
+
+const hackathon = await res.json()
+console.log("Name:", hackathon.name)
+console.log("Status:", hackathon.status)
+console.log("Judging mode:", hackathon.judgingMode)
+```
+
+### Response
+
+Returns the full `Hackathon` object as defined in the Response Types section.
+
+## Update Hackathon Settings
+
+`PATCH /api/dashboard/hackathons/:id/settings` — requires `hackathons:write` scope.
+
+All fields are optional. Only include the fields you want to change.
+
+```typescript title="update-settings.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/settings`,
+  {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      status: "registration_open",
+      startsAt: "2026-04-01T09:00:00Z",
+      endsAt: "2026-04-03T17:00:00Z",
+      registrationOpensAt: "2026-03-01T00:00:00Z",
+      registrationClosesAt: "2026-03-28T23:59:59Z",
+      maxParticipants: 200,
+      minTeamSize: 2,
+      maxTeamSize: 5,
+      allowSolo: false,
+      judgingMode: "points",
+      anonymousJudging: true,
+    }),
+  }
+)
+
+const updated = await res.json()
+console.log("Updated status:", updated.status)
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | No | Hackathon name |
+| `description` | `string \| null` | No | Description |
+| `rules` | `string \| null` | No | Rules and guidelines |
+| `status` | `HackathonStatus` | No | Lifecycle status |
+| `startsAt` | `string \| null` | No | Event start (ISO 8601) |
+| `endsAt` | `string \| null` | No | Event end (ISO 8601) |
+| `registrationOpensAt` | `string \| null` | No | Registration opens (ISO 8601) |
+| `registrationClosesAt` | `string \| null` | No | Registration closes (ISO 8601) |
+| `maxParticipants` | `number \| null` | No | Max participants (null = unlimited) |
+| `minTeamSize` | `number` | No | Minimum team size |
+| `maxTeamSize` | `number` | No | Maximum team size |
+| `allowSolo` | `boolean` | No | Allow solo participants |
+| `judgingMode` | `"points" \| "subjective"` | No | Scoring mode |
+| `anonymousJudging` | `boolean` | No | Hide team names from judges |
+| `locationType` | `"in_person" \| "virtual" \| null` | No | Location type |
+| `locationName` | `string \| null` | No | Venue name |
+| `locationUrl` | `string \| null` | No | Virtual location URL |
+
+### Response
+
+Returns the full updated `Hackathon` object.
+
+## Delete a Hackathon
+
+`DELETE /api/dashboard/hackathons/:id` — requires `hackathons:write` scope.
+
+<Callout type="warn">
+Deleting a hackathon is permanent and cascades to all participants, submissions, judging data, and results.
+</Callout>
+
+```typescript title="delete-hackathon.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}`,
+  {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+    },
+  }
+)
+
+const { success } = await res.json()
+console.log("Deleted:", success)
+```
+
+## Upload Banner
+
+`POST /api/dashboard/hackathons/:id/banner` — requires `hackathons:write` scope.
+
+Accepts PNG, JPEG, or WebP images up to 50MB.
+
+```typescript title="upload-banner.ts"
+const formData = new FormData()
+formData.append("file", bannerFile)
+
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/banner`,
+  {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+    },
+    body: formData,
+  }
+)
+
+const { url } = await res.json()
+console.log("Banner URL:", url)
+```
+
+## Remove Banner
+
+`DELETE /api/dashboard/hackathons/:id/banner` — requires `hackathons:write` scope.
+
+```typescript title="delete-banner.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/banner`,
+  {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+    },
+  }
+)
+
+const { success } = await res.json()
+```
+
+## List Public Hackathons
+
+`GET /api/public/hackathons` — no authentication required.
+
+Returns published hackathons with pagination.
+
+```typescript title="browse-hackathons.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons?q=AI&page=1&limit=10`
+)
+
+const { hackathons, total, page, totalPages } = await res.json()
+
+for (const h of hackathons) {
+  console.log(`${h.name} by ${h.organizer.name} (${h.status})`)
+}
+console.log(`Page ${page} of ${totalPages} (${total} total)`)
+```
+
+### Query Parameters
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `q` | `string` | No | Search query |
+| `page` | `number` | No | Page number (default: 1) |
+| `limit` | `number` | No | Results per page (default: 9, max: 50) |
+
+### Response
+
+```json title="response.json"
+{
+  "hackathons": [
+    {
+      "id": "hack_abc123",
+      "name": "AI Innovation Challenge 2026",
+      "slug": "ai-innovation-challenge-2026",
+      "description": "Build the future of AI-powered tools",
+      "bannerUrl": "https://storage.example.com/banners/hack_abc123.jpg",
+      "status": "registration_open",
+      "startsAt": "2026-04-01T09:00:00Z",
+      "endsAt": "2026-04-03T17:00:00Z",
+      "registrationOpensAt": "2026-03-01T00:00:00Z",
+      "registrationClosesAt": "2026-03-28T23:59:59Z",
+      "organizer": {
+        "id": "org_xyz",
+        "name": "AGI Ventures",
+        "slug": "agi-ventures",
+        "logoUrl": "https://storage.example.com/logos/org_xyz.png"
+      }
+    }
+  ],
+  "total": 42,
+  "page": 1,
+  "totalPages": 5
+}
+```
+
+## Get Public Hackathon by Slug
+
+`GET /api/public/hackathons/:slug` — no authentication required.
+
+Returns full hackathon details including sponsors.
+
+```typescript title="get-public-hackathon.ts"
+const res = await fetch(`${BASE_URL}/api/public/hackathons/ai-innovation-2026`)
+
+const hackathon = await res.json()
+console.log("Name:", hackathon.name)
+console.log("Sponsors:", hackathon.sponsors.length)
+```
+
+### Response
+
+```json title="response.json"
+{
+  "id": "hack_abc123",
+  "name": "AI Innovation Challenge 2026",
+  "slug": "ai-innovation-challenge-2026",
+  "description": "Build the future of AI-powered tools",
+  "rules": "Teams of 2-5. Must use at least one AI API.",
+  "bannerUrl": "https://storage.example.com/banners/hack_abc123.jpg",
+  "status": "registration_open",
+  "startsAt": "2026-04-01T09:00:00Z",
+  "endsAt": "2026-04-03T17:00:00Z",
+  "registrationOpensAt": "2026-03-01T00:00:00Z",
+  "registrationClosesAt": "2026-03-28T23:59:59Z",
+  "organizer": {
+    "id": "org_xyz",
+    "name": "AGI Ventures",
+    "slug": "agi-ventures",
+    "logoUrl": "https://storage.example.com/logos/org_xyz.png"
+  },
+  "sponsors": [
+    {
+      "id": "sp_001",
+      "name": "Anthropic",
+      "logoUrl": "https://storage.example.com/sponsors/anthropic.png",
+      "websiteUrl": "https://anthropic.com",
+      "tier": "gold",
+      "tenant": {
+        "slug": "anthropic",
+        "name": "Anthropic",
+        "logoUrl": null
+      }
+    }
+  ]
+}
+```
+
+## Full Example
+
+```typescript title="full-example.ts"
+const API_KEY = process.env.OATMEAL_API_KEY!
+const BASE_URL = process.env.OATMEAL_BASE_URL!
+
+async function createAndConfigureHackathon() {
+  const createRes = await fetch(`${BASE_URL}/api/dashboard/hackathons`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: "Spring Hack 2026",
+      description: "48-hour sprint to build something amazing",
+    }),
+  })
+
+  const { id } = await createRes.json()
+
+  await fetch(`${BASE_URL}/api/dashboard/hackathons/${id}/settings`, {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      status: "published",
+      startsAt: "2026-05-01T09:00:00Z",
+      endsAt: "2026-05-03T09:00:00Z",
+      registrationOpensAt: "2026-04-01T00:00:00Z",
+      registrationClosesAt: "2026-04-28T23:59:59Z",
+      maxParticipants: 100,
+      minTeamSize: 2,
+      maxTeamSize: 4,
+      allowSolo: true,
+      judgingMode: "points",
+      anonymousJudging: true,
+    }),
+  })
+
+  console.log(`Hackathon ${id} created and configured`)
+}
+```

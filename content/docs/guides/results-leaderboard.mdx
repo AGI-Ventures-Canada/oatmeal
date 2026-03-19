@@ -1,0 +1,168 @@
+---
+title: Results & Leaderboard
+description: Calculate results, review rankings, and publish the leaderboard.
+---
+
+This guide walks through the end-to-end flow of finalizing a hackathon — from completing judging to publishing the public leaderboard.
+
+## Overview
+
+The results flow has four steps:
+
+1. **Verify judging is complete** — Check assignment progress
+2. **Calculate results** — Aggregate scores into rankings
+3. **Review the leaderboard** — Preview before making it public
+4. **Publish** — Make results visible and notify winners
+
+## Step 1: Verify Judging Progress
+
+Before calculating results, confirm all judges have completed their assignments.
+
+```typescript title="check-progress.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/assignments`,
+  {
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+
+const { progress } = await res.json()
+
+console.log(
+  `${progress.completedAssignments}/${progress.totalAssignments} assignments complete`
+)
+
+for (const judge of progress.judges) {
+  if (judge.completed < judge.total) {
+    console.log(`${judge.displayName}: ${judge.completed}/${judge.total} (incomplete)`)
+  }
+}
+```
+
+<Callout type="info">
+You can calculate results before all assignments are complete, but scores will only reflect submitted evaluations. Incomplete assignments are excluded from the calculation.
+</Callout>
+
+## Step 2: Calculate Results
+
+Trigger result calculation to aggregate scores and generate rankings.
+
+```typescript title="calculate.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/calculate`,
+  {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+
+const { count } = await res.json()
+console.log(`Ranked ${count} submissions`)
+```
+
+### How Calculation Works
+
+**Points mode:** Each submission's total is the sum of `(score × weight)` across all criteria and judges. The weighted score normalizes by judge count for fair comparison.
+
+**Subjective mode:** Pick counts are tallied per prize category. Submissions with the most picks rank highest.
+
+You can recalculate at any time — new results replace previous ones.
+
+## Step 3: Review the Leaderboard
+
+Preview the full leaderboard before publishing.
+
+```typescript title="preview.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results`,
+  {
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+
+const { results, isPublished } = await res.json()
+
+console.log(`Published: ${isPublished}\n`)
+console.log("Rank | Team | Score | Prizes")
+console.log("-----|------|-------|-------")
+
+for (const r of results) {
+  const prizes = r.prizes.map((p) => p.name).join(", ") || "—"
+  console.log(`#${r.rank} | ${r.teamName} | ${r.totalScore} | ${prizes}`)
+}
+```
+
+At this point you can:
+- **Assign prizes manually** if needed (see [Prizes API](/docs/sdk/prizes))
+- **Recalculate** if you notice issues
+- **Adjust criteria weights** and recalculate for different rankings
+
+## Step 4: Publish Results
+
+When you're satisfied with the leaderboard, publish it.
+
+```typescript title="publish.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/publish`,
+  {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+
+console.log("Results are now public!")
+```
+
+Publishing triggers:
+- Score-based prizes are auto-assigned to top-ranked submissions
+- Winner notification emails are sent
+- `results.published` webhooks fire
+- Results become visible at `/e/{slug}` on the public event page
+
+### Unpublishing
+
+If you need to make corrections after publishing:
+
+```typescript title="unpublish.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/unpublish`,
+  {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+```
+
+This hides results from the public page and reverts the hackathon status to `"judging"`.
+
+## Viewing Public Results
+
+Once published, anyone can view results without authentication:
+
+```typescript title="public-view.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/results`
+)
+
+if (res.status === 404) {
+  console.log("Results not yet published")
+  return
+}
+
+const { results } = await res.json()
+
+for (const r of results) {
+  console.log(`#${r.rank} ${r.submissionTitle} by ${r.teamName}`)
+  if (r.prizes.length > 0) {
+    console.log(`   Prizes: ${r.prizes.map((p) => p.name).join(", ")}`)
+  }
+}
+```
+
+## Best Practices
+
+1. **Calculate early, publish late** — Run calculation once judging is mostly complete to preview results, but wait until all judges are done before publishing
+2. **Double-check prize assignments** — Auto-assigned prizes cover score-based rankings, but manually assign opinion-based prizes (Most Creative, etc.) before publishing
+3. **Communicate timing** — Let participants know when to expect results via the hackathon description or schedule
+4. **Use webhooks** to automate post-publication workflows — notify Slack channels, update external dashboards, or trigger certificate generation
+5. **Keep results up** — Unpublishing is available for corrections, but try to get it right before the first publish to avoid confusion

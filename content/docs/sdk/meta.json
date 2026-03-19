@@ -1,4 +1,23 @@
 {
   "title": "API Reference",
-  "pages": ["jobs", "webhooks", "schedules"]
+  "pages": [
+    "hackathons",
+    "submissions",
+    "registration",
+    "---",
+    "judging",
+    "prizes",
+    "results",
+    "crowd-voting",
+    "judge-display",
+    "---",
+    "organizations",
+    "sponsors",
+    "api-keys",
+    "luma-import",
+    "---",
+    "jobs",
+    "webhooks",
+    "schedules"
+  ]
 }

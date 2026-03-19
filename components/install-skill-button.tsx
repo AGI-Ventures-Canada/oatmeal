@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 
-const INSTALL_COMMAND = "npx skills add AGI-Ventures-Canada/hackathon-skills"
+const INSTALL_COMMAND = "npx skills add AGI-Ventures-Canada/oatmeal"
 
 interface InstallSkillButtonProps {
   trigger?: ReactNode
@@ -37,7 +37,7 @@ export function InstallSkillButton({ trigger }: InstallSkillButtonProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Install Oatmeal Skills</DialogTitle>
           <DialogDescription>

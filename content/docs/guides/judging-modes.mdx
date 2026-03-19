@@ -1,0 +1,203 @@
+---
+title: Judging Modes
+description: Understand the two judging modes — points-based and subjective — and when to use each.
+---
+
+Oatmeal supports two distinct judging modes. Choose the right one when setting up your hackathon.
+
+## Overview
+
+| Mode | How it works | Best for |
+|------|-------------|----------|
+| **Points** | Judges score each submission against weighted criteria (e.g., 1-10) | Large hackathons, objective ranking, detailed feedback |
+| **Subjective** | Judges pick favorites for each prize category | Small hackathons, simple voting, opinionated categories |
+
+Set the mode via the [Hackathons API](/docs/sdk/hackathons):
+
+```typescript title="set-judging-mode.ts"
+await fetch(`${BASE_URL}/api/dashboard/hackathons/${id}/settings`, {
+  method: "PATCH",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ judgingMode: "points" }),
+})
+```
+
+## Points-Based Judging
+
+Judges evaluate each assigned submission against a set of criteria with numeric scores. Final rankings are calculated by aggregating weighted scores across all judges.
+
+### Setup
+
+1. **Define criteria** — Create judging criteria with names, max scores, and weights
+
+```typescript title="setup-criteria.ts"
+const criteria = [
+  { name: "Technical Innovation", maxScore: 10, weight: 1.5 },
+  { name: "Design & UX", maxScore: 10, weight: 1.0 },
+  { name: "Completeness", maxScore: 10, weight: 1.0 },
+  { name: "Presentation", maxScore: 10, weight: 0.5 },
+]
+
+for (const c of criteria) {
+  await fetch(
+    `${BASE_URL}/api/dashboard/hackathons/${id}/judging/criteria`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(c),
+    }
+  )
+}
+```
+
+2. **Add judges** and **auto-assign submissions**
+
+```typescript title="assign-judges.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${id}/judging/auto-assign`,
+  {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ submissionsPerJudge: 5 }),
+  }
+)
+```
+
+3. **Judges score** via the scoring endpoint
+
+```typescript title="judge-scores.ts"
+await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/judging/assignments/${assignmentId}/scores`,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      scores: [
+        { criteriaId: "crit_001", score: 9 },
+        { criteriaId: "crit_002", score: 7 },
+        { criteriaId: "crit_003", score: 8 },
+        { criteriaId: "crit_004", score: 6 },
+      ],
+    }),
+  }
+)
+```
+
+### How Scoring Works
+
+For each submission, the total score is calculated as:
+
+```
+totalScore = Σ (criteriaScore × criteriaWeight)
+```
+
+The weighted score normalizes by judge count so submissions with different numbers of reviewers are compared fairly.
+
+### When to Use Points
+
+- 10+ submissions where objective comparison matters
+- Multiple judging criteria with different importance levels
+- You want detailed scoring breakdowns per criteria
+- Transparency in how rankings were determined
+
+## Subjective Judging
+
+Judges pick their favorite submissions for each prize category. Results are determined by tallying picks across all judges.
+
+### Setup
+
+1. **Define prizes** — Each prize becomes a category judges vote on
+
+```typescript title="setup-prizes.ts"
+const prizes = [
+  { name: "Best Overall", type: "favorite" },
+  { name: "Most Creative", type: "favorite" },
+  { name: "Best Technical", type: "favorite" },
+]
+
+for (const p of prizes) {
+  await fetch(
+    `${BASE_URL}/api/dashboard/hackathons/${id}/prizes`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(p),
+    }
+  )
+}
+```
+
+2. **Judges pick favorites** for each prize
+
+```typescript title="judge-picks.ts"
+await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/judging/picks`,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      prizeId: "prize_001",
+      submissionId: "sub_xyz456",
+      rank: 1,
+      reason: "Most polished end-to-end experience",
+    }),
+  }
+)
+```
+
+3. **View aggregated results** as the organizer
+
+```typescript title="view-pick-results.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${id}/judging/pick-results`,
+  {
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+
+const { results } = await res.json()
+```
+
+### When to Use Subjective
+
+- Fewer than 10 submissions
+- Prize categories are opinion-based ("Most Creative", "Crowd Favorite")
+- You want a faster judging process
+- Rankings don't need numeric justification
+
+## Anonymous Judging
+
+Both modes support anonymous judging. When enabled, team names are hidden from judges so they evaluate submissions purely on merit.
+
+```typescript title="enable-anonymous.ts"
+await fetch(`${BASE_URL}/api/dashboard/hackathons/${id}/settings`, {
+  method: "PATCH",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ anonymousJudging: true }),
+})
+```
+
+## Best Practices
+
+1. **Set up criteria before adding judges** so judges know what to evaluate from the start
+2. **Use auto-assign** to distribute submissions evenly and avoid conflicts of interest
+3. **Enable anonymous judging** for larger events to reduce bias
+4. **Monitor progress** — check the assignments endpoint for completion stats before calculating results
+5. **Recalculate as needed** — if you add or remove judges, recalculate results before publishing

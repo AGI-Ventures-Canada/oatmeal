@@ -1,0 +1,323 @@
+---
+title: Registration & Teams API
+description: Register for hackathons, manage teams, and handle team invitations via the REST API.
+---
+
+The Registration & Teams API handles participant registration, team formation, and team invitations for hackathons.
+
+## Endpoints
+
+### Public (Clerk session)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/public/hackathons/:slug/register` | Register for a hackathon |
+| `GET` | `/api/public/hackathons/:slug/registration` | Get registration status |
+| `GET` | `/api/public/invitations/:token` | Get invitation details |
+| `POST` | `/api/public/invitations/:token/accept` | Accept a team invitation |
+| `POST` | `/api/public/invitations/:token/decline` | Decline a team invitation |
+
+### Dashboard (Clerk session only)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/dashboard/teams/:teamId/invitations` | Send a team invitation |
+| `GET` | `/api/dashboard/teams/:teamId/invitations` | List team invitations |
+| `DELETE` | `/api/dashboard/teams/:teamId/invitations/:id` | Cancel an invitation |
+
+<Callout type="info">
+Team invitation endpoints require a Clerk session (not API keys) since they are participant-facing actions.
+</Callout>
+
+## Register for a Hackathon
+
+`POST /api/public/hackathons/:slug/register` — requires Clerk session.
+
+Registers the current user for a hackathon. A team is automatically created with the user as captain.
+
+```typescript title="register.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/register`,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      latitude: 43.6532,
+      longitude: -79.3832,
+    }),
+  }
+)
+
+const { participantId, teamId } = await res.json()
+console.log("Registered:", participantId)
+console.log("Team:", teamId)
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `latitude` | `number` | No | Location latitude (for in-person verification) |
+| `longitude` | `number` | No | Location longitude (for in-person verification) |
+
+### Response
+
+```json title="response.json"
+{
+  "success": true,
+  "participantId": "part_abc123",
+  "teamId": "team_xyz456"
+}
+```
+
+### Error Codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `not_authenticated` | Sign in required |
+| 404 | `hackathon_not_found` | Hackathon does not exist |
+| 409 | `already_registered` | User is already registered |
+| 400 | — | Registration is not open or location verification failed |
+
+## Check Registration Status
+
+`GET /api/public/hackathons/:slug/registration` — optional Clerk session.
+
+Returns the participant count and whether the current user is registered.
+
+```typescript title="check-registration.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/registration`,
+  { credentials: "include" }
+)
+
+const { participantCount, isRegistered } = await res.json()
+console.log(`${participantCount} registered`)
+console.log("You are registered:", isRegistered)
+```
+
+### Response
+
+```json title="response.json"
+{
+  "participantCount": 87,
+  "isRegistered": true
+}
+```
+
+When not authenticated, `isRegistered` is `null`.
+
+## Send a Team Invitation
+
+`POST /api/dashboard/teams/:teamId/invitations` — requires Clerk session.
+
+Sends an email invitation to join a team. Rate limited to 10 invitations per minute per team.
+
+```typescript title="send-invitation.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/teams/${teamId}/invitations`,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      hackathonId: "hack_abc123",
+      email: "teammate@example.com",
+      inviterName: "Alex",
+    }),
+  }
+)
+
+const invitation = await res.json()
+console.log("Invitation sent:", invitation.id)
+console.log("Email sent:", invitation.emailSent)
+console.log("Expires:", invitation.expiresAt)
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `hackathonId` | `string` | Yes | Hackathon ID |
+| `email` | `string` | Yes | Invitee's email address |
+| `inviterName` | `string` | No | Display name of the person inviting |
+
+### Response
+
+```json title="response.json"
+{
+  "id": "inv_abc123",
+  "email": "teammate@example.com",
+  "expiresAt": "2026-03-25T00:00:00Z",
+  "emailSent": true
+}
+```
+
+## List Team Invitations
+
+`GET /api/dashboard/teams/:teamId/invitations` — requires Clerk session.
+
+```typescript title="list-invitations.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/teams/${teamId}/invitations?status=pending`,
+  { credentials: "include" }
+)
+
+const { invitations } = await res.json()
+
+for (const inv of invitations) {
+  console.log(`${inv.email} - ${inv.status} (expires ${inv.expiresAt})`)
+}
+```
+
+### Query Parameters
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `status` | `string` | No | Filter by status: `pending`, `accepted`, `declined`, `expired`, `cancelled` |
+
+### Response
+
+```json title="response.json"
+{
+  "invitations": [
+    {
+      "id": "inv_abc123",
+      "email": "teammate@example.com",
+      "status": "pending",
+      "expiresAt": "2026-03-25T00:00:00Z",
+      "createdAt": "2026-03-18T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Cancel an Invitation
+
+`DELETE /api/dashboard/teams/:teamId/invitations/:invitationId` — requires Clerk session.
+
+```typescript title="cancel-invitation.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/teams/${teamId}/invitations/${invitationId}`,
+  {
+    method: "DELETE",
+    credentials: "include",
+  }
+)
+
+const { success } = await res.json()
+```
+
+## Get Invitation Details
+
+`GET /api/public/invitations/:token` — no authentication required.
+
+Retrieve invitation details by token. Used to show the invitation page before the invitee accepts or declines.
+
+```typescript title="get-invitation.ts"
+const res = await fetch(`${BASE_URL}/api/public/invitations/${token}`)
+
+const invitation = await res.json()
+console.log(`Join ${invitation.teamName} for ${invitation.hackathonName}`)
+console.log("Status:", invitation.status)
+```
+
+### Response
+
+```json title="response.json"
+{
+  "id": "inv_abc123",
+  "status": "pending",
+  "teamName": "Team Alpha",
+  "hackathonName": "AI Innovation Challenge 2026",
+  "hackathonSlug": "ai-innovation-challenge-2026",
+  "hackathonStatus": "registration_open",
+  "email": "teammate@example.com",
+  "expiresAt": "2026-03-25T00:00:00Z"
+}
+```
+
+## Accept an Invitation
+
+`POST /api/public/invitations/:token/accept` — requires Clerk session.
+
+The authenticated user's email must match the invitation email.
+
+```typescript title="accept-invitation.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/invitations/${token}/accept`,
+  {
+    method: "POST",
+    credentials: "include",
+  }
+)
+
+const { teamId, hackathonSlug } = await res.json()
+console.log("Joined team:", teamId)
+console.log("Hackathon:", hackathonSlug)
+```
+
+### Response
+
+```json title="response.json"
+{
+  "success": true,
+  "teamId": "team_xyz456",
+  "hackathonSlug": "ai-innovation-challenge-2026"
+}
+```
+
+## Decline an Invitation
+
+`POST /api/public/invitations/:token/decline` — requires Clerk session.
+
+```typescript title="decline-invitation.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/invitations/${token}/decline`,
+  {
+    method: "POST",
+    credentials: "include",
+  }
+)
+
+const { success } = await res.json()
+```
+
+## Full Example
+
+```typescript title="full-example.ts"
+async function registerAndInviteTeam(hackathonSlug: string) {
+  const regRes = await fetch(
+    `${BASE_URL}/api/public/hackathons/${hackathonSlug}/register`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    }
+  )
+
+  const { teamId } = await regRes.json()
+
+  const teammates = ["alice@example.com", "bob@example.com"]
+
+  for (const email of teammates) {
+    const invRes = await fetch(
+      `${BASE_URL}/api/dashboard/teams/${teamId}/invitations`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          hackathonId: "hack_abc123",
+          email,
+          inviterName: "Team Captain",
+        }),
+      }
+    )
+
+    const inv = await invRes.json()
+    console.log(`Invited ${email}: ${inv.emailSent ? "sent" : "queued"}`)
+  }
+}
+```

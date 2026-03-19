@@ -1,4 +1,19 @@
 {
   "title": "Guides",
-  "pages": ["webhooks", "cli-organizer", "cli-browsing", "cli-judging", "cli-automation"]
+  "pages": [
+    "webhooks",
+    "judging-modes",
+    "results-leaderboard",
+    "submissions",
+    "crowd-voting",
+    "sponsor-management",
+    "luma-import",
+    "organization-setup",
+    "api-keys-setup",
+    "---",
+    "cli-organizer",
+    "cli-browsing",
+    "cli-judging",
+    "cli-automation"
+  ]
 }
