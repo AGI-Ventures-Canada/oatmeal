@@ -5,6 +5,7 @@ description: Advanced Next.js patterns - middleware, Server Actions, caching wit
 license: MIT
 allowed-tools: WebFetch
 metadata:
+  internal: true
   author: clerk
   version: "2.1.0"
 ---

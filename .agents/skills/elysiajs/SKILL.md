@@ -2,6 +2,8 @@
 internal: true
 name: elysiajs
 description: Create backend with ElysiaJS, a type-safe, high-performance framework.
+metadata:
+  internal: true
 ---
 internal: true
 

@@ -54,6 +54,14 @@ lib/**/*.d.ts.map
 specs.md
 examples/
 
+# Claude Code worktrees
+.claude/worktrees/
+
+# IDE / tool config
+.continue/
+.factory/
+cli.json
+
 # supabase local
 supabase/.branches
 supabase/.temp

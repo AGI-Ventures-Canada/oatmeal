@@ -5,6 +5,7 @@ description: Custom authentication flows and component appearance - hooks (useSi
 allowed-tools: WebFetch
 license: MIT
 metadata:
+  internal: true
   author: clerk
   version: "2.1.0"
 ---

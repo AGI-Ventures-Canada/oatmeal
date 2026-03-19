@@ -5,6 +5,7 @@ description: Clerk Organizations for B2B SaaS - create multi-tenant apps with or
 allowed-tools: WebFetch
 license: MIT
 metadata:
+  internal: true
   author: clerk
   version: "2.0.0"
 ---

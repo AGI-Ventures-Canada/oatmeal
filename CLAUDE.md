@@ -100,6 +100,15 @@ When developers include external documentation links in requests, save them to t
 | anthropic.com | lib/agents/CLAUDE.md |
 | luma.com, docs.luma.com | lib/integrations/CLAUDE.md |
 
+### CLAUDE.md / AGENTS.md Symlink Convention
+
+Every directory that contains agent instructions must expose them through both `CLAUDE.md` and `AGENTS.md`, with one filename symlinked to the other so the content stays identical across tools.
+
+- When creating a new `CLAUDE.md`, also create `AGENTS.md` in the same directory as a symlink to it: `ln -s CLAUDE.md AGENTS.md`
+- When creating a new `AGENTS.md`, also create `CLAUDE.md` in the same directory as a symlink to it: `ln -s AGENTS.md CLAUDE.md`
+- Never maintain `CLAUDE.md` and `AGENTS.md` as separate standalone files with duplicated content
+- If one of the two files already exists without the other, add the missing counterpart as a symlink instead of copying the file
+
 ### Claude Skills
 
 Skills in `.claude/skills/`:
@@ -108,6 +117,8 @@ Skills in `.claude/skills/`:
 #### Hackathon Skills (`skills/`)
 
 Hackathon-specific AI agent skills live in `skills/` at the project root, distributed via [skills.sh](https://skills.sh). These are **not** internal dev skills — they're public, installable skills that any AI agent can use to interact with the Oatmeal platform or get hackathon guidance.
+
+`npx skills add` scans agent-specific skill directories like `.agents/skills/` and `.claude/skills/` too, so public installable skills must live in `skills/`, while repo-local helper skills outside `skills/` must set `metadata.internal: true`.
 
 **Install (for external users):**
 ```bash
@@ -392,6 +403,10 @@ it("example test", async () => {
 For RPC calls, use `setMockRpcImplementation()` instead.
 
 ## Git Workflow
+
+### Always Commit All Changes
+
+**When committing, stage and include ALL changes in the working tree.** Do not cherry-pick only the files that seem related to the current task — treat every uncommitted change as part of the same work unit. Leaving behind orphaned changes clutters future diffs and risks losing work.
 
 ### Run CI Checks Before Pushing
 
