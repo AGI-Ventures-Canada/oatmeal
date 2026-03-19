@@ -98,7 +98,7 @@ describe("CreateHackathonMenu", () => {
       fireEvent.click(screen.getByTestId("trigger"))
 
       await waitFor(() => {
-        expect(screen.getByText(/Choose how you want to start/i)).toBeDefined()
+        expect(screen.getByText(/Choose a starting point/i)).toBeDefined()
       })
     })
   })
@@ -168,7 +168,7 @@ describe("CreateHackathonMenu", () => {
 
       await waitFor(() => {
         expect(mockSetActive).toHaveBeenCalledWith({ organization: "org_1" })
-        expect(screen.getByText(/Choose how you want to start/i)).toBeDefined()
+        expect(screen.getByText(/Choose a starting point/i)).toBeDefined()
       })
     })
 
@@ -195,7 +195,7 @@ describe("CreateHackathonMenu", () => {
       fireEvent.click(screen.getByTestId("simulate-org-created"))
 
       await waitFor(() => {
-        expect(screen.getByText(/Choose how you want to start/i)).toBeDefined()
+        expect(screen.getByText(/Choose a starting point/i)).toBeDefined()
       })
     })
   })
