@@ -44,6 +44,8 @@ Interactive documentation is available at `/docs` with:
 
 `CLAUDE.md` and `AGENTS.md` expose the same instructions for local development tools. In any directory that has agent guidance, one filename is a symlink to the other so different tools can read the same rules without duplicating content.
 
+Install this repo's hackathon skills with `npx skills add AGI-Ventures-Canada/oatmeal` to manage the platform from any AI coding agent (Claude Code, Cursor, etc.).
+
 Public installable skills live in `skills/`. Repo-local helper skills live in agent-specific folders and are meant to support local development inside this repository.
 
 ## New Developer Setup
