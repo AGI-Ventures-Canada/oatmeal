@@ -28,16 +28,21 @@ import { InstallSkillButton } from "@/components/install-skill-button"
 import { CreateOrganizationDialog } from "@/components/create-organization-dialog"
 
 type NavSection = {
-  id?: string
+  id: string
   title: string
   href?: string
   children?: { title: string; href: string }[]
 }
 
+const ORG_SWITCHER_ID = "org-switcher"
+const HACKATHONS_ID = "hackathons"
+const MANAGE_ID = "manage"
+
 const navSections: NavSection[] = [
-  { title: "Dashboard", href: "/home" },
-  { title: "Browse", href: "/browse" },
+  { id: "dashboard", title: "Dashboard", href: "/home" },
+  { id: "browse", title: "Browse", href: "/browse" },
   {
+    id: HACKATHONS_ID,
     title: "Hackathons",
     children: [
       { title: "Participating", href: "/home?tab=participating" },
@@ -47,6 +52,7 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    id: MANAGE_ID,
     title: "Manage",
     children: [
       { title: "Settings", href: "/settings" },
@@ -89,7 +95,7 @@ export function MobileHeader() {
   }, [open])
 
   const orgSection: NavSection = {
-    id: "org-switcher",
+    id: ORG_SWITCHER_ID,
     title: organization?.name || "Personal Workspace",
     children: [],
   }
@@ -182,7 +188,7 @@ export function MobileHeader() {
             {navSections.map((section) =>
               section.children ? (
                 <button
-                  key={section.title}
+                  key={section.id}
                   type="button"
                   onClick={() => setActiveSection(section)}
                   className="flex items-center justify-between py-5 px-3 -mx-3 rounded-lg text-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
@@ -192,7 +198,7 @@ export function MobileHeader() {
                 </button>
               ) : (
                 <Link
-                  key={section.title}
+                  key={section.id}
                   href={section.href!}
                   className="py-5 px-3 -mx-3 rounded-lg text-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
                 >
@@ -205,7 +211,7 @@ export function MobileHeader() {
           {/* Sub-level: Organization switcher */}
           <nav
             className={`absolute inset-0 flex flex-col px-5 overflow-y-auto transition-transform duration-250 ease-in-out ${
-              activeSection?.id === "org-switcher" ? "translate-x-0" : "translate-x-full"
+              activeSection?.id === ORG_SWITCHER_ID ? "translate-x-0" : "translate-x-full"
             }`}
           >
             <button
@@ -282,9 +288,9 @@ export function MobileHeader() {
             .filter((s) => s.children)
             .map((section) => (
               <nav
-                key={section.title}
+                key={section.id}
                 className={`absolute inset-0 flex flex-col px-5 overflow-y-auto transition-transform duration-250 ease-in-out ${
-                  activeSection?.title === section.title ? "translate-x-0" : "translate-x-full"
+                  activeSection?.id === section.id ? "translate-x-0" : "translate-x-full"
                 }`}
               >
                 <button
@@ -304,7 +310,7 @@ export function MobileHeader() {
                     {child.title}
                   </Link>
                 ))}
-                {section.title === "Hackathons" && (
+                {section.id === HACKATHONS_ID && (
                   <CreateHackathonMenu
                     trigger={
                       <button
@@ -317,7 +323,7 @@ export function MobileHeader() {
                     }
                   />
                 )}
-                {section.title === "Manage" && (
+                {section.id === MANAGE_ID && (
                   <InstallSkillButton
                     trigger={
                       <button
