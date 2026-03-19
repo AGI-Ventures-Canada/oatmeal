@@ -264,7 +264,7 @@ describe("MobileHeader", () => {
       expect(screen.getByText("API Docs")).toBeDefined()
     })
 
-    it("shows Create Hackathon in Hackathons sub-panel", () => {
+    it("shows Create Event in Hackathons sub-panel", () => {
       openMenu()
       const rootNav = getOverlay().querySelector("nav")!
       const hackathonsBtn = within(rootNav).getAllByText("Hackathons")[0]
@@ -272,6 +272,7 @@ describe("MobileHeader", () => {
       fireEvent.click(hackathonsBtn)
 
       expect(screen.getByTestId("create-hackathon-menu")).toBeDefined()
+      expect(screen.getByText("Create Event")).toBeDefined()
     })
 
     it("shows Install Skill in Manage sub-panel", () => {

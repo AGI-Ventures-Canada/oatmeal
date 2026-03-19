@@ -73,6 +73,7 @@ Create a new hackathon. Prompts interactively if flags omitted in TTY.
 | `--name` | Yes | Hackathon name |
 | `--slug` | Yes | URL-safe identifier (auto-suggested from name in interactive mode) |
 | `--description` | No | Short description |
+| `--from-url` | No | Import a hackathon from a supported public event page URL (`luma.com` / `lu.ma`). When used, the CLI creates the hackathon from the external event data instead of the scratch flow. |
 
 ### `hackathon hackathons get <id-or-slug>`
 

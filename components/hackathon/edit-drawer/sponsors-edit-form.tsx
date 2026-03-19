@@ -1218,10 +1218,12 @@ export function SponsorsEditForm({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="title">Title</SelectItem>
                         <SelectItem value="none">No Tier</SelectItem>
                         <SelectItem value="gold">Gold</SelectItem>
                         <SelectItem value="silver">Silver</SelectItem>
                         <SelectItem value="bronze">Bronze</SelectItem>
+                        <SelectItem value="partner">Partner</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button

@@ -1,7 +1,13 @@
-"use client"
+"use client";
 
-import { type ReactNode, useState } from "react"
-import { Check, Copy, Download, Terminal } from "lucide-react"
+import { type ReactNode, useState } from "react";
+import { Check, Copy, Download, Terminal } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Dialog,
   DialogContent,
@@ -9,23 +15,23 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
-const INSTALL_COMMAND = "npx skills add AGI-Ventures-Canada/oatmeal"
+const INSTALL_COMMAND = "npx skills add AGI-Ventures-Canada/oatmeal";
 
 interface InstallSkillButtonProps {
-  trigger?: ReactNode
+  trigger?: ReactNode;
 }
 
 export function InstallSkillButton({ trigger }: InstallSkillButtonProps) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(INSTALL_COMMAND)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    await navigator.clipboard.writeText(INSTALL_COMMAND);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <Dialog>
@@ -39,22 +45,26 @@ export function InstallSkillButton({ trigger }: InstallSkillButtonProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Install Oatmeal Skills</DialogTitle>
+          <DialogTitle>Manage Hackathons from Your AI Agent</DialogTitle>
           <DialogDescription>
-            Add hackathon management skills to your AI agent. Skills extend your
-            agent&apos;s capabilities with hackathon-specific knowledge and
-            actions.
+            Add this skill to create and manage hackathons from Claude Code or
+            your agent of choice.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 rounded-lg bg-muted p-3 font-mono text-sm">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 overflow-hidden rounded-lg border bg-muted p-3 font-mono text-sm">
             <Terminal className="size-4 shrink-0 text-muted-foreground" />
-            <code className="flex-1 break-all">{INSTALL_COMMAND}</code>
+            <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap">
+              {INSTALL_COMMAND}
+            </code>
             <Button
               variant="ghost"
               size="icon"
               className="size-8 shrink-0"
               onClick={handleCopy}
+              aria-label={
+                copied ? "Copied install command" : "Copy install command"
+              }
             >
               {copied ? (
                 <Check className="size-4" />
@@ -63,12 +73,23 @@ export function InstallSkillButton({ trigger }: InstallSkillButtonProps) {
               )}
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Run this command in your project directory to install the Oatmeal
-            hackathon skills. Requires Node.js 18+.
-          </p>
+          <Accordion type="single" collapsible>
+            <AccordionItem value="troubleshooting">
+              <AccordionTrigger>Troubleshooting</AccordionTrigger>
+              <AccordionContent>
+                <p>
+                  Run the command from the project directory where you want the
+                  skill available.
+                </p>
+                <p>
+                  If <code>npx skills</code> is unavailable, use Node.js 18 or
+                  newer.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

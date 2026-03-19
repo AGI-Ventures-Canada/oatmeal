@@ -6,20 +6,15 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+import { Dialog } from "@/components/ui/dialog"
 import {
   Field,
   FieldLabel,
   FieldDescription,
   FieldGroup,
 } from "@/components/ui/field"
-import { Check, Loader2, Send, Pencil, Lock, Upload, X, ImageIcon } from "lucide-react"
+import { SteppedDialogContent } from "@/components/ui/stepped-dialog-content"
+import { Loader2, Send, Pencil, Lock, Upload, X, ImageIcon } from "lucide-react"
 import type { HackathonStatus, Submission } from "@/lib/db/hackathon-types"
 import {
   normalizeOptionalUrl,
@@ -527,64 +522,35 @@ export function SubmissionButton({
       </Button>
 
       <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {submission ? "Edit Your Submission" : "Submit Your Project"}
-            </DialogTitle>
-            <DialogDescription>
-              {submission
-                ? "Update your project for the competition."
-                : "Submit your hackathon project to the competition."}
-            </DialogDescription>
-          </DialogHeader>
-
+        <SteppedDialogContent
+          currentStep={currentStep}
+          description={
+            submission
+              ? "Update your project for the competition."
+              : "Submit your hackathon project to the competition."
+          }
+          onStepChange={(index) => {
+            setError(null)
+            setCurrentStep(index)
+          }}
+          stepColumns={5}
+          steps={submissionSteps.map((step) => ({
+            key: step.key,
+            label: step.label,
+            complete:
+              step.key === "title"
+                ? title.trim().length > 0
+                : step.key === "githubUrl"
+                  ? githubUrl.trim().length > 0
+                  : step.key === "liveAppUrl"
+                    ? liveAppUrl.trim().length > 0
+                    : step.key === "description"
+                      ? description.trim().length > 0
+                      : screenshotPreview !== null,
+          }))}
+          title={submission ? "Edit Your Submission" : "Submit Your Project"}
+        >
           <form onSubmit={handleFormSubmit} onKeyDown={handleKeyDown} className="space-y-4" autoComplete="off">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                Step {currentStep + 1} of {submissionSteps.length}
-              </span>
-              <span>{Math.round(((currentStep + 1) / submissionSteps.length) * 100)}%</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {submissionSteps.map((step, index) => {
-                const isCurrent = currentStep === index
-                const isFilled =
-                  step.key === "title"
-                    ? title.trim().length > 0
-                    : step.key === "githubUrl"
-                      ? githubUrl.trim().length > 0
-                      : step.key === "liveAppUrl"
-                        ? liveAppUrl.trim().length > 0
-                        : step.key === "description"
-                          ? description.trim().length > 0
-                          : screenshotPreview !== null
-
-                return (
-                  <Button
-                    key={step.key}
-                    type="button"
-                    variant={isCurrent ? "secondary" : "outline"}
-                    className="h-auto flex-col items-start gap-1 py-2"
-                    aria-label={`Go to ${step.label} step`}
-                    onClick={() => {
-                      setError(null)
-                      setCurrentStep(index)
-                    }}
-                  >
-                    <span className="flex items-center gap-2 text-sm">
-                      {isFilled ? <Check className="size-3.5" /> : <span>{index + 1}</span>}
-                      <span>{step.label}</span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {isFilled ? "Filled" : "Empty"}
-                    </span>
-                  </Button>
-                )
-              })}
-            </div>
-
             <FieldGroup>
               {currentStep === 0 && (
                 <Field>
@@ -624,6 +590,7 @@ export function SubmissionButton({
                   />
                 </Field>
               )}
+
 
               {currentStep === 2 && (
                 <Field>
@@ -769,7 +736,7 @@ export function SubmissionButton({
               </Button>
             </div>
           </form>
-        </DialogContent>
+        </SteppedDialogContent>
       </Dialog>
     </>
   )

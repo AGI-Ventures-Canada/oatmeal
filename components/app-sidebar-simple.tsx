@@ -304,7 +304,7 @@ export function AppSidebarSimple() {
                       trigger={
                         <SidebarMenuButton className="h-10">
                           <Plus />
-                          <span className="text-sm">Create Hackathon</span>
+                          <span className="text-sm">Create Event</span>
                         </SidebarMenuButton>
                       }
                     />

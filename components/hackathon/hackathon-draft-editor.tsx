@@ -7,7 +7,7 @@ import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon
 import { SignInRequiredDialog } from "@/components/sign-in-required-dialog"
 import { OrgGateDialog } from "@/components/org-gate-dialog"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Check, Copy, Loader2 } from "lucide-react"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
 
 const STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000
@@ -43,7 +43,7 @@ type HackathonDraftEditorProps = {
   initialState: DraftState
   storageKey: string
   onSubmit: (state: DraftState) => Promise<{ slug: string }>
-  sourceLabel?: string
+  sourceUrl?: string
   signInDescription?: string
 }
 
@@ -124,11 +124,21 @@ function loadSavedState(storageKey: string): DraftState | null {
   }
 }
 
+function formatSourceDisplayUrl(sourceUrl: string): string {
+  try {
+    const url = new URL(sourceUrl)
+    const path = `${url.pathname}${url.search}${url.hash}`.replace(/\/$/, "")
+    return `${url.hostname}${path}`
+  } catch {
+    return sourceUrl.replace(/^https?:\/\//, "")
+  }
+}
+
 export function HackathonDraftEditor({
   initialState,
   storageKey,
   onSubmit,
-  sourceLabel,
+  sourceUrl,
   signInDescription = "Your edits have been saved. Sign in to continue.",
 }: HackathonDraftEditorProps) {
   const router = useRouter()
@@ -142,11 +152,21 @@ export function HackathonDraftEditor({
   const [error, setError] = useState<string | null>(null)
   const [showSignInDialog, setShowSignInDialog] = useState(false)
   const [orgGateOpen, setOrgGateOpen] = useState(false)
+  const [sourceCopied, setSourceCopied] = useState(false)
   const pendingSubmit = useRef(false)
+  const copyTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify({ state, savedAt: Date.now() }))
   }, [state, storageKey])
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current !== null) {
+        window.clearTimeout(copyTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const hackathon = stateToHackathon(state)
 
@@ -200,6 +220,7 @@ export function HackathonDraftEditor({
       if ("locationType" in data) next.locationType = data.locationType as DraftState["locationType"]
       if ("locationName" in data) next.locationName = data.locationName as string | null
       if ("locationUrl" in data) next.locationUrl = data.locationUrl as string | null
+      if ("imageUrl" in data) next.imageUrl = data.imageUrl as string | null
       if ("sponsors" in data) next.sponsors = data.sponsors as DraftSponsor[]
       if ("rules" in data) next.rules = data.rules as string | null
       return next
@@ -207,35 +228,73 @@ export function HackathonDraftEditor({
     return true
   }, [])
 
+  const handleCopySource = useCallback(async () => {
+    if (!sourceUrl) {
+      return
+    }
+
+    await navigator.clipboard.writeText(sourceUrl)
+    setSourceCopied(true)
+
+    if (copyTimeoutRef.current !== null) {
+      window.clearTimeout(copyTimeoutRef.current)
+    }
+
+    copyTimeoutRef.current = window.setTimeout(() => {
+      setSourceCopied(false)
+      copyTimeoutRef.current = null
+    }, 2000)
+  }, [sourceUrl])
+
+  const sourceDisplayUrl = sourceUrl ? formatSourceDisplayUrl(sourceUrl) : null
+
   return (
     <div>
       <HackathonPreviewClient
         hackathon={hackathon}
         isEditable={true}
         onFormSave={handleFormSave}
+        onBannerChange={(imageUrl) => {
+          setState((prev) => ({ ...prev, imageUrl }))
+        }}
         onAuthRequired={!isSignedIn ? () => setShowSignInDialog(true) : undefined}
       />
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-full shadow-xl bg-background backdrop-blur px-2 py-1.5">
-        {sourceLabel && (
-          <span className="text-xs text-muted-foreground pl-3 hidden sm:inline">
-            {sourceLabel}
-          </span>
-        )}
-        {error && (
-          <span className="text-xs text-destructive">{error}</span>
-        )}
-        <Button
-          size="lg"
-          className="rounded-full px-6 text-base"
-          onClick={handleSubmit}
-          disabled={isSubmitting || !state.name.trim()}
-        >
-          {isSubmitting ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            "Create Hackathon"
+      <div className="fixed inset-x-0 bottom-4 z-50 px-4 sm:bottom-6">
+        <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-3 rounded-2xl border bg-background/95 px-3 py-3 shadow-xl backdrop-blur sm:px-4">
+          {sourceDisplayUrl && (
+            <div className="flex w-full items-center gap-2 rounded-full border bg-muted/50 px-3 py-2">
+              <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground" title={sourceUrl}>
+                {sourceDisplayUrl}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="rounded-full"
+                onClick={() => void handleCopySource()}
+                aria-label={sourceCopied ? "Source URL copied" : "Copy source URL"}
+                title={sourceCopied ? "Source URL copied" : "Copy source URL"}
+              >
+                {sourceCopied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+              </Button>
+            </div>
           )}
-        </Button>
+          {error && (
+            <p className="text-center text-sm text-destructive">{error}</p>
+          )}
+          <Button
+            size="lg"
+            className="rounded-full px-8 text-base"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !state.name.trim()}
+          >
+            {isSubmitting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              "Create Event"
+            )}
+          </Button>
+        </div>
       </div>
       <SignInRequiredDialog
         open={showSignInDialog}
