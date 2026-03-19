@@ -1,8 +1,22 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test"
 
 const mockCreateHackathonFromImport = mock(() => Promise.resolve(null))
+const mockCreateSponsorsFromImport = mock(() => Promise.resolve())
+const mockCreatePrizesFromImport = mock(() => Promise.resolve())
 mock.module("@/lib/services/luma-import-create", () => ({
   createHackathonFromImport: mockCreateHackathonFromImport,
+  createSponsorsFromImport: mockCreateSponsorsFromImport,
+  createPrizesFromImport: mockCreatePrizesFromImport,
+}))
+
+const mockExtractLumaEventData = mock(() => Promise.resolve(null))
+mock.module("@/lib/services/luma-import", () => ({
+  extractLumaEventData: mockExtractLumaEventData,
+}))
+
+const mockExtractLumaRichContent = mock(() => Promise.resolve(null))
+mock.module("@/lib/services/luma-extract", () => ({
+  extractLumaRichContent: mockExtractLumaRichContent,
 }))
 
 const mockLogAudit = mock(() => Promise.resolve())
@@ -46,6 +60,10 @@ const { api } = await import("@/lib/api")
 describe("POST /api/dashboard/import/luma", () => {
   beforeEach(() => {
     mockCreateHackathonFromImport.mockClear()
+    mockCreateSponsorsFromImport.mockClear()
+    mockCreatePrizesFromImport.mockClear()
+    mockExtractLumaEventData.mockClear()
+    mockExtractLumaRichContent.mockClear()
     mockLogAudit.mockClear()
     mockTriggerWebhooks.mockClear()
     mockAuth.mockClear()
@@ -92,6 +110,53 @@ describe("POST /api/dashboard/import/luma", () => {
     expect(data.slug).toBe("imported-hackathon")
   })
 
+  it("creates hackathon from generic event-page data when authenticated", async () => {
+    mockAuth.mockResolvedValueOnce({
+      userId: "user-1",
+      orgId: "org-1",
+      orgRole: "org:admin",
+    })
+
+    mockGetOrCreateTenant.mockResolvedValueOnce({ id: "tenant-1" })
+
+    mockCreateHackathonFromImport.mockResolvedValueOnce({
+      id: "h-generic",
+      name: "Imported Event Page",
+      slug: "imported-event-page",
+    })
+
+    const res = await api.handle(
+      new Request("http://localhost/api/dashboard/import/event-page", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Imported Event Page",
+          description: "From Eventbrite",
+          startsAt: "2026-06-08T09:00:00",
+          endsAt: "2026-06-08T20:00:00",
+          locationType: "in_person",
+          locationName: "Ottawa",
+          locationUrl: null,
+          imageUrl: "https://example.com/banner.png",
+          sponsors: [{ name: "OpenAI", tier: "gold" }],
+          rules: "Bring your laptop.",
+          prizes: [{ name: "Grand Prize", description: null, value: "$5,000" }],
+        }),
+      })
+    )
+
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.id).toBe("h-generic")
+    expect(data.slug).toBe("imported-event-page")
+    expect(mockCreateSponsorsFromImport).toHaveBeenCalledWith("h-generic", [
+      { name: "OpenAI", tier: "gold" },
+    ])
+    expect(mockCreatePrizesFromImport).toHaveBeenCalledWith("h-generic", [
+      { name: "Grand Prize", description: null, value: "$5,000" },
+    ])
+  })
+
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValueOnce({ userId: null, orgId: null, orgRole: null })
 
@@ -104,5 +169,92 @@ describe("POST /api/dashboard/import/luma", () => {
     )
 
     expect(res.status).toBe(401)
+  })
+
+  it("creates hackathon from a Luma URL with API key auth", async () => {
+    mockVerifyApiKey.mockResolvedValueOnce({
+      id: "key-1",
+      tenant_id: "tenant-1",
+      scopes: ["hackathons:write"],
+    })
+
+    mockExtractLumaEventData.mockResolvedValueOnce({
+      name: "Extracted Luma Event",
+      description: "From page",
+      startsAt: "2026-03-15T09:00:00",
+      endsAt: "2026-03-16T17:00:00",
+      locationType: "in_person",
+      locationName: "San Francisco",
+      locationUrl: null,
+      imageUrl: "https://images.lumacdn.com/test.png",
+    })
+
+    mockExtractLumaRichContent.mockResolvedValueOnce({
+      sponsors: [{ name: "OpenAI", tier: "gold" }],
+      rules: "Bring your laptop.",
+      prizes: [{ name: "Grand Prize", description: null, value: "$5,000" }],
+    })
+
+    mockCreateHackathonFromImport.mockResolvedValueOnce({
+      id: "h2",
+      name: "CLI Imported Hackathon",
+      slug: "cli-imported-hackathon",
+    })
+
+    const res = await api.handle(
+      new Request("http://localhost/api/dashboard/import/luma-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer sk_live_test",
+        },
+        body: JSON.stringify({
+          url: "lu.ma/test-hackathon",
+          name: "CLI Imported Hackathon",
+        }),
+      })
+    )
+
+    expect(res.status).toBe(200)
+    expect(mockCreateHackathonFromImport).toHaveBeenCalledWith("tenant-1", {
+      name: "CLI Imported Hackathon",
+      description: "From page",
+      startsAt: "2026-03-15T09:00:00",
+      endsAt: "2026-03-16T17:00:00",
+      locationType: "in_person",
+      locationName: "San Francisco",
+      locationUrl: null,
+      imageUrl: "https://images.lumacdn.com/test.png",
+      rules: "Bring your laptop.",
+    })
+    expect(mockCreateSponsorsFromImport).toHaveBeenCalledWith("h2", [
+      { name: "OpenAI", tier: "gold" },
+    ])
+    expect(mockCreatePrizesFromImport).toHaveBeenCalledWith("h2", [
+      { name: "Grand Prize", description: null, value: "$5,000" },
+    ])
+  })
+
+  it("rejects unsupported non-Luma URLs", async () => {
+    mockVerifyApiKey.mockResolvedValueOnce({
+      id: "key-1",
+      tenant_id: "tenant-1",
+      scopes: ["hackathons:write"],
+    })
+
+    const res = await api.handle(
+      new Request("http://localhost/api/dashboard/import/luma-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer sk_live_test",
+        },
+        body: JSON.stringify({
+          url: "https://example.com/not-supported",
+        }),
+      })
+    )
+
+    expect(res.status).toBe(400)
   })
 })

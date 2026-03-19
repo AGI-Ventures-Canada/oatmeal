@@ -1,7 +1,12 @@
 import { describe, expect, it, mock, beforeEach, afterEach, spyOn } from "bun:test"
 import { parseLoginOptions } from "../../src/commands/login"
+import { AUTH_TIMEOUT_MS } from "../../src/constants"
 
 describe("parseLoginOptions", () => {
+  it("uses a 10 minute auth timeout", () => {
+    expect(AUTH_TIMEOUT_MS).toBe(600_000)
+  })
+
   it("parses --api-key flag", () => {
     const options = parseLoginOptions(["--api-key", "sk_live_test"])
     expect(options.apiKey).toBe("sk_live_test")

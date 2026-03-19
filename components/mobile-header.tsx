@@ -316,7 +316,7 @@ export function MobileHeader() {
                         className="flex items-center gap-3 py-5 px-3 -mx-3 rounded-lg text-xl text-primary hover:bg-accent active:text-primary/80 transition-colors"
                       >
                         <Plus className="size-5" />
-                        Create Hackathon
+                        Create Event
                       </button>
                     }
                   />

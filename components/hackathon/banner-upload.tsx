@@ -31,10 +31,11 @@ import { cn } from "@/lib/utils"
 interface BannerUploadProps {
   hackathonId: string
   currentBannerUrl: string | null
-  onUploadComplete?: (url: string) => void
+  onUploadComplete?: (url: string | null) => void
   onAuthRequired?: () => void
   className?: string
   variant?: "default" | "hero"
+  mode?: "persisted" | "draft"
 }
 
 const ASPECT_RATIO = 1
@@ -95,6 +96,7 @@ export function BannerUpload({
   onAuthRequired,
   className,
   variant = "default",
+  mode = "persisted",
 }: BannerUploadProps) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -107,6 +109,8 @@ export function BannerUpload({
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const isDraft = mode === "draft" || hackathonId === "draft"
+  const draftUploadMessage = "Create the hackathon first to upload a custom banner"
 
   const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels)
@@ -117,6 +121,11 @@ export function BannerUpload({
   function processFile(file: File) {
     if (onAuthRequired) {
       onAuthRequired()
+      return
+    }
+
+    if (isDraft) {
+      setError(draftUploadMessage)
       return
     }
 
@@ -202,6 +211,12 @@ export function BannerUpload({
   }
 
   async function handleDelete() {
+    if (isDraft) {
+      setError(null)
+      onUploadComplete?.(null)
+      return
+    }
+
     setDeleting(true)
     setError(null)
 
@@ -215,7 +230,7 @@ export function BannerUpload({
         throw new Error(data.error || "Failed to delete banner")
       }
 
-      onUploadComplete?.("")
+      onUploadComplete?.(null)
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Delete failed")
@@ -229,6 +244,20 @@ export function BannerUpload({
     setCrop({ x: 0, y: 0 })
     setZoom(1)
     setError(null)
+  }
+
+  function handleDraftUploadAttempt() {
+    if (onAuthRequired) {
+      onAuthRequired()
+      return
+    }
+
+    if (isDraft) {
+      setError(draftUploadMessage)
+      return
+    }
+
+    inputRef.current?.click()
   }
 
   const isHero = variant === "hero"
@@ -283,7 +312,7 @@ export function BannerUpload({
                     size="icon"
                     variant="secondary"
                     className="size-12 rounded-full shadow-lg pointer-events-auto bg-background/80 hover:bg-background backdrop-blur-sm"
-                    onClick={() => inputRef.current?.click()}
+                    onClick={handleDraftUploadAttempt}
                   >
                     <Upload className="size-5" />
                   </Button>
@@ -333,7 +362,7 @@ export function BannerUpload({
         ) : (
           <button
             type="button"
-            onClick={() => onAuthRequired ? onAuthRequired() : inputRef.current?.click()}
+            onClick={handleDraftUploadAttempt}
             className={cn(
               "aspect-square w-full flex flex-col items-center justify-center gap-1.5 border border-dashed bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors",
               isHero

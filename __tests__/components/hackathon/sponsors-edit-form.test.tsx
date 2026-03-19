@@ -184,6 +184,39 @@ describe("SponsorsEditForm", () => {
     expect(screen.getByText("Linked")).toBeDefined();
   });
 
+  it("renders the full sponsor tier list for linked sponsors", () => {
+    render(
+      <SponsorsEditForm
+        hackathonId="h1"
+        initialSponsors={[
+          {
+            id: "s1",
+            hackathon_id: "h1",
+            sponsor_tenant_id: "org-1",
+            tenant_sponsor_id: null,
+            use_org_assets: true,
+            name: "Linked Sponsor",
+            logo_url: null,
+            logo_url_dark: null,
+            website_url: "https://linked.example.com",
+            tier: "partner",
+            display_order: 0,
+            created_at: "2026-03-19T00:00:00.000Z",
+            tenant: {
+              slug: "linked-sponsor",
+              name: "Linked Sponsor",
+              logo_url: "https://cdn.example.com/linked-light.png",
+              logo_url_dark: "https://cdn.example.com/linked-dark.png",
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Title")).toBeDefined();
+    expect(screen.getByText("Partner")).toBeDefined();
+  });
+
   it("lets a manual sponsor search for an org and saves the selected link", async () => {
     render(
       <SponsorsEditForm

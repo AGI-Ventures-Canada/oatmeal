@@ -130,7 +130,7 @@ async function pollForKey(baseUrl: string, deviceToken: string): Promise<string>
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
   }
 
-  throw new Error("Authentication timed out after 5 minutes. Please try again.")
+  throw new Error("Authentication timed out after 10 minutes. Please try again.")
 }
 
 async function validateAndSaveKey(apiKey: string, baseUrl: string): Promise<void> {

@@ -48,7 +48,7 @@ mock.module("@/lib/ai/anthropic", () => ({
   getModelConfig: () => ({}),
 }))
 
-const { extractLumaRichContent } = await import("@/lib/services/luma-extract")
+const { extractEventPageRichContent, extractLumaRichContent } = await import("@/lib/services/luma-extract")
 
 describe("extractLumaRichContent", () => {
   beforeEach(() => {
@@ -133,6 +133,15 @@ describe("extractLumaRichContent", () => {
 
     expect(mockExtract).toHaveBeenCalledWith(
       ["https://luma.com/my-event/sub-path"],
+      expect.objectContaining({ extractDepth: "advanced", format: "markdown" })
+    )
+  })
+
+  it("supports arbitrary event page URLs", async () => {
+    await extractEventPageRichContent("eventbrite.com/e/test-event")
+
+    expect(mockExtract).toHaveBeenCalledWith(
+      ["https://eventbrite.com/e/test-event"],
       expect.objectContaining({ extractDepth: "advanced", format: "markdown" })
     )
   })

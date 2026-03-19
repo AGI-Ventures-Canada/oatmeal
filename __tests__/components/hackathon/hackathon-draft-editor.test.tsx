@@ -13,6 +13,7 @@ globalThis.localStorage = {
 
 const mockPush = mock(() => {})
 const mockSetActive = mock(() => Promise.resolve())
+const mockClipboardWriteText = mock(() => Promise.resolve())
 let mockIsSignedIn = true
 let mockOrganization: { id: string; name: string } | null = { id: "org_1", name: "Test Org" }
 let mockMemberships: Array<{
@@ -50,7 +51,13 @@ mock.module("@/components/ui/dialog", () => ({
 }))
 
 mock.module("@/components/hackathon/preview/hackathon-preview-client", () => ({
-  HackathonPreviewClient: () => <div data-testid="preview">Preview</div>,
+  HackathonPreviewClient: (props: { onBannerChange?: (imageUrl: string | null) => void }) => (
+    <div data-testid="preview">
+      <button type="button" onClick={() => props.onBannerChange?.(null)}>
+        Clear Banner
+      </button>
+    </div>
+  ),
 }))
 
 mock.module("@/components/sign-in-required-dialog", () => ({
@@ -96,7 +103,12 @@ beforeEach(() => {
   mockMemberships = []
   mockSetActive.mockClear()
   mockPush.mockClear()
+  mockClipboardWriteText.mockClear()
   storage.clear()
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    value: { writeText: mockClipboardWriteText },
+    configurable: true,
+  })
 })
 
 afterEach(() => {
@@ -123,12 +135,12 @@ describe("HackathonDraftEditor", () => {
 
   it("renders the create hackathon button", () => {
     renderEditor()
-    expect(screen.getByText("Create Hackathon")).toBeDefined()
+    expect(screen.getByText("Create Event")).toBeDefined()
   })
 
   it("submits when org is active", async () => {
     renderEditor()
-    fireEvent.click(screen.getByText("Create Hackathon"))
+    fireEvent.click(screen.getByText("Create Event"))
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalled()
@@ -147,7 +159,7 @@ describe("HackathonDraftEditor", () => {
 
     it("shows org gate dialog when submitting without org", async () => {
       renderEditor()
-      fireEvent.click(screen.getByText("Create Hackathon"))
+      fireEvent.click(screen.getByText("Create Event"))
 
       await waitFor(() => {
         expect(screen.getByText("Organization Required")).toBeDefined()
@@ -156,7 +168,7 @@ describe("HackathonDraftEditor", () => {
 
     it("lists existing organizations", async () => {
       renderEditor()
-      fireEvent.click(screen.getByText("Create Hackathon"))
+      fireEvent.click(screen.getByText("Create Event"))
 
       await waitFor(() => {
         expect(screen.getByText("Alpha Org")).toBeDefined()
@@ -169,7 +181,7 @@ describe("HackathonDraftEditor", () => {
         mockOrganization = { id: "org_1", name: "Alpha Org" }
       })
       renderEditor()
-      fireEvent.click(screen.getByText("Create Hackathon"))
+      fireEvent.click(screen.getByText("Create Event"))
 
       await waitFor(() => screen.getByText("Alpha Org"))
       fireEvent.click(screen.getByText("Alpha Org"))
@@ -182,7 +194,7 @@ describe("HackathonDraftEditor", () => {
 
     it("auto-submits after creating a new organization", async () => {
       renderEditor()
-      fireEvent.click(screen.getByText("Create Hackathon"))
+      fireEvent.click(screen.getByText("Create Event"))
 
       await waitFor(() => screen.getByText("Create New Organization"))
       fireEvent.click(screen.getByText("Create New Organization"))
@@ -198,7 +210,7 @@ describe("HackathonDraftEditor", () => {
 
     it("does not submit when org gate is dismissed", async () => {
       renderEditor()
-      fireEvent.click(screen.getByText("Create Hackathon"))
+      fireEvent.click(screen.getByText("Create Event"))
 
       await waitFor(() => screen.getByText("Organization Required"))
 
@@ -213,7 +225,7 @@ describe("HackathonDraftEditor", () => {
 
     it("shows sign in dialog when not signed in", async () => {
       renderEditor()
-      fireEvent.click(screen.getByText("Create Hackathon"))
+      fireEvent.click(screen.getByText("Create Event"))
 
       await waitFor(() => {
         expect(screen.getByTestId("sign-in-dialog")).toBeDefined()
@@ -224,7 +236,46 @@ describe("HackathonDraftEditor", () => {
   it("shows error when name is empty", async () => {
     renderEditor({ initialState: { ...defaultState, name: "" } })
 
-    const button = screen.getByText("Create Hackathon")
+    const button = screen.getByText("Create Event")
     expect(button.hasAttribute("disabled")).toBe(true)
+  })
+
+  it("submits the cleared banner state after removing an imported image", async () => {
+    renderEditor({
+      initialState: {
+        ...defaultState,
+        imageUrl: "https://example.com/banner.png",
+      },
+    })
+
+    fireEvent.click(screen.getByText("Clear Banner"))
+    fireEvent.click(screen.getByText("Create Event"))
+
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          imageUrl: null,
+        })
+      )
+    })
+  })
+
+  it("shows a truncated source URL and copies the full URL", async () => {
+    renderEditor({
+      sourceUrl: "https://www.eventbrite.com/e/devops-for-genai-hackathon-ottawa-2026-tickets-1984872192158?aff=ebdssbdestsearch",
+    })
+
+    expect(
+      screen.getByText("www.eventbrite.com/e/devops-for-genai-hackathon-ottawa-2026-tickets-1984872192158?aff=ebdssbdestsearch")
+    ).toBeDefined()
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy source URL" }))
+
+    await waitFor(() => {
+      expect(mockClipboardWriteText).toHaveBeenCalledWith(
+        "https://www.eventbrite.com/e/devops-for-genai-hackathon-ottawa-2026-tickets-1984872192158?aff=ebdssbdestsearch"
+      )
+      expect(screen.getByRole("button", { name: "Source URL copied" })).toBeDefined()
+    })
   })
 })
