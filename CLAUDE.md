@@ -244,6 +244,14 @@ Use only these semantic color classes:
 
 This ensures consistent theming and proper dark mode support.
 
+### Copywriting
+
+- Lead with the user outcome, not the internal feature or brand name
+- Prefer one short sentence over two average ones
+- Keep setup requirements and technical caveats out of first-glance UI copy unless they block the main action
+- Move secondary details into tooltips, help text, accordions, or docs
+- Use job-to-be-done labels like "Manage hackathons from your AI agent" instead of labels like "Install Oatmeal Skills"
+
 ### Supabase
 
 - Use Service Key in API endpoints to bypass RLS policies
@@ -559,6 +567,10 @@ refactor: extract payment logic into service
 ```
 
 This catches style violations, shadcn primitive misuse, dead code, and other issues before they land in a PR.
+
+### Browser Verification
+
+**For any UI change, always verify the result with the `agent-browser` skill before considering the task done.** Do not rely only on static code review, screenshots, or tests when the interface can be exercised in the browser.
 
 ### Required Environment Variables
 

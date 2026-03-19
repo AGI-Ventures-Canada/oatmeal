@@ -61,7 +61,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ThemeSwitcher } from "@/components/theme-switcher"
-import { CreateHackathonDrawer } from "@/components/hackathon/create-hackathon-drawer"
+import { CreateHackathonMenu } from "@/components/hackathon/create-hackathon-menu"
 
 const navItems = [
   { title: "Dashboard", href: "/home", icon: Home },
@@ -286,7 +286,7 @@ export function AppSidebar() {
                             )
                           })}
                           <SidebarMenuSubItem>
-                            <CreateHackathonDrawer
+                            <CreateHackathonMenu
                               trigger={
                                 <SidebarMenuSubButton>
                                   <Plus />

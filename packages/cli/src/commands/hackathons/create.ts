@@ -7,7 +7,14 @@ interface CreateOptions {
   name?: string
   slug?: string
   description?: string
+  fromUrl?: string
   json?: boolean
+}
+
+interface ImportedHackathonResponse {
+  id: string
+  name: string
+  slug: string
 }
 
 export function parseCreateOptions(args: string[]): CreateOptions {
@@ -22,6 +29,9 @@ export function parseCreateOptions(args: string[]): CreateOptions {
         break
       case "--description":
         options.description = args[++i]
+        break
+      case "--from-url":
+        options.fromUrl = args[++i]
         break
       case "--json":
         options.json = true
@@ -40,6 +50,22 @@ export async function runHackathonsCreate(
   let name = options.name
   let slug = options.slug
   let description = options.description
+
+  if (options.fromUrl) {
+    const hackathon = await client.post<ImportedHackathonResponse>("/api/dashboard/import/luma-url", {
+      url: options.fromUrl,
+      name,
+      description,
+    })
+
+    if (options.json) {
+      console.log(formatJson(hackathon))
+      return
+    }
+
+    console.log(formatSuccess(`Imported hackathon "${hackathon.name}" (${hackathon.id})`))
+    return
+  }
 
   if (!name && process.stdout.isTTY) {
     const result = await p.text({ message: "Hackathon name:", validate: (v: string) => (v ? undefined : "Name is required") })

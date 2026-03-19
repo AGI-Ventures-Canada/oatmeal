@@ -7,4 +7,4 @@ export const CONFIG_DIR = join(homedir(), ".hackathon")
 export const CONFIG_FILE = join(CONFIG_DIR, "config.json")
 export const REQUEST_TIMEOUT_MS = 30_000
 export const POLL_INTERVAL_MS = 2_000
-export const AUTH_TIMEOUT_MS = 300_000
+export const AUTH_TIMEOUT_MS = 600_000

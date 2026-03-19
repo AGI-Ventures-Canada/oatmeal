@@ -48,6 +48,7 @@ interface HackathonPreviewClientProps {
   teamInfo?: ParticipantTeamInfo
   publicResults?: PublicResultWithDetails[]
   onFormSave?: (data: Record<string, unknown>) => Promise<boolean>
+  onBannerChange?: (imageUrl: string | null) => void | Promise<void>
   onAuthRequired?: () => void
 }
 
@@ -63,6 +64,7 @@ function HackathonPreviewContent({
   teamInfo = null,
   publicResults = [],
   onFormSave,
+  onBannerChange,
   onAuthRequired,
 }: Omit<HackathonPreviewClientProps, "isEditable">) {
   const { isEditable, editMode, activeSection, openSection, closeDrawer } = useEdit()
@@ -239,7 +241,12 @@ function HackathonPreviewContent({
       hackathonId={hackathon.id}
       currentBannerUrl={bannerUrl}
       variant="hero"
-      onUploadComplete={(url) => setBannerUrl(url || null)}
+      mode={hackathon.id === "draft" ? "draft" : "persisted"}
+      onUploadComplete={(url) => {
+        const nextUrl = url ?? null
+        setBannerUrl(nextUrl)
+        void onBannerChange?.(nextUrl)
+      }}
       onAuthRequired={onAuthRequired}
     />
   ) : null
@@ -540,6 +547,7 @@ export function HackathonPreviewClient({
   teamInfo,
   publicResults,
   onFormSave,
+  onBannerChange,
   onAuthRequired,
 }: HackathonPreviewClientProps) {
   return (
@@ -556,6 +564,7 @@ export function HackathonPreviewClient({
         teamInfo={teamInfo}
         publicResults={publicResults}
         onFormSave={onFormSave}
+        onBannerChange={onBannerChange}
         onAuthRequired={onAuthRequired}
       />
     </EditProvider>

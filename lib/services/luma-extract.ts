@@ -2,8 +2,9 @@ import { tavily } from "@tavily/core"
 import { generateObject } from "ai"
 import { anthropic } from "@/lib/ai/anthropic"
 import { z } from "zod"
+import { normalizeUrl } from "@/lib/utils/url"
 
-const LumaRichContentSchema = z.object({
+const EventPageRichContentSchema = z.object({
   sponsors: z
     .array(
       z.object({
@@ -44,18 +45,19 @@ const LumaRichContentSchema = z.object({
     .describe("List of prizes or awards mentioned on the event page"),
 })
 
-export type LumaRichContent = z.infer<typeof LumaRichContentSchema>
+export type EventPageRichContent = z.infer<typeof EventPageRichContentSchema>
+export type LumaRichContent = EventPageRichContent
 
-export async function extractLumaRichContent(
-  slug: string
-): Promise<LumaRichContent | null> {
+export async function extractEventPageRichContent(
+  inputUrl: string
+): Promise<EventPageRichContent | null> {
   const tavilyApiKey = process.env.TAVILY_API_KEY
   if (!tavilyApiKey) {
     console.warn("TAVILY_API_KEY not set, skipping rich content extraction")
     return null
   }
 
-  const url = `https://luma.com/${slug}`
+  const url = normalizeUrl(inputUrl)
 
   let rawContent: string
   try {
@@ -79,7 +81,7 @@ export async function extractLumaRichContent(
   try {
     const { object } = await generateObject({
       model: anthropic("claude-haiku-4-5-20251001"),
-      schema: LumaRichContentSchema,
+      schema: EventPageRichContentSchema,
       prompt: `Extract sponsors, rules, and prizes from this hackathon/event page content.
 
 Only extract information that is explicitly present in the content. Do not infer or fabricate data.
@@ -99,4 +101,10 @@ ${rawContent}`,
     console.error("LLM structured extraction failed:", err)
     return null
   }
+}
+
+export async function extractLumaRichContent(
+  slug: string
+): Promise<LumaRichContent | null> {
+  return extractEventPageRichContent(`https://luma.com/${slug}`)
 }

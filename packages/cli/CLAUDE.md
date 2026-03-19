@@ -26,6 +26,8 @@ bun cli prizes create <hackathon-id> --name "Best AI App"
 bun cli judging judges list <hackathon-id>
 ```
 
+When testing the CLI from an agent environment, use `agent-browser` to complete the browser-based Clerk sign-in flow if needed. Treat that as part of the real local login path, not as a fallback around the CLI.
+
 The `--base-url` is saved in `~/.hackathon/config.json` after login — you only set it once. To switch back to production later, just `bun cli login` (no flag = default prod URL).
 
 **Prerequisite:** The server must have `ENCRYPTION_KEY` set in `.env.local` (64 hex chars / 32 bytes). CLI login encrypts the generated API key before storing it in `cli_auth_sessions`. Without it, login fails with "Internal server error". Generate with `openssl rand -hex 32`.

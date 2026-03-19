@@ -224,6 +224,22 @@ export function EventHero({
     </div>
   );
 
+  const locationLabel =
+    locationType === "in_person"
+      ? locationName || "In Person"
+      : locationName || locationUrl || "Virtual";
+
+  const LocationIcon = locationType === "in_person" ? MapPin : Video;
+
+  const locationContent = (
+    <div className="flex min-w-0 items-start gap-1.5 text-sm text-muted-foreground text-left">
+      <LocationIcon className="mt-0.5 size-3.5 shrink-0" />
+      <span className="block min-w-0 break-words text-left">
+        {locationLabel}
+      </span>
+    </div>
+  );
+
   const contentColumn = (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 flex-wrap">
@@ -303,20 +319,11 @@ export function EventHero({
               onLocationClick();
             }}
             data-edit-section="location"
-            className="group w-fit rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 scroll-mt-24"
+            className="group max-w-full rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 text-left scroll-mt-24"
           >
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                {locationType === "in_person" ? (
-                  <MapPin className="size-3.5" />
-                ) : (
-                  <Video className="size-3.5" />
-                )}
-                <span>
-                  {locationType === "in_person"
-                    ? locationName || "In Person"
-                    : locationName || locationUrl || "Virtual"}
-                </span>
+            <div className="flex max-w-full items-start gap-2">
+              <div className="min-w-0 flex-1">
+                {locationContent}
               </div>
               <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                 Edit
@@ -324,18 +331,7 @@ export function EventHero({
             </div>
           </button>
         ) : (
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            {locationType === "in_person" ? (
-              <MapPin className="size-3.5" />
-            ) : (
-              <Video className="size-3.5" />
-            )}
-            <span>
-              {locationType === "in_person"
-                ? locationName || "In Person"
-                : locationName || locationUrl || "Virtual"}
-            </span>
-          </div>
+          locationContent
         )
       ) : onLocationClick ? (
         <button
