@@ -24,8 +24,8 @@ export async function runJobsGet(
       { label: "ID", value: job.id },
       { label: "Type", value: job.type },
       { label: "Status", value: job.status },
-      { label: "Created", value: job.created_at },
-      { label: "Completed", value: job.completed_at },
+      { label: "Created", value: job.createdAt },
+      { label: "Completed", value: job.completedAt },
       { label: "Error", value: job.error },
     ])
   )

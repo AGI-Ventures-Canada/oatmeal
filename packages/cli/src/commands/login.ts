@@ -69,6 +69,13 @@ export async function runLogin(args: string[]): Promise<void> {
   const deviceToken = randomBytes(32).toString("hex")
   const authUrl = `${baseUrl}/cli-auth?token=${deviceToken}`
 
+  const initClient = new OatmealClient({ baseUrl })
+  try {
+    await initClient.get("/api/public/cli-auth/poll", { params: { token: deviceToken } })
+  } catch {
+    // Session creation failed — continue anyway, poll loop will retry
+  }
+
   p.log.info(`Opening browser to sign in...`)
   p.log.info(authUrl)
 

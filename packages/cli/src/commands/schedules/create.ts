@@ -60,7 +60,7 @@ export async function runSchedulesCreate(
 
   const schedule = await client.post<Schedule>("/api/dashboard/schedules", {
     name,
-    cron_expression: cron,
+    cronExpression: cron,
   })
 
   if (options.json) {

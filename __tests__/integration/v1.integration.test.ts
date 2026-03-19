@@ -409,7 +409,7 @@ describe("V1 API Routes Integration Tests", () => {
   })
 
   describe("POST /api/v1/webhooks", () => {
-    it("creates webhook successfully", async () => {
+    it("creates webhook successfully from a bare domain", async () => {
       mockResolvePrincipal.mockResolvedValue(mockApiKeyPrincipal)
       mockCreateWebhook.mockResolvedValue({
         webhook: {
@@ -426,7 +426,7 @@ describe("V1 API Routes Integration Tests", () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            url: "https://example.com/webhook",
+            url: "example.com/webhook",
             events: ["hackathon.updated"],
           }),
         })
@@ -436,6 +436,11 @@ describe("V1 API Routes Integration Tests", () => {
       expect(res.status).toBe(200)
       expect(data.id).toBe("wh-new")
       expect(data.secret).toBe("secret-abc123")
+      expect(mockCreateWebhook).toHaveBeenCalledWith({
+        tenantId: mockApiKeyPrincipal.tenantId,
+        url: "https://example.com/webhook",
+        events: ["hackathon.updated"],
+      })
       expect(mockLogAudit).toHaveBeenCalled()
     })
   })

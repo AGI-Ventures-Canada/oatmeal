@@ -1,0 +1,257 @@
+---
+title: Sponsors API
+description: Add, manage, and display hackathon sponsors with tiered visibility via the REST API.
+---
+
+The Sponsors API lets organizers manage sponsor listings with tiered visibility, logos, and display ordering.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/dashboard/hackathons/:id/sponsors` | List sponsors |
+| `POST` | `/api/dashboard/hackathons/:id/sponsors` | Add a sponsor |
+| `PATCH` | `/api/dashboard/hackathons/:id/sponsors/:sponsorId` | Update sponsor |
+| `DELETE` | `/api/dashboard/hackathons/:id/sponsors/:sponsorId` | Remove sponsor |
+| `PATCH` | `/api/dashboard/hackathons/:id/sponsors/reorder` | Reorder sponsors |
+| `POST` | `/api/dashboard/hackathons/:id/sponsors/:sponsorId/logo` | Upload sponsor logo |
+| `DELETE` | `/api/dashboard/hackathons/:id/sponsors/:sponsorId/logo` | Delete sponsor logo |
+
+All endpoints require an API key with `hackathons:read` or `hackathons:write` scope.
+
+## Sponsor Tiers
+
+| Tier | Description |
+|------|-------------|
+| `title` | Title sponsor — most prominent placement |
+| `gold` | Gold tier |
+| `silver` | Silver tier |
+| `bronze` | Bronze tier |
+| `partner` | Partner — non-monetary sponsors |
+
+## Response Types
+
+```typescript title="types.ts"
+interface Sponsor {
+  id: string
+  name: string
+  logoUrl: string | null
+  websiteUrl: string | null
+  tier: "title" | "gold" | "silver" | "bronze" | "partner" | null
+  displayOrder: number
+  sponsorTenantId: string | null
+  tenant: {
+    slug: string
+    name: string
+    logoUrl: string | null
+    logoUrlDark: string | null
+  } | null
+  createdAt: string
+}
+```
+
+## List Sponsors
+
+`GET /api/dashboard/hackathons/:id/sponsors` — requires `hackathons:read` scope.
+
+```typescript title="list-sponsors.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors`,
+  {
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+
+const { sponsors } = await res.json()
+
+for (const s of sponsors) {
+  console.log(`${s.name} (${s.tier ?? "no tier"})`)
+}
+```
+
+## Add a Sponsor
+
+`POST /api/dashboard/hackathons/:id/sponsors` — requires `hackathons:write` scope.
+
+```typescript title="add-sponsor.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors`,
+  {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: "Anthropic",
+      tier: "gold",
+      websiteUrl: "https://anthropic.com",
+    }),
+  }
+)
+
+const { id, name, tier } = await res.json()
+console.log(`Added ${name} as ${tier} sponsor`)
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | Yes | Sponsor name |
+| `tier` | `string` | No | Sponsor tier |
+| `websiteUrl` | `string \| null` | No | Sponsor website |
+| `logoUrl` | `string \| null` | No | Logo URL (or upload via logo endpoint) |
+| `sponsorTenantId` | `string \| null` | No | Link to an Oatmeal organization |
+| `displayOrder` | `number` | No | Display position |
+
+## Update a Sponsor
+
+`PATCH /api/dashboard/hackathons/:id/sponsors/:sponsorId` — requires `hackathons:write` scope.
+
+```typescript title="update-sponsor.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
+  {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ tier: "title" }),
+  }
+)
+```
+
+## Remove a Sponsor
+
+`DELETE /api/dashboard/hackathons/:id/sponsors/:sponsorId` — requires `hackathons:write` scope.
+
+```typescript title="remove-sponsor.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
+  {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+```
+
+## Reorder Sponsors
+
+`PATCH /api/dashboard/hackathons/:id/sponsors/reorder` — requires `hackathons:write` scope.
+
+```typescript title="reorder-sponsors.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/reorder`,
+  {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      sponsorIds: ["sp_001", "sp_002", "sp_003"],
+    }),
+  }
+)
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `sponsorIds` | `string[]` | Yes | Sponsor IDs in desired display order |
+
+## Upload Sponsor Logo
+
+`POST /api/dashboard/hackathons/:id/sponsors/:sponsorId/logo` — requires `hackathons:write` scope.
+
+Accepts PNG, JPEG, WebP, or SVG files up to 5MB. Supports light and dark variants.
+
+```typescript title="upload-sponsor-logo.ts"
+const formData = new FormData()
+formData.append("file", logoFile)
+formData.append("variant", "light")
+
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}/logo`,
+  {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+    body: formData,
+  }
+)
+
+const { url } = await res.json()
+console.log("Logo uploaded:", url)
+```
+
+### Request Body (FormData)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | `File` | Yes | Image file (max 5MB) |
+| `variant` | `"light" \| "dark"` | No | Logo variant (default: `"light"`) |
+
+## Delete Sponsor Logo
+
+`DELETE /api/dashboard/hackathons/:id/sponsors/:sponsorId/logo` — requires `hackathons:write` scope.
+
+```typescript title="delete-sponsor-logo.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}/logo?variant=light`,
+  {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+```
+
+## Full Example
+
+```typescript title="full-example.ts"
+const API_KEY = process.env.OATMEAL_API_KEY!
+const BASE_URL = process.env.OATMEAL_BASE_URL!
+
+async function setupSponsors(hackathonId: string) {
+  const sponsors = [
+    { name: "Anthropic", tier: "title", websiteUrl: "https://anthropic.com" },
+    { name: "Vercel", tier: "gold", websiteUrl: "https://vercel.com" },
+    { name: "Supabase", tier: "gold", websiteUrl: "https://supabase.com" },
+    { name: "Clerk", tier: "silver", websiteUrl: "https://clerk.com" },
+  ]
+
+  const ids: string[] = []
+
+  for (const sponsor of sponsors) {
+    const res = await fetch(
+      `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(sponsor),
+      }
+    )
+    const { id } = await res.json()
+    ids.push(id)
+  }
+
+  await fetch(
+    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/reorder`,
+    {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sponsorIds: ids }),
+    }
+  )
+
+  console.log(`Added and ordered ${ids.length} sponsors`)
+}
+```

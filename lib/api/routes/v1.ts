@@ -4,6 +4,7 @@ import { createJob, getJobById, cancelJob, startJobWorkflow } from "@/lib/servic
 import { logAudit } from "@/lib/services/audit"
 import { checkRateLimit, getRateLimitHeaders, defaultRateLimits, RateLimitError } from "@/lib/services/rate-limit"
 import type { Json } from "@/lib/db/types"
+import { normalizeUrl } from "@/lib/utils/url"
 
 export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
   .onError(({ error }) => {
@@ -253,10 +254,27 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
         throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
       }
 
+      const webhookUrl = normalizeUrl(body.url)
+
+      try {
+        const parsedUrl = new URL(webhookUrl)
+        if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+          return new Response(JSON.stringify({ error: "Webhook URL must use http or https" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          })
+        }
+      } catch {
+        return new Response(JSON.stringify({ error: "Invalid webhook URL" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
       const { createWebhook } = await import("@/lib/services/webhooks")
       const result = await createWebhook({
         tenantId: principal.tenantId,
-        url: body.url,
+        url: webhookUrl,
         events: body.events as import("@/lib/db/hackathon-types").WebhookEvent[],
       })
 
@@ -281,7 +299,7 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
     },
     {
       body: t.Object({
-        url: t.String({ format: "uri", description: "Webhook endpoint URL" }),
+        url: t.String({ description: "Webhook endpoint URL" }),
         events: t.Array(t.String(), { description: "Events to subscribe to" }),
       }),
       detail: {

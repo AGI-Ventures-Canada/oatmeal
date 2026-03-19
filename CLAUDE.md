@@ -100,16 +100,47 @@ When developers include external documentation links in requests, save them to t
 | anthropic.com | lib/agents/CLAUDE.md |
 | luma.com, docs.luma.com | lib/integrations/CLAUDE.md |
 
+### CLAUDE.md / AGENTS.md Symlink Convention
+
+Every directory that contains agent instructions must expose them through both `CLAUDE.md` and `AGENTS.md`, with one filename symlinked to the other so the content stays identical across tools.
+
+- When creating a new `CLAUDE.md`, also create `AGENTS.md` in the same directory as a symlink to it: `ln -s CLAUDE.md AGENTS.md`
+- When creating a new `AGENTS.md`, also create `CLAUDE.md` in the same directory as a symlink to it: `ln -s AGENTS.md CLAUDE.md`
+- Never maintain `CLAUDE.md` and `AGENTS.md` as separate standalone files with duplicated content
+- If one of the two files already exists without the other, add the missing counterpart as a symlink instead of copying the file
+
 ### Claude Skills
 
 Skills in `.claude/skills/`:
 - `local-dev-setup.md` - Developer onboarding and local environment setup
 
-Hackathon-specific skills (CLI, API, organizer, attendee) live in `skills/` at the project root (picked up by skills.sh):
-- `hackathon-api` - API route patterns and workflow examples
-- `hackathon-attendee` - Attendee building, strategy, and networking
-- `hackathon-cli` - CLI commands and workflow examples
-- `hackathon-organizer` - Organizer judging, prizes, planning, and logistics
+#### Hackathon Skills (`skills/`)
+
+Hackathon-specific AI agent skills live in `skills/` at the project root, distributed via [skills.sh](https://skills.sh). These are **not** internal dev skills — they're public, installable skills that any AI agent can use to interact with the Oatmeal platform or get hackathon guidance.
+
+`npx skills add` scans agent-specific skill directories like `.agents/skills/` and `.claude/skills/` too, so public installable skills must live in `skills/`, while repo-local helper skills outside `skills/` must set `metadata.internal: true`.
+
+**Install (for external users):**
+```bash
+npx skills add AGI-Ventures-Canada/oatmeal
+```
+
+**Structure:** Each skill follows the standard skills.sh format:
+```
+skills/<skill-name>/
+├── SKILL.md              # Main skill file (YAML frontmatter + content)
+└── references/           # Supporting documentation
+    └── *.md
+```
+
+| Skill | Description | When It Activates |
+|-------|-------------|-------------------|
+| `hackathon-cli` | Manage hackathons from the terminal using the `hackathon` CLI tool. Covers creating hackathons, judges, criteria, prizes, assignments, results, webhooks, and schedules | User asks to create/manage hackathons via CLI or terminal |
+| `hackathon-api` | Interact with the Oatmeal REST API directly via `curl` commands. Complete endpoint catalog, auth setup, and error handling | User asks to make direct API calls, test endpoints, or debug API responses |
+| `hackathon-organizer` | Planning and running hackathons — timelines, budgets, sponsors, venue logistics, judging setup, marketing, day-of operations, and post-event follow-up | User asks how to organize, plan, or run a hackathon |
+| `hackathon-attendee` | Competing in hackathons — preparation, team formation, time management, technical strategy, presenting, what judges look for, and networking | User is preparing for or competing in a hackathon |
+
+**Skill routing:** The skills are designed to complement each other. If a user is organizing on the platform, `hackathon-cli` or `hackathon-api` handle the tooling while `hackathon-organizer` provides strategic advice. For participants, `hackathon-attendee` covers the human side while `hackathon-cli`/`hackathon-api` handle any platform interaction.
 
 ## Next.js 16 Specifics
 
@@ -244,6 +275,13 @@ This ensures consistent theming and proper dark mode support.
 // - Profile forms where users enter personal info
 ```
 
+**URL inputs must accept bare domains and paths.** Never require users to type `https://` manually.
+
+- Use `type="text"` with `inputMode="url"` instead of `type="url"` so entries like `github.com/org/repo` are accepted
+- Normalize URL values with `normalizeUrl()` from `lib/utils/url.ts` on blur or submit before validation/storage
+- Disable auto-capitalization and spellcheck on URL fields
+- When URL behavior changes in the app, update matching API routes and CLI flows too
+
 **Support Cmd/Ctrl+Enter to submit forms.** Most forms should be submittable with Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux):
 
 ```typescript
@@ -311,6 +349,7 @@ Exceptions (don't auto-focus):
 - Maintain TypeScript type safety throughout
 - Delete dead code outright — no commented-out blocks, `// TODO: remove`, or placeholder stubs
 - **Reuse existing components and patterns** — before building something custom, check if a similar component already exists in the codebase. If unsure, ask the user before creating a new one
+- **Consider CLI impact when changing app behavior** — this repo ships a standalone CLI in `packages/cli/`. If you change API contracts, validation, or user-facing workflows in the app, verify whether the CLI also needs matching support, tests, or docs
 
 ### Testing
 
@@ -372,6 +411,10 @@ it("example test", async () => {
 For RPC calls, use `setMockRpcImplementation()` instead.
 
 ## Git Workflow
+
+### Always Commit All Changes
+
+**When committing, stage and include ALL changes in the working tree.** Do not cherry-pick only the files that seem related to the current task — treat every uncommitted change as part of the same work unit. Leaving behind orphaned changes clutters future diffs and risks losing work.
 
 ### Run CI Checks Before Pushing
 
@@ -516,6 +559,17 @@ refactor: extract payment logic into service
 ```
 
 This catches style violations, shadcn primitive misuse, dead code, and other issues before they land in a PR.
+
+### Required Environment Variables
+
+Beyond the standard Clerk/Supabase keys, these secrets must be in `.env.local` for full functionality:
+
+| Variable | Purpose | Generate with |
+|----------|---------|---------------|
+| `API_KEY_SECRET` | Hashes API keys before storing in the database | `openssl rand -hex 32` |
+| `ENCRYPTION_KEY` | Encrypts API keys in CLI auth sessions (must be exactly 64 hex chars / 32 bytes) | `openssl rand -hex 32` |
+
+Without `ENCRYPTION_KEY`, CLI login (`hackathon login`) will fail with "Internal server error" because `completeCliAuthSession` calls `encryptToken()` which requires it.
 
 ### Local Supabase Port Assignments
 

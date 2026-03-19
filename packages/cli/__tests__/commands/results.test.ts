@@ -43,9 +43,9 @@ describe("results commands", () => {
     it("displays results table", async () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
-          rankings: [
-            { rank: 1, submission_name: "Project A", team_name: "Team 1", total_score: 95 },
-            { rank: 2, submission_name: "Project B", team_name: "Team 2", total_score: 87 },
+          results: [
+            { rank: 1, submissionTitle: "Project A", teamName: "Team 1", totalScore: 95 },
+            { rank: 2, submissionTitle: "Project B", teamName: "Team 2", totalScore: 87 },
           ],
         })
       )
@@ -57,7 +57,7 @@ describe("results commands", () => {
     })
 
     it("--json outputs full results data", async () => {
-      const data = { rankings: [{ rank: 1, submission_name: "A", total_score: 95 }] }
+      const data = { results: [{ rank: 1, submissionTitle: "A", totalScore: 95 }] }
       mockFetch.mockResolvedValueOnce(jsonResponse(data))
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
       const { runResultsGet } = await import("../../src/commands/results/get")

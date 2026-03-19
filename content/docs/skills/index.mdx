@@ -1,0 +1,43 @@
+---
+title: Hackathon Skills
+description: Installable AI agent skills for hackathon management, planning, and participation on the Oatmeal platform.
+---
+
+Oatmeal ships a set of AI agent skills distributed via [skills.sh](https://skills.sh). Once installed, your AI agent automatically activates the right skill based on your request — no manual switching needed.
+
+## Install
+
+```bash title="Install all skills"
+npx skills add AGI-Ventures-Canada/oatmeal
+```
+
+## Available Skills
+
+| Skill | Description | Best For |
+|-------|-------------|----------|
+| [hackathon-cli](/docs/skills/hackathon-cli) | Manage hackathons from the terminal using the `hackathon` CLI | Creating events, adding judges, managing prizes, publishing results |
+| [hackathon-api](/docs/skills/hackathon-api) | Interact with the Oatmeal REST API directly via `curl` | Testing endpoints, debugging responses, custom integrations |
+| [hackathon-organizer](/docs/skills/hackathon-organizer) | Planning and running hackathons end-to-end | Timelines, sponsors, venue logistics, judging setup |
+| [hackathon-attendee](/docs/skills/hackathon-attendee) | Preparing for and competing in hackathons | First-timers, demo tips, strategy, networking |
+
+## How Skills Work
+
+Each skill follows the standard [skills.sh](https://skills.sh) format:
+
+```text title="Skill structure"
+skills/<skill-name>/
+├── SKILL.md              # Main skill file (YAML frontmatter + content)
+└── references/           # Supporting documentation
+    └── *.md
+```
+
+Skills activate automatically based on keywords in your prompt. For example:
+
+- **"Create a hackathon via CLI"** → `hackathon-cli`
+- **"Call the hackathon API"** → `hackathon-api`
+- **"How do I organize a hackathon?"** → `hackathon-organizer`
+- **"Tips for my first hackathon"** → `hackathon-attendee`
+
+## Skill Routing
+
+The skills complement each other. If you're organizing on the platform, `hackathon-cli` or `hackathon-api` handle the tooling while `hackathon-organizer` provides strategic advice. For participants, `hackathon-attendee` covers the human side while the CLI and API skills handle platform interaction.

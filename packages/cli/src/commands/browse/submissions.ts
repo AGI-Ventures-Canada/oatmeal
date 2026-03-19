@@ -28,9 +28,9 @@ export async function runBrowseSubmissions(
 
   console.log(
     formatTable(data.submissions, [
-      { key: "name", label: "Name" },
-      { key: "team_name", label: "Team" },
-      { key: "submitted_at", label: "Submitted" },
+      { key: "title", label: "Name" },
+      { key: "submitter", label: "Team" },
+      { key: "createdAt", label: "Submitted" },
     ])
   )
 }

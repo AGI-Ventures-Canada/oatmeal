@@ -1,23 +1,48 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname, useSearchParams } from "next/navigation"
-import { useUser, useClerk } from "@clerk/nextjs"
+import { usePathname, useSearchParams, useRouter } from "next/navigation"
+import {
+  useUser,
+  useClerk,
+  useOrganization,
+  useOrganizationList,
+} from "@clerk/nextjs"
+import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
-import { Menu, X, ChevronRight, ChevronLeft } from "lucide-react"
+import {
+  Menu,
+  X,
+  ChevronRight,
+  ChevronLeft,
+  Plus,
+  Check,
+  Sun,
+  Moon,
+  Monitor,
+} from "lucide-react"
+import { CreateHackathonMenu } from "@/components/hackathon/create-hackathon-menu"
+import { InstallSkillButton } from "@/components/install-skill-button"
+import { CreateOrganizationDialog } from "@/components/create-organization-dialog"
 
 type NavSection = {
+  id: string
   title: string
   href?: string
   children?: { title: string; href: string }[]
 }
 
+const ORG_SWITCHER_ID = "org-switcher"
+const HACKATHONS_ID = "hackathons"
+const MANAGE_ID = "manage"
+
 const navSections: NavSection[] = [
-  { title: "Dashboard", href: "/home" },
-  { title: "Browse", href: "/browse" },
+  { id: "dashboard", title: "Dashboard", href: "/home" },
+  { id: "browse", title: "Browse", href: "/browse" },
   {
+    id: HACKATHONS_ID,
     title: "Hackathons",
     children: [
       { title: "Participating", href: "/home?tab=participating" },
@@ -27,13 +52,11 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    title: "Settings",
+    id: MANAGE_ID,
+    title: "Manage",
     children: [
-      { title: "Organization", href: "/settings/profile" },
-      { title: "API Keys", href: "/settings/api-keys" },
-      { title: "Schedules", href: "/settings/schedules" },
-      { title: "Webhooks", href: "/settings/webhooks" },
-      { title: "Integrations", href: "/settings/integrations" },
+      { title: "Settings", href: "/settings" },
+      { title: "API Docs", href: "/docs" },
     ],
   },
 ]
@@ -41,10 +64,17 @@ const navSections: NavSection[] = [
 export function MobileHeader() {
   const [open, setOpen] = useState(false)
   const [activeSection, setActiveSection] = useState<NavSection | null>(null)
+  const [createOrgOpen, setCreateOrgOpen] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const { isSignedIn, user } = useUser()
   const { openUserProfile, signOut } = useClerk()
+  const { organization } = useOrganization()
+  const { userMemberships, setActive } = useOrganizationList({
+    userMemberships: { infinite: true },
+  })
+  const { theme, setTheme } = useTheme()
 
   const close = useCallback(() => {
     setOpen(false)
@@ -63,6 +93,12 @@ export function MobileHeader() {
     }
     return () => { document.body.style.overflow = "" }
   }, [open])
+
+  const orgSection: NavSection = useMemo(() => ({
+    id: ORG_SWITCHER_ID,
+    title: organization?.name || "Personal Workspace",
+    children: [],
+  }), [organization])
 
   return (
     <>
@@ -119,26 +155,52 @@ export function MobileHeader() {
         <div className="relative flex-1 overflow-hidden">
           {/* Root level */}
           <nav
-            className={`absolute inset-0 flex flex-col px-5 pt-4 transition-transform duration-250 ease-in-out ${
+            className={`absolute inset-0 flex flex-col px-5 pt-4 overflow-y-auto transition-transform duration-250 ease-in-out ${
               activeSection ? "-translate-x-full" : "translate-x-0"
             }`}
           >
+            {isSignedIn && (
+              <button
+                type="button"
+                onClick={() => setActiveSection(orgSection)}
+                className="flex items-center justify-between py-5 px-3 -mx-3 rounded-lg text-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
+              >
+                <span className="flex items-center gap-3">
+                  {organization?.imageUrl ? (
+                    <Image
+                      src={organization.imageUrl}
+                      alt={organization.name || "Organization"}
+                      width={28}
+                      height={28}
+                      className="size-7 rounded object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-7 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
+                      {organization?.name?.charAt(0).toUpperCase() || user?.firstName?.charAt(0)?.toUpperCase() || "P"}
+                    </div>
+                  )}
+                  <span className="truncate">{organization?.name || "Personal Workspace"}</span>
+                </span>
+                <ChevronRight className="size-5 shrink-0" />
+              </button>
+            )}
+
             {navSections.map((section) =>
               section.children ? (
                 <button
-                  key={section.title}
+                  key={section.id}
                   type="button"
                   onClick={() => setActiveSection(section)}
-                  className="flex items-center justify-between py-5 text-xl text-muted-foreground active:text-foreground transition-colors"
+                  className="flex items-center justify-between py-5 px-3 -mx-3 rounded-lg text-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
                 >
                   {section.title}
                   <ChevronRight className="size-5" />
                 </button>
               ) : (
                 <Link
-                  key={section.title}
+                  key={section.id}
                   href={section.href!}
-                  className="py-5 text-xl text-muted-foreground active:text-foreground transition-colors"
+                  className="py-5 px-3 -mx-3 rounded-lg text-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
                 >
                   {section.title}
                 </Link>
@@ -146,34 +208,168 @@ export function MobileHeader() {
             )}
           </nav>
 
-          {/* Sub-level */}
           <nav
-            className={`absolute inset-0 flex flex-col px-5 transition-transform duration-250 ease-in-out ${
-              activeSection ? "translate-x-0" : "translate-x-full"
+            className={`absolute inset-0 flex flex-col px-5 overflow-y-auto transition-transform duration-250 ease-in-out ${
+              activeSection?.id === ORG_SWITCHER_ID ? "translate-x-0" : "translate-x-full"
             }`}
           >
             <button
               type="button"
               onClick={() => setActiveSection(null)}
-              className="flex items-center gap-2 py-4 text-sm text-muted-foreground"
+              className="flex items-center gap-2 py-4 px-3 -mx-3 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <ChevronLeft className="size-4" />
-              {activeSection?.title}
+              Organization
             </button>
-            {activeSection?.children?.map((child) => (
-              <Link
-                key={child.href}
-                href={child.href}
-                className="py-5 text-xl text-muted-foreground active:text-foreground transition-colors"
+
+            <button
+              type="button"
+              onClick={() => {
+                setActive?.({ organization: null })
+                close()
+                if (pathname !== "/home") router.push("/home")
+              }}
+              className="flex items-center gap-3 py-5 px-3 -mx-3 rounded-lg text-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
+            >
+              <div className="flex size-7 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
+                {user?.firstName?.charAt(0)?.toUpperCase() || "P"}
+              </div>
+              <span className="flex-1 text-left truncate">Personal Workspace</span>
+              {!organization && <Check className="size-5 shrink-0" />}
+            </button>
+
+            {userMemberships?.data?.map((mem) => (
+              <button
+                key={mem.organization.id}
+                type="button"
+                onClick={() => {
+                  setActive?.({ organization: mem.organization.id })
+                  close()
+                  if (pathname !== "/home") router.push("/home")
+                }}
+                className="flex items-center gap-3 py-5 px-3 -mx-3 rounded-lg text-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
               >
-                {child.title}
-              </Link>
+                {mem.organization.imageUrl ? (
+                  <Image
+                    src={mem.organization.imageUrl}
+                    alt={mem.organization.name}
+                    width={28}
+                    height={28}
+                    className="size-7 rounded object-cover"
+                  />
+                ) : (
+                  <div className="flex size-7 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
+                    {mem.organization.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="flex-1 text-left truncate">{mem.organization.name}</span>
+                {organization?.id === mem.organization.id && <Check className="size-5 shrink-0" />}
+              </button>
             ))}
+
+            <button
+              type="button"
+              onClick={() => {
+                close()
+                setCreateOrgOpen(true)
+              }}
+              className="flex items-center gap-3 py-5 px-3 -mx-3 rounded-lg text-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
+            >
+              <div className="flex size-7 items-center justify-center rounded bg-muted text-muted-foreground">
+                <Plus className="size-4" />
+              </div>
+              <span>Create New Organization</span>
+            </button>
           </nav>
+
+          {navSections
+            .filter((s) => s.children)
+            .map((section) => (
+              <nav
+                key={section.id}
+                className={`absolute inset-0 flex flex-col px-5 overflow-y-auto transition-transform duration-250 ease-in-out ${
+                  activeSection?.id === section.id ? "translate-x-0" : "translate-x-full"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setActiveSection(null)}
+                  className="flex items-center gap-2 py-4 px-3 -mx-3 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  <ChevronLeft className="size-4" />
+                  {section.title}
+                </button>
+                {section.children?.map((child) => (
+                  <Link
+                    key={child.href}
+                    href={child.href}
+                    className="py-5 px-3 -mx-3 rounded-lg text-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
+                  >
+                    {child.title}
+                  </Link>
+                ))}
+                {section.id === HACKATHONS_ID && (
+                  <CreateHackathonMenu
+                    trigger={
+                      <button
+                        type="button"
+                        className="flex items-center gap-3 py-5 px-3 -mx-3 rounded-lg text-xl text-primary hover:bg-accent active:text-primary/80 transition-colors"
+                      >
+                        <Plus className="size-5" />
+                        Create Hackathon
+                      </button>
+                    }
+                  />
+                )}
+                {section.id === MANAGE_ID && (
+                  <InstallSkillButton
+                    trigger={
+                      <button
+                        type="button"
+                        className="py-5 px-3 -mx-3 rounded-lg text-xl text-left text-muted-foreground hover:bg-accent hover:text-accent-foreground active:text-foreground transition-colors"
+                      >
+                        Install Skill
+                      </button>
+                    }
+                  />
+                )}
+              </nav>
+            ))}
         </div>
 
         {/* Footer */}
-        <div className="px-5 pb-8 pt-4">
+        <div className="px-5 pb-8 pt-4 space-y-4">
+          {isSignedIn && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Theme</span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant={theme === "light" ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  onClick={() => setTheme("light")}
+                >
+                  <Sun className="size-4" />
+                  <span className="sr-only">Light theme</span>
+                </Button>
+                <Button
+                  variant={theme === "dark" ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  onClick={() => setTheme("dark")}
+                >
+                  <Moon className="size-4" />
+                  <span className="sr-only">Dark theme</span>
+                </Button>
+                <Button
+                  variant={theme === "system" ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  onClick={() => setTheme("system")}
+                >
+                  <Monitor className="size-4" />
+                  <span className="sr-only">System theme</span>
+                </Button>
+              </div>
+            </div>
+          )}
           {isSignedIn ? (
             <Button
               variant="secondary"
@@ -194,6 +390,11 @@ export function MobileHeader() {
           )}
         </div>
       </div>
+
+      <CreateOrganizationDialog
+        open={createOrgOpen}
+        onOpenChange={setCreateOrgOpen}
+      />
     </>
   )
 }

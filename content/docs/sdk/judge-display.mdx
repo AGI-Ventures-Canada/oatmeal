@@ -1,0 +1,185 @@
+---
+title: Judge Display API
+description: Manage public judge profiles with headshots and bios for the event page.
+---
+
+The Judge Display API manages the public-facing judge gallery shown on the hackathon event page. These profiles are separate from functional judge assignments — a judge can appear in the gallery without being assigned to score submissions.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/dashboard/hackathons/:id/judges/display` | List judge profiles |
+| `POST` | `/api/dashboard/hackathons/:id/judges/display` | Create a judge profile |
+| `PATCH` | `/api/dashboard/hackathons/:id/judges/display/:judgeId` | Update a profile |
+| `DELETE` | `/api/dashboard/hackathons/:id/judges/display/:judgeId` | Delete a profile |
+| `POST` | `/api/dashboard/hackathons/:id/judges/display/reorder` | Reorder profiles |
+| `POST` | `/api/dashboard/hackathons/:id/judges/display/:judgeId/headshot` | Upload headshot |
+| `DELETE` | `/api/dashboard/hackathons/:id/judges/display/:judgeId/headshot` | Remove headshot |
+
+All endpoints require an API key with `hackathons:read` or `hackathons:write` scope.
+
+## Response Types
+
+```typescript title="types.ts"
+interface JudgeDisplay {
+  id: string
+  name: string
+  title: string | null
+  organization: string | null
+  headshotUrl: string | null
+  clerkUserId: string | null
+  participantId: string | null
+  displayOrder: number
+  createdAt: string
+}
+```
+
+## List Judge Profiles
+
+`GET /api/dashboard/hackathons/:id/judges/display` — requires `hackathons:read` scope.
+
+```typescript title="list-judge-display.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display`,
+  {
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+
+const { judges } = await res.json()
+
+for (const j of judges) {
+  console.log(`${j.name} — ${j.title ?? ""} at ${j.organization ?? ""}`)
+}
+```
+
+## Create a Judge Profile
+
+`POST /api/dashboard/hackathons/:id/judges/display` — requires `hackathons:write` scope.
+
+```typescript title="create-judge-display.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display`,
+  {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: "Dr. Sarah Chen",
+      title: "CTO",
+      organization: "Anthropic",
+      email: "sarah@example.com",
+    }),
+  }
+)
+
+const { id, name } = await res.json()
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | Yes | Judge's display name |
+| `title` | `string \| null` | No | Job title |
+| `organization` | `string \| null` | No | Company or organization |
+| `headshotUrl` | `string \| null` | No | Headshot image URL |
+| `email` | `string` | No | Email (for linking to Clerk user) |
+| `clerkUserId` | `string \| null` | No | Link to a Clerk user account |
+| `participantId` | `string \| null` | No | Link to a hackathon participant |
+| `displayOrder` | `number` | No | Display position |
+
+## Update a Judge Profile
+
+`PATCH /api/dashboard/hackathons/:id/judges/display/:judgeId` — requires `hackathons:write` scope.
+
+```typescript title="update-judge-display.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display/${judgeId}`,
+  {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title: "VP of Engineering",
+      organization: "Anthropic",
+    }),
+  }
+)
+```
+
+## Delete a Judge Profile
+
+`DELETE /api/dashboard/hackathons/:id/judges/display/:judgeId` — requires `hackathons:write` scope.
+
+```typescript title="delete-judge-display.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display/${judgeId}`,
+  {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+```
+
+## Reorder Judge Profiles
+
+`POST /api/dashboard/hackathons/:id/judges/display/reorder` — requires `hackathons:write` scope.
+
+```typescript title="reorder-judges.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display/reorder`,
+  {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      orderedIds: ["judge_001", "judge_002", "judge_003"],
+    }),
+  }
+)
+```
+
+## Upload Headshot
+
+`POST /api/dashboard/hackathons/:id/judges/display/:judgeId/headshot` — requires `hackathons:write` scope.
+
+Accepts PNG, JPEG, or WebP files up to 5MB.
+
+```typescript title="upload-headshot.ts"
+const formData = new FormData()
+formData.append("file", headshotFile)
+
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display/${judgeId}/headshot`,
+  {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+    body: formData,
+  }
+)
+
+const { headshotUrl } = await res.json()
+console.log("Headshot uploaded:", headshotUrl)
+```
+
+## Remove Headshot
+
+`DELETE /api/dashboard/hackathons/:id/judges/display/:judgeId/headshot` — requires `hackathons:write` scope.
+
+```typescript title="delete-headshot.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display/${judgeId}/headshot`,
+  {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+  }
+)
+```

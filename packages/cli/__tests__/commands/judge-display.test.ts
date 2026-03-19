@@ -131,7 +131,7 @@ describe("judge-display commands", () => {
 
       const init = mockFetch.mock.calls[0][1] as RequestInit
       const body = JSON.parse(init.body as string)
-      expect(body.profile_ids).toEqual(["jd1", "jd2"])
+      expect(body.orderedIds).toEqual(["jd1", "jd2"])
     })
   })
 })

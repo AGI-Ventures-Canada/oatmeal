@@ -1,0 +1,4 @@
+{
+  "title": "Hackathon Skills",
+  "pages": ["index", "hackathon-cli", "hackathon-api", "hackathon-organizer", "hackathon-attendee"]
+}

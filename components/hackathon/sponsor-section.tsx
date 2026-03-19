@@ -2,7 +2,10 @@ import { SponsorCard } from "./sponsor-card"
 import type { HackathonSponsor, SponsorTier, TenantProfile } from "@/lib/db/hackathon-types"
 
 type SponsorWithTenant = HackathonSponsor & {
-  tenant?: Pick<TenantProfile, "slug" | "name" | "logo_url" | "logo_url_dark"> | null
+  tenant?: Pick<
+    TenantProfile,
+    "slug" | "name" | "logo_url" | "logo_url_dark" | "website_url" | "description"
+  > | null
 }
 
 interface SponsorSectionProps {

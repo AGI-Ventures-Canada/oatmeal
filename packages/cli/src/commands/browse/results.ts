@@ -21,22 +21,22 @@ export async function runBrowseResults(
     return
   }
 
-  if (!data.published) {
+  if (!data.isPublished) {
     console.log("Results have not been published yet.")
     return
   }
 
-  if (!data.rankings?.length) {
+  if (!data.results?.length) {
     console.log("No rankings available.")
     return
   }
 
   console.log(
-    formatTable(data.rankings, [
+    formatTable(data.results, [
       { key: "rank", label: "#" },
-      { key: "submission_name", label: "Submission" },
-      { key: "team_name", label: "Team" },
-      { key: "total_score", label: "Score" },
+      { key: "submissionTitle", label: "Submission" },
+      { key: "teamName", label: "Team" },
+      { key: "totalScore", label: "Score" },
     ])
   )
 }

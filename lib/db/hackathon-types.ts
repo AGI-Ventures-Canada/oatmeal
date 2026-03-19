@@ -275,6 +275,7 @@ export interface HackathonSponsor {
   hackathon_id: string
   sponsor_tenant_id: string | null
   tenant_sponsor_id: string | null
+  use_org_assets: boolean
   name: string
   logo_url: string | null
   logo_url_dark: string | null

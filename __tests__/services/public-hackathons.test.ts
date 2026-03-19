@@ -49,7 +49,23 @@ describe("Public Hackathons Service", () => {
     it("returns hackathon with organizer and sponsors", async () => {
       mockMultiTableQuery({
         hackathons: { data: { ...mockHackathon, organizer: mockOrganizer }, error: null },
-        hackathon_sponsors: { data: [{ id: "s1", name: "Sponsor", tier: "gold", tenant: null }], error: null },
+        hackathon_sponsors: {
+          data: [{
+            id: "s1",
+            name: "Sponsor",
+            tier: "gold",
+            sponsor_tenant_id: null,
+            tenant_sponsor_id: null,
+            use_org_assets: false,
+            logo_url: null,
+            logo_url_dark: null,
+            website_url: null,
+            display_order: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            tenant: null,
+          }],
+          error: null,
+        },
       })
 
       const result = await getPublicHackathon("test-hackathon")

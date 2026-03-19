@@ -1,0 +1,41 @@
+---
+title: hackathon-api
+description: AI skill for interacting with the Oatmeal REST API directly via curl commands.
+---
+
+Interact with the Oatmeal hackathon platform directly via its REST API using `curl` commands. Use this skill when you need raw API access, are debugging endpoints, testing integrations, or building custom scripts against the Oatmeal API.
+
+For CLI usage, use the [hackathon-cli](/docs/skills/hackathon-cli) skill instead.
+
+## When to Use
+
+- Make direct API calls to the Oatmeal platform
+- Test or debug API endpoints and responses
+- Build custom integrations or scripts against the REST API
+- Set up webhooks or schedules programmatically
+
+## Prerequisites
+
+1. **A running Oatmeal instance** — either local (`http://localhost:3000`) or production
+2. **An API key** — obtained from the dashboard at Settings > API Keys
+3. **An organization** — the user must belong to a Clerk organization
+
+## Activation Keywords
+
+The skill activates when your prompt includes terms like:
+
+`hackathon api`, `curl hackathon`, `api endpoint`, `rest api hackathon`, `api key hackathon`, `test api`, `api call`
+
+## What's Included
+
+The skill bundles two reference files that the AI agent uses for context:
+
+- **api-endpoints.md** — Complete API endpoint catalog organized by category with request/response shapes
+- **workflow-examples.md** — Natural language to API call mappings, common workflows, and end-to-end examples
+
+## Example Prompts
+
+- "Show me how to create a hackathon via the API"
+- "What endpoints are available for managing judges?"
+- "Debug why my webhook isn't receiving events"
+- "Write a script that fetches all submissions and exports them to CSV"

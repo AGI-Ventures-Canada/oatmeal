@@ -5,6 +5,7 @@ description: Clerk webhooks for real-time events and data syncing. Listen for us
 allowed-tools: WebFetch
 license: MIT
 metadata:
+  internal: true
   author: clerk
   version: "1.0.0"
 ---

@@ -1,0 +1,121 @@
+---
+title: Crowd Voting
+description: Enable attendee voting and display results alongside judge scores.
+---
+
+Crowd voting lets hackathon attendees and the public vote for their favorite submissions, separate from the official judge scoring.
+
+## Overview
+
+Key rules:
+- **One vote per user per hackathon** — Voting for a new submission replaces the previous vote
+- **Separate from judging** — Crowd votes don't affect judge scores or official rankings
+- **Real-time counts** — Vote totals are visible immediately
+- **Optional** — Crowd voting works alongside either judging mode
+
+## Enabling Crowd Voting
+
+Crowd voting is available by default on all hackathons. To award a prize for the crowd favorite, create a prize with type `"crowd"`:
+
+```typescript title="create-crowd-prize.ts"
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes`,
+  {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: "People's Choice",
+      description: "Most voted submission by the community",
+      value: "$500",
+      type: "crowd",
+    }),
+  }
+)
+```
+
+## Casting a Vote
+
+Users vote via the public API with a Clerk session:
+
+```typescript title="vote.ts"
+await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/vote`,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ submissionId: "sub_xyz456" }),
+  }
+)
+```
+
+To change your vote, just vote for a different submission — the previous vote is automatically replaced.
+
+## Removing a Vote
+
+```typescript title="remove-vote.ts"
+await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/vote`,
+  {
+    method: "DELETE",
+    credentials: "include",
+  }
+)
+```
+
+## Viewing Results
+
+Vote counts are public — no authentication required:
+
+```typescript title="view-results.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/vote`
+)
+
+const { userVote, counts } = await res.json()
+
+const sorted = counts.sort((a, b) => b.voteCount - a.voteCount)
+
+for (const { submissionId, voteCount } of sorted) {
+  const marker = submissionId === userVote ? " ← your vote" : ""
+  console.log(`${submissionId}: ${voteCount} votes${marker}`)
+}
+```
+
+When authenticated, the response includes `userVote` with the submission ID the user voted for. When not authenticated, `userVote` is `null`.
+
+## Assigning the Crowd Prize
+
+After voting closes, assign the crowd prize to the top-voted submission:
+
+```typescript title="assign-crowd-prize.ts"
+const voteRes = await fetch(
+  `${BASE_URL}/api/public/hackathons/${slug}/vote`
+)
+
+const { counts } = await voteRes.json()
+const winner = counts.sort((a, b) => b.voteCount - a.voteCount)[0]
+
+await fetch(
+  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes/${crowdPrizeId}/assign`,
+  {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ submissionId: winner.submissionId }),
+  }
+)
+```
+
+## Best Practices
+
+1. **Open voting during judging** — Let the crowd vote while judges score, so both happen in parallel
+2. **Promote voting** — Share the voting page link with attendees and on social media
+3. **Keep it simple** — One vote per person keeps the system fair and easy to understand
+4. **Combine with official prizes** — Use crowd voting for a "People's Choice" award alongside judge-determined prizes
+5. **Assign the prize before publishing results** — Make sure the crowd winner is included when results go live

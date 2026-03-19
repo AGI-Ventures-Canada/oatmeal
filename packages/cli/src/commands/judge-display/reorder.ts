@@ -20,7 +20,7 @@ export async function runJudgeDisplayReorder(
 
   await client.post(
     `/api/dashboard/hackathons/${hackathonId}/judges/display/reorder`,
-    { profile_ids: ids }
+    { orderedIds: ids }
   )
   console.log(formatSuccess(`Reordered ${ids.length} judge display profiles`))
 }

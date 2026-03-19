@@ -443,6 +443,23 @@ describe("Team Invitations Service", () => {
         expect(result.error).toBe("Invitation has expired")
       }
     })
+
+    it("returns at_capacity when event is full", async () => {
+      setMockRpcImplementation(() =>
+        Promise.resolve({
+          data: [{ success: false, team_id: null, hackathon_id: null, error_code: "at_capacity", error_message: "Event is at full capacity" }],
+          error: null,
+        })
+      )
+
+      const result = await acceptTeamInvitation("test_token", "user_123", "user@example.com")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("at_capacity")
+        expect(result.error).toBe("Event is at full capacity")
+      }
+    })
   })
 
   describe("declineTeamInvitation", () => {

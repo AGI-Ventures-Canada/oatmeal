@@ -371,6 +371,7 @@ export type Database = {
           sponsor_tenant_id: string | null
           tenant_sponsor_id: string | null
           tier: Database["public"]["Enums"]["sponsor_tier"]
+          use_org_assets: boolean
           website_url: string | null
         }
         Insert: {
@@ -384,6 +385,7 @@ export type Database = {
           sponsor_tenant_id?: string | null
           tenant_sponsor_id?: string | null
           tier?: Database["public"]["Enums"]["sponsor_tier"]
+          use_org_assets?: boolean
           website_url?: string | null
         }
         Update: {
@@ -397,6 +399,7 @@ export type Database = {
           sponsor_tenant_id?: string | null
           tenant_sponsor_id?: string | null
           tier?: Database["public"]["Enums"]["sponsor_tier"]
+          use_org_assets?: boolean
           website_url?: string | null
         }
         Relationships: [

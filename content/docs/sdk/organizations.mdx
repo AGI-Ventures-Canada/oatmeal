@@ -1,0 +1,194 @@
+---
+title: Organizations API
+description: Manage organization profiles, logos, and public pages via the REST API.
+---
+
+The Organizations API lets you manage your organization profile, upload logos, and check slug availability. Organizations are the top-level tenant in Oatmeal — all hackathons, API keys, and integrations belong to an organization.
+
+## Endpoints
+
+### Dashboard (API key or session)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/dashboard/org-profile` | Get organization profile |
+| `PATCH` | `/api/dashboard/org-profile` | Update organization profile |
+| `POST` | `/api/dashboard/upload-logo` | Upload logo |
+| `DELETE` | `/api/dashboard/logo/:variant` | Delete logo |
+| `GET` | `/api/dashboard/organizations/slug-available` | Check slug availability |
+
+### Public (no auth required)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/public/orgs/:slug` | Get public organization page |
+
+Dashboard endpoints require an API key with `org:read` or `org:write` scope, or a Clerk session. Slug availability check requires a Clerk session.
+
+## Get Organization Profile
+
+`GET /api/dashboard/org-profile` — requires `org:read` scope.
+
+```typescript title="get-profile.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/org-profile`, {
+  headers: { "Authorization": `Bearer ${API_KEY}` },
+})
+
+const profile = await res.json()
+console.log(`${profile.name} (@${profile.slug})`)
+```
+
+### Response
+
+```json title="response.json"
+{
+  "id": "org_abc123",
+  "name": "AGI Ventures",
+  "slug": "agi-ventures",
+  "logoUrl": "https://storage.example.com/logos/org_abc123_light.png",
+  "description": "Building the future of hackathons",
+  "websiteUrl": "https://agiventures.com"
+}
+```
+
+## Update Organization Profile
+
+`PATCH /api/dashboard/org-profile` — requires `org:write` scope.
+
+```typescript title="update-profile.ts"
+const res = await fetch(`${BASE_URL}/api/dashboard/org-profile`, {
+  method: "PATCH",
+  headers: {
+    "Authorization": `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "AGI Ventures Canada",
+    description: "Building the future of hackathons in Canada",
+    websiteUrl: "https://agiventures.ca",
+  }),
+})
+
+const { id, slug, updatedAt } = await res.json()
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | No | Organization name |
+| `slug` | `string` | No | URL slug (min 3 chars, lowercase letters/numbers/hyphens) |
+| `description` | `string \| null` | No | Organization description |
+| `websiteUrl` | `string \| null` | No | Website URL |
+| `logoUrl` | `string \| null` | No | Light mode logo URL |
+| `logoUrlDark` | `string \| null` | No | Dark mode logo URL |
+
+## Upload Logo
+
+`POST /api/dashboard/upload-logo` — requires `org:write` scope.
+
+Accepts PNG, JPEG, WebP, or SVG files up to 30MB. Specify the variant to upload separate light and dark mode logos.
+
+```typescript title="upload-logo.ts"
+const formData = new FormData()
+formData.append("file", logoFile)
+formData.append("variant", "light")
+
+const res = await fetch(`${BASE_URL}/api/dashboard/upload-logo`, {
+  method: "POST",
+  headers: { "Authorization": `Bearer ${API_KEY}` },
+  body: formData,
+})
+
+const { url, variant } = await res.json()
+console.log(`${variant} logo uploaded:`, url)
+```
+
+### Request Body (FormData)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | `File` | Yes | Image file (PNG, JPEG, WebP, or SVG, max 30MB) |
+| `variant` | `"light" \| "dark"` | Yes | Logo variant |
+
+## Delete Logo
+
+`DELETE /api/dashboard/logo/:variant` — requires `org:write` scope.
+
+```typescript title="delete-logo.ts"
+await fetch(`${BASE_URL}/api/dashboard/logo/dark`, {
+  method: "DELETE",
+  headers: { "Authorization": `Bearer ${API_KEY}` },
+})
+```
+
+## Check Slug Availability
+
+`GET /api/dashboard/organizations/slug-available` — requires Clerk session (not API key).
+
+```typescript title="check-slug.ts"
+const res = await fetch(
+  `${BASE_URL}/api/dashboard/organizations/slug-available?slug=agi-ventures`,
+  { credentials: "include" }
+)
+
+const { available } = await res.json()
+console.log("Slug available:", available)
+```
+
+## Get Public Organization Page
+
+`GET /api/public/orgs/:slug` — no authentication required.
+
+Returns the organization profile along with all hackathons they've organized or sponsored.
+
+```typescript title="public-org.ts"
+const res = await fetch(`${BASE_URL}/api/public/orgs/agi-ventures`)
+
+const org = await res.json()
+console.log(`${org.name}: ${org.organizedHackathons.length} hackathons organized`)
+```
+
+### Response
+
+```json title="response.json"
+{
+  "id": "org_abc123",
+  "name": "AGI Ventures",
+  "slug": "agi-ventures",
+  "logoUrl": "https://storage.example.com/logos/org_abc123_light.png",
+  "logoUrlDark": "https://storage.example.com/logos/org_abc123_dark.png",
+  "description": "Building the future of hackathons",
+  "websiteUrl": "https://agiventures.com",
+  "organizedHackathons": [
+    {
+      "id": "hack_abc123",
+      "name": "AI Innovation Challenge 2026",
+      "slug": "ai-innovation-challenge-2026",
+      "description": "Build the future of AI-powered tools",
+      "bannerUrl": "https://storage.example.com/banners/hack_abc123.jpg",
+      "status": "completed",
+      "startsAt": "2026-04-01T09:00:00Z",
+      "endsAt": "2026-04-03T17:00:00Z"
+    }
+  ],
+  "sponsoredHackathons": [
+    {
+      "id": "hack_def456",
+      "name": "Green Tech Hackathon",
+      "slug": "green-tech-hackathon",
+      "description": "Sustainability through technology",
+      "bannerUrl": null,
+      "status": "active",
+      "startsAt": "2026-05-15T09:00:00Z",
+      "endsAt": "2026-05-17T17:00:00Z",
+      "organizer": {
+        "id": "org_xyz",
+        "name": "Tech for Good",
+        "slug": "tech-for-good",
+        "logoUrl": null
+      }
+    }
+  ]
+}
+```

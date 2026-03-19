@@ -129,6 +129,7 @@ export function AppSidebarSimple() {
     const url = new URL(item.href, "http://x")
     const tab = url.searchParams.get("tab")
     if (tab) return pathname === "/home" && currentTab === tab
+    if (pathname === "/home" && currentTab && !tab) return false
     return pathname.startsWith(url.pathname)
   }
 

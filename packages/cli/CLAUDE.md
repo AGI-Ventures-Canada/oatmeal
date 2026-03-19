@@ -28,6 +28,8 @@ bun cli judging judges list <hackathon-id>
 
 The `--base-url` is saved in `~/.hackathon/config.json` after login — you only set it once. To switch back to production later, just `bun cli login` (no flag = default prod URL).
 
+**Prerequisite:** The server must have `ENCRYPTION_KEY` set in `.env.local` (64 hex chars / 32 bytes). CLI login encrypts the generated API key before storing it in `cli_auth_sessions`. Without it, login fails with "Internal server error". Generate with `openssl rand -hex 32`.
+
 Edit any `.ts` file in `packages/cli/src/` and re-run `bun cli` — changes are picked up instantly since Bun executes TypeScript directly.
 
 ### Testing with seeded data
@@ -43,6 +45,12 @@ bun cli judging auto-assign <hackathon-id> --per-judge 3
 - `src/client.ts` — HTTP client (no server imports)
 - `src/config.ts` — `~/.hackathon/config.json` management
 - All types are CLI-local (no imports from main app)
+
+## App Parity
+
+- When app behavior or API validation changes, check whether the CLI needs the same behavior
+- CLI URL arguments should accept bare domains like `example.com/webhook` and normalize them before sending requests
+- Changes that affect both app and CLI should include CLI tests, not just app tests
 
 ## Adding a Command
 1. Create `src/commands/<resource>/<action>.ts`

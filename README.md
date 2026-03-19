@@ -42,7 +42,11 @@ Interactive documentation is available at `/docs` with:
 
 ## AI Agent Integration
 
-Use the [hackathon-skills](https://github.com/AGI-Ventures-Canada/hackathon-skills) to manage the platform from any AI coding agent (Claude Code, Cursor, etc.):
+`CLAUDE.md` and `AGENTS.md` always mirror the same instructions by keeping one as a symlink to the other in any directory that has agent guidance.
+
+Install this repo's hackathon skills with `npx skills add AGI-Ventures-Canada/oatmeal` to manage the platform from any AI coding agent (Claude Code, Cursor, etc.):
+
+Only the public skills in `skills/` are meant for installation; repo-local helper skills in agent-specific folders are marked internal so they stay out of normal `npx skills add` installs.
 
 ```bash
 claude

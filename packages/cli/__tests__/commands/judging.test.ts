@@ -37,7 +37,7 @@ describe("judging commands", () => {
   describe("criteria list", () => {
     it("fetches and displays criteria", async () => {
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ criteria: [{ name: "Innovation", max_score: 10, weight: 1 }] })
+        jsonResponse({ criteria: [{ name: "Innovation", maxScore: 10, weight: 1 }] })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
       const { runCriteriaList } = await import("../../src/commands/judging/criteria-list")
@@ -49,7 +49,7 @@ describe("judging commands", () => {
   describe("criteria create", () => {
     it("creates criteria with flags", async () => {
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ id: "c1", name: "Design", max_score: 10, weight: 1 })
+        jsonResponse({ id: "c1", name: "Design", maxScore: 10, weight: 1 })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
       const { runCriteriaCreate } = await import("../../src/commands/judging/criteria-create")
@@ -58,7 +58,7 @@ describe("judging commands", () => {
       const init = mockFetch.mock.calls[0][1] as RequestInit
       const body = JSON.parse(init.body as string)
       expect(body.name).toBe("Design")
-      expect(body.max_score).toBe(10)
+      expect(body.maxScore).toBe(10)
     })
   })
 
@@ -66,7 +66,7 @@ describe("judging commands", () => {
     it("shows judges with progress", async () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
-          judges: [{ name: "Judge A", email: "a@test.com", completed_count: 3, total_count: 5 }],
+          judges: [{ name: "Judge A", email: "a@test.com", completedCount: 3, totalCount: 5 }],
         })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
@@ -109,9 +109,13 @@ describe("judging commands", () => {
     it("displays tally table", async () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
-          picks: [
-            { submission_name: "Project A", pick_count: 3, judges: ["Judge 1", "Judge 2", "Judge 3"] },
-          ],
+          results: {
+            "Project A": [
+              { judgeName: "Judge 1", submissionTitle: "Project A" },
+              { judgeName: "Judge 2", submissionTitle: "Project A" },
+              { judgeName: "Judge 3", submissionTitle: "Project A" },
+            ],
+          },
         })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
@@ -206,7 +210,7 @@ describe("judging commands", () => {
     it("displays assignments table", async () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
-          assignments: [{ judge_name: "Alice", submission_name: "Project X", status: "pending" }],
+          assignments: [{ judgeName: "Alice", submissionTitle: "Project X", isComplete: false }],
         })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
@@ -217,7 +221,7 @@ describe("judging commands", () => {
     })
 
     it("--json outputs raw data", async () => {
-      const data = { assignments: [{ judge_name: "Alice", submission_name: "Project X" }] }
+      const data = { assignments: [{ judgeName: "Alice", submissionTitle: "Project X" }] }
       mockFetch.mockResolvedValueOnce(jsonResponse(data))
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
       const { runAssignmentsList } = await import("../../src/commands/judging/assignments-list")
@@ -243,8 +247,8 @@ describe("judging commands", () => {
 
       const init = mockFetch.mock.calls[0][1] as RequestInit
       const body = JSON.parse(init.body as string)
-      expect(body.judge_id).toBe("j1")
-      expect(body.submission_id).toBe("s1")
+      expect(body.judgeParticipantId).toBe("j1")
+      expect(body.submissionId).toBe("s1")
     })
 
     it("exits when --judge or --submission missing", async () => {
@@ -284,7 +288,7 @@ describe("judging commands", () => {
     it("displays pending invitations", async () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
-          invitations: [{ email: "pending@test.com", status: "pending", created_at: "2026-01-01" }],
+          invitations: [{ email: "pending@test.com", status: "pending", createdAt: "2026-01-01" }],
         })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })

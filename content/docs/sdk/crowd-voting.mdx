@@ -1,0 +1,126 @@
+---
+title: Crowd Voting API
+description: Enable public voting on hackathon submissions via the REST API.
+---
+
+The Crowd Voting API allows attendees and the public to vote for their favorite submissions. Each user gets one vote per hackathon — voting for a new submission replaces the previous vote.
+
+## Endpoints
+
+All endpoints use the public namespace with hackathon slugs.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/public/hackathons/:slug/vote` | Cast or change vote |
+| `DELETE` | `/api/public/hackathons/:slug/vote` | Remove vote |
+| `GET` | `/api/public/hackathons/:slug/vote` | Get vote counts |
+
+Casting and removing votes requires a Clerk session. Reading vote counts is public.
+
+## Cast a Vote
+
+`POST /api/public/hackathons/:slug/vote` — requires Clerk session.
+
+Votes for a submission. If the user has already voted in this hackathon, their vote moves to the new submission.
+
+```typescript title="cast-vote.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/vote`,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      submissionId: "sub_xyz456",
+    }),
+  }
+)
+
+const { success } = await res.json()
+console.log("Vote cast:", success)
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `submissionId` | `string` | Yes | Submission to vote for |
+
+## Remove Vote
+
+`DELETE /api/public/hackathons/:slug/vote` — requires Clerk session.
+
+Removes the user's vote. Returns an error if the user hasn't voted.
+
+```typescript title="remove-vote.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/vote`,
+  {
+    method: "DELETE",
+    credentials: "include",
+  }
+)
+
+const { success } = await res.json()
+```
+
+## Get Vote Counts
+
+`GET /api/public/hackathons/:slug/vote` — optional Clerk session.
+
+Returns aggregated vote counts for all submissions and the current user's vote (if authenticated).
+
+```typescript title="get-votes.ts"
+const res = await fetch(
+  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/vote`,
+  { credentials: "include" }
+)
+
+const { userVote, counts } = await res.json()
+
+if (userVote) {
+  console.log("You voted for:", userVote)
+}
+
+const sorted = counts.sort((a, b) => b.voteCount - a.voteCount)
+for (const { submissionId, voteCount } of sorted) {
+  console.log(`${submissionId}: ${voteCount} votes`)
+}
+```
+
+### Response
+
+```json title="response.json"
+{
+  "userVote": "sub_xyz456",
+  "counts": [
+    { "submissionId": "sub_xyz456", "voteCount": 24 },
+    { "submissionId": "sub_abc789", "voteCount": 18 },
+    { "submissionId": "sub_def012", "voteCount": 12 }
+  ]
+}
+```
+
+When not authenticated, `userVote` is `null`.
+
+## Full Example
+
+```typescript title="full-example.ts"
+async function displayVoteResults(hackathonSlug: string) {
+  const res = await fetch(
+    `${BASE_URL}/api/public/hackathons/${hackathonSlug}/vote`
+  )
+
+  const { counts } = await res.json()
+
+  const sorted = counts.sort((a, b) => b.voteCount - a.voteCount)
+  const totalVotes = sorted.reduce((sum, c) => sum + c.voteCount, 0)
+
+  console.log(`Total votes: ${totalVotes}\n`)
+
+  for (const [i, { submissionId, voteCount }] of sorted.entries()) {
+    const pct = ((voteCount / totalVotes) * 100).toFixed(1)
+    console.log(`${i + 1}. ${submissionId} — ${voteCount} votes (${pct}%)`)
+  }
+}
+```

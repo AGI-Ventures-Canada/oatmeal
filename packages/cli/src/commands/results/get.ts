@@ -21,17 +21,17 @@ export async function runResultsGet(
     return
   }
 
-  if (!data.rankings?.length) {
+  if (!data.results?.length) {
     console.log("No results available. Run 'hackathon results calculate <id>' first.")
     return
   }
 
   console.log(
-    formatTable(data.rankings, [
+    formatTable(data.results, [
       { key: "rank", label: "#" },
-      { key: "submission_name", label: "Submission" },
-      { key: "team_name", label: "Team" },
-      { key: "total_score", label: "Score" },
+      { key: "submissionTitle", label: "Submission" },
+      { key: "teamName", label: "Team" },
+      { key: "totalScore", label: "Score" },
     ])
   )
 }

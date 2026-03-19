@@ -20,15 +20,15 @@ export async function runSchedulesList(
 
   const rows = data.schedules.map((s) => ({
     ...s,
-    enabled_str: s.enabled ? "Enabled" : "Disabled",
+    activeStr: s.isActive ? "Enabled" : "Disabled",
   }))
 
   console.log(
     formatTable(rows, [
       { key: "name", label: "Name" },
-      { key: "cron_expression", label: "Cron" },
-      { key: "enabled_str", label: "Status" },
-      { key: "next_run_at", label: "Next Run" },
+      { key: "cronExpression", label: "Cron" },
+      { key: "activeStr", label: "Status" },
+      { key: "nextRunAt", label: "Next Run" },
     ])
   )
 }

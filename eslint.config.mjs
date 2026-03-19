@@ -42,6 +42,8 @@ const eslintConfig = defineConfig([
     ".source/**",
     // Workflow DevKit generated routes
     "app/.well-known/workflow/**",
+    // Claude Code worktrees (isolated branch copies)
+    ".claude/worktrees/**",
   ]),
 ]);
 

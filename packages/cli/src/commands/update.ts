@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process"
 import pc from "picocolors"
 import { VERSION } from "../constants.js"
+import { detectInvocationMode } from "../invocation.js"
 import { checkForUpdate } from "../update-check.js"
 
 const PKG = "@agi-ventures-canada/hackathon-cli"
@@ -24,7 +25,16 @@ export async function runUpdate(): Promise<void> {
   }
 
   const pm = detectPackageManager()
+  const invocationMode = detectInvocationMode()
   console.log(`New version available: ${update.latest}`)
+
+  if (invocationMode === "local-bun-script") {
+    console.log(pc.yellow("You are running the repo-local CLI via `bun cli`."))
+    console.log("Update this repository to use the newer CLI source, or install the published package globally:")
+    console.log(`  ${pm.install}`)
+    return
+  }
+
   console.log(`Updating via ${pm.cmd}...`)
 
   try {

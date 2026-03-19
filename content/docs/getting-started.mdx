@@ -3,7 +3,7 @@ title: Getting Started
 description: Set up authentication and make your first API call.
 ---
 
-The Oatmeal platform exposes a REST API. All requests use standard `fetch()` with JSON payloads and API key authentication.
+The Oatmeal platform exposes a REST API. All requests use standard `fetch()` with JSON payloads and API key authentication. For a comprehensive overview of all authentication methods, see the [Authentication](/docs/authentication) guide.
 
 ## Get Your API Key
 
@@ -87,17 +87,28 @@ async function apiCall(path: string, options?: RequestInit) {
 }
 ```
 
-## API Endpoints
+## API Namespaces
 
-The API is split across two namespaces:
+The API is split across three namespaces with different authentication requirements:
 
 | Namespace | Auth | Description |
 |-----------|------|-------------|
-| `/api/v1/*` | API key only | Programmatic access for jobs, webhooks |
-| `/api/dashboard/*` | API key or session | Schedules, extended job details |
+| `/api/public/*` | None or Clerk session | Public discovery, participant actions (registration, submissions, voting) |
+| `/api/dashboard/*` | API key or Clerk session | Organizer management (hackathon CRUD, judging, prizes, sponsors) |
+| `/api/v1/*` | API key only | Programmatic access for jobs and webhooks |
+
+<Callout type="info">
+Most organizer and programmatic endpoints accept API keys. Participant-facing actions (registration, submissions, team invitations) require a Clerk session since they act on behalf of a logged-in user.
+</Callout>
 
 ## Next Steps
 
+### Core API
+- [Hackathons API](/docs/sdk/hackathons) - Create, configure, and manage events
+- [Submissions API](/docs/sdk/submissions) - Submit projects and upload screenshots
+- [Registration & Teams](/docs/sdk/registration) - Register and manage team invitations
+
+### Platform
 - [Jobs API](/docs/sdk/jobs) - Create and manage async jobs
 - [Webhooks API](/docs/sdk/webhooks) - Receive real-time event notifications
 - [Schedules API](/docs/sdk/schedules) - Create recurring jobs
