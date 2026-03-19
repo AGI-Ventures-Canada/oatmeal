@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Sun, Moon, ImageIcon, ExternalLink, Users, CreditCard, TriangleAlert, Check, X, Loader2 } from "lucide-react"
+import { normalizeOptionalUrl, normalizeUrlFieldValue, urlInputProps } from "@/lib/utils/url"
 
 function isValidSlugFormat(s: string): boolean {
   return s.length >= 3 && /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(s)
@@ -101,13 +102,14 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     setError(null)
 
     try {
+      const normalizedWebsiteUrl = normalizeOptionalUrl(websiteUrl) ?? ""
       const res = await fetch("/api/dashboard/org-profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slug,
           description: description || null,
-          websiteUrl: websiteUrl || null,
+          websiteUrl: normalizedWebsiteUrl || null,
         }),
       })
 
@@ -116,7 +118,8 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         throw new Error(data.error || "Failed to save profile")
       }
 
-      lastSaved.current = { slug, description, websiteUrl }
+      setWebsiteUrl(normalizedWebsiteUrl)
+      lastSaved.current = { slug, description, websiteUrl: normalizedWebsiteUrl }
       setSlugStatus("idle")
       router.refresh()
     } catch (err) {
@@ -252,10 +255,11 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         <FieldLabel htmlFor="website-url">Website URL</FieldLabel>
         <Input
           id="website-url"
-          type="url"
-          placeholder="https://example.com"
+          {...urlInputProps}
+          placeholder="example.com"
           value={websiteUrl}
           onChange={(e) => setWebsiteUrl(e.target.value)}
+          onBlur={() => setWebsiteUrl(normalizeUrlFieldValue(websiteUrl))}
         />
       </Field>
 

@@ -93,6 +93,7 @@ function stateToHackathon(state: DraftState): PublicHackathon {
       hackathon_id: "draft",
       sponsor_tenant_id: null,
       tenant_sponsor_id: null,
+      use_org_assets: false,
       name: s.name,
       logo_url: null,
       logo_url_dark: null,

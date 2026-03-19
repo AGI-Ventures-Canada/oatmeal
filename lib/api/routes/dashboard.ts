@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia"
-import { normalizeUrl } from "@/lib/utils/url"
+import { normalizeOptionalUrl, normalizeUrl } from "@/lib/utils/url"
 import { resolvePrincipal, requirePrincipal, AuthError } from "@/lib/auth/principal"
 import { createApiKey, listApiKeys, revokeApiKey, getApiKeyById } from "@/lib/services/api-keys"
 import { listJobs, getJobById } from "@/lib/services/jobs"
@@ -319,10 +319,27 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     async ({ principal, body }) => {
       requirePrincipal(principal, ["user", "api_key"], ["webhooks:write"])
 
+      const webhookUrl = normalizeUrl(body.url)
+
+      try {
+        const parsedUrl = new URL(webhookUrl)
+        if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+          return new Response(JSON.stringify({ error: "Webhook URL must use http or https" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          })
+        }
+      } catch {
+        return new Response(JSON.stringify({ error: "Invalid webhook URL" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
       const { createWebhook } = await import("@/lib/services/webhooks")
       const result = await createWebhook({
         tenantId: principal.tenantId,
-        url: body.url,
+        url: webhookUrl,
         events: body.events as WebhookEvent[],
       })
 
@@ -350,7 +367,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         description: "Creates a webhook and returns the signing secret once. Requires webhooks:write scope.",
       },
       body: t.Object({
-        url: t.String({ format: "uri" }),
+        url: t.String(),
         events: t.Array(t.String()),
       }),
     }
@@ -1107,7 +1124,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         judgingMode: body.judgingMode as "points" | "subjective" | undefined,
         locationType: body.locationType as "in_person" | "virtual" | null | undefined,
         locationName: body.locationName,
-        locationUrl: body.locationUrl,
+        locationUrl: normalizeOptionalUrl(body.locationUrl),
         locationLatitude: body.locationLatitude,
         locationLongitude: body.locationLongitude,
         requireLocationVerification: body.requireLocationVerification,
@@ -1347,6 +1364,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         logoUrl: s.logo_url,
         websiteUrl: s.website_url,
         tier: s.tier,
+        useOrgAssets: s.use_org_assets,
         displayOrder: s.display_order,
         sponsorTenantId: s.sponsor_tenant_id,
         tenant: s.tenant
@@ -1355,6 +1373,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
               name: s.tenant.name,
               logoUrl: s.tenant.logo_url,
               logoUrlDark: s.tenant.logo_url_dark,
+              websiteUrl: s.tenant.website_url,
+              description: s.tenant.description,
             }
           : null,
         createdAt: s.created_at,
@@ -1389,6 +1409,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
       const { addSponsor } = await import("@/lib/services/sponsors")
 
+      const logoUrl = normalizeOptionalUrl(body.logoUrl)
       const websiteUrl = body.websiteUrl ? normalizeUrl(body.websiteUrl) : body.websiteUrl
 
       let tenantSponsorId: string | null = null
@@ -1407,11 +1428,12 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       const sponsor = await addSponsor({
         hackathonId: params.id,
         name: body.name,
-        logoUrl: body.logoUrl,
+        logoUrl,
         websiteUrl,
         tier: body.tier as "title" | "gold" | "silver" | "bronze" | "partner" | undefined,
         sponsorTenantId: body.sponsorTenantId,
         tenantSponsorId,
+        useOrgAssets: body.useOrgAssets,
         displayOrder: body.displayOrder,
       })
 
@@ -1448,6 +1470,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         websiteUrl: t.Optional(t.Union([t.String(), t.Null()])),
         tier: t.Optional(t.String()),
         sponsorTenantId: t.Optional(t.Union([t.String(), t.Null()])),
+        useOrgAssets: t.Optional(t.Boolean()),
         displayOrder: t.Optional(t.Number()),
       }),
     }
@@ -1474,13 +1497,15 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
 
       const { updateSponsor } = await import("@/lib/services/sponsors")
+      const sponsorLogoUrl = normalizeOptionalUrl(body.logoUrl)
       const sponsorWebsiteUrl = body.websiteUrl ? normalizeUrl(body.websiteUrl) : body.websiteUrl
       const sponsor = await updateSponsor(params.sponsorId, {
         name: body.name,
-        logoUrl: body.logoUrl,
+        logoUrl: sponsorLogoUrl,
         websiteUrl: sponsorWebsiteUrl,
         tier: body.tier as "title" | "gold" | "silver" | "bronze" | "partner" | undefined,
         sponsorTenantId: body.sponsorTenantId,
+        useOrgAssets: body.useOrgAssets,
         displayOrder: body.displayOrder,
       }, params.id)
 
@@ -1514,6 +1539,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         websiteUrl: t.Optional(t.Union([t.String(), t.Null()])),
         tier: t.Optional(t.String()),
         sponsorTenantId: t.Optional(t.Union([t.String(), t.Null()])),
+        useOrgAssets: t.Optional(t.Boolean()),
         displayOrder: t.Optional(t.Number()),
       }),
     }

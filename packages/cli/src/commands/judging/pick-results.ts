@@ -1,13 +1,23 @@
 import type { OatmealClient } from "../../client.js"
 import { formatJson, formatTable } from "../../output.js"
-import type { PickResults } from "../../types.js"
+
+interface PickResultEntry {
+  submissionId: string
+  firstPicks: number
+  averageRank: number
+  totalPicks: number
+}
+
+type PickResultsResponse = {
+  results: Record<string, PickResultEntry[]>
+}
 
 export async function runPickResults(
   client: OatmealClient,
   hackathonId: string,
   options: { json?: boolean }
 ): Promise<void> {
-  const data = await client.get<PickResults>(
+  const data = await client.get<PickResultsResponse>(
     `/api/dashboard/hackathons/${hackathonId}/judging/pick-results`
   )
 
@@ -16,21 +26,21 @@ export async function runPickResults(
     return
   }
 
-  if (!data.picks?.length) {
+  const entries = Object.entries(data.results)
+  if (!entries.length) {
     console.log("No pick results available.")
     return
   }
 
-  const rows = data.picks.map((pick) => ({
-    ...pick,
-    judges_list: pick.judges.join(", "),
-  }))
-
-  console.log(
-    formatTable(rows, [
-      { key: "submission_name", label: "Submission" },
-      { key: "pick_count", label: "Picks" },
-      { key: "judges_list", label: "Judges" },
-    ])
-  )
+  for (const [prizeId, picks] of entries) {
+    console.log(`\nPrize: ${prizeId}`)
+    console.log(
+      formatTable(picks, [
+        { key: "submissionId", label: "Submission" },
+        { key: "firstPicks", label: "1st Picks" },
+        { key: "averageRank", label: "Avg Rank" },
+        { key: "totalPicks", label: "Total Picks" },
+      ])
+    )
+  }
 }

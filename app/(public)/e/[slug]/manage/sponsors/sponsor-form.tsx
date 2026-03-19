@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { normalizeOptionalUrl, normalizeUrl, urlInputProps } from "@/lib/utils/url"
 
 interface SponsorFormProps {
   hackathonId: string
@@ -30,8 +31,8 @@ export function SponsorForm({ hackathonId }: SponsorFormProps) {
     const formData = new FormData(e.currentTarget)
     const data = {
       name: formData.get("name") as string,
-      logoUrl: formData.get("logoUrl") as string || null,
-      websiteUrl: formData.get("websiteUrl") as string || null,
+      logoUrl: normalizeOptionalUrl(formData.get("logoUrl") as string | null),
+      websiteUrl: normalizeOptionalUrl(formData.get("websiteUrl") as string | null),
       tier: formData.get("tier") as string,
     }
 
@@ -91,8 +92,13 @@ export function SponsorForm({ hackathonId }: SponsorFormProps) {
           <Input
             id="logoUrl"
             name="logoUrl"
-            type="url"
-            placeholder="https://..."
+            {...urlInputProps}
+            placeholder="cdn.example.com/logo.png"
+            onBlur={(e) => {
+              if (e.currentTarget.value.trim()) {
+                e.currentTarget.value = normalizeUrl(e.currentTarget.value)
+              }
+            }}
           />
         </div>
         <div className="space-y-2">
@@ -100,8 +106,13 @@ export function SponsorForm({ hackathonId }: SponsorFormProps) {
           <Input
             id="websiteUrl"
             name="websiteUrl"
-            type="url"
-            placeholder="https://..."
+            {...urlInputProps}
+            placeholder="company.com"
+            onBlur={(e) => {
+              if (e.currentTarget.value.trim()) {
+                e.currentTarget.value = normalizeUrl(e.currentTarget.value)
+              }
+            }}
           />
         </div>
       </div>

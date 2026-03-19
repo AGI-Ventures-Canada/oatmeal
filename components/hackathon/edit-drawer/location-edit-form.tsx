@@ -17,6 +17,7 @@ import { useEditOptional } from "@/components/hackathon/preview/edit-context"
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete"
 import { MapPin, Video, Undo2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { normalizeOptionalUrl, normalizeUrlFieldValue, urlInputProps } from "@/lib/utils/url"
 
 type LocationType = "in_person" | "virtual" | null
 
@@ -79,11 +80,12 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
     setError(null)
 
     try {
+      const normalizedLocationUrl = normalizeOptionalUrl(locationUrl) ?? null
       if (onSave) {
         return await onSave({
           locationType,
           locationName: locationName.trim() || null,
-          locationUrl: locationUrl.trim() || null,
+          locationUrl: normalizedLocationUrl,
           locationLatitude,
           locationLongitude,
           requireLocationVerification,
@@ -96,7 +98,7 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
         body: JSON.stringify({
           locationType,
           locationName: locationName.trim() || null,
-          locationUrl: locationUrl.trim() || null,
+          locationUrl: normalizedLocationUrl,
           locationLatitude,
           locationLongitude,
           requireLocationVerification,
@@ -249,10 +251,11 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
             <Input
               id="location-url"
               name="location-url"
-              type="url"
-              placeholder="https://zoom.us/j/..."
+              {...urlInputProps}
+              placeholder="zoom.us/j/..."
               value={locationUrl}
               onChange={(e) => setLocationUrl(e.target.value)}
+              onBlur={() => setLocationUrl(normalizeUrlFieldValue(locationUrl))}
               autoFocus
               autoComplete="off"
               data-1p-ignore

@@ -275,6 +275,13 @@ This ensures consistent theming and proper dark mode support.
 // - Profile forms where users enter personal info
 ```
 
+**URL inputs must accept bare domains and paths.** Never require users to type `https://` manually.
+
+- Use `type="text"` with `inputMode="url"` instead of `type="url"` so entries like `github.com/org/repo` are accepted
+- Normalize URL values with `normalizeUrl()` from `lib/utils/url.ts` on blur or submit before validation/storage
+- Disable auto-capitalization and spellcheck on URL fields
+- When URL behavior changes in the app, update matching API routes and CLI flows too
+
 **Support Cmd/Ctrl+Enter to submit forms.** Most forms should be submittable with Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux):
 
 ```typescript
@@ -342,6 +349,7 @@ Exceptions (don't auto-focus):
 - Maintain TypeScript type safety throughout
 - Delete dead code outright — no commented-out blocks, `// TODO: remove`, or placeholder stubs
 - **Reuse existing components and patterns** — before building something custom, check if a similar component already exists in the codebase. If unsure, ask the user before creating a new one
+- **Consider CLI impact when changing app behavior** — this repo ships a standalone CLI in `packages/cli/`. If you change API contracts, validation, or user-facing workflows in the app, verify whether the CLI also needs matching support, tests, or docs
 
 ### Testing
 
@@ -551,6 +559,17 @@ refactor: extract payment logic into service
 ```
 
 This catches style violations, shadcn primitive misuse, dead code, and other issues before they land in a PR.
+
+### Required Environment Variables
+
+Beyond the standard Clerk/Supabase keys, these secrets must be in `.env.local` for full functionality:
+
+| Variable | Purpose | Generate with |
+|----------|---------|---------------|
+| `API_KEY_SECRET` | Hashes API keys before storing in the database | `openssl rand -hex 32` |
+| `ENCRYPTION_KEY` | Encrypts API keys in CLI auth sessions (must be exactly 64 hex chars / 32 bytes) | `openssl rand -hex 32` |
+
+Without `ENCRYPTION_KEY`, CLI login (`hackathon login`) will fail with "Internal server error" because `completeCliAuthSession` calls `encryptToken()` which requires it.
 
 ### Local Supabase Port Assignments
 

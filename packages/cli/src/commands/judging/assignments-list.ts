@@ -23,10 +23,10 @@ export async function runAssignmentsList(
 
   console.log(
     formatTable(data.assignments, [
-      { key: "judge_name", label: "Judge" },
-      { key: "submission_name", label: "Submission" },
-      { key: "status", label: "Status" },
-      { key: "scored_at", label: "Scored At" },
+      { key: "judgeName", label: "Judge" },
+      { key: "submissionTitle", label: "Submission" },
+      { key: "isComplete", label: "Complete" },
+      { key: "assignedAt", label: "Assigned At" },
     ])
   )
 }

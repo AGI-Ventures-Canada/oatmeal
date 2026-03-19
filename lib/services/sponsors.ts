@@ -11,6 +11,7 @@ export interface AddSponsorInput {
   tier?: SponsorTier
   sponsorTenantId?: string | null
   tenantSponsorId?: string | null
+  useOrgAssets?: boolean
   displayOrder?: number
 }
 
@@ -27,6 +28,7 @@ export async function addSponsor(input: AddSponsorInput): Promise<HackathonSpons
       tier: input.tier ?? "none",
       sponsor_tenant_id: input.sponsorTenantId ?? null,
       tenant_sponsor_id: input.tenantSponsorId ?? null,
+      use_org_assets: input.useOrgAssets ?? false,
       display_order: input.displayOrder ?? 0,
     })
     .select()
@@ -98,6 +100,7 @@ export async function updateSponsor(
   if (updates.websiteUrl !== undefined) updateData.website_url = updates.websiteUrl
   if (updates.tier !== undefined) updateData.tier = updates.tier
   if (updates.sponsorTenantId !== undefined) updateData.sponsor_tenant_id = updates.sponsorTenantId
+  if (updates.useOrgAssets !== undefined) updateData.use_org_assets = updates.useOrgAssets
   if (updates.displayOrder !== undefined) updateData.display_order = updates.displayOrder
 
   const { data, error } = await client
@@ -149,6 +152,8 @@ export type SponsorWithTenant = HackathonSponsor & {
     name: string
     logo_url: string | null
     logo_url_dark: string | null
+    website_url: string | null
+    description: string | null
   } | null
 }
 
@@ -160,7 +165,7 @@ export async function listHackathonSponsorsWithTenants(
     .from("hackathon_sponsors")
     .select(`
       *,
-      tenant:tenants!sponsor_tenant_id(slug, name, logo_url, logo_url_dark)
+      tenant:tenants!sponsor_tenant_id(slug, name, logo_url, logo_url_dark, website_url, description)
     `)
     .eq("hackathon_id", hackathonId)
     .order("tier")

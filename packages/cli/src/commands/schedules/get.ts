@@ -23,11 +23,11 @@ export async function runSchedulesGet(
     formatDetail([
       { label: "ID", value: schedule.id },
       { label: "Name", value: schedule.name },
-      { label: "Cron", value: schedule.cron_expression },
-      { label: "Enabled", value: String(schedule.enabled) },
-      { label: "Last Run", value: schedule.last_run_at },
-      { label: "Next Run", value: schedule.next_run_at },
-      { label: "Created", value: schedule.created_at },
+      { label: "Cron", value: schedule.cronExpression },
+      { label: "Enabled", value: String(schedule.isActive) },
+      { label: "Last Run", value: schedule.lastRunAt },
+      { label: "Next Run", value: schedule.nextRunAt },
+      { label: "Created", value: schedule.createdAt },
     ])
   )
 }

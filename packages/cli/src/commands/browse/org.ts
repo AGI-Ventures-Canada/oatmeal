@@ -26,7 +26,7 @@ export async function runBrowseOrg(
       { label: "Name", value: data.name },
       { label: "Slug", value: data.slug },
       { label: "Description", value: data.description },
-      { label: "Hackathons", value: String(data.hackathon_count ?? 0) },
+      { label: "Hackathons", value: String(data.organizedHackathons?.length ?? 0) },
     ])
   )
 }

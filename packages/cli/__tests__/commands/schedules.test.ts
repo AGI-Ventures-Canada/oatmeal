@@ -30,7 +30,7 @@ describe("schedules commands", () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
           schedules: [
-            { name: "Daily Backup", cron_expression: "0 0 * * *", enabled: true, next_run_at: "2026-01-02T00:00:00Z" },
+            { name: "Daily Backup", cronExpression: "0 0 * * *", isActive: true, nextRunAt: "2026-01-02T00:00:00Z" },
           ],
         })
       )
@@ -44,7 +44,7 @@ describe("schedules commands", () => {
   describe("create", () => {
     it("creates schedule with flags", async () => {
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ id: "s1", name: "Nightly Report", cron_expression: "0 2 * * *" })
+        jsonResponse({ id: "s1", name: "Nightly Report", cronExpression: "0 2 * * *" })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
       const { runSchedulesCreate } = await import("../../src/commands/schedules/create")
@@ -53,7 +53,7 @@ describe("schedules commands", () => {
       const init = mockFetch.mock.calls[0][1] as RequestInit
       const body = JSON.parse(init.body as string)
       expect(body.name).toBe("Nightly Report")
-      expect(body.cron_expression).toBe("0 2 * * *")
+      expect(body.cronExpression).toBe("0 2 * * *")
     })
   })
 
@@ -63,8 +63,8 @@ describe("schedules commands", () => {
         jsonResponse({
           id: "s1",
           name: "Test Schedule",
-          cron_expression: "0 * * * *",
-          enabled: true,
+          cronExpression: "0 * * * *",
+          isActive: true,
         })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
@@ -86,7 +86,7 @@ describe("schedules commands", () => {
       const init = mockFetch.mock.calls[0][1] as RequestInit
       const body = JSON.parse(init.body as string)
       expect(body.name).toBe("Updated Schedule")
-      expect(body.enabled).toBe(false)
+      expect(body.isActive).toBe(false)
     })
   })
 

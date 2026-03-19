@@ -19,7 +19,7 @@ export async function runPrizesReorder(
   }
 
   await client.post(`/api/dashboard/hackathons/${hackathonId}/prizes/reorder`, {
-    prize_ids: ids,
+    orderedIds: ids,
   })
   console.log(formatSuccess(`Reordered ${ids.length} prizes`))
 }

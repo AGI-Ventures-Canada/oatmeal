@@ -26,7 +26,7 @@ export async function runPrizesList(
       { key: "name", label: "Name" },
       { key: "type", label: "Type" },
       { key: "value", label: "Value" },
-      { key: "assigned_submission_name", label: "Assigned To" },
+      { key: "assignedSubmissionName", label: "Assigned To" },
     ])
   )
 }

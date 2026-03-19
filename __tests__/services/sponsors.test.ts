@@ -14,8 +14,11 @@ const mockSponsor: HackathonSponsor = {
   id: "s1",
   hackathon_id: "h1",
   sponsor_tenant_id: null,
+  tenant_sponsor_id: null,
+  use_org_assets: false,
   name: "Test Sponsor",
   logo_url: "https://example.com/logo.png",
+  logo_url_dark: "https://example.com/logo-dark.png",
   website_url: "https://example.com",
   tier: "gold" as SponsorTier,
   display_order: 0,
@@ -162,6 +165,18 @@ describe("Sponsors Service", () => {
       const result = await updateSponsor("s1", { name: "Updated Sponsor" }, "h1")
 
       expect(result).toBeNull()
+    })
+
+    it("updates the org asset source flag", async () => {
+      const chain = createChainableMock({
+        data: { ...mockSponsor, use_org_assets: true },
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await updateSponsor("s1", { useOrgAssets: true }, "h1")
+
+      expect(result?.use_org_assets).toBe(true)
     })
   })
 

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { CONFIG_DIR, VERSION } from "./constants.js"
+import { formatUpdateHint } from "./invocation.js"
 
 const PACKAGE_NAME = "@agi-ventures-canada/hackathon-cli"
 const CHECK_FILE = join(CONFIG_DIR, "update-check.json")
@@ -83,5 +84,5 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
 }
 
 export function formatUpdateNotice(info: UpdateInfo): string {
-  return `\nUpdate available: ${info.current} → ${info.latest}\nRun \`hackathon update\` to update`
+  return `\nUpdate available: ${info.current} → ${info.latest}\n${formatUpdateHint()}`
 }

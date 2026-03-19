@@ -25,7 +25,7 @@ export async function runInvitationsList(
     formatTable(data.invitations, [
       { key: "email", label: "Email" },
       { key: "status", label: "Status" },
-      { key: "created_at", label: "Sent" },
+      { key: "createdAt", label: "Sent" },
     ])
   )
 }

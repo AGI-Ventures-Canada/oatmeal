@@ -19,12 +19,12 @@ export interface Hackathon {
   slug: string
   description?: string
   status?: string
-  registration_opens_at?: string
-  registration_closes_at?: string
-  starts_at?: string
-  ends_at?: string
-  created_at?: string
-  updated_at?: string
+  registrationOpensAt?: string
+  registrationClosesAt?: string
+  startsAt?: string
+  endsAt?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface HackathonListResponse {
@@ -36,84 +36,84 @@ export interface HackathonListResponse {
 
 export interface Submission {
   id: string
-  name: string
+  title: string
   description?: string
-  team_name?: string
-  submitted_at?: string
-  demo_url?: string
-  repo_url?: string
+  submitter?: string
+  createdAt?: string
+  githubUrl?: string
+  liveAppUrl?: string
 }
 
 export interface JudgingCriteria {
   id: string
-  hackathon_id: string
+  hackathonId: string
   name: string
   description?: string
-  max_score: number
+  maxScore: number
   weight: number
-  order_index?: number
+  orderIndex?: number
 }
 
 export interface Judge {
   id: string
-  hackathon_id: string
-  user_id?: string
+  hackathonId: string
+  userId?: string
   email?: string
   name?: string
-  completed_count?: number
-  total_count?: number
+  completedCount?: number
+  totalCount?: number
 }
 
 export interface JudgeAssignment {
   id: string
-  judge_id: string
-  submission_id: string
-  judge_name?: string
-  submission_name?: string
-  status?: string
-  scored_at?: string
+  judgeParticipantId: string
+  submissionId: string
+  judgeName?: string
+  submissionTitle?: string
+  isComplete?: boolean
+  assignedAt?: string
 }
 
 export interface JudgeInvitation {
   id: string
-  hackathon_id: string
+  hackathonId: string
   email: string
   status: string
-  created_at?: string
+  createdAt?: string
 }
 
 export interface Prize {
   id: string
-  hackathon_id: string
+  hackathonId: string
   name: string
   description?: string
   type?: string
   value?: string
-  order_index?: number
-  assigned_submission_id?: string
-  assigned_submission_name?: string
+  displayOrder?: number
+  assignedSubmissionId?: string
+  assignedSubmissionName?: string
 }
 
 export interface JudgeDisplayProfile {
   id: string
-  hackathon_id: string
+  hackathonId: string
   name: string
   title?: string
   bio?: string
-  headshot_url?: string
-  order_index?: number
+  headshotUrl?: string
+  orderIndex?: number
 }
 
 export interface ResultsData {
-  hackathon_id: string
-  published: boolean
-  published_at?: string
-  rankings?: Array<{
+  hackathonId: string
+  isPublished: boolean
+  publishedAt?: string
+  results?: Array<{
     rank: number
-    submission_id: string
-    submission_name: string
-    team_name?: string
-    total_score: number
+    submissionId: string
+    submissionTitle: string
+    teamName?: string
+    totalScore: number
     prizes?: string[]
   }>
 }
@@ -123,8 +123,8 @@ export interface Webhook {
   url: string
   events: string[]
   active: boolean
-  signing_secret?: string
-  created_at?: string
+  signingSecret?: string
+  createdAt?: string
 }
 
 export interface Job {
@@ -134,18 +134,18 @@ export interface Job {
   input?: Record<string, unknown>
   result?: Record<string, unknown>
   error?: string
-  created_at?: string
-  completed_at?: string
+  createdAt?: string
+  completedAt?: string
 }
 
 export interface Schedule {
   id: string
   name: string
-  cron_expression: string
-  enabled: boolean
-  last_run_at?: string
-  next_run_at?: string
-  created_at?: string
+  cronExpression: string
+  isActive: boolean
+  lastRunAt?: string
+  nextRunAt?: string
+  createdAt?: string
 }
 
 export interface OrgProfile {
@@ -153,17 +153,13 @@ export interface OrgProfile {
   name: string
   slug: string
   description?: string
-  hackathon_count?: number
+  organizedHackathons?: unknown[]
+  sponsoredHackathons?: unknown[]
 }
 
 export interface PickResults {
-  hackathon_id: string
-  picks: Array<{
-    submission_id: string
-    submission_name: string
-    pick_count: number
-    judges: string[]
-  }>
+  hackathonId: string
+  results: Record<string, unknown>
 }
 
 export interface PaginationParams {

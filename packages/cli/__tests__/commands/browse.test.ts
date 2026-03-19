@@ -73,7 +73,7 @@ describe("browse commands", () => {
   describe("browse submissions", () => {
     it("fetches submissions for hackathon", async () => {
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ submissions: [{ name: "Project A", team_name: "Team 1" }] })
+        jsonResponse({ submissions: [{ title: "Project A", teamName: "Team 1" }] })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost" })
       const { runBrowseSubmissions } = await import("../../src/commands/browse/submissions")
@@ -88,8 +88,8 @@ describe("browse commands", () => {
     it("shows published results", async () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
-          published: true,
-          rankings: [{ rank: 1, submission_name: "Winner", total_score: 95 }],
+          isPublished: true,
+          results: [{ rank: 1, submissionTitle: "Winner", totalScore: 95 }],
         })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost" })
@@ -100,7 +100,7 @@ describe("browse commands", () => {
     })
 
     it("handles unpublished results", async () => {
-      mockFetch.mockResolvedValueOnce(jsonResponse({ published: false }))
+      mockFetch.mockResolvedValueOnce(jsonResponse({ isPublished: false }))
       const client = new OatmealClient({ baseUrl: "http://localhost" })
       const { runBrowseResults } = await import("../../src/commands/browse/results")
       await runBrowseResults(client, "my-hack", { json: false })

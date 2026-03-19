@@ -40,7 +40,7 @@ export async function runJudgesAdd(
 
   const body: Record<string, string> = {}
   if (options.email) body.email = options.email
-  if (options.userId) body.user_id = options.userId
+  if (options.userId) body.clerkUserId = options.userId
 
   const judge = await client.post<Judge>(
     `/api/dashboard/hackathons/${hackathonId}/judging/judges`,

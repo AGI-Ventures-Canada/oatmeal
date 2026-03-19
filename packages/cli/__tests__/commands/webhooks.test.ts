@@ -42,21 +42,25 @@ describe("webhooks commands", () => {
   })
 
   describe("create", () => {
-    it("creates webhook with flags and shows signing secret", async () => {
+    it("creates webhook with flags, normalizes bare domains, and shows signing secret", async () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
           id: "w1",
           url: "https://example.com/hook",
           events: ["submission.created"],
-          signing_secret: "whsec_test123",
+          signingSecret: "whsec_test123",
         })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
       const { runWebhooksCreate } = await import("../../src/commands/webhooks/create")
-      await runWebhooksCreate(client, ["--url", "https://example.com/hook", "--events", "submission.created"])
+      await runWebhooksCreate(client, ["--url", "example.com/hook", "--events", "submission.created"])
 
       const allOutput = consoleLogSpy.mock.calls.map((c) => c[0]).join("\n")
       expect(allOutput).toContain("whsec_test123")
+      expect(JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body))).toEqual({
+        url: "https://example.com/hook",
+        events: ["submission.created"],
+      })
     })
   })
 

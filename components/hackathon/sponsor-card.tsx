@@ -2,7 +2,10 @@ import Link from "next/link"
 import type { HackathonSponsor, TenantProfile } from "@/lib/db/hackathon-types"
 
 type SponsorWithTenant = HackathonSponsor & {
-  tenant?: Pick<TenantProfile, "slug" | "name" | "logo_url" | "logo_url_dark"> | null
+  tenant?: Pick<
+    TenantProfile,
+    "slug" | "name" | "logo_url" | "logo_url_dark" | "website_url" | "description"
+  > | null
 }
 
 interface SponsorCardProps {
@@ -17,12 +20,20 @@ const sizeClasses = {
 }
 
 export function SponsorCard({ sponsor, size = "md" }: SponsorCardProps) {
-  const lightLogoUrl = sponsor.logo_url || sponsor.tenant?.logo_url
-  const darkLogoUrl = sponsor.logo_url_dark || sponsor.tenant?.logo_url_dark
-  const name = sponsor.name
-  const href = sponsor.tenant?.slug
-    ? `/o/${sponsor.tenant.slug}`
-    : sponsor.website_url
+  const org = sponsor.tenant
+  const useOrgAssets = sponsor.use_org_assets && !!org
+  const lightLogoUrl = useOrgAssets
+    ? org?.logo_url || sponsor.logo_url
+    : sponsor.logo_url
+  const darkLogoUrl = useOrgAssets
+    ? org?.logo_url_dark || org?.logo_url || sponsor.logo_url_dark
+    : sponsor.logo_url_dark
+  const name = useOrgAssets ? org?.name || sponsor.name : sponsor.name
+  const href = useOrgAssets
+    ? org?.slug
+      ? `/o/${org.slug}`
+      : org?.website_url || sponsor.website_url
+    : sponsor.website_url || (org?.slug ? `/o/${org.slug}` : org?.website_url)
 
   const content = (
     <div

@@ -40,7 +40,7 @@ export async function runAssignmentsCreate(
 
   const assignment = await client.post<JudgeAssignment>(
     `/api/dashboard/hackathons/${hackathonId}/judging/assignments`,
-    { judge_id: options.judge, submission_id: options.submission }
+    { judgeParticipantId: options.judge, submissionId: options.submission }
   )
 
   if (options.json) {

@@ -29,7 +29,7 @@ describe("jobs commands", () => {
     it("displays jobs with status", async () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
-          jobs: [{ id: "j1", type: "analysis", status: "completed", created_at: "2026-01-01" }],
+          jobs: [{ id: "j1", type: "analysis", status: "completed", createdAt: "2026-01-01" }],
         })
       )
       const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })

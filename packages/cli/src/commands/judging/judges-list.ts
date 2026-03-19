@@ -23,7 +23,7 @@ export async function runJudgesList(
 
   const rows = data.judges.map((j) => ({
     ...j,
-    progress: `${j.completed_count ?? 0}/${j.total_count ?? 0}`,
+    progress: `${j.completedCount ?? 0}/${j.totalCount ?? 0}`,
   }))
 
   console.log(
