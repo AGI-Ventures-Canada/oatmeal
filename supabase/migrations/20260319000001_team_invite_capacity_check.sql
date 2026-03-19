@@ -57,7 +57,8 @@ BEGIN
   SELECT id, status, ends_at, max_team_size, max_participants
   INTO v_hackathon
   FROM hackathons
-  WHERE id = v_invitation.hackathon_id;
+  WHERE id = v_invitation.hackathon_id
+  FOR UPDATE;
 
   IF v_hackathon.status IN ('completed', 'archived') THEN
     RETURN QUERY SELECT FALSE, NULL::UUID, NULL::UUID, 'hackathon_ended'::TEXT, 'Hackathon has ended'::TEXT;
