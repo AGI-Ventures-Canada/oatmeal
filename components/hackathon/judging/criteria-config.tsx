@@ -38,9 +38,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Loader2, CheckCircle2, AlertTriangle, ChevronsUpDown } from "lucide-react"
-import type { JudgingMode, CriterionCategory, RubricLevel } from "@/lib/db/hackathon-types"
-import { RubricLevelEditor } from "./rubric-level-editor"
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Loader2, CheckCircle2, AlertTriangle } from "lucide-react"
+import type { JudgingMode, CriterionCategory } from "@/lib/db/hackathon-types"
 
 type Criterion = {
   id: string
@@ -51,7 +50,6 @@ type Criterion = {
   category: CriterionCategory | null
   displayOrder: number
   createdAt: string
-  rubricLevels?: RubricLevel[]
 }
 
 interface CriteriaConfigProps {
@@ -81,21 +79,16 @@ export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: Cr
   const [success, setSuccess] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [reorderingId, setReorderingId] = useState<string | null>(null)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [dialogLevels, setDialogLevels] = useState<RubricLevel[]>([])
-  const [dialogCriteriaId, setDialogCriteriaId] = useState<string | null>(null)
 
   function openCreate() {
     setEditingId(null)
     setForm(emptyForm)
     setError(null)
     setSuccess(false)
-    setDialogLevels([])
-    setDialogCriteriaId(null)
     setDialogOpen(true)
   }
 
-  async function openEdit(c: Criterion) {
+  function openEdit(c: Criterion) {
     setEditingId(c.id)
     setForm({
       name: c.name,
@@ -106,23 +99,7 @@ export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: Cr
     })
     setError(null)
     setSuccess(false)
-    setDialogCriteriaId(c.id)
-    setDialogLevels(c.rubricLevels ?? [])
     setDialogOpen(true)
-    if (isRubric && (!c.rubricLevels || c.rubricLevels.length === 0)) {
-      try {
-        const res = await fetch(
-          `/api/dashboard/hackathons/${hackathonId}/judging/criteria/${c.id}/levels`
-        )
-        if (res.ok) {
-          const data = await res.json()
-          setDialogLevels(data.levels ?? [])
-          setCriteria((prev) =>
-            prev.map((cr) => (cr.id === c.id ? { ...cr, rubricLevels: data.levels ?? [] } : cr))
-          )
-        }
-      } catch {}
-    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -192,7 +169,6 @@ export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: Cr
               category: (payload as { category: CriterionCategory }).category,
               displayOrder: criteria.length,
               createdAt: new Date().toISOString(),
-              rubricLevels: [],
             }
           : {
               id: data.id,
@@ -205,32 +181,9 @@ export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: Cr
               createdAt: new Date().toISOString(),
             }
         setCriteria((prev) => [...prev, newCriterion])
-
-        if (isRubric) {
-          setDialogCriteriaId(data.id)
-          try {
-            const levelsRes = await fetch(
-              `/api/dashboard/hackathons/${hackathonId}/judging/criteria/${data.id}/levels`
-            )
-            if (levelsRes.ok) {
-              const levelsData = await levelsRes.json()
-              const levels = levelsData.levels ?? []
-              setDialogLevels(levels)
-              setCriteria((prev) =>
-                prev.map((cr) => (cr.id === data.id ? { ...cr, rubricLevels: levels } : cr))
-              )
-            }
-          } catch {}
-        }
       }
-
-      if (!isRubric || editingId) {
-        setSuccess(true)
-        setTimeout(() => setDialogOpen(false), 800)
-      } else {
-        setSaving(false)
-        return
-      }
+      setSuccess(true)
+      setTimeout(() => setDialogOpen(false), 800)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong")
     } finally {
@@ -305,12 +258,6 @@ export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: Cr
     }
   }
 
-  function handleLevelsChange(criteriaId: string, levels: RubricLevel[]) {
-    setCriteria((prev) =>
-      prev.map((c) => (c.id === criteriaId ? { ...c, rubricLevels: levels } : c))
-    )
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -327,14 +274,10 @@ export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: Cr
               Add Criterion
             </Button>
           </DialogTrigger>
-          <DialogContent className={isRubric && dialogLevels.length > 0 ? "sm:max-w-lg" : undefined}>
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {dialogLevels.length > 0 && dialogCriteriaId && !editingId
-                  ? "Configure Rubric Levels"
-                  : editingId
-                    ? "Edit Criterion"
-                    : "Add Criterion"}
+                {editingId ? "Edit Criterion" : "Add Criterion"}
               </DialogTitle>
             </DialogHeader>
             {success ? (
@@ -343,36 +286,6 @@ export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: Cr
                 <p className="text-sm font-medium">
                   {editingId ? "Criterion updated" : "Criterion added"}
                 </p>
-              </div>
-            ) : isRubric && dialogCriteriaId && dialogLevels.length > 0 && !editingId ? (
-              <div className="space-y-4">
-                <div className="flex items-start gap-3 rounded-md border bg-muted/50 p-3">
-                  <CheckCircle2 className="size-5 shrink-0 text-primary mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium">Criterion created with 5 default rubric levels</p>
-                    <p className="text-muted-foreground">Edit, add, or remove levels below.</p>
-                  </div>
-                </div>
-                <RubricLevelEditor
-                  hackathonId={hackathonId}
-                  criteriaId={dialogCriteriaId}
-                  levels={dialogLevels}
-                  onLevelsChange={(levels) => {
-                    setDialogLevels(levels)
-                    setCriteria((prev) =>
-                      prev.map((cr) =>
-                        cr.id === dialogCriteriaId
-                          ? { ...cr, rubricLevels: levels }
-                          : cr
-                      )
-                    )
-                  }}
-                />
-                <div className="flex justify-end">
-                  <Button onClick={() => setDialogOpen(false)}>
-                    Done
-                  </Button>
-                </div>
               </div>
             ) : (
               <form
@@ -412,45 +325,23 @@ export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: Cr
                   />
                 </div>
                 {isRubric ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="criteria-category">Category</Label>
-                      <Select
-                        value={form.category}
-                        onValueChange={(value) =>
-                          setForm({ ...form, category: value as CriterionCategory })
-                        }
-                      >
-                        <SelectTrigger id="criteria-category">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="core">Core</SelectItem>
-                          <SelectItem value="bonus">Bonus</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {dialogCriteriaId && dialogLevels.length > 0 && (
-                      <div className="space-y-2">
-                        <Label>Rubric Levels</Label>
-                        <RubricLevelEditor
-                          hackathonId={hackathonId}
-                          criteriaId={dialogCriteriaId}
-                          levels={dialogLevels}
-                          onLevelsChange={(levels) => {
-                            setDialogLevels(levels)
-                            setCriteria((prev) =>
-                              prev.map((cr) =>
-                                cr.id === dialogCriteriaId
-                                  ? { ...cr, rubricLevels: levels }
-                                  : cr
-                              )
-                            )
-                          }}
-                        />
-                      </div>
-                    )}
-                  </>
+                  <div className="space-y-2">
+                    <Label htmlFor="criteria-category">Category</Label>
+                    <Select
+                      value={form.category}
+                      onValueChange={(value) =>
+                        setForm({ ...form, category: value as CriterionCategory })
+                      }
+                    >
+                      <SelectTrigger id="criteria-category">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="core">Core</SelectItem>
+                        <SelectItem value="bonus">Bonus</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -604,29 +495,8 @@ export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: Cr
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    onClick={() => setExpandedId(expandedId === c.id ? null : c.id)}
-                  >
-                    <ChevronsUpDown className="size-3.5" />
-                  </Button>
                 </div>
               </div>
-              {expandedId === c.id && (
-                <div className="border-t px-4 py-3">
-                  <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-                    Rubric Levels
-                  </p>
-                  <RubricLevelEditor
-                    hackathonId={hackathonId}
-                    criteriaId={c.id}
-                    levels={c.rubricLevels ?? []}
-                    onLevelsChange={(levels) => handleLevelsChange(c.id, levels)}
-                  />
-                </div>
-              )}
             </div>
           ))}
         </div>
