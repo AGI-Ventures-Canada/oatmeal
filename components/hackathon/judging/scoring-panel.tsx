@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, CheckCircle2, ExternalLink, Github, Maximize2 } from "lucide-react"
+import { RubricLevelSelector } from "./rubric-level-selector"
 import Image from "next/image"
 import {
   Dialog,
@@ -22,6 +23,7 @@ type CriterionWithScore = {
   max_score: number
   weight: number
   currentScore: number | null
+  rubricLevels?: { id: string; level_number: number; label: string; description: string | null }[]
 }
 
 type AssignmentDetail = {
@@ -253,34 +255,47 @@ export function ScoringPanel({
               </div>
               <Badge variant="secondary">{c.weight}x</Badge>
             </div>
-            <div className="flex items-center gap-3">
-              <Slider
-                value={[scores[c.id] ?? 0]}
-                onValueChange={([val]) =>
-                  setScores((prev) => ({ ...prev, [c.id]: val }))
+            {c.rubricLevels && c.rubricLevels.length > 0 ? (
+              <RubricLevelSelector
+                levels={c.rubricLevels}
+                selectedLevel={scores[c.id] ?? null}
+                onSelect={(level) =>
+                  setScores((prev) => ({
+                    ...prev,
+                    [c.id]: level ?? 0,
+                  }))
                 }
-                min={0}
-                max={c.max_score}
-                step={1}
-                className="flex-1"
               />
-              <Input
-                type="number"
-                min={0}
-                max={c.max_score}
-                value={scores[c.id] ?? 0}
-                onChange={(e) => {
-                  const val = Math.max(0, Math.min(c.max_score, parseInt(e.target.value) || 0))
-                  setScores((prev) => ({ ...prev, [c.id]: val }))
-                }}
-                className="w-16 text-center"
-                autoComplete="off"
-                data-1p-ignore
-                data-lpignore="true"
-                data-form-type="other"
-              />
-              <span className="text-xs text-muted-foreground w-8">/{c.max_score}</span>
-            </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Slider
+                  value={[scores[c.id] ?? 0]}
+                  onValueChange={([val]) =>
+                    setScores((prev) => ({ ...prev, [c.id]: val }))
+                  }
+                  min={0}
+                  max={c.max_score}
+                  step={1}
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  max={c.max_score}
+                  value={scores[c.id] ?? 0}
+                  onChange={(e) => {
+                    const val = Math.max(0, Math.min(c.max_score, parseInt(e.target.value) || 0))
+                    setScores((prev) => ({ ...prev, [c.id]: val }))
+                  }}
+                  className="w-16 text-center"
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
+                />
+                <span className="text-xs text-muted-foreground w-8">/{c.max_score}</span>
+              </div>
+            )}
           </div>
         ))}
       </div>
