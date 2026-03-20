@@ -1167,17 +1167,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }).catch(console.error)
 
       if (previousStatus === "draft" && body.status && body.status !== "draft") {
-        let inviterName = "An organizer"
-        if (principal.kind === "user") {
-          try {
-            const { clerkClient } = await import("@clerk/nextjs/server")
-            const client = await clerkClient()
-            const inviterUser = await client.users.getUser(principal.userId)
-            inviterName = [inviterUser.firstName, inviterUser.lastName].filter(Boolean).join(" ") || "An organizer"
-          } catch {
-            // fall back to default
-          }
-        }
+        const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
+        const inviterName = await resolveAdderName(principal)
         const { sendPendingJudgeInvitationEmails } = await import("@/lib/services/judge-invitations")
         sendPendingJudgeInvitationEmails(hackathon.id, hackathon.name, inviterName).catch(console.error)
       }

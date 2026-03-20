@@ -264,4 +264,16 @@ describe("PATCH /api/dashboard/hackathons/:id/settings - status change emails", 
 
     expect(mockSendPendingJudgeInvitationEmails).not.toHaveBeenCalled()
   })
+
+  it("does not send pending invitation emails when getHackathonByIdForOrganizer returns null", async () => {
+    mockGetHackathonByIdForOrganizer.mockResolvedValue(null)
+    mockUpdateHackathonSettings.mockResolvedValue({ ...mockHackathonResponse, status: "published" })
+
+    const res = await patchSettings({ status: "published" })
+    expect(res.status).toBe(200)
+
+    await Promise.resolve()
+
+    expect(mockSendPendingJudgeInvitationEmails).not.toHaveBeenCalled()
+  })
 })

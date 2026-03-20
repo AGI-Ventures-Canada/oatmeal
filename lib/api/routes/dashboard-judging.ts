@@ -1,19 +1,7 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requirePrincipal } from "@/lib/auth/principal"
 import { logAudit } from "@/lib/services/audit"
-
-async function resolveAdderName(
-  principal: { kind: string; userId?: string },
-  client: { users: { getUser: (id: string) => Promise<{ firstName?: string | null; lastName?: string | null }> } }
-): Promise<string> {
-  if (principal.kind !== "user" || !principal.userId) return "An organizer"
-  try {
-    const adder = await client.users.getUser(principal.userId)
-    return [adder.firstName, adder.lastName].filter(Boolean).join(" ") || "An organizer"
-  } catch {
-    return "An organizer"
-  }
-}
+import { resolveAdderName } from "@/lib/auth/resolve-adder-name"
 
 export const dashboardJudgingRoutes = new Elysia()
   .derive(async ({ request }) => {
@@ -353,7 +341,7 @@ export const dashboardJudgingRoutes = new Elysia()
             const judgeUser = await client.users.getUser(typedBody.clerkUserId)
             const judgeEmail = judgeUser.primaryEmailAddress?.emailAddress
             if (judgeEmail) {
-              const addedByName = await resolveAdderName(principal, client)
+              const addedByName = await resolveAdderName(principal)
               const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
               sendJudgeAddedNotification({
                 to: judgeEmail,
@@ -403,7 +391,7 @@ export const dashboardJudgingRoutes = new Elysia()
             const hackathon = result.hackathon
             if (hackathon.status !== "draft") {
               try {
-                const addedByName = await resolveAdderName(principal, client)
+                const addedByName = await resolveAdderName(principal)
                 const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
                 sendJudgeAddedNotification({
                   to: email,

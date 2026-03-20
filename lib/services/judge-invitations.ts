@@ -203,17 +203,21 @@ export async function sendPendingJudgeInvitationEmails(
 
   const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
 
-  let sent = 0
-  for (const invitation of pending) {
-    const result = await sendJudgeInvitationEmail({
-      to: invitation.email,
-      hackathonName,
-      inviterName,
-      inviteToken: invitation.token,
-      expiresAt: invitation.expires_at,
-    })
-    if (result.success) sent++
-  }
+  const results = await Promise.allSettled(
+    pending.map((invitation) =>
+      sendJudgeInvitationEmail({
+        to: invitation.email,
+        hackathonName,
+        inviterName,
+        inviteToken: invitation.token,
+        expiresAt: invitation.expires_at,
+      })
+    )
+  )
+
+  const sent = results.filter(
+    (r) => r.status === "fulfilled" && r.value.success
+  ).length
 
   return { sent }
 }
