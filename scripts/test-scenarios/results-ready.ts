@@ -30,6 +30,7 @@ async function run() {
     status: "judging",
     startsAt: new Date(now.getTime() - 7 * 86400000),
     endsAt: new Date(now.getTime() - 4 * 86400000),
+    judgingMode: "rubric",
   })
 
   const teams: string[] = []
