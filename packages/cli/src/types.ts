@@ -52,7 +52,16 @@ export interface JudgingCriteria {
   description?: string
   maxScore: number
   weight: number
+  category?: string
   orderIndex?: number
+}
+
+export interface RubricLevel {
+  id: string
+  criteriaId: string
+  levelNumber: number
+  label: string
+  description?: string
 }
 
 export interface Judge {
