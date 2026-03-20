@@ -214,7 +214,7 @@ describe("PATCH /api/dashboard/hackathons/:id/settings - status change emails", 
     const res = await patchSettings({ status: "published" })
     expect(res.status).toBe(200)
 
-    await new Promise((r) => setTimeout(r, 10))
+    await Promise.resolve()
 
     expect(mockSendPendingJudgeInvitationEmails).toHaveBeenCalledTimes(1)
     expect(mockSendPendingJudgeInvitationEmails).toHaveBeenCalledWith(
@@ -234,7 +234,7 @@ describe("PATCH /api/dashboard/hackathons/:id/settings - status change emails", 
     const res = await patchSettings({ status: "draft" })
     expect(res.status).toBe(200)
 
-    await new Promise((r) => setTimeout(r, 10))
+    await Promise.resolve()
 
     expect(mockSendPendingJudgeInvitationEmails).not.toHaveBeenCalled()
   })
@@ -249,7 +249,7 @@ describe("PATCH /api/dashboard/hackathons/:id/settings - status change emails", 
     const res = await patchSettings({ status: "active" })
     expect(res.status).toBe(200)
 
-    await new Promise((r) => setTimeout(r, 10))
+    await Promise.resolve()
 
     expect(mockSendPendingJudgeInvitationEmails).not.toHaveBeenCalled()
   })
@@ -260,7 +260,7 @@ describe("PATCH /api/dashboard/hackathons/:id/settings - status change emails", 
     const res = await patchSettings({ name: "Renamed Hackathon" })
     expect(res.status).toBe(200)
 
-    await new Promise((r) => setTimeout(r, 10))
+    await Promise.resolve()
 
     expect(mockSendPendingJudgeInvitationEmails).not.toHaveBeenCalled()
   })

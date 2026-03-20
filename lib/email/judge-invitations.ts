@@ -57,7 +57,7 @@ export async function sendJudgeAddedNotification(
           <p style="margin: 0; font-size: 18px; font-weight: 600;">${escapeHtml(input.hackathonName)}</p>
         </div>
 
-        <a href="${eventUrl}"
+        <a href="${escapeHtml(eventUrl)}"
            style="display: inline-block; background: #18181b; color: white; padding: 14px 28px;
                   text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
           View Event

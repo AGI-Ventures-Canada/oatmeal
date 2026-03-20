@@ -183,7 +183,7 @@ describe("POST /hackathons/:id/judging/judges - email notifications", () => {
       const res = await postAddJudge({ clerkUserId: "judge_123" })
       expect(res.status).toBe(200)
 
-      await new Promise((r) => setTimeout(r, 10))
+      await Promise.resolve()
 
       expect(mockSendJudgeAddedNotification).toHaveBeenCalledTimes(1)
       expect(mockSendJudgeAddedNotification).toHaveBeenCalledWith(
@@ -204,7 +204,7 @@ describe("POST /hackathons/:id/judging/judges - email notifications", () => {
       const res = await postAddJudge({ clerkUserId: "judge_123" })
       expect(res.status).toBe(200)
 
-      await new Promise((r) => setTimeout(r, 10))
+      await Promise.resolve()
 
       expect(mockSendJudgeAddedNotification).not.toHaveBeenCalled()
     })
@@ -227,7 +227,7 @@ describe("POST /hackathons/:id/judging/judges - email notifications", () => {
       const res = await postAddJudge({ email: "existing@example.com" })
       expect(res.status).toBe(200)
 
-      await new Promise((r) => setTimeout(r, 10))
+      await Promise.resolve()
 
       expect(mockSendJudgeAddedNotification).toHaveBeenCalledTimes(1)
       expect(mockSendJudgeAddedNotification).toHaveBeenCalledWith(
@@ -247,7 +247,7 @@ describe("POST /hackathons/:id/judging/judges - email notifications", () => {
       const res = await postAddJudge({ email: "existing@example.com" })
       expect(res.status).toBe(200)
 
-      await new Promise((r) => setTimeout(r, 10))
+      await Promise.resolve()
 
       expect(mockSendJudgeAddedNotification).not.toHaveBeenCalled()
     })
