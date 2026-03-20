@@ -3,10 +3,10 @@ import { resolvePrincipal, requirePrincipal } from "@/lib/auth/principal"
 import { logAudit } from "@/lib/services/audit"
 
 async function resolveAdderName(
-  principal: { kind: string; userId: string },
+  principal: { kind: string; userId?: string },
   client: { users: { getUser: (id: string) => Promise<{ firstName?: string | null; lastName?: string | null }> } }
 ): Promise<string> {
-  if (principal.kind !== "user") return "An organizer"
+  if (principal.kind !== "user" || !principal.userId) return "An organizer"
   try {
     const adder = await client.users.getUser(principal.userId)
     return [adder.firstName, adder.lastName].filter(Boolean).join(" ") || "An organizer"
