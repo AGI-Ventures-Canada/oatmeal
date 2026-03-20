@@ -303,6 +303,7 @@ export interface JudgingCriteria {
   description: string | null
   max_score: number
   weight: number
+  category: CriterionCategory | null
   display_order: number
   created_at: string
   updated_at: string
@@ -362,7 +363,18 @@ export interface Prize {
   updated_at: string
 }
 
-export type JudgingMode = "points" | "subjective"
+export type JudgingMode = "points" | "subjective" | "rubric"
+
+export type CriterionCategory = "core" | "bonus"
+
+export interface RubricLevel {
+  id: string
+  criteria_id: string
+  level_number: number
+  label: string
+  description: string | null
+  created_at: string
+}
 
 export interface PrizeAssignment {
   id: string
