@@ -76,7 +76,7 @@ export function JudgingModeToggle({
             <Label htmlFor="mode-rubric" className="flex flex-col gap-1 cursor-pointer">
               <span className="font-medium">Rubric</span>
               <span className="text-sm text-muted-foreground font-normal">
-                Judges select from defined levels per criterion (e.g., 'Meets Expectations')
+                Judges select from defined levels per criterion (e.g., &apos;Meets Expectations&apos;)
               </span>
             </Label>
           </div>
