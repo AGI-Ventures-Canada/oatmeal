@@ -8,7 +8,9 @@ export type CreateCriteriaInput = {
   description?: string | null
   maxScore?: number
   weight?: number
+  category?: "core" | "bonus"
   displayOrder?: number
+  hackathonJudgingMode?: string
 }
 
 export type UpdateCriteriaInput = {
@@ -16,6 +18,7 @@ export type UpdateCriteriaInput = {
   description?: string | null
   maxScore?: number
   weight?: number
+  category?: "core" | "bonus"
   displayOrder?: number
 }
 
@@ -50,6 +53,7 @@ export async function createJudgingCriteria(
       description: input.description ?? null,
       max_score: input.maxScore ?? 10,
       weight: input.weight ?? 1.0,
+      category: input.category ?? "core",
       display_order: input.displayOrder ?? 0,
     })
     .select()
@@ -60,7 +64,14 @@ export async function createJudgingCriteria(
     return null
   }
 
-  return data as unknown as JudgingCriteria
+  const criteria = data as unknown as JudgingCriteria
+
+  if (input.hackathonJudgingMode === "rubric") {
+    const { createDefaultRubricLevels } = await import("@/lib/services/rubric-levels")
+    await createDefaultRubricLevels(criteria.id)
+  }
+
+  return criteria
 }
 
 export async function updateJudgingCriteria(
@@ -75,6 +86,7 @@ export async function updateJudgingCriteria(
   if (input.description !== undefined) updates.description = input.description
   if (input.maxScore !== undefined) updates.max_score = input.maxScore
   if (input.weight !== undefined) updates.weight = input.weight
+  if (input.category !== undefined) updates.category = input.category
   if (input.displayOrder !== undefined) updates.display_order = input.displayOrder
   updates.updated_at = new Date().toISOString()
 
@@ -882,12 +894,23 @@ export async function markAssignmentViewed(
 }
 
 export type JudgingSetupStatus = {
+  hasCriteria: boolean
+  allCriteriaHaveLevels: boolean
   judgeCount: number
+  hasSubmissions: boolean
   hasUnassignedSubmissions: boolean
+  isReady: boolean
 }
 
 export async function getJudgingSetupStatus(hackathonId: string): Promise<JudgingSetupStatus> {
   const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: criteria } = await client
+    .from("judging_criteria")
+    .select("id")
+    .eq("hackathon_id", hackathonId)
+
+  const hasCriteria = (criteria?.length ?? 0) > 0
 
   const { data: judges } = await client
     .from("hackathon_participants")
@@ -903,6 +926,8 @@ export async function getJudgingSetupStatus(hackathonId: string): Promise<Judgin
     .eq("hackathon_id", hackathonId)
     .eq("status", "submitted")
 
+  const hasSubmissions = (submissions?.length ?? 0) > 0
+
   const { data: assignments } = await client
     .from("judge_assignments")
     .select("submission_id")
@@ -911,5 +936,26 @@ export async function getJudgingSetupStatus(hackathonId: string): Promise<Judgin
   const assignedSubmissionIds = new Set((assignments ?? []).map(a => a.submission_id))
   const hasUnassignedSubmissions = (submissions ?? []).some(s => !assignedSubmissionIds.has(s.id))
 
-  return { judgeCount, hasUnassignedSubmissions }
+  let allCriteriaHaveLevels = true
+  if (hasCriteria && criteria) {
+    const criteriaIds = criteria.map(c => c.id)
+    const { data: levels } = await client
+      .from("rubric_levels")
+      .select("criteria_id")
+      .in("criteria_id", criteriaIds)
+
+    if (levels) {
+      const countMap = new Map<string, number>()
+      for (const l of levels) {
+        countMap.set(l.criteria_id, (countMap.get(l.criteria_id) ?? 0) + 1)
+      }
+      allCriteriaHaveLevels = criteriaIds.every(id => (countMap.get(id) ?? 0) >= 2)
+    } else {
+      allCriteriaHaveLevels = false
+    }
+  }
+
+  const isReady = hasCriteria && allCriteriaHaveLevels && judgeCount > 0 && hasSubmissions && !hasUnassignedSubmissions
+
+  return { hasCriteria, allCriteriaHaveLevels, judgeCount, hasSubmissions, hasUnassignedSubmissions, isReady }
 }
