@@ -1,14 +1,8 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test"
 import { render, screen, cleanup, act } from "@testing-library/react"
+import { resetComponentMocks, setRouter, setPathname } from "../../lib/component-mocks"
 
 const mockReplace = mock(() => {})
-mock.module("next/navigation", () => ({
-  useRouter: () => ({ push: mock(() => {}), replace: mockReplace, refresh: mock(() => {}), prefetch: mock(() => {}) }),
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => "/luma.com/test-event",
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-}))
 
 const { ImportComplete } = await import("@/components/hackathon/import-complete")
 
@@ -16,6 +10,9 @@ let callbacks: Array<{ fn: () => void; delay: number }>
 let originalSetTimeout: typeof globalThis.setTimeout
 
 beforeEach(() => {
+  resetComponentMocks()
+  setRouter({ replace: mockReplace })
+  setPathname("/luma.com/test-event")
   callbacks = []
   originalSetTimeout = globalThis.setTimeout
   globalThis.setTimeout = ((fn: () => void, delay: number) => {

@@ -1,21 +1,9 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from "bun:test"
 import { render, screen, cleanup, fireEvent } from "@testing-library/react"
+import { resetComponentMocks, setRouter } from "../../lib/component-mocks"
 
 const mockPush = mock(() => {})
 const mockRefresh = mock(() => {})
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-    refresh: mockRefresh,
-    replace: mock(() => {}),
-    prefetch: mock(() => {}),
-  }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}))
 
 let mockIsMobile = false
 mock.module("@/hooks/use-mobile", () => ({
@@ -42,8 +30,10 @@ function findPhaseNode(label: string) {
 
 describe("LifecycleStepper", () => {
   beforeEach(() => {
+    resetComponentMocks()
     mockPush.mockClear()
     mockRefresh.mockClear()
+    setRouter({ push: mockPush, refresh: mockRefresh })
     mockIsMobile = false
   })
 

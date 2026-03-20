@@ -107,6 +107,65 @@ describe("Judge Invitations Integration - acceptJudgeInvitation", () => {
     }
   })
 
+  it("accepts invitation when matching email is in array of user emails", async () => {
+    let isFirstCall = true
+    mockFrom.mockImplementation(() => {
+      if (isFirstCall) {
+        isFirstCall = false
+        return createIntegrationChainableMock({ data: mockInvitation, error: null })
+      }
+      return createIntegrationChainableMock({ data: null, error: null })
+    })
+
+    const result = await acceptJudgeInvitation(
+      "test-token-123",
+      "user_123",
+      ["other@example.com", "judge@example.com", "work@example.com"]
+    )
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.hackathonSlug).toBe("test-hackathon")
+    }
+    expect(mockAddJudge).toHaveBeenCalledWith("h1", "user_123")
+  })
+
+  it("returns email_mismatch when no email in array matches invitation", async () => {
+    mockFrom.mockImplementation(() =>
+      createIntegrationChainableMock({ data: mockInvitation, error: null })
+    )
+
+    const result = await acceptJudgeInvitation(
+      "test-token-123",
+      "user_123",
+      ["other@example.com", "work@example.com"]
+    )
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe("email_mismatch")
+    }
+  })
+
+  it("matches email case-insensitively in array", async () => {
+    let isFirstCall = true
+    mockFrom.mockImplementation(() => {
+      if (isFirstCall) {
+        isFirstCall = false
+        return createIntegrationChainableMock({ data: mockInvitation, error: null })
+      }
+      return createIntegrationChainableMock({ data: null, error: null })
+    })
+
+    const result = await acceptJudgeInvitation(
+      "test-token-123",
+      "user_123",
+      ["JUDGE@EXAMPLE.COM"]
+    )
+
+    expect(result.success).toBe(true)
+  })
+
   it("returns not_found error when invitation does not exist", async () => {
     mockFrom.mockImplementation(() =>
       createIntegrationChainableMock({ data: null, error: null })

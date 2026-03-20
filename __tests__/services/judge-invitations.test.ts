@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach, mock } from "bun:test"
 import type { JudgeInvitation } from "@/lib/db/hackathon-types"
 import {
   createChainableMock,
@@ -6,12 +6,19 @@ import {
   setMockFromImplementation,
 } from "../lib/supabase-mock"
 
+const mockSendJudgeInvitationEmail = mock(() => Promise.resolve({ success: true }))
+
+mock.module("@/lib/email/judge-invitations", () => ({
+  sendJudgeInvitationEmail: mockSendJudgeInvitationEmail,
+}))
+
 const {
   createJudgeInvitation,
   getJudgeInvitationByToken,
   acceptJudgeInvitation,
   cancelJudgeInvitation,
   listJudgeInvitations,
+  sendPendingJudgeInvitationEmails,
 } = await import("@/lib/services/judge-invitations")
 
 const mockInvitation: JudgeInvitation = {
@@ -228,6 +235,72 @@ describe("Judge Invitations Service", () => {
       const result = await cancelJudgeInvitation("inv1", "h1")
 
       expect(result.success).toBe(false)
+    })
+  })
+
+  describe("sendPendingJudgeInvitationEmails", () => {
+    beforeEach(() => {
+      mockSendJudgeInvitationEmail.mockClear()
+      mockSendJudgeInvitationEmail.mockResolvedValue({ success: true })
+    })
+
+    it("sends emails for all pending invitations", async () => {
+      const pendingInvitations = [
+        { ...mockInvitation, id: "inv1", email: "judge1@example.com", token: "token1" },
+        { ...mockInvitation, id: "inv2", email: "judge2@example.com", token: "token2" },
+      ]
+      const chain = createChainableMock({
+        data: pendingInvitations,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await sendPendingJudgeInvitationEmails("h1", "Test Hackathon", "Organizer Name")
+
+      expect(result.sent).toBe(2)
+      expect(mockSendJudgeInvitationEmail).toHaveBeenCalledTimes(2)
+      expect(mockSendJudgeInvitationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "judge1@example.com",
+          hackathonName: "Test Hackathon",
+          inviterName: "Organizer Name",
+          inviteToken: "token1",
+        })
+      )
+    })
+
+    it("returns sent: 0 when no pending invitations exist", async () => {
+      const chain = createChainableMock({
+        data: [],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await sendPendingJudgeInvitationEmails("h1", "Test Hackathon", "Organizer")
+
+      expect(result.sent).toBe(0)
+      expect(mockSendJudgeInvitationEmail).not.toHaveBeenCalled()
+    })
+
+    it("counts only successfully sent emails", async () => {
+      const pendingInvitations = [
+        { ...mockInvitation, id: "inv1", email: "judge1@example.com", token: "token1" },
+        { ...mockInvitation, id: "inv2", email: "judge2@example.com", token: "token2" },
+      ]
+      const chain = createChainableMock({
+        data: pendingInvitations,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      mockSendJudgeInvitationEmail
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: false })
+
+      const result = await sendPendingJudgeInvitationEmails("h1", "Test Hackathon", "Organizer")
+
+      expect(result.sent).toBe(1)
+      expect(mockSendJudgeInvitationEmail).toHaveBeenCalledTimes(2)
     })
   })
 

@@ -1,22 +1,23 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test"
 import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react"
-import { clerkState, clerkMock, resetClerkState } from "../lib/clerk-mock"
+import {
+  resetComponentMocks,
+  setPathname,
+  setRouter,
+  setClerkIsSignedIn,
+  setClerkUser,
+  setClerkInstance,
+  setClerkOrganization,
+  setClerkMemberships,
+  setClerkSetActive,
+  setCreateOrganizationDialog,
+} from "../lib/component-mocks"
 
 const mockPush = mock(() => {})
 const mockSetTheme = mock(() => {})
 
 let mockTheme = "system"
 let mockPathname = "/home"
-
-mock.module("next/navigation", () => ({
-  usePathname: () => mockPathname,
-  useSearchParams: () => new URLSearchParams(),
-  useRouter: () => ({ push: mockPush }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-}))
-
-mock.module("@clerk/nextjs", () => clerkMock)
 
 mock.module("next-themes", () => ({
   useTheme: () => ({ theme: mockTheme, setTheme: mockSetTheme }),
@@ -53,41 +54,14 @@ mock.module("next/link", () => ({
   ),
 }))
 
-mock.module("@/components/hackathon/create-hackathon-menu", () => ({
-  CreateHackathonMenu: ({ trigger }: { trigger: React.ReactNode }) => (
-    <div data-testid="create-hackathon-menu">{trigger}</div>
-  ),
-}))
-
-mock.module("@/components/install-skill-button", () => ({
-  InstallSkillButton: ({ trigger }: { trigger: React.ReactNode }) => (
-    <div data-testid="install-skill-button">{trigger}</div>
-  ),
-}))
-
-mock.module("@/components/create-organization-dialog", () => ({
-  CreateOrganizationDialog: ({
-    open,
-    onOpenChange,
-  }: {
-    open: boolean
-    onOpenChange: (v: boolean) => void
-  }) =>
-    open ? (
-      <div data-testid="create-org-dialog">
-        <button type="button" onClick={() => onOpenChange(false)}>
-          Close Org Dialog
-        </button>
-      </div>
-    ) : null,
-}))
 
 const { MobileHeader } = await import("@/components/mobile-header")
 
 beforeEach(() => {
-  resetClerkState()
-  clerkState.user = {
-    id: "user_123",
+  resetComponentMocks()
+  mockIsSignedIn = true
+  mockUser = {
+    firstName: "Alex",
     fullName: "Alex Ivany",
     firstName: "Alex",
     imageUrl: null,
@@ -96,6 +70,23 @@ beforeEach(() => {
   mockPathname = "/home"
   mockPush.mockClear()
   mockSetTheme.mockClear()
+  setRouter({ push: mockPush })
+  setPathname(mockPathname)
+  setClerkIsSignedIn(mockIsSignedIn)
+  setClerkUser(mockUser as Record<string, unknown>)
+  setClerkInstance({ openUserProfile: mockOpenUserProfile, signOut: mockSignOut })
+  setClerkOrganization(mockOrganization)
+  setClerkMemberships(mockMemberships)
+  setClerkSetActive(mockSetActive)
+  setCreateOrganizationDialog(({ open, onOpenChange }) =>
+    open ? (
+      <div data-testid="create-org-dialog">
+        <button type="button" onClick={() => onOpenChange?.(false)}>
+          Close Org Dialog
+        </button>
+      </div>
+    ) : null,
+  )
 })
 
 afterEach(() => {
@@ -133,7 +124,8 @@ describe("MobileHeader", () => {
     })
 
     it("shows user image when imageUrl is provided", () => {
-      clerkState.user = { ...clerkState.user!, imageUrl: "https://example.com/avatar.png" }
+      mockUser = { ...mockUser!, imageUrl: "https://example.com/avatar.png" }
+      setClerkUser(mockUser as Record<string, unknown>)
       render(<MobileHeader />)
       const img = screen.getByAltText("Alex Ivany")
       expect(img.getAttribute("src")).toBe("https://example.com/avatar.png")
@@ -148,8 +140,10 @@ describe("MobileHeader", () => {
     })
 
     it("does not show avatar when signed out", () => {
-      clerkState.isSignedIn = false
-      clerkState.user = null
+      mockIsSignedIn = false
+      mockUser = null
+      setClerkIsSignedIn(false)
+      setClerkUser(null)
       render(<MobileHeader />)
       const header = getHeader()
       expect(within(header).queryByRole("button", { name: /user/i })).toBeNull()
@@ -197,8 +191,10 @@ describe("MobileHeader", () => {
     })
 
     it("shows sign in link when signed out", () => {
-      clerkState.isSignedIn = false
-      clerkState.user = null
+      mockIsSignedIn = false
+      mockUser = null
+      setClerkIsSignedIn(false)
+      setClerkUser(null)
       openMenu()
       expect(screen.getByText("Sign in")).toBeDefined()
     })
@@ -264,6 +260,8 @@ describe("MobileHeader", () => {
           },
         },
       ]
+      setClerkOrganization(mockOrganization)
+      setClerkMemberships(mockMemberships)
     })
 
     function openOrgSwitcher() {
@@ -280,7 +278,8 @@ describe("MobileHeader", () => {
     })
 
     it("shows Personal Workspace when no org is active", () => {
-      clerkState.organization = null
+      mockOrganization = null
+      setClerkOrganization(null)
       openMenu()
       expect(
         screen.getAllByText("Personal Workspace").length
@@ -305,6 +304,7 @@ describe("MobileHeader", () => {
 
     it("switches to personal workspace when Personal Workspace is clicked", () => {
       mockPathname = "/hackathons/123"
+      setPathname(mockPathname)
       openOrgSwitcher()
       const personalButtons = screen.getAllByText("Personal Workspace")
       const personalButton = personalButtons
@@ -318,6 +318,7 @@ describe("MobileHeader", () => {
 
     it("switches to a different org when clicked", () => {
       mockPathname = "/hackathons/123"
+      setPathname(mockPathname)
       openOrgSwitcher()
       fireEvent.click(screen.getByText("Second Org"))
       expect(clerkState.setActive).toHaveBeenCalledWith({
@@ -340,6 +341,7 @@ describe("MobileHeader", () => {
         name: "Alpha Corp",
         imageUrl: null,
       }
+      setClerkOrganization(mockOrganization)
       openMenu()
       const rootNav = getOverlay().querySelector("nav")!
       const orgButton = within(rootNav)
@@ -378,8 +380,10 @@ describe("MobileHeader", () => {
     })
 
     it("does not show theme toggle when signed out", () => {
-      clerkState.isSignedIn = false
-      clerkState.user = null
+      mockIsSignedIn = false
+      mockUser = null
+      setClerkIsSignedIn(false)
+      setClerkUser(null)
       openMenu()
       expect(screen.queryByText("Theme")).toBeNull()
     })

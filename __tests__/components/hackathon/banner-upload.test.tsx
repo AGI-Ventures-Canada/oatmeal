@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import * as dialogMock from "../../lib/dialog-mock"
+import { resetComponentMocks, setRouter } from "../../lib/component-mocks"
 
 const mockRefresh = mock(() => {})
 const mockFetch = mock(() =>
@@ -12,21 +12,9 @@ const mockFetch = mock(() =>
   )
 )
 
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    refresh: mockRefresh,
-  }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}))
-
 mock.module("react-easy-crop", () => ({
   default: () => null,
 }))
-
-mock.module("@/components/ui/dialog", () => dialogMock)
 
 mock.module("@/components/ui/alert-dialog", () => ({
   AlertDialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -58,6 +46,8 @@ mock.module("@/components/ui/slider", () => ({
 const { BannerUpload } = await import("@/components/hackathon/banner-upload")
 
 beforeEach(() => {
+  resetComponentMocks()
+  setRouter({ refresh: mockRefresh })
   mockRefresh.mockClear()
   mockFetch.mockClear()
   globalThis.fetch = mockFetch as typeof fetch

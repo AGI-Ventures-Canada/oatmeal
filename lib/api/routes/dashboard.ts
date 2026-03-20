@@ -1093,23 +1093,29 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
 
       const hasDateUpdate = body.startsAt !== undefined || body.endsAt !== undefined ||
         body.registrationOpensAt !== undefined || body.registrationClosesAt !== undefined
+      const isStatusChange = body.status !== undefined
 
-      if (hasDateUpdate) {
+      let previousStatus: string | undefined
+      if (hasDateUpdate || isStatusChange) {
         const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
         const current = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
         if (current) {
-          const { validateTimelineDates } = await import("@/lib/utils/timeline")
-          const dateError = validateTimelineDates({
-            registrationOpensAt: body.registrationOpensAt !== undefined ? body.registrationOpensAt : current.registration_opens_at,
-            registrationClosesAt: body.registrationClosesAt !== undefined ? body.registrationClosesAt : current.registration_closes_at,
-            startsAt: body.startsAt !== undefined ? body.startsAt : current.starts_at,
-            endsAt: body.endsAt !== undefined ? body.endsAt : current.ends_at,
-          })
-          if (dateError) {
-            return new Response(JSON.stringify({ error: dateError }), {
-              status: 400,
-              headers: { "Content-Type": "application/json" },
+          previousStatus = current.status
+
+          if (hasDateUpdate) {
+            const { validateTimelineDates } = await import("@/lib/utils/timeline")
+            const dateError = validateTimelineDates({
+              registrationOpensAt: body.registrationOpensAt !== undefined ? body.registrationOpensAt : current.registration_opens_at,
+              registrationClosesAt: body.registrationClosesAt !== undefined ? body.registrationClosesAt : current.registration_closes_at,
+              startsAt: body.startsAt !== undefined ? body.startsAt : current.starts_at,
+              endsAt: body.endsAt !== undefined ? body.endsAt : current.ends_at,
             })
+            if (dateError) {
+              return new Response(JSON.stringify({ error: dateError }), {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+              })
+            }
           }
         }
       }
@@ -1159,6 +1165,22 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         timestamp: new Date().toISOString(),
         data: { hackathonId: hackathon.id },
       }).catch(console.error)
+
+      if (previousStatus === "draft" && body.status && body.status !== "draft") {
+        let inviterName = "An organizer"
+        if (principal.kind === "user") {
+          try {
+            const { clerkClient } = await import("@clerk/nextjs/server")
+            const client = await clerkClient()
+            const inviterUser = await client.users.getUser(principal.userId)
+            inviterName = [inviterUser.firstName, inviterUser.lastName].filter(Boolean).join(" ") || "An organizer"
+          } catch {
+            // fall back to default
+          }
+        }
+        const { sendPendingJudgeInvitationEmails } = await import("@/lib/services/judge-invitations")
+        sendPendingJudgeInvitationEmails(hackathon.id, hackathon.name, inviterName).catch(console.error)
+      }
 
       return {
         id: hackathon.id,

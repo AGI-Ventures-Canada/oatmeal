@@ -332,6 +332,32 @@ export const dashboardJudgingRoutes = new Elysia()
           })
         }
 
+        const hackathon = result.hackathon
+        if (hackathon.status !== "draft") {
+          const { clerkClient } = await import("@clerk/nextjs/server")
+          const client = await clerkClient()
+          try {
+            const judgeUser = await client.users.getUser(typedBody.clerkUserId)
+            const judgeEmail = judgeUser.primaryEmailAddress?.emailAddress
+            if (judgeEmail) {
+              let addedByName = "An organizer"
+              if (principal.kind === "user") {
+                const adder = await client.users.getUser(principal.userId)
+                addedByName = [adder.firstName, adder.lastName].filter(Boolean).join(" ") || "An organizer"
+              }
+              const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
+              sendJudgeAddedNotification({
+                to: judgeEmail,
+                hackathonName: hackathon.name,
+                hackathonSlug: hackathon.slug,
+                addedByName,
+              }).catch(console.error)
+            }
+          } catch {
+            // non-blocking — judge was still added
+          }
+        }
+
         await logAudit({
           principal,
           action: "judge.added",
@@ -363,6 +389,26 @@ export const dashboardJudgingRoutes = new Elysia()
                 status: 400,
                 headers: { "Content-Type": "application/json" },
               })
+            }
+
+            const hackathon = result.hackathon
+            if (hackathon.status !== "draft") {
+              let addedByName = "An organizer"
+              if (principal.kind === "user") {
+                try {
+                  const adder = await client.users.getUser(principal.userId)
+                  addedByName = [adder.firstName, adder.lastName].filter(Boolean).join(" ") || "An organizer"
+                } catch {
+                  // fall back to default
+                }
+              }
+              const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
+              sendJudgeAddedNotification({
+                to: email,
+                hackathonName: hackathon.name,
+                hackathonSlug: hackathon.slug,
+                addedByName,
+              }).catch(console.error)
             }
 
             await logAudit({
@@ -402,23 +448,26 @@ export const dashboardJudgingRoutes = new Elysia()
         }
 
         const hackathon = result.hackathon
-        let inviterName = "An organizer"
-        if (principal.kind === "user") {
-          try {
-            const inviterUser = await client.users.getUser(principal.userId)
-            inviterName = [inviterUser.firstName, inviterUser.lastName].filter(Boolean).join(" ") || "An organizer"
-          } catch {
-            // fall back to default
+
+        if (hackathon.status !== "draft") {
+          let inviterName = "An organizer"
+          if (principal.kind === "user") {
+            try {
+              const inviterUser = await client.users.getUser(principal.userId)
+              inviterName = [inviterUser.firstName, inviterUser.lastName].filter(Boolean).join(" ") || "An organizer"
+            } catch {
+              // fall back to default
+            }
           }
+          const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
+          await sendJudgeInvitationEmail({
+            to: email,
+            hackathonName: hackathon.name,
+            inviterName,
+            inviteToken: inviteResult.invitation.token,
+            expiresAt: inviteResult.invitation.expires_at,
+          })
         }
-        const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
-        await sendJudgeInvitationEmail({
-          to: email,
-          hackathonName: hackathon.name,
-          inviterName,
-          inviteToken: inviteResult.invitation.token,
-          expiresAt: inviteResult.invitation.expires_at,
-        })
 
         await logAudit({
           principal,
