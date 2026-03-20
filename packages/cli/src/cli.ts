@@ -104,20 +104,24 @@ const BANNER = `
     ${pc.dim("(alias: hackathons)")}
 
   ${pc.dim("JUDGING")}
-    judging criteria list <id>              List criteria
-    judging criteria create <id>            Create criteria
-    judging criteria update <id> <cid>      Update criteria
-    judging criteria delete <id> <cid>      Delete criteria
-    judging judges list <id>                List judges
-    judging judges add <id>                 Add a judge
-    judging judges remove <id> <pid>        Remove a judge
-    judging assignments list <id>           List assignments
-    judging assignments create <id>         Create assignment
-    judging assignments delete <id> <aid>   Delete assignment
-    judging auto-assign <id>                Auto-assign judges
-    judging invitations list <id>           List invitations
-    judging invitations cancel <id> <iid>   Cancel invitation
-    judging pick-results <id>               View pick results
+    judging criteria list <id>                           List criteria
+    judging criteria create <id>                         Create criteria
+    judging criteria update <id> <cid>                   Update criteria
+    judging criteria delete <id> <cid>                   Delete criteria
+    judging levels list --hackathon-id <id> --criteria-id <cid>        List rubric levels
+    judging levels add --hackathon-id <id> --criteria-id <cid>         Add a rubric level
+    judging levels update --hackathon-id <id> --criteria-id <cid>      Update a rubric level
+    judging levels delete --hackathon-id <id> --criteria-id <cid>      Delete a rubric level
+    judging judges list <id>                             List judges
+    judging judges add <id>                              Add a judge
+    judging judges remove <id> <pid>                     Remove a judge
+    judging assignments list <id>                        List assignments
+    judging assignments create <id>                      Create assignment
+    judging assignments delete <id> <aid>                Delete assignment
+    judging auto-assign <id>                             Auto-assign judges
+    judging invitations list <id>                        List invitations
+    judging invitations cancel <id> <iid>                Cancel invitation
+    judging pick-results <id>                            View pick results
 
   ${pc.dim("PRIZES")}
     prizes list <id>                         List prizes
@@ -322,6 +326,51 @@ async function main() {
                 process.exit(1)
             }
             break
+
+          case "levels": {
+            const levelArgs = rest.slice(3).concat(flags.json ? ["--json"] : []).concat(flags.yes ? ["--yes"] : [])
+
+            const parseLevelFlags = (a: string[]) => {
+              let hackathonId = ""
+              let criteriaId = ""
+              let levelId = ""
+              for (let i = 0; i < a.length; i++) {
+                if (a[i] === "--hackathon-id") hackathonId = a[++i]
+                else if (a[i] === "--criteria-id") criteriaId = a[++i]
+                else if (a[i] === "--level-id") levelId = a[++i]
+              }
+              return { hackathonId, criteriaId, levelId }
+            }
+
+            const levelFlags = parseLevelFlags(levelArgs)
+
+            switch (sub2) {
+              case "list": {
+                const { runLevelsList } = await import("./commands/judging/levels-list.js")
+                await runLevelsList(client, levelFlags.hackathonId, levelFlags.criteriaId, { json: flags.json })
+                break
+              }
+              case "add": {
+                const { runLevelsAdd } = await import("./commands/judging/levels-add.js")
+                await runLevelsAdd(client, levelFlags.hackathonId, levelFlags.criteriaId, levelArgs)
+                break
+              }
+              case "update": {
+                const { runLevelsUpdate } = await import("./commands/judging/levels-update.js")
+                await runLevelsUpdate(client, levelFlags.hackathonId, levelFlags.criteriaId, levelFlags.levelId, levelArgs)
+                break
+              }
+              case "delete": {
+                const { runLevelsDelete } = await import("./commands/judging/levels-delete.js")
+                await runLevelsDelete(client, levelFlags.hackathonId, levelFlags.criteriaId, levelFlags.levelId, { yes: flags.yes, json: flags.json })
+                break
+              }
+              default:
+                console.error(`Unknown judging levels command: ${sub2}`)
+                process.exit(1)
+            }
+            break
+          }
 
           case "judges":
             switch (sub2) {
