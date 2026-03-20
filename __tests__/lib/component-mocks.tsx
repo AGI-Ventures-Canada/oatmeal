@@ -1,20 +1,3 @@
-/**
- * Shared Component Mocks
- *
- * Configurable mocks for Next.js, Clerk, and component modules used in component tests.
- * Uses closure-based pattern so that whichever test file first triggers mock.module,
- * all files share the same mutable state configurable via setter functions.
- *
- * Usage:
- * ```typescript
- * import { resetComponentMocks, setRouter, setClerkOrganization } from "../lib/component-mocks"
- *
- * beforeEach(() => {
- *   resetComponentMocks()
- *   setRouter({ push: mockPush })
- * })
- * ```
- */
 import { mock } from "bun:test"
 
 // ============================================================================

@@ -41,6 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# fumadocs auto-generated source index
+.source/
+
 # SDK dist
 packages/sdk/dist/
 

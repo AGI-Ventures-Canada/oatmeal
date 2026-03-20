@@ -402,14 +402,18 @@ export const dashboardJudgingRoutes = new Elysia()
 
             const hackathon = result.hackathon
             if (hackathon.status !== "draft") {
-              const addedByName = await resolveAdderName(principal, client)
-              const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
-              sendJudgeAddedNotification({
-                to: email,
-                hackathonName: hackathon.name,
-                hackathonSlug: hackathon.slug,
-                addedByName,
-              }).catch(console.error)
+              try {
+                const addedByName = await resolveAdderName(principal, client)
+                const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
+                sendJudgeAddedNotification({
+                  to: email,
+                  hackathonName: hackathon.name,
+                  hackathonSlug: hackathon.slug,
+                  addedByName,
+                }).catch(console.error)
+              } catch {
+                // non-blocking — judge was still added
+              }
             }
 
             await logAudit({
