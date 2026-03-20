@@ -1005,9 +1005,19 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
 
     markAssignmentViewed(params.assignmentId, userId).catch(() => {})
 
+    const { listRubricLevels } = await import("@/lib/services/rubric-levels")
+
+    const criteriaWithLevels = await Promise.all(
+      detail.criteria.map(async (c: any) => ({
+        ...c,
+        rubricLevels: await listRubricLevels(c.id),
+      }))
+    )
+
     const anonymize = hackathon.anonymous_judging
     return {
       ...detail,
+      criteria: criteriaWithLevels,
       teamName: anonymize ? null : detail.teamName,
     }
   }, {
@@ -1067,7 +1077,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         scores: t.Array(
           t.Object({
             criteriaId: t.String(),
-            score: t.Number({ minimum: 0 }),
+            score: t.Number(),
           })
         ),
         notes: t.Optional(t.String()),
