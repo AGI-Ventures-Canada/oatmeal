@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -31,7 +38,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Loader2, CheckCircle2, AlertTriangle } from "lucide-react"
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Loader2, CheckCircle2, AlertTriangle, ChevronsUpDown } from "lucide-react"
+import type { JudgingMode, CriterionCategory, RubricLevel } from "@/lib/db/hackathon-types"
+import { RubricLevelEditor } from "./rubric-level-editor"
 
 type Criterion = {
   id: string
@@ -39,12 +48,15 @@ type Criterion = {
   description: string | null
   maxScore: number
   weight: number
+  category: CriterionCategory | null
   displayOrder: number
   createdAt: string
+  rubricLevels?: RubricLevel[]
 }
 
 interface CriteriaConfigProps {
   hackathonId: string
+  judgingMode: JudgingMode
   initialCriteria: Criterion[]
 }
 
@@ -53,11 +65,13 @@ type FormState = {
   description: string
   maxScore: string
   weight: string
+  category: CriterionCategory
 }
 
-const emptyForm: FormState = { name: "", description: "", maxScore: "10", weight: "1.0" }
+const emptyForm: FormState = { name: "", description: "", maxScore: "10", weight: "1.0", category: "core" }
 
-export function CriteriaConfig({ hackathonId, initialCriteria }: CriteriaConfigProps) {
+export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: CriteriaConfigProps) {
+  const isRubric = judgingMode === "rubric"
   const [criteria, setCriteria] = useState<Criterion[]>(initialCriteria)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -67,6 +81,7 @@ export function CriteriaConfig({ hackathonId, initialCriteria }: CriteriaConfigP
   const [success, setSuccess] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [reorderingId, setReorderingId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   function openCreate() {
     setEditingId(null)
@@ -83,6 +98,7 @@ export function CriteriaConfig({ hackathonId, initialCriteria }: CriteriaConfigP
       description: c.description ?? "",
       maxScore: String(c.maxScore),
       weight: String(c.weight),
+      category: c.category ?? "core",
     })
     setError(null)
     setSuccess(false)
@@ -94,12 +110,18 @@ export function CriteriaConfig({ hackathonId, initialCriteria }: CriteriaConfigP
     setSaving(true)
     setError(null)
 
-    const payload = {
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      maxScore: parseInt(form.maxScore) || 10,
-      weight: parseFloat(form.weight) || 1.0,
-    }
+    const payload = isRubric
+      ? {
+          name: form.name.trim(),
+          description: form.description.trim() || null,
+          category: form.category,
+        }
+      : {
+          name: form.name.trim(),
+          description: form.description.trim() || null,
+          maxScore: parseInt(form.maxScore) || 10,
+          weight: parseFloat(form.weight) || 1.0,
+        }
 
     if (!payload.name) {
       setError("Name is required")
@@ -140,18 +162,29 @@ export function CriteriaConfig({ hackathonId, initialCriteria }: CriteriaConfigP
           throw new Error(data.error || "Failed to create")
         }
         const data = await res.json()
-        setCriteria((prev) => [
-          ...prev,
-          {
-            id: data.id,
-            name: payload.name,
-            description: payload.description,
-            maxScore: payload.maxScore,
-            weight: payload.weight,
-            displayOrder: criteria.length,
-            createdAt: new Date().toISOString(),
-          },
-        ])
+        const newCriterion: Criterion = isRubric
+          ? {
+              id: data.id,
+              name: payload.name,
+              description: payload.description,
+              maxScore: 0,
+              weight: 1,
+              category: (payload as { category: CriterionCategory }).category,
+              displayOrder: criteria.length,
+              createdAt: new Date().toISOString(),
+              rubricLevels: [],
+            }
+          : {
+              id: data.id,
+              name: payload.name,
+              description: payload.description,
+              maxScore: (payload as { maxScore: number }).maxScore,
+              weight: (payload as { weight: number }).weight,
+              category: null,
+              displayOrder: criteria.length,
+              createdAt: new Date().toISOString(),
+            }
+        setCriteria((prev) => [...prev, newCriterion])
       }
       setSuccess(true)
       setTimeout(() => setDialogOpen(false), 800)
@@ -229,6 +262,12 @@ export function CriteriaConfig({ hackathonId, initialCriteria }: CriteriaConfigP
     }
   }
 
+  function handleLevelsChange(criteriaId: string, levels: RubricLevel[]) {
+    setCriteria((prev) =>
+      prev.map((c) => (c.id === criteriaId ? { ...c, rubricLevels: levels } : c))
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -274,6 +313,7 @@ export function CriteriaConfig({ hackathonId, initialCriteria }: CriteriaConfigP
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     placeholder="e.g. Innovation"
                     autoComplete="off"
+                    autoFocus
                     data-1p-ignore
                     data-lpignore="true"
                     data-form-type="other"
@@ -294,39 +334,59 @@ export function CriteriaConfig({ hackathonId, initialCriteria }: CriteriaConfigP
                     data-form-type="other"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                {isRubric ? (
                   <div className="space-y-2">
-                    <Label htmlFor="criteria-max-score">Max Score</Label>
-                    <Input
-                      id="criteria-max-score"
-                      name="criteria-max-score"
-                      type="number"
-                      min={1}
-                      value={form.maxScore}
-                      onChange={(e) => setForm({ ...form, maxScore: e.target.value })}
-                      autoComplete="off"
-                      data-1p-ignore
-                      data-lpignore="true"
-                      data-form-type="other"
-                    />
+                    <Label htmlFor="criteria-category">Category</Label>
+                    <Select
+                      value={form.category}
+                      onValueChange={(value) =>
+                        setForm({ ...form, category: value as CriterionCategory })
+                      }
+                    >
+                      <SelectTrigger id="criteria-category">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="core">Core</SelectItem>
+                        <SelectItem value="bonus">Bonus</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="criteria-weight">Weight</Label>
-                    <Input
-                      id="criteria-weight"
-                      name="criteria-weight"
-                      type="number"
-                      min={0}
-                      step={0.1}
-                      value={form.weight}
-                      onChange={(e) => setForm({ ...form, weight: e.target.value })}
-                      autoComplete="off"
-                      data-1p-ignore
-                      data-lpignore="true"
-                      data-form-type="other"
-                    />
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="criteria-max-score">Max Score</Label>
+                      <Input
+                        id="criteria-max-score"
+                        name="criteria-max-score"
+                        type="number"
+                        min={1}
+                        value={form.maxScore}
+                        onChange={(e) => setForm({ ...form, maxScore: e.target.value })}
+                        autoComplete="off"
+                        data-1p-ignore
+                        data-lpignore="true"
+                        data-form-type="other"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="criteria-weight">Weight</Label>
+                      <Input
+                        id="criteria-weight"
+                        name="criteria-weight"
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        value={form.weight}
+                        onChange={(e) => setForm({ ...form, weight: e.target.value })}
+                        autoComplete="off"
+                        data-1p-ignore
+                        data-lpignore="true"
+                        data-form-type="other"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
                 {error && (
                   <p className="text-sm text-destructive">{error}</p>
                 )}
@@ -366,6 +426,110 @@ export function CriteriaConfig({ hackathonId, initialCriteria }: CriteriaConfigP
           <p className="text-sm text-muted-foreground">
             No criteria defined yet. Add criteria to create a scoring rubric for judges.
           </p>
+        </div>
+      ) : isRubric ? (
+        <div className="space-y-3">
+          {criteria.map((c, idx) => (
+            <div key={c.id} className="rounded-lg border">
+              <div className="flex items-center gap-2 p-3">
+                <div className="flex flex-col shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    disabled={idx === 0 || reorderingId !== null}
+                    onClick={() => handleReorder(c.id, "up")}
+                  >
+                    <ChevronUp className="size-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    disabled={idx === criteria.length - 1 || reorderingId !== null}
+                    onClick={() => handleReorder(c.id, "down")}
+                  >
+                    <ChevronDown className="size-3.5" />
+                  </Button>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm">{c.name}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">
+                      {c.category ?? "core"}
+                    </span>
+                  </div>
+                  {c.description && (
+                    <p className="text-sm text-muted-foreground mt-0.5 truncate">{c.description}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() => openEdit(c)}
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-destructive"
+                        disabled={deletingId === c.id}
+                      >
+                        {deletingId === c.id ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-3.5" />
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete &quot;{c.name}&quot;?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete this criterion and any associated scores. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDelete(c.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() => setExpandedId(expandedId === c.id ? null : c.id)}
+                  >
+                    <ChevronsUpDown className="size-3.5" />
+                  </Button>
+                </div>
+              </div>
+              {expandedId === c.id && (
+                <div className="border-t px-4 py-3">
+                  <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">
+                    Rubric Levels
+                  </p>
+                  <RubricLevelEditor
+                    hackathonId={hackathonId}
+                    criteriaId={c.id}
+                    levels={c.rubricLevels ?? []}
+                    onLevelsChange={(levels) => handleLevelsChange(c.id, levels)}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       ) : (
         <div className="rounded-lg border overflow-x-auto">

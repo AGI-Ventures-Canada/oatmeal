@@ -48,12 +48,14 @@ export async function JudgesTabContent({
           <JudgingModeToggle hackathonId={hackathonId} initialMode={judgingMode} />
           <CriteriaConfig
             hackathonId={hackathonId}
+            judgingMode={judgingMode}
             initialCriteria={criteria.map((c) => ({
               id: c.id,
               name: c.name,
               description: c.description,
               maxScore: c.max_score,
               weight: Number(c.weight),
+              category: c.category,
               displayOrder: c.display_order,
               createdAt: c.created_at,
             }))}
