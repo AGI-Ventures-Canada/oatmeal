@@ -1,8 +1,8 @@
 -- Add 'rubric' to judging_mode enum
 ALTER TYPE judging_mode ADD VALUE IF NOT EXISTS 'rubric';
 
--- Default new hackathons to rubric mode
-ALTER TABLE hackathons ALTER COLUMN judging_mode SET DEFAULT 'rubric';
+-- NOTE: Setting the default to 'rubric' must happen in a separate migration
+-- because PostgreSQL cannot use a newly added enum value in the same transaction.
 
 -- Create criterion category enum
 CREATE TYPE criterion_category AS ENUM ('core', 'bonus');
