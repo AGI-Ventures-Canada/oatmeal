@@ -45,7 +45,7 @@ export default async function SettingsIntegrationsPage() {
             Connect your accounts to enable agents to access these services
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-4">
           <IntegrationList
             connectedOAuthProviders={connectedOAuthProviders}
             connectedApiKeyProviders={connectedApiKeyProviders}

@@ -7,7 +7,6 @@ export default function NotFound() {
   return (
     <div className="space-y-6">
       <PageHeader
-        breadcrumbs={[{ label: "Not Found" }]}
         title="Page not found"
         description="The page you're looking for doesn't exist or has been moved."
       />

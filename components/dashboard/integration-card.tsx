@@ -33,8 +33,8 @@ export function IntegrationCard({
 }: IntegrationCardProps) {
   return (
     <Card className={connected ? "border-green-500/50" : ""}>
-      <CardContent className="pt-6">
-        <div className="flex items-start gap-4">
+      <CardContent>
+        <div className="flex items-center gap-4">
           <div className="p-2 rounded-lg bg-muted">
             <Icon className="size-6" />
           </div>
