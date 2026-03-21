@@ -1,22 +1,8 @@
-import { auth } from "@clerk/nextjs/server"
-import { redirect } from "next/navigation"
-import { isAdminEnabled } from "@/lib/auth/principal"
 import { getPlatformStats } from "@/lib/services/admin"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 
-async function assertAdmin() {
-  if (!isAdminEnabled()) redirect("/")
-  const session = await auth()
-  if (!session.userId) redirect("/sign-in")
-  const metadata = (session.sessionClaims as Record<string, unknown>)?.metadata as
-    | Record<string, unknown>
-    | undefined
-  if (metadata?.admin !== true) redirect("/")
-}
-
 export default async function AdminOverviewPage() {
-  await assertAdmin()
   const stats = await getPlatformStats()
 
   return (

@@ -10,7 +10,6 @@ import {
   deleteHackathon,
 } from "@/lib/services/admin"
 import { listScenarios, runScenario } from "@/lib/services/admin-scenarios"
-import type { UpdateHackathonFields } from "@/lib/services/admin"
 
 const HackathonStatusEnum = t.Union([
   t.Literal("draft"),
@@ -28,26 +27,18 @@ const LocationTypeEnum = t.Union([
 ])
 
 export const adminRoutes = new Elysia({ prefix: "/admin" })
-  .onError(({ error }) => {
+  .onError(({ error, set }) => {
     if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: error.statusCode,
-        headers: { "Content-Type": "application/json" },
-      })
+      set.status = error.statusCode
+      return { error: error.message }
     }
     if (error instanceof RateLimitError) {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          ...getRateLimitHeaders({ allowed: false, remaining: error.remaining, resetAt: error.resetAt }),
-        },
-      })
+      set.status = 429
+      set.headers = getRateLimitHeaders({ allowed: false, remaining: error.remaining, resetAt: error.resetAt }) as Record<string, string>
+      return { error: "Rate limit exceeded" }
     }
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    })
+    set.status = 500
+    return { error: "Internal server error" }
   })
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
@@ -119,7 +110,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         throw new AuthError("Hackathon not found", 404)
       }
 
-      const updated = await updateHackathonAsAdmin(params.id, body as UpdateHackathonFields)
+      const updated = await updateHackathonAsAdmin(params.id, body)
 
       await logAudit({
         principal,

@@ -1,5 +1,4 @@
 import { listAllHackathons } from "@/lib/services/admin"
-import type { Hackathon } from "./hackathon-list"
 import { AdminHackathonList } from "./hackathon-list"
 
 const PAGE_SIZE = 25
@@ -21,7 +20,7 @@ export default async function AdminHackathonsPage(props: PageProps) {
 
   return (
     <AdminHackathonList
-      initialHackathons={hackathons as unknown as Hackathon[]}
+      initialHackathons={hackathons}
       initialPage={page}
       initialTotalPages={Math.ceil(total / PAGE_SIZE)}
       initialTotal={total}

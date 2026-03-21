@@ -39,7 +39,8 @@ export type Hackathon = {
   ends_at: string | null
   created_at: string
   tenant_id: string
-  tenants: { id: string; name: string; slug: string } | null
+  tenants: { id: string; name: string; slug: string | null }
+  [key: string]: unknown
 }
 
 type Props = {
