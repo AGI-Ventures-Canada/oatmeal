@@ -3,7 +3,8 @@ import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/re
 
 const mockPush = mock(() => {})
 let mockOrganization: { id: string; name: string } | null = null
-let mockFetchResponse: object = { hackathons: [] }
+let mockOrganizedResponse: object = { hackathons: [] }
+let mockPublicResponse: object = { hackathons: [] }
 
 mock.module("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
@@ -27,10 +28,12 @@ const globalFetch = globalThis.fetch
 beforeEach(() => {
   mockPush.mockClear()
   mockOrganization = null
-  mockFetchResponse = { hackathons: [] }
-  globalThis.fetch = mock(() =>
-    Promise.resolve({ ok: true, json: () => Promise.resolve(mockFetchResponse) } as Response)
-  )
+  mockOrganizedResponse = { hackathons: [] }
+  mockPublicResponse = { hackathons: [] }
+  globalThis.fetch = mock((url: string) => {
+    const response = url.includes("/api/public/") ? mockPublicResponse : mockOrganizedResponse
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(response) } as Response)
+  })
 })
 
 afterEach(() => {
@@ -131,11 +134,10 @@ describe("SearchCommand", () => {
 
   describe("search hierarchy", () => {
     it("shows Events group when events match the query", async () => {
-      mockFetchResponse = {
+      mockPublicResponse = {
         hackathons: [
-          { id: "h1", name: "Spring Hackathon 2026" },
-          { id: "h2", name: "Summer Hackathon 2026" },
-          { id: "h3", name: "AI Summit" },
+          { id: "h1", slug: "spring-hackathon-2026", name: "Spring Hackathon 2026" },
+          { id: "h2", slug: "summer-hackathon-2026", name: "Summer Hackathon 2026" },
         ],
       }
       openMenu()
@@ -150,12 +152,15 @@ describe("SearchCommand", () => {
       })
     })
 
-    it("limits events to top 2 matches", async () => {
-      mockFetchResponse = {
+    it("limits events to top 5 matches", async () => {
+      mockPublicResponse = {
         hackathons: [
-          { id: "h1", name: "Hackathon Alpha" },
-          { id: "h2", name: "Hackathon Beta" },
-          { id: "h3", name: "Hackathon Gamma" },
+          { id: "h1", slug: "hackathon-alpha", name: "Hackathon Alpha" },
+          { id: "h2", slug: "hackathon-beta", name: "Hackathon Beta" },
+          { id: "h3", slug: "hackathon-gamma", name: "Hackathon Gamma" },
+          { id: "h4", slug: "hackathon-delta", name: "Hackathon Delta" },
+          { id: "h5", slug: "hackathon-epsilon", name: "Hackathon Epsilon" },
+          { id: "h6", slug: "hackathon-zeta", name: "Hackathon Zeta" },
         ],
       }
       openMenu()
@@ -164,8 +169,8 @@ describe("SearchCommand", () => {
         target: { value: "hackathon" },
       })
       await waitFor(() => {
-        const items = screen.getAllByText(/Hackathon (Alpha|Beta|Gamma)/)
-        expect(items.length).toBe(2)
+        const items = screen.getAllByText(/Hackathon (Alpha|Beta|Gamma|Delta|Epsilon|Zeta)/)
+        expect(items.length).toBe(5)
       })
     })
 
@@ -238,8 +243,8 @@ describe("SearchCommand", () => {
       expect(mockPush).toHaveBeenCalledWith("/settings/api-keys")
     })
 
-    it("navigates to event page when an event result is selected", async () => {
-      mockFetchResponse = { hackathons: [{ id: "h1", name: "My Hackathon" }] }
+    it("navigates to manage page for organized events", async () => {
+      mockOrganizedResponse = { hackathons: [{ id: "h1", slug: "my-hackathon", name: "My Hackathon" }] }
       openMenu()
       await waitFor(() => screen.getByRole("dialog"))
       fireEvent.change(screen.getByPlaceholderText("Search pages, events, and docs..."), {
@@ -247,7 +252,19 @@ describe("SearchCommand", () => {
       })
       await waitFor(() => screen.getByText("My Hackathon"))
       fireEvent.click(screen.getByText("My Hackathon"))
-      expect(mockPush).toHaveBeenCalledWith("/hackathons/h1")
+      expect(mockPush).toHaveBeenCalledWith("/e/my-hackathon/manage")
+    })
+
+    it("navigates to event page for public-only events", async () => {
+      mockPublicResponse = { hackathons: [{ id: "h1", slug: "public-hackathon", name: "Public Hackathon" }] }
+      openMenu()
+      await waitFor(() => screen.getByRole("dialog"))
+      fireEvent.change(screen.getByPlaceholderText("Search pages, events, and docs..."), {
+        target: { value: "public hackathon" },
+      })
+      await waitFor(() => screen.getByText("Public Hackathon"))
+      fireEvent.click(screen.getByText("Public Hackathon"))
+      expect(mockPush).toHaveBeenCalledWith("/e/public-hackathon")
     })
 
     it("navigates to a docs page when a docs result is selected", async () => {

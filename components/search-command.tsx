@@ -35,7 +35,7 @@ import { CreateHackathonDialog } from "@/components/hackathon/create-hackathon-d
 import { OrgGateDialog } from "@/components/org-gate-dialog"
 import { searchDocs } from "@/lib/docs-pages"
 
-type HackathonResult = { id: string; name: string }
+type HackathonResult = { id: string; name: string; slug: string; isOrganized?: boolean }
 
 const allFunctionalityItems = [
   { title: "Dashboard", href: "/home", icon: Home },
@@ -82,6 +82,7 @@ export function SearchCommand() {
   const [orgGateOpen, setOrgGateOpen] = useState(false)
   const [canScrollMore, setCanScrollMore] = useState(false)
   const [events, setEvents] = useState<HackathonResult[]>([])
+  const [eventsLoading, setEventsLoading] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const { organization } = useOrganization()
@@ -107,14 +108,36 @@ export function SearchCommand() {
   }, [])
 
   useEffect(() => {
-    if (!open) return
-    fetch("/api/dashboard/hackathons")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.hackathons) setEvents(data.hackathons)
-      })
-      .catch(() => {})
-  }, [open])
+    const delay = open && query.length >= 2 ? 300 : 0
+    const timer = setTimeout(() => {
+      if (!open || query.length < 2) {
+        setEvents([])
+        setEventsLoading(false)
+        return
+      }
+      setEventsLoading(true)
+      const q = encodeURIComponent(query)
+      Promise.all([
+        fetch(`/api/public/hackathons?q=${q}&limit=5`).then((res) => (res.ok ? res.json() : null)),
+        fetch(`/api/dashboard/hackathons?q=${q}`).then((res) => (res.ok ? res.json() : null)),
+      ])
+        .then(([pub, organized]) => {
+          const seen = new Set<string>()
+          const results: HackathonResult[] = []
+          for (const h of (organized?.hackathons ?? [])) {
+            seen.add(h.id)
+            results.push({ id: h.id, name: h.name, slug: h.slug, isOrganized: true })
+          }
+          for (const h of (pub?.hackathons ?? [])) {
+            if (!seen.has(h.id)) results.push({ id: h.id, name: h.name, slug: h.slug })
+          }
+          setEvents(results)
+        })
+        .catch(() => {})
+        .finally(() => setEventsLoading(false))
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [open, query])
 
   useEffect(() => {
     if (!open) return
@@ -144,6 +167,7 @@ export function SearchCommand() {
     if (!v) {
       setCanScrollMore(false)
       setQuery("")
+      setEvents([])
     }
   }
 
@@ -163,9 +187,7 @@ export function SearchCommand() {
 
   const q = query.toLowerCase()
 
-  const matchedEvents = q
-    ? events.filter((e) => e.name.toLowerCase().includes(q)).slice(0, 2)
-    : []
+  const matchedEvents = q ? events.slice(0, 5) : []
 
   const matchedFunctionality = q
     ? allFunctionalityItems.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 1)
@@ -173,7 +195,7 @@ export function SearchCommand() {
 
   const matchedDocs = q ? searchDocs(q, 2) : []
 
-  const hasSearchResults = matchedEvents.length > 0 || matchedFunctionality.length > 0 || matchedDocs.length > 0
+  const hasSearchResults = eventsLoading || matchedEvents.length > 0 || matchedFunctionality.length > 0 || matchedDocs.length > 0
 
   return (
     <>
@@ -195,19 +217,25 @@ export function SearchCommand() {
               {q ? (
                 <>
                   <CommandEmpty>No results found.</CommandEmpty>
-                  {matchedEvents.length > 0 && (
+                  {(eventsLoading || matchedEvents.length > 0) && (
                     <>
                       <CommandGroup heading="Events">
-                        {matchedEvents.map((event) => (
-                          <CommandItem
-                            key={`/hackathons/${event.id}`}
-                            value={`/hackathons/${event.id}`}
-                            onSelect={() => navigate(`/hackathons/${event.id}`)}
-                          >
-                            <Calendar />
-                            {event.name}
-                          </CommandItem>
-                        ))}
+                        {eventsLoading ? (
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">Searching events...</div>
+                        ) : (
+                          matchedEvents.map((event) => {
+                            const href = event.isOrganized ? `/e/${event.slug}/manage` : `/e/${event.slug}`
+                            return (
+                            <CommandItem
+                              key={event.id}
+                              value={event.id}
+                              onSelect={() => navigate(href)}
+                            >
+                              <Calendar />
+                              {event.name}
+                            </CommandItem>
+                          )})
+                        )}
                       </CommandGroup>
                       {(matchedFunctionality.length > 0 || matchedDocs.length > 0) && <CommandSeparator />}
                     </>
