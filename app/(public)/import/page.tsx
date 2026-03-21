@@ -3,6 +3,7 @@ import { EventImportEditor } from "@/components/hackathon/event-import-editor"
 import { extractEventPageData } from "@/lib/services/event-page-import"
 import { extractEventPageRichContent } from "@/lib/services/luma-extract"
 import { normalizeUrl } from "@/lib/utils/url"
+import { ttlCache } from "@/lib/utils/ttl-cache"
 import type { Metadata } from "next"
 
 type PageProps = {
@@ -40,8 +41,8 @@ export default async function EventImportPage({ searchParams }: PageProps) {
   const normalizedUrl = normalizeUrl(rawUrl)
 
   const [eventData, richContent] = await Promise.all([
-    extractEventPageData(normalizedUrl),
-    extractEventPageRichContent(normalizedUrl),
+    ttlCache(`import:data:${normalizedUrl}`, () => extractEventPageData(normalizedUrl)),
+    ttlCache(`import:rich:${normalizedUrl}`, () => extractEventPageRichContent(normalizedUrl)),
   ])
 
   if (!eventData) {
