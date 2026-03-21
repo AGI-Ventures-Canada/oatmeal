@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useOrganization } from "@clerk/nextjs"
 import {
   Home,
   Search,
@@ -28,6 +29,8 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command"
+import { CreateHackathonDialog } from "@/components/hackathon/create-hackathon-dialog"
+import { OrgGateDialog } from "@/components/org-gate-dialog"
 
 const navigationItems = [
   { title: "Dashboard", href: "/home", icon: Home },
@@ -35,7 +38,6 @@ const navigationItems = [
 ]
 
 const hackathonItems = [
-  { title: "Create Hackathon", href: "/home", icon: Plus },
   { title: "Participating", href: "/home?tab=participating", icon: Users },
   { title: "Judging", href: "/home?tab=judging", icon: Scale },
   { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
@@ -54,9 +56,12 @@ const settingsItems = [
 
 export function SearchCommand() {
   const [open, setOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [orgGateOpen, setOrgGateOpen] = useState(false)
   const [canScrollMore, setCanScrollMore] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const { organization } = useOrganization()
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -85,68 +90,86 @@ export function SearchCommand() {
     setOpen(false)
   }
 
+  function handleCreateHackathon() {
+    setOpen(false)
+    if (organization) {
+      setCreateOpen(true)
+    } else {
+      setOrgGateOpen(true)
+    }
+  }
+
   return (
-    <CommandDialog
-      open={open}
-      onOpenChange={setOpen}
-      title="Search"
-      description="Navigate to any page or action"
-      className="md:max-w-2xl"
-    >
-      <Command>
-        <CommandInput placeholder="Search pages and actions..." />
-        <div className="relative">
-          <CommandList ref={listRef} className="md:max-h-[420px]">
-            <CommandEmpty>No results found.</CommandEmpty>
+    <>
+      <CommandDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Search"
+        description="Navigate to any page or action"
+        className="md:max-w-2xl"
+      >
+        <Command>
+          <CommandInput placeholder="Search pages and actions..." />
+          <div className="relative">
+            <CommandList ref={listRef} className="max-h-[60vh] md:max-h-[420px]">
+              <CommandEmpty>No results found.</CommandEmpty>
 
-            <CommandGroup heading="Navigation">
-              {navigationItems.map((item) => (
-                <CommandItem
-                  key={item.href}
-                  value={item.title}
-                  onSelect={() => navigate(item.href)}
-                >
-                  <item.icon />
-                  {item.title}
+              <CommandGroup heading="Navigation">
+                {navigationItems.map((item) => (
+                  <CommandItem
+                    key={item.title}
+                    value={item.title}
+                    onSelect={() => navigate(item.href)}
+                  >
+                    <item.icon />
+                    {item.title}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+
+              <CommandSeparator />
+
+              <CommandGroup heading="Hackathons">
+                <CommandItem value="Create Hackathon" onSelect={handleCreateHackathon}>
+                  <Plus />
+                  Create Hackathon
                 </CommandItem>
-              ))}
-            </CommandGroup>
+                {hackathonItems.map((item) => (
+                  <CommandItem
+                    key={item.title}
+                    value={item.title}
+                    onSelect={() => navigate(item.href)}
+                  >
+                    <item.icon />
+                    {item.title}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
 
-            <CommandSeparator />
+              <CommandSeparator />
 
-            <CommandGroup heading="Hackathons">
-              {hackathonItems.map((item) => (
-                <CommandItem
-                  key={item.title}
-                  value={item.title}
-                  onSelect={() => navigate(item.href)}
-                >
-                  <item.icon />
-                  {item.title}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+              <CommandGroup heading="Settings">
+                {settingsItems.map((item) => (
+                  <CommandItem
+                    key={item.title}
+                    value={item.title}
+                    onSelect={() => navigate(item.href)}
+                  >
+                    <item.icon />
+                    {item.title}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+            {canScrollMore && (
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-popover to-transparent" />
+            )}
+          </div>
+        </Command>
+      </CommandDialog>
 
-            <CommandSeparator />
-
-            <CommandGroup heading="Settings">
-              {settingsItems.map((item) => (
-                <CommandItem
-                  key={item.href}
-                  value={item.title}
-                  onSelect={() => navigate(item.href)}
-                >
-                  <item.icon />
-                  {item.title}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-          {canScrollMore && (
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-popover to-transparent" />
-          )}
-        </div>
-      </Command>
-    </CommandDialog>
+      <CreateHackathonDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <OrgGateDialog open={orgGateOpen} onOpenChange={setOrgGateOpen} />
+    </>
   )
 }
