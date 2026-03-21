@@ -18,6 +18,8 @@ import {
   Clock,
   Webhook,
   Plug,
+  Calendar,
+  FileText,
 } from "lucide-react"
 import {
   Command,
@@ -31,10 +33,29 @@ import {
 } from "@/components/ui/command"
 import { CreateHackathonDialog } from "@/components/hackathon/create-hackathon-dialog"
 import { OrgGateDialog } from "@/components/org-gate-dialog"
+import { searchDocs } from "@/lib/docs-pages"
+
+type HackathonResult = { id: string; name: string }
+
+const allFunctionalityItems = [
+  { title: "Dashboard", href: "/home", icon: Home },
+  { title: "Explore Hackathons", href: "/browse", icon: Search },
+  { title: "Participating", href: "/home?tab=participating", icon: Users },
+  { title: "Judging", href: "/home?tab=judging", icon: Scale },
+  { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
+  { title: "Sponsoring", href: "/home?tab=sponsored", icon: Star },
+  { title: "Settings", href: "/settings", icon: Settings },
+  { title: "Organization Settings", href: "/settings/profile", icon: Building2 },
+  { title: "API Keys", href: "/settings/api-keys", icon: Key },
+  { title: "Schedules", href: "/settings/schedules", icon: Clock },
+  { title: "Webhooks", href: "/settings/webhooks", icon: Webhook },
+  { title: "Integrations", href: "/settings/integrations", icon: Plug },
+  { title: "API Docs", href: "/docs", icon: BookOpen },
+]
 
 const navigationItems = [
   { title: "Dashboard", href: "/home", icon: Home },
-  { title: "Browse Hackathons", href: "/browse", icon: Search },
+  { title: "Explore Hackathons", href: "/browse", icon: Search },
 ]
 
 const hackathonItems = [
@@ -56,12 +77,18 @@ const settingsItems = [
 
 export function SearchCommand() {
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
   const [createOpen, setCreateOpen] = useState(false)
   const [orgGateOpen, setOrgGateOpen] = useState(false)
   const [canScrollMore, setCanScrollMore] = useState(false)
-  const listRef = useRef<HTMLDivElement>(null)
+  const [events, setEvents] = useState<HackathonResult[]>([])
+  const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const { organization } = useOrganization()
+
+  function getListEl() {
+    return containerRef.current?.querySelector<HTMLDivElement>('[data-slot="command-list"]') ?? null
+  }
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -70,26 +97,55 @@ export function SearchCommand() {
         setOpen((prev) => !prev)
       }
     }
+    const openHandler = () => setOpen(true)
     document.addEventListener("keydown", down)
-    return () => document.removeEventListener("keydown", down)
+    document.addEventListener("open-search", openHandler)
+    return () => {
+      document.removeEventListener("keydown", down)
+      document.removeEventListener("open-search", openHandler)
+    }
   }, [])
 
   useEffect(() => {
     if (!open) return
-    const el = listRef.current
-    if (!el) return
-    const check = () =>
+    fetch("/api/dashboard/hackathons")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.hackathons) setEvents(data.hackathons)
+      })
+      .catch(() => {})
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const container = containerRef.current
+    if (!container) return
+    const check = () => {
+      const el = getListEl()
+      if (!el) return
       setCanScrollMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4)
+    }
     const timer = setTimeout(check, 0)
-    el.addEventListener("scroll", check)
     const ro = new ResizeObserver(check)
-    ro.observe(el)
+    ro.observe(container)
     return () => {
       clearTimeout(timer)
-      el.removeEventListener("scroll", check)
       ro.disconnect()
     }
-  }, [open])
+  }, [open, query])
+
+  function checkScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget
+    setCanScrollMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4)
+  }
+
+  function handleOpenChange(v: boolean) {
+    setOpen(v)
+    if (!v) {
+      setCanScrollMore(false)
+      setQuery("")
+    }
+  }
 
   function navigate(href: string) {
     router.push(href)
@@ -105,67 +161,161 @@ export function SearchCommand() {
     }
   }
 
+  const q = query.toLowerCase()
+
+  const matchedEvents = q
+    ? events.filter((e) => e.name.toLowerCase().includes(q)).slice(0, 2)
+    : []
+
+  const matchedFunctionality = q
+    ? allFunctionalityItems.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 1)
+    : []
+
+  const matchedDocs = q ? searchDocs(q, 2) : []
+
+  const hasSearchResults = matchedEvents.length > 0 || matchedFunctionality.length > 0 || matchedDocs.length > 0
+
   return (
     <>
       <CommandDialog
         open={open}
-        onOpenChange={(v) => { setOpen(v); if (!v) setCanScrollMore(false) }}
+        onOpenChange={handleOpenChange}
         title="Search"
         description="Navigate to any page or action"
         className="md:max-w-2xl"
       >
-        <Command>
-          <CommandInput placeholder="Search pages and actions..." />
-          <div className="relative">
-            <CommandList ref={listRef} className="max-h-[60vh] md:max-h-[420px]">
-              <CommandEmpty>No results found.</CommandEmpty>
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Search pages, events, and docs..."
+            value={query}
+            onValueChange={setQuery}
+          />
+          <div className="relative" ref={containerRef}>
+            <CommandList className="max-h-[60vh] md:max-h-[420px]" onScroll={checkScroll}>
+              {q ? (
+                <>
+                  <CommandEmpty>No results found.</CommandEmpty>
+                  {matchedEvents.length > 0 && (
+                    <>
+                      <CommandGroup heading="Events">
+                        {matchedEvents.map((event) => (
+                          <CommandItem
+                            key={`/hackathons/${event.id}`}
+                            value={`/hackathons/${event.id}`}
+                            onSelect={() => navigate(`/hackathons/${event.id}`)}
+                          >
+                            <Calendar />
+                            {event.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                      {(matchedFunctionality.length > 0 || matchedDocs.length > 0) && <CommandSeparator />}
+                    </>
+                  )}
+                  {matchedFunctionality.length > 0 && (
+                    <>
+                      <CommandGroup heading="Pages">
+                        {matchedFunctionality.map((item) => (
+                          <CommandItem
+                            key={item.href}
+                            value={item.href}
+                            onSelect={() => navigate(item.href)}
+                          >
+                            <item.icon />
+                            {item.title}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                      {matchedDocs.length > 0 && <CommandSeparator />}
+                    </>
+                  )}
+                  {matchedDocs.length > 0 && (
+                    <CommandGroup heading="Docs">
+                      {matchedDocs.map((doc) => (
+                        <CommandItem
+                          key={doc.url}
+                          value={doc.url}
+                          onSelect={() => navigate(doc.url)}
+                        >
+                          <FileText />
+                          {doc.title}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                  {!hasSearchResults && null}
+                </>
+              ) : (
+                <>
+                  <CommandEmpty>No results found.</CommandEmpty>
 
-              <CommandGroup heading="Navigation">
-                {navigationItems.map((item) => (
-                  <CommandItem
-                    key={item.title}
-                    value={item.title}
-                    onSelect={() => navigate(item.href)}
-                  >
-                    <item.icon />
-                    {item.title}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+                  <CommandGroup heading="Navigation">
+                    {navigationItems.map((item) => (
+                      <CommandItem
+                        key={item.href}
+                        value={item.href}
+                        onSelect={() => navigate(item.href)}
+                      >
+                        <item.icon />
+                        {item.title}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
 
-              <CommandSeparator />
+                  <CommandSeparator />
 
-              <CommandGroup heading="Hackathons">
-                <CommandItem value="Create Hackathon" onSelect={handleCreateHackathon}>
-                  <Plus />
-                  Create Hackathon
-                </CommandItem>
-                {hackathonItems.map((item) => (
-                  <CommandItem
-                    key={item.title}
-                    value={item.title}
-                    onSelect={() => navigate(item.href)}
-                  >
-                    <item.icon />
-                    {item.title}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+                  <CommandGroup heading="Hackathons">
+                    <CommandItem value="create-hackathon" onSelect={handleCreateHackathon}>
+                      <Plus />
+                      Create Hackathon
+                    </CommandItem>
+                    {hackathonItems.map((item) => (
+                      <CommandItem
+                        key={item.href}
+                        value={item.href}
+                        onSelect={() => navigate(item.href)}
+                      >
+                        <item.icon />
+                        {item.title}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
 
-              <CommandSeparator />
+                  <CommandSeparator />
 
-              <CommandGroup heading="Settings">
-                {settingsItems.map((item) => (
-                  <CommandItem
-                    key={item.title}
-                    value={item.title}
-                    onSelect={() => navigate(item.href)}
-                  >
-                    <item.icon />
-                    {item.title}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+                  <CommandGroup heading="Settings">
+                    {settingsItems.map((item) => (
+                      <CommandItem
+                        key={item.href}
+                        value={item.href}
+                        onSelect={() => navigate(item.href)}
+                      >
+                        <item.icon />
+                        {item.title}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+
+                  <CommandSeparator />
+
+                  <CommandGroup heading="Docs">
+                    {[
+                      { title: "Getting Started", url: "/docs/getting-started" },
+                      { title: "Authentication", url: "/docs/authentication" },
+                      { title: "Hackathons API", url: "/docs/sdk/hackathons" },
+                    ].map((doc) => (
+                      <CommandItem
+                        key={doc.url}
+                        value={doc.url}
+                        onSelect={() => navigate(doc.url)}
+                      >
+                        <FileText />
+                        {doc.title}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </>
+              )}
             </CommandList>
             {canScrollMore && (
               <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-popover to-transparent" />
