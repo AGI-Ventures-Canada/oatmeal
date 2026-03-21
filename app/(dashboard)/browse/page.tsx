@@ -26,7 +26,6 @@ export default async function BrowsePage(props: {
   return (
     <div className="space-y-6">
       <PageHeader
-        breadcrumbs={[{ label: "Browse" }]}
         title="Browse Hackathons"
         description="Discover and join published hackathons"
       />
