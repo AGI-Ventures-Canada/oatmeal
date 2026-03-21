@@ -322,6 +322,9 @@ export const dashboardJudgingRoutes = new Elysia()
 
       const typedBody = body as { clerkUserId?: string; email?: string }
 
+      const { clerkClient } = await import("@clerk/nextjs/server")
+      const client = await clerkClient()
+
       if (typedBody.clerkUserId) {
         const { addJudge } = await import("@/lib/services/judging")
         const addResult = await addJudge(params.id, typedBody.clerkUserId)
@@ -336,8 +339,6 @@ export const dashboardJudgingRoutes = new Elysia()
         const hackathon = result.hackathon
         if (hackathon.status !== "draft") {
           try {
-            const { clerkClient } = await import("@clerk/nextjs/server")
-            const client = await clerkClient()
             const judgeUser = await client.users.getUser(typedBody.clerkUserId)
             const judgeEmail = judgeUser.primaryEmailAddress?.emailAddress
             if (judgeEmail) {
@@ -371,9 +372,6 @@ export const dashboardJudgingRoutes = new Elysia()
 
       if (typedBody.email) {
         const email = typedBody.email
-
-        const { clerkClient } = await import("@clerk/nextjs/server")
-        const client = await clerkClient()
 
         try {
           const users = await client.users.getUserList({ emailAddress: [email] })
