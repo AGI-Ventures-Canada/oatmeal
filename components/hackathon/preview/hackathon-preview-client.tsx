@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import { EditProvider, useEdit, SECTION_ORDER } from "./edit-context"
@@ -89,6 +89,14 @@ function HackathonPreviewContent({
       closeDrawer()
     }
   }
+
+  const autoOpenedName = useRef(false)
+  useEffect(() => {
+    if (isEditable && editMode && !hackathon.name.trim() && !activeSection && !autoOpenedName.current) {
+      autoOpenedName.current = true
+      openSection("name")
+    }
+  }, [isEditable, editMode, hackathon.name, activeSection, openSection])
 
   const hasTimeline = hackathon.registration_opens_at || hackathon.registration_closes_at || hackathon.starts_at || hackathon.ends_at
 
