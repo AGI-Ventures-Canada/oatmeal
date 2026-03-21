@@ -36,7 +36,6 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [countdown, setCountdown] = useState(INVITE_COUNTDOWN)
   const [progressValue, setProgressValue] = useState(0)
   const rafRef = useRef<number | null>(null)
 
@@ -49,21 +48,6 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
   }, [open, success])
 
   useEffect(() => {
-    if (!success || !open) return
-    setCountdown(INVITE_COUNTDOWN)
-    const interval = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearInterval(interval)
-          return 0
-        }
-        return c - 1
-      })
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [success, open])
-
-  useEffect(() => {
     if (!success || !open) {
       setProgressValue(0)
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
@@ -74,24 +58,21 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
     const animate = (now: number) => {
       const value = Math.min(((now - start) / duration) * 100, 100)
       setProgressValue(value)
-      if (value < 100) rafRef.current = requestAnimationFrame(animate)
+      if (value < 100) {
+        rafRef.current = requestAnimationFrame(animate)
+      } else {
+        setOpen(false)
+        setEmail("")
+        setError(null)
+        setSuccess(false)
+        router.refresh()
+      }
     }
     rafRef.current = requestAnimationFrame(animate)
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
-  }, [success, open])
-
-  useEffect(() => {
-    if (countdown === 0 && success) {
-      setOpen(false)
-      setEmail("")
-      setError(null)
-      setSuccess(false)
-      setCountdown(INVITE_COUNTDOWN)
-      router.refresh()
-    }
-  }, [countdown, success, router])
+  }, [success, open, router])
 
   useEffect(() => {
     if (!success || !open) return
@@ -102,7 +83,6 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
         setEmail("")
         setError(null)
         setSuccess(false)
-        setCountdown(INVITE_COUNTDOWN)
         router.refresh()
       }
     }
@@ -141,7 +121,6 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
     if (!isOpen) {
       setEmail("")
       setError(null)
-      setCountdown(INVITE_COUNTDOWN)
       if (success) {
         setSuccess(false)
         router.refresh()

@@ -47,6 +47,9 @@ packages/sdk/dist/
 # Generated JS files in source directories (from accidental tsc)
 lib/**/*.js
 lib/**/*.js.map
+
+# fumadocs auto-generated source files
+/.source/
 lib/**/*.d.ts
 lib/**/*.d.ts.map
 
