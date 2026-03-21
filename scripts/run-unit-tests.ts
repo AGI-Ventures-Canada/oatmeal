@@ -1,21 +1,3 @@
-/**
- * Unit test runner — splits component tests into separate bun processes
- * to avoid mock.module pollution between test files.
- *
- * Why the split:
- * - mobile-header.test.tsx mocks @/components/install-skill-button and
- *   @/components/hackathon/create-hackathon-menu at the module level.
- *   When run in the same process, those mocks replace the real modules
- *   for InstallSkillButton's and CreateHackathonMenu's own test files.
- * - Bun's mock.module persists across files in the same process, so
- *   tests that mock overlapping modules must run in separate processes.
- *
- * Groups:
- * 1. API, lib, and service tests (no mock.module conflicts)
- * 2. Component tests (subdirectories + standalone files)
- * 3. mobile-header (isolated — mocks other component modules)
- */
-
 const groups = [
   {
     name: "api + lib + services",
