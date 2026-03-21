@@ -194,15 +194,15 @@ describe("Audit Service", () => {
       expect(result?.actor_id).toBe("admin-789")
     })
 
-    it("returns null for admin principal without targetTenantId", async () => {
-      const result = await logAudit({
-        principal: mockAdminPrincipal,
-        action: "admin.hackathon.updated",
-        resourceType: "hackathon",
-        resourceId: "h-123",
-      })
-
-      expect(result).toBeNull()
+    it("throws for admin principal without targetTenantId", async () => {
+      expect(
+        logAudit({
+          principal: mockAdminPrincipal,
+          action: "admin.hackathon.updated",
+          resourceType: "hackathon",
+          resourceId: "h-123",
+        })
+      ).rejects.toThrow("Admin audit log requires targetTenantId")
     })
 
     it("returns null on database error", async () => {

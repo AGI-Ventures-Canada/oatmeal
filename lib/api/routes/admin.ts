@@ -10,6 +10,22 @@ import {
   deleteHackathon,
 } from "@/lib/services/admin"
 import { listScenarios, runScenario } from "@/lib/services/admin-scenarios"
+import type { UpdateHackathonFields } from "@/lib/services/admin"
+
+const HackathonStatusEnum = t.Union([
+  t.Literal("draft"),
+  t.Literal("published"),
+  t.Literal("registration_open"),
+  t.Literal("active"),
+  t.Literal("judging"),
+  t.Literal("completed"),
+  t.Literal("archived"),
+])
+
+const LocationTypeEnum = t.Union([
+  t.Literal("in_person"),
+  t.Literal("virtual"),
+])
 
 export const adminRoutes = new Elysia({ prefix: "/admin" })
   .onError(({ error }) => {
@@ -57,8 +73,8 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     "/hackathons",
     async ({ query }) => {
       const result = await listAllHackathons({
-        limit: query.limit ? parseInt(query.limit) : undefined,
-        offset: query.offset ? parseInt(query.offset) : undefined,
+        limit: query.limit,
+        offset: query.offset,
         status: query.status || undefined,
         tenantId: query.tenant_id || undefined,
         search: query.search || undefined,
@@ -67,8 +83,8 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     },
     {
       query: t.Object({
-        limit: t.Optional(t.String()),
-        offset: t.Optional(t.String()),
+        limit: t.Optional(t.Numeric()),
+        offset: t.Optional(t.Numeric()),
         status: t.Optional(t.String()),
         tenant_id: t.Optional(t.String()),
         search: t.Optional(t.String()),
@@ -103,7 +119,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         throw new AuthError("Hackathon not found", 404)
       }
 
-      const updated = await updateHackathonAsAdmin(params.id, body)
+      const updated = await updateHackathonAsAdmin(params.id, body as UpdateHackathonFields)
 
       await logAudit({
         principal,
@@ -121,7 +137,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         name: t.Optional(t.String()),
         slug: t.Optional(t.String()),
         description: t.Optional(t.Nullable(t.String())),
-        status: t.Optional(t.String()),
+        status: t.Optional(HackathonStatusEnum),
         starts_at: t.Optional(t.Nullable(t.String())),
         ends_at: t.Optional(t.Nullable(t.String())),
         registration_opens_at: t.Optional(t.Nullable(t.String())),
@@ -132,7 +148,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         allow_solo: t.Optional(t.Nullable(t.Boolean())),
         anonymous_judging: t.Optional(t.Boolean()),
         rules: t.Optional(t.Nullable(t.String())),
-        location_type: t.Optional(t.Nullable(t.String())),
+        location_type: t.Optional(t.Nullable(LocationTypeEnum)),
         location_name: t.Optional(t.Nullable(t.String())),
         location_url: t.Optional(t.Nullable(t.String())),
         results_published_at: t.Optional(t.Nullable(t.String())),

@@ -82,8 +82,7 @@ export async function logAudit(input: LogAuditInput): Promise<AuditLog | null> {
 
   if (principal.kind === "admin") {
     if (!input.targetTenantId) {
-      console.error("Admin audit log requires targetTenantId")
-      return null
+      throw new Error("Admin audit log requires targetTenantId")
     }
     tenantId = input.targetTenantId
     actorType = "user"
