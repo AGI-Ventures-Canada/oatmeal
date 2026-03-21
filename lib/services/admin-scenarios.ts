@@ -223,7 +223,7 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
       status: "published",
       startsAt: new Date(now.getTime() + 7 * 86400000),
       endsAt: new Date(now.getTime() + 9 * 86400000),
-      registrationOpensAt: new Date(now.getTime() - 1 * 86400000),
+      registrationOpensAt: new Date(now.getTime() + 1 * 86400000),
       registrationClosesAt: new Date(now.getTime() + 6 * 86400000),
     })
     return { hackathonId, slug, tenantId }
@@ -429,8 +429,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
 }
 
 export async function runScenario(name: string, tenantId?: string): Promise<{ hackathonId: string; slug: string; tenantId: string }> {
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
-    throw new Error("Test scenarios cannot be run in production")
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV) {
+    throw new Error("Test scenarios can only be run in local development")
   }
 
   const runner = scenarioRunners[name]

@@ -151,7 +151,7 @@ describe("Admin Service", () => {
 
     it("throws in production environment", async () => {
       process.env.NODE_ENV = "production"
-      expect(runScenario("pre-registration")).rejects.toThrow("Test scenarios cannot be run in production")
+      expect(runScenario("pre-registration")).rejects.toThrow("Test scenarios can only be run in local development")
     })
 
     it("throws for unknown scenario", async () => {
