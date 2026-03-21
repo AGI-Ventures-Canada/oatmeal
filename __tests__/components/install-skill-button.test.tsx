@@ -70,6 +70,12 @@ describe("InstallSkillButton", () => {
     expect(button.getAttribute("aria-expanded")).toBe("false");
   });
 
+  it("has correct button type", () => {
+    render(<InstallSkillButton />);
+    const button = screen.getByRole("button", { name: /Install Skill/i });
+    expect(button.getAttribute("type")).toBe("button");
+  });
+
   it("shows concise install copy and hides troubleshooting details by default", () => {
     render(<InstallSkillButton />);
 
