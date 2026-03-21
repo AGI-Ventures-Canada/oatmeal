@@ -19,7 +19,7 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { path } = await params
   const slug = path.join("/")
-  const eventData = await extractLumaEventData(slug)
+  const eventData = await ttlCache(`luma:data:${slug}`, () => extractLumaEventData(slug))
 
   if (!eventData) {
     return { title: "Import from Luma | Oatmeal" }

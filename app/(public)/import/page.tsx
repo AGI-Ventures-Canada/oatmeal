@@ -18,7 +18,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     return { title: "Import from Event Page | Oatmeal" }
   }
 
-  const eventData = await extractEventPageData(rawUrl)
+  const normalized = normalizeUrl(rawUrl)
+  const eventData = await ttlCache(`import:data:${normalized}`, () => extractEventPageData(normalized))
 
   if (!eventData) {
     return { title: "Import from Event Page | Oatmeal" }
