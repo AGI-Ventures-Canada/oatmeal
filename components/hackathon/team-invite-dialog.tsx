@@ -157,11 +157,13 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
                 <p className="text-sm text-muted-foreground mt-1">{email}</p>
               </div>
             </div>
-            <AlertDialogFooter className="flex-col gap-2">
-              <Progress value={((6 - countdown) / 6) * 100} className="h-1 w-full" />
-              <AlertDialogAction onClick={() => handleOpenChange(false)}>
-                Done
-              </AlertDialogAction>
+            <AlertDialogFooter>
+              <div className="flex flex-col gap-1 items-end">
+                <AlertDialogAction onClick={() => handleOpenChange(false)}>
+                  Done
+                </AlertDialogAction>
+                <Progress value={((6 - countdown) / 6) * 100} className="h-1 w-full" />
+              </div>
             </AlertDialogFooter>
           </>
         ) : (
