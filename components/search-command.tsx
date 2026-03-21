@@ -82,9 +82,12 @@ export function SearchCommand() {
       setCanScrollMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4)
     const timer = setTimeout(check, 0)
     el.addEventListener("scroll", check)
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
     return () => {
       clearTimeout(timer)
       el.removeEventListener("scroll", check)
+      ro.disconnect()
     }
   }, [open])
 
