@@ -304,7 +304,7 @@ describe("Admin API Routes", () => {
   })
 
   describe("DELETE /admin/hackathons/:id", () => {
-    it("deletes hackathon and logs audit", async () => {
+    it("deletes hackathon and logs audit when confirm_name matches", async () => {
       mockResolvePrincipal.mockResolvedValue(adminPrincipal)
       mockGetHackathonById.mockResolvedValue({
         id: "h-1",
@@ -316,6 +316,8 @@ describe("Admin API Routes", () => {
       const res = await app.handle(
         new Request("http://localhost/api/admin/hackathons/h-1", {
           method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirm_name: "Doomed" }),
         })
       )
       const data = await res.json()
@@ -331,6 +333,27 @@ describe("Admin API Routes", () => {
       )
     })
 
+    it("rejects delete when confirm_name does not match", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      mockGetHackathonById.mockResolvedValue({
+        id: "h-1",
+        name: "Doomed",
+        slug: "doomed",
+        tenant_id: "t-1",
+      })
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/hackathons/h-1", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirm_name: "Wrong Name" }),
+        })
+      )
+
+      expect(res.status).toBe(400)
+      expect(mockDeleteHackathon).not.toHaveBeenCalled()
+    })
+
     it("returns 404 for missing hackathon", async () => {
       mockResolvePrincipal.mockResolvedValue(adminPrincipal)
       mockGetHackathonById.mockResolvedValue(null)
@@ -338,6 +361,8 @@ describe("Admin API Routes", () => {
       const res = await app.handle(
         new Request("http://localhost/api/admin/hackathons/missing", {
           method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirm_name: "anything" }),
         })
       )
 

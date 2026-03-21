@@ -115,7 +115,11 @@ export function AdminHackathonEditor({ hackathon }: { hackathon: Hackathon }) {
 
   async function handleDelete() {
     setDeleting(true)
-    const res = await fetch(`/api/admin/hackathons/${hackathon.id}`, { method: "DELETE" })
+    const res = await fetch(`/api/admin/hackathons/${hackathon.id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm_name: hackathon.name }),
+    })
     if (res.ok) {
       router.push("/admin/hackathons")
     } else {

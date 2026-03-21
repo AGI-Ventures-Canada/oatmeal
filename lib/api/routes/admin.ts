@@ -152,10 +152,14 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
   )
   .delete(
     "/hackathons/:id",
-    async ({ params, principal }) => {
+    async ({ params, body, principal }) => {
       const existing = await getHackathonById(params.id)
       if (!existing) {
         throw new AuthError("Hackathon not found", 404)
+      }
+
+      if (body?.confirm_name !== existing.name) {
+        throw new AuthError("confirm_name must match the hackathon name", 400)
       }
 
       await deleteHackathon(params.id)
@@ -172,9 +176,12 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       return { success: true }
     },
     {
+      body: t.Object({
+        confirm_name: t.String({ description: "Must match the hackathon name to confirm deletion" }),
+      }),
       detail: {
         summary: "Delete hackathon",
-        description: "Permanently delete a hackathon and all associated data.",
+        description: "Permanently delete a hackathon and all associated data. Requires confirm_name matching the hackathon name.",
       },
     }
   )
