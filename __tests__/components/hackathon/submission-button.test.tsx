@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
+import * as dialogMock from "../../lib/dialog-mock"
 
 const mockRefresh = mock(() => {})
 const mockFetch = mock(() =>
@@ -11,53 +12,27 @@ const mockFetch = mock(() =>
   )
 )
 
-let mockIsLoaded = true
-let mockIsSignedIn = true
+import { clerkState, clerkMock, resetClerkState } from "../../lib/clerk-mock"
 
-mock.module("@clerk/nextjs", () => ({
-  useUser: () => ({
-    isLoaded: mockIsLoaded,
-    isSignedIn: mockIsSignedIn,
-  }),
-}))
+mock.module("@clerk/nextjs", () => clerkMock)
 
 mock.module("next/navigation", () => ({
   useRouter: () => ({
     refresh: mockRefresh,
   }),
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
 }))
 
-mock.module("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode
-    open: boolean
-    onOpenChange?: (open: boolean) => void
-  }) =>
-    open ? (
-      <div>
-        <button type="button" onClick={() => onOpenChange?.(false)}>
-          Close Dialog
-        </button>
-        {children}
-      </div>
-    ) : null,
-  DialogContent: ({ children }: { children: React.ReactNode; className?: string }) => (
-    <div role="dialog">{children}</div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-}))
+mock.module("@/components/ui/dialog", () => dialogMock)
 
 const { SubmissionButton } = await import("@/components/hackathon/submission-button")
 
 beforeEach(() => {
-  mockIsLoaded = true
-  mockIsSignedIn = true
+  clerkState.isLoaded = true
+  clerkState.isSignedIn = true
   window.localStorage.clear()
   mockRefresh.mockClear()
   mockFetch.mockClear()

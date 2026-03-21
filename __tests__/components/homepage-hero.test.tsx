@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import * as dialogMock from "../lib/dialog-mock"
 
 const mockPush = mock(() => {})
 
@@ -7,33 +8,13 @@ mock.module("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
 }))
 
-mock.module("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode
-    open: boolean
-    onOpenChange?: (open: boolean) => void
-  }) =>
-    open ? (
-      <div>
-        <button type="button" onClick={() => onOpenChange?.(false)}>
-          Close Dialog
-        </button>
-        {children}
-      </div>
-    ) : null,
-  DialogContent: ({ children }: { children: React.ReactNode; className?: string }) => (
-    <div role="dialog">{children}</div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-}))
+mock.module("@/components/ui/dialog", () => dialogMock)
 
 const { HomepageHero } = await import("@/components/homepage-hero")
 

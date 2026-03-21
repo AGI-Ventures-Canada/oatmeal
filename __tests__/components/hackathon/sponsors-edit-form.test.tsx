@@ -60,6 +60,10 @@ mock.module("next/navigation", () => ({
   useRouter: () => ({
     refresh: mockRefresh,
   }),
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 mock.module("next/link", () => ({

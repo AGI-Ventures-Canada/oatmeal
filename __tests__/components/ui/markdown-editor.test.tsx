@@ -8,6 +8,10 @@ mock.module("next/navigation", () => ({
     replace: mock(() => {}),
     prefetch: mock(() => {}),
   }),
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 const { MarkdownEditor } = await import("@/components/ui/markdown-editor")

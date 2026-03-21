@@ -1,32 +1,10 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test"
 import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react"
+import { clerkState, clerkMock, resetClerkState } from "../lib/clerk-mock"
 
 const mockPush = mock(() => {})
-const mockSignOut = mock(() => {})
-const mockOpenUserProfile = mock(() => {})
-const mockSetActive = mock(() => Promise.resolve())
 const mockSetTheme = mock(() => {})
 
-let mockIsSignedIn = true
-let mockUser: {
-  firstName: string
-  fullName: string
-  imageUrl: string | null
-  emailAddresses: { emailAddress: string }[]
-} | null = {
-  firstName: "Alex",
-  fullName: "Alex Ivany",
-  imageUrl: null,
-  emailAddresses: [{ emailAddress: "alex@example.com" }],
-}
-let mockOrganization: {
-  id: string
-  name: string
-  imageUrl: string | null
-} | null = null
-let mockMemberships: Array<{
-  organization: { id: string; name: string; imageUrl: string | null }
-}> = []
 let mockTheme = "system"
 let mockPathname = "/home"
 
@@ -34,20 +12,11 @@ mock.module("next/navigation", () => ({
   usePathname: () => mockPathname,
   useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: mockPush }),
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
 }))
 
-mock.module("@clerk/nextjs", () => ({
-  useUser: () => ({ isSignedIn: mockIsSignedIn, user: mockUser }),
-  useClerk: () => ({
-    openUserProfile: mockOpenUserProfile,
-    signOut: mockSignOut,
-  }),
-  useOrganization: () => ({ organization: mockOrganization }),
-  useOrganizationList: () => ({
-    userMemberships: { data: mockMemberships },
-    setActive: mockSetActive,
-  }),
-}))
+mock.module("@clerk/nextjs", () => clerkMock)
 
 mock.module("next-themes", () => ({
   useTheme: () => ({ theme: mockTheme, setTheme: mockSetTheme }),
@@ -116,21 +85,16 @@ mock.module("@/components/create-organization-dialog", () => ({
 const { MobileHeader } = await import("@/components/mobile-header")
 
 beforeEach(() => {
-  mockIsSignedIn = true
-  mockUser = {
-    firstName: "Alex",
+  resetClerkState()
+  clerkState.user = {
+    id: "user_123",
     fullName: "Alex Ivany",
+    firstName: "Alex",
     imageUrl: null,
-    emailAddresses: [{ emailAddress: "alex@example.com" }],
   }
-  mockOrganization = null
-  mockMemberships = []
   mockTheme = "system"
   mockPathname = "/home"
   mockPush.mockClear()
-  mockSignOut.mockClear()
-  mockOpenUserProfile.mockClear()
-  mockSetActive.mockClear()
   mockSetTheme.mockClear()
 })
 
@@ -169,7 +133,7 @@ describe("MobileHeader", () => {
     })
 
     it("shows user image when imageUrl is provided", () => {
-      mockUser = { ...mockUser!, imageUrl: "https://example.com/avatar.png" }
+      clerkState.user = { ...clerkState.user!, imageUrl: "https://example.com/avatar.png" }
       render(<MobileHeader />)
       const img = screen.getByAltText("Alex Ivany")
       expect(img.getAttribute("src")).toBe("https://example.com/avatar.png")
@@ -180,12 +144,12 @@ describe("MobileHeader", () => {
       const header = getHeader()
       const avatarButton = within(header).getByText("A").closest("button")!
       fireEvent.click(avatarButton)
-      expect(mockOpenUserProfile).toHaveBeenCalled()
+      expect(clerkState.openUserProfile).toHaveBeenCalled()
     })
 
     it("does not show avatar when signed out", () => {
-      mockIsSignedIn = false
-      mockUser = null
+      clerkState.isSignedIn = false
+      clerkState.user = null
       render(<MobileHeader />)
       const header = getHeader()
       expect(within(header).queryByRole("button", { name: /user/i })).toBeNull()
@@ -229,12 +193,12 @@ describe("MobileHeader", () => {
     it("calls signOut when sign out button is clicked", () => {
       openMenu()
       fireEvent.click(screen.getByText("Sign out"))
-      expect(mockSignOut).toHaveBeenCalledWith({ redirectUrl: "/sign-in" })
+      expect(clerkState.signOut).toHaveBeenCalledWith({ redirectUrl: "/sign-in" })
     })
 
     it("shows sign in link when signed out", () => {
-      mockIsSignedIn = false
-      mockUser = null
+      clerkState.isSignedIn = false
+      clerkState.user = null
       openMenu()
       expect(screen.getByText("Sign in")).toBeDefined()
     })
@@ -287,8 +251,8 @@ describe("MobileHeader", () => {
 
   describe("organization switcher", () => {
     beforeEach(() => {
-      mockOrganization = { id: "org_1", name: "Test Org", imageUrl: null }
-      mockMemberships = [
+      clerkState.organization = { id: "org_1", name: "Test Org", imageUrl: null }
+      clerkState.memberships = [
         {
           organization: { id: "org_1", name: "Test Org", imageUrl: null },
         },
@@ -316,7 +280,7 @@ describe("MobileHeader", () => {
     })
 
     it("shows Personal Workspace when no org is active", () => {
-      mockOrganization = null
+      clerkState.organization = null
       openMenu()
       expect(
         screen.getAllByText("Personal Workspace").length
@@ -340,6 +304,7 @@ describe("MobileHeader", () => {
     })
 
     it("switches to personal workspace when Personal Workspace is clicked", () => {
+      mockPathname = "/hackathons/123"
       openOrgSwitcher()
       const personalButtons = screen.getAllByText("Personal Workspace")
       const personalButton = personalButtons
@@ -347,14 +312,15 @@ describe("MobileHeader", () => {
         .find((btn) => btn !== null)!
       fireEvent.click(personalButton)
 
-      expect(mockSetActive).toHaveBeenCalledWith({ organization: null })
+      expect(clerkState.setActive).toHaveBeenCalledWith({ organization: null })
       expect(mockPush).toHaveBeenCalledWith("/home")
     })
 
     it("switches to a different org when clicked", () => {
+      mockPathname = "/hackathons/123"
       openOrgSwitcher()
       fireEvent.click(screen.getByText("Second Org"))
-      expect(mockSetActive).toHaveBeenCalledWith({
+      expect(clerkState.setActive).toHaveBeenCalledWith({
         organization: "org_2",
       })
       expect(mockPush).toHaveBeenCalledWith("/home")
@@ -369,7 +335,7 @@ describe("MobileHeader", () => {
 
   describe("org switcher panel uses stable id, not title", () => {
     it("org sub-panel visibility is based on id, not dynamic org name", () => {
-      mockOrganization = {
+      clerkState.organization = {
         id: "org_1",
         name: "Alpha Corp",
         imageUrl: null,
@@ -412,8 +378,8 @@ describe("MobileHeader", () => {
     })
 
     it("does not show theme toggle when signed out", () => {
-      mockIsSignedIn = false
-      mockUser = null
+      clerkState.isSignedIn = false
+      clerkState.user = null
       openMenu()
       expect(screen.queryByText("Theme")).toBeNull()
     })
