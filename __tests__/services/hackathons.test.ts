@@ -530,21 +530,21 @@ describe("Hackathons Service", () => {
     })
 
     it("includes email from Clerk for each member", async () => {
-      let callCount = 0
+      const participantsCalls = { count: 0 }
       setMockFromImplementation((table) => {
-        callCount++
-        if (table === "hackathon_participants" && callCount === 1) {
-          return createChainableMock({ data: { team_id: "team_1" }, error: null })
+        if (table === "hackathon_participants") {
+          participantsCalls.count++
+          if (participantsCalls.count === 1) {
+            return createChainableMock({ data: { team_id: "team_1" }, error: null })
+          }
+          return createChainableMock({
+            data: [{ clerk_user_id: "user_captain", role: "participant", registered_at: "2026-01-01T00:00:00Z" }],
+            error: null,
+          })
         }
         if (table === "teams") {
           return createChainableMock({
             data: { id: "team_1", name: "Test Team", status: "forming", invite_code: "abc123", captain_clerk_user_id: "user_captain" },
-            error: null,
-          })
-        }
-        if (table === "hackathon_participants") {
-          return createChainableMock({
-            data: [{ clerk_user_id: "user_captain", role: "participant", registered_at: "2026-01-01T00:00:00Z" }],
             error: null,
           })
         }
@@ -579,21 +579,21 @@ describe("Hackathons Service", () => {
     })
 
     it("sets email to null when Clerk call fails", async () => {
-      let callCount = 0
+      const participantsCalls = { count: 0 }
       setMockFromImplementation((table) => {
-        callCount++
-        if (table === "hackathon_participants" && callCount === 1) {
-          return createChainableMock({ data: { team_id: "team_1" }, error: null })
+        if (table === "hackathon_participants") {
+          participantsCalls.count++
+          if (participantsCalls.count === 1) {
+            return createChainableMock({ data: { team_id: "team_1" }, error: null })
+          }
+          return createChainableMock({
+            data: [{ clerk_user_id: "user_captain", role: "participant", registered_at: "2026-01-01T00:00:00Z" }],
+            error: null,
+          })
         }
         if (table === "teams") {
           return createChainableMock({
             data: { id: "team_1", name: "Test Team", status: "forming", invite_code: "abc123", captain_clerk_user_id: "user_captain" },
-            error: null,
-          })
-        }
-        if (table === "hackathon_participants") {
-          return createChainableMock({
-            data: [{ clerk_user_id: "user_captain", role: "participant", registered_at: "2026-01-01T00:00:00Z" }],
             error: null,
           })
         }
