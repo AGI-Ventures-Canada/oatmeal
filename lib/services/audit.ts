@@ -58,6 +58,10 @@ export type AuditAction =
   | "results.published"
   | "results.unpublished"
   | "cli_auth.completed"
+  | "admin.hackathon.updated"
+  | "admin.hackathon.deleted"
+  | "admin.tenant.updated"
+  | "admin.scenario.created"
 
 export type LogAuditInput = {
   principal: Exclude<Principal, { kind: "anon" }>
@@ -65,22 +69,46 @@ export type LogAuditInput = {
   resourceType: string
   resourceId?: string
   metadata?: Json
+  targetTenantId?: string
 }
 
 export async function logAudit(input: LogAuditInput): Promise<AuditLog | null> {
+  const { principal } = input
+
+  let tenantId: string
+  let actorType: "user" | "api_key"
+  let actorId: string
+  let metadata = input.metadata
+
+  if (principal.kind === "admin") {
+    if (!input.targetTenantId) {
+      console.error("Admin audit log requires targetTenantId")
+      return null
+    }
+    tenantId = input.targetTenantId
+    actorType = "user"
+    actorId = principal.userId
+    metadata = { ...(input.metadata as Record<string, unknown> ?? {}), is_admin_action: true, admin_user_id: principal.userId }
+  } else if (principal.kind === "user") {
+    tenantId = principal.tenantId
+    actorType = "user"
+    actorId = principal.userId
+  } else {
+    tenantId = principal.tenantId
+    actorType = "api_key"
+    actorId = principal.keyId
+  }
+
   const { data, error } = await getSupabase()
     .from("audit_logs")
     .insert({
-      tenant_id: input.principal.tenantId,
+      tenant_id: tenantId,
       action: input.action,
-      actor_type: input.principal.kind === "user" ? "user" : "api_key",
-      actor_id:
-        input.principal.kind === "user"
-          ? input.principal.userId
-          : input.principal.keyId,
+      actor_type: actorType,
+      actor_id: actorId,
       resource_type: input.resourceType,
       resource_id: input.resourceId,
-      metadata: input.metadata,
+      metadata,
     })
     .select()
     .single()

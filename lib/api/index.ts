@@ -4,6 +4,7 @@ import { publicRoutes } from "./routes/public"
 import { dashboardRoutes } from "./routes/dashboard"
 import { v1Routes } from "./routes/v1"
 import { importRoutes, dashboardImportRoutes } from "./routes/import"
+import { adminRoutes } from "./routes/admin"
 
 export const api = new Elysia({ prefix: "/api" })
   .use(
@@ -51,5 +52,6 @@ Authorization: Bearer sk_live_your_api_key_here
   .use(dashboardImportRoutes)
   .use(dashboardRoutes)
   .use(v1Routes)
+  .use(adminRoutes)
 
 export type Api = typeof api

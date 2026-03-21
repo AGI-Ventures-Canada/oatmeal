@@ -1,9 +1,13 @@
 import { auth } from "@clerk/nextjs/server"
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { Principal, PrincipalKindMap, Scope } from "./types"
-import { scopesForRole } from "./types"
+import type { AdminPrincipal, Principal, PrincipalKindMap, Scope } from "./types"
+import { ADMIN_SCOPES, scopesForRole } from "./types"
 import { verifyApiKey } from "@/lib/services/api-keys"
 import { getOrCreateTenant, getOrCreatePersonalTenant } from "@/lib/services/tenants"
+
+export function isAdminEnabled(): boolean {
+  return process.env.ADMIN_ENABLED === "true"
+}
 
 export async function resolvePrincipal(request: Request): Promise<Principal> {
   const authHeader = request.headers.get("authorization")
@@ -27,9 +31,21 @@ export async function resolvePrincipal(request: Request): Promise<Principal> {
     }
   }
 
-  const { userId, orgId, orgRole } = await auth()
+  const session = await auth()
+  const { userId, orgId, orgRole } = session
   if (!userId) {
     return { kind: "anon" }
+  }
+
+  const metadata = (session.sessionClaims as Record<string, unknown>)?.metadata as
+    | Record<string, unknown>
+    | undefined
+  if (isAdminEnabled() && metadata?.admin === true) {
+    return {
+      kind: "admin",
+      userId,
+      scopes: ADMIN_SCOPES,
+    }
   }
 
   let tenant
@@ -60,6 +76,15 @@ export class AuthError extends Error {
   ) {
     super(message)
     this.name = "AuthError"
+  }
+}
+
+export function requireAdmin(principal: Principal): asserts principal is AdminPrincipal {
+  if (!isAdminEnabled()) {
+    throw new AuthError("Not found", 404)
+  }
+  if (principal.kind !== "admin") {
+    throw new AuthError("Forbidden", 403)
   }
 }
 
