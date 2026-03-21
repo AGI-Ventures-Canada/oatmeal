@@ -80,9 +80,12 @@ export function SearchCommand() {
     if (!el) return
     const check = () =>
       setCanScrollMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4)
-    check()
+    const timer = setTimeout(check, 0)
     el.addEventListener("scroll", check)
-    return () => el.removeEventListener("scroll", check)
+    return () => {
+      clearTimeout(timer)
+      el.removeEventListener("scroll", check)
+    }
   }, [open])
 
   function navigate(href: string) {
@@ -103,7 +106,7 @@ export function SearchCommand() {
     <>
       <CommandDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(v) => { setOpen(v); if (!v) setCanScrollMore(false) }}
         title="Search"
         description="Navigate to any page or action"
         className="md:max-w-2xl"
