@@ -3,9 +3,10 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Globe, Plus, Terminal } from "lucide-react"
+import { Globe, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CreateHackathonDialog } from "@/components/hackathon/create-hackathon-dialog"
+import { InstallSkillButton } from "@/components/install-skill-button"
 
 export function HomepageHero() {
   const router = useRouter()
@@ -54,13 +55,18 @@ export function HomepageHero() {
           </Button>
         </div>
 
-        <p className="mt-12 text-sm text-muted-foreground">
-          <Terminal className="mr-1.5 inline size-3.5 align-text-bottom" />
-          Or manage hackathons from your AI agent —{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
-            npx skills add AGI-Ventures-Canada/oatmeal
-          </code>
-        </p>
+        <div className="mt-12">
+          <InstallSkillButton
+            trigger={
+              <button
+                type="button"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Or manage hackathons from your AI agent
+              </button>
+            }
+          />
+        </div>
       </div>
 
       <CreateHackathonDialog
