@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "bun test __tests__/api __tests__/lib/*.test.ts __tests__/services && bun test __tests__/components/hackathon __tests__/components/dashboard __tests__/components/ui __tests__/components/org __tests__/components/install-skill-button.test.tsx __tests__/components/homepage-hero.test.tsx && bun test __tests__/components/mobile-header.test.tsx",
+    "test": "bun scripts/run-unit-tests.ts",
     "test:integration": "bun scripts/run-integration-tests.ts",
     "test:email": "bun test --test-name-pattern '.*' __tests__/integration/*.email.test.ts",
     "test:all": "bun run test && bun run test:integration && bun run test:email && bun run cli:test",

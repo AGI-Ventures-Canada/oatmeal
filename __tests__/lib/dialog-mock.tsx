@@ -53,7 +53,7 @@ export function DialogTrigger({
     })
   }
   return (
-    <button onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
+    <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
       {children}
     </button>
   )
