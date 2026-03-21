@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { UserPlus, Check, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Progress } from "@/components/ui/progress"
 
 interface TeamInviteDialogProps {
   teamId: string
@@ -156,9 +157,10 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
                 <p className="text-sm text-muted-foreground mt-1">{email}</p>
               </div>
             </div>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="flex-col gap-2">
+              <Progress value={((6 - countdown) / 6) * 100} className="h-1 w-full" />
               <AlertDialogAction onClick={() => handleOpenChange(false)}>
-                Done · {countdown}
+                Done
               </AlertDialogAction>
             </AlertDialogFooter>
           </>
