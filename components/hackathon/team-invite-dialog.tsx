@@ -18,7 +18,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { UserPlus, Check, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Progress } from "@/components/ui/progress"
 
 interface TeamInviteDialogProps {
   teamId: string
@@ -160,15 +159,13 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
               </div>
             </div>
             <AlertDialogFooter>
-              <div className="flex items-center gap-3 w-full">
-                <div className="flex flex-col gap-1 flex-1">
-                  <p className="text-xs text-muted-foreground">Closing automatically…</p>
-                  <Progress value={progressValue} />
-                </div>
-                <AlertDialogAction onClick={() => handleOpenChange(false)}>
-                  Done
-                </AlertDialogAction>
-              </div>
+              <AlertDialogAction className="relative overflow-hidden" onClick={() => handleOpenChange(false)}>
+                <span
+                  className="absolute inset-0 origin-left bg-primary-foreground/20 transition-none"
+                  style={{ transform: `scaleX(${progressValue / 100})` }}
+                />
+                <span className="relative">Done</span>
+              </AlertDialogAction>
             </AlertDialogFooter>
           </>
         ) : (
