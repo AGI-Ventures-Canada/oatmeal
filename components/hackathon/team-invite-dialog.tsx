@@ -164,7 +164,10 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
                 <AlertDialogAction onClick={() => handleOpenChange(false)}>
                   Done
                 </AlertDialogAction>
-                <Progress value={((INVITE_COUNTDOWN - countdown) / INVITE_COUNTDOWN) * 100} />
+                <div className="flex flex-col gap-1 w-full">
+                  <p className="text-xs text-muted-foreground text-right">Closing automatically…</p>
+                  <Progress value={((INVITE_COUNTDOWN - countdown) / INVITE_COUNTDOWN) * 100} />
+                </div>
               </div>
             </AlertDialogFooter>
           </>
