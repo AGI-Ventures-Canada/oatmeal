@@ -57,8 +57,12 @@ lib/**/*.d.ts.map
 specs.md
 examples/
 
-# Claude Code worktrees
+# Claude Code
 .claude/worktrees/
+.claude/scheduled_tasks.lock
+
+# Superset worktrees
+.superset/
 
 # IDE / tool config
 .continue/
