@@ -81,6 +81,10 @@ export class AuthError extends Error {
 
 const ADMIN_API_KEY_SCOPES: Scope[] = ["admin:read", "admin:write", "admin:scenarios"]
 
+// Outer gate: confirms admin is enabled and the principal holds at least one admin scope.
+// Per-endpoint scope enforcement is done separately via requireAdminScopes — keep both checks;
+// collapsing them would either over-restrict (blocking valid admin Clerk sessions) or
+// under-restrict (skipping scope verification on specific endpoints).
 export function requireAdmin(principal: Principal): asserts principal is AdminPrincipal | ApiKeyPrincipal {
   if (!isAdminEnabled()) {
     throw new AuthError("Not found", 404)

@@ -60,7 +60,6 @@ export type AuditAction =
   | "cli_auth.completed"
   | "admin.hackathon.updated"
   | "admin.hackathon.deleted"
-  | "admin.tenant.updated"
   | "admin.scenario.created"
 
 export type LogAuditInput = {
