@@ -2,13 +2,21 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Globe, Plus } from "lucide-react"
+import { Check, Copy, Globe, Plus, Terminal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CreateHackathonDialog } from "@/components/hackathon/create-hackathon-dialog"
-import { InstallSkillButton } from "@/components/install-skill-button"
+
+const INSTALL_COMMAND = "npx skills add AGI-Ventures-Canada/oatmeal"
 
 export function HomepageHero() {
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(INSTALL_COMMAND)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <section className="flex min-h-[85vh] flex-col items-center justify-center px-4">
@@ -48,14 +56,28 @@ export function HomepageHero() {
           </Button>
         </div>
 
-        <div className="mt-12">
-          <InstallSkillButton
-            trigger={
-              <Button variant="link" size="sm">
-                Or manage hackathons from your AI agent
-              </Button>
-            }
-          />
+        <div className="mt-12 space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Or manage hackathons from your AI agent
+          </p>
+          <div className="mx-auto flex max-w-sm items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 font-mono text-sm">
+            <Terminal className="size-3.5 shrink-0 text-muted-foreground" />
+            <code className="min-w-0 flex-1 truncate text-left">
+              {INSTALL_COMMAND}
+            </code>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={handleCopy}
+              aria-label={copied ? "Copied" : "Copy install command"}
+            >
+              {copied ? (
+                <Check className="size-3" />
+              ) : (
+                <Copy className="size-3" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 

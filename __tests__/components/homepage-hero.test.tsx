@@ -59,10 +59,12 @@ describe("HomepageHero", () => {
     expect(screen.getByText("Import an external event")).toBeDefined()
   })
 
-  it("renders the AI agent skill trigger", () => {
+  it("renders the install command with a copy button", () => {
     render(<HomepageHero />)
 
     expect(screen.getByText("Or manage hackathons from your AI agent")).toBeDefined()
+    expect(screen.getByText("npx skills add AGI-Ventures-Canada/oatmeal")).toBeDefined()
+    expect(screen.getByRole("button", { name: "Copy install command" })).toBeDefined()
   })
 
   it("links 'Create from scratch' to /create", () => {
