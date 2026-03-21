@@ -169,7 +169,7 @@ export function SearchCommand() {
       </CommandDialog>
 
       <CreateHackathonDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <OrgGateDialog open={orgGateOpen} onOpenChange={setOrgGateOpen} />
+      <OrgGateDialog open={orgGateOpen} onOpenChange={setOrgGateOpen} onOrgSelected={() => setCreateOpen(true)} />
     </>
   )
 }

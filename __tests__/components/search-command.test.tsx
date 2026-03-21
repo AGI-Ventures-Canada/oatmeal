@@ -18,7 +18,7 @@ mock.module("@/components/hackathon/create-hackathon-dialog", () => ({
 }))
 
 mock.module("@/components/org-gate-dialog", () => ({
-  OrgGateDialog: ({ open }: { open: boolean; onOpenChange: (v: boolean) => void }) =>
+  OrgGateDialog: ({ open }: { open: boolean; onOpenChange: (v: boolean) => void; onOrgSelected: () => void }) =>
     open ? <div data-testid="org-gate-dialog" /> : null,
 }))
 
