@@ -197,24 +197,36 @@ export async function sendPendingJudgeInvitationEmails(
   hackathonName: string,
   inviterName: string
 ): Promise<{ sent: number }> {
-  // Known edge case: if a hackathon cycles draft→active→draft→active, pending invitations
-  // will be emailed again on each transition. An emailed_at column would prevent duplicates.
-  const pending = await listJudgeInvitations(hackathonId, "pending")
+  const client = getSupabase() as unknown as SupabaseClient
 
-  if (pending.length === 0) return { sent: 0 }
+  const { data: pending } = await client
+    .from("judge_invitations")
+    .select("*")
+    .eq("hackathon_id", hackathonId)
+    .eq("status", "pending")
+    .is("emailed_at", null)
+
+  if (!pending || pending.length === 0) return { sent: 0 }
 
   const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
 
   const results = await Promise.allSettled(
-    pending.map((invitation) =>
-      sendJudgeInvitationEmail({
+    (pending as JudgeInvitation[]).map(async (invitation) => {
+      const result = await sendJudgeInvitationEmail({
         to: invitation.email,
         hackathonName,
         inviterName,
         inviteToken: invitation.token,
         expiresAt: invitation.expires_at,
       })
-    )
+      if (result.success) {
+        await client
+          .from("judge_invitations")
+          .update({ emailed_at: new Date().toISOString() })
+          .eq("id", invitation.id)
+      }
+      return result
+    })
   )
 
   const sent = results.filter(

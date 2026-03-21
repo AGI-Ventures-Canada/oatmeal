@@ -381,6 +381,7 @@ export interface JudgeInvitation {
   status: JudgeInvitationStatus
   accepted_by_clerk_user_id: string | null
   expires_at: string
+  emailed_at: string | null
   created_at: string
   updated_at: string
 }

@@ -30,6 +30,7 @@ const mockInvitation: JudgeInvitation = {
   status: "pending",
   expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   accepted_by_clerk_user_id: null,
+  emailed_at: null,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 }
@@ -301,6 +302,19 @@ describe("Judge Invitations Service", () => {
 
       expect(result.sent).toBe(1)
       expect(mockSendJudgeInvitationEmail).toHaveBeenCalledTimes(2)
+    })
+
+    it("skips invitations that have already been emailed", async () => {
+      const chain = createChainableMock({
+        data: [],
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await sendPendingJudgeInvitationEmails("h1", "Test Hackathon", "Organizer")
+
+      expect(result.sent).toBe(0)
+      expect(mockSendJudgeInvitationEmail).not.toHaveBeenCalled()
     })
   })
 
