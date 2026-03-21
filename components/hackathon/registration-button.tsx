@@ -102,8 +102,8 @@ export function RegistrationButton({
   if (closesAt && now > closesAt) {
     return (
       <div className="flex flex-col gap-1.5">
-        <Button disabled variant="secondary" size="lg" className="opacity-60 line-through decoration-foreground/40">
-          Register to Attend
+        <Button disabled variant="secondary" size="lg">
+          <span className="line-through opacity-60">Register to Attend</span>
         </Button>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Lock className="size-3 shrink-0" />
@@ -124,8 +124,8 @@ export function RegistrationButton({
     }
     return (
       <div className="flex flex-col gap-1.5">
-        <Button disabled variant="secondary" size="lg" className="opacity-60 line-through decoration-foreground/40">
-          Register to Attend
+        <Button disabled variant="secondary" size="lg">
+          <span className="line-through opacity-60">Register to Attend</span>
         </Button>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Lock className="size-3 shrink-0" />

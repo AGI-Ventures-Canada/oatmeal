@@ -16,7 +16,8 @@ import { SubmissionGallery, type GallerySubmission } from "@/components/hackatho
 import { TeamInviteDialog } from "@/components/hackathon/team-invite-dialog"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card"
+import { Badge } from "@/components/ui/badge"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { CheckCircle2, Crown, Clock, X, Lock, Scale, Mail, CalendarClock } from "lucide-react"
 import { formatDateTimeDisplay } from "@/lib/utils/format"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
@@ -170,10 +171,10 @@ function HackathonPreviewContent({
                   <span className="text-xs truncate">{displayName}{isCurrentUser && " (you)"}</span>
                   {member.email && <span className="text-xs text-muted-foreground truncate">{member.email}</span>}
                   {member.isCaptain && <Crown className="size-3 text-primary shrink-0" />}
-                  <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary shrink-0">
-                    <CheckCircle2 className="size-3" />
+                  <Badge variant="secondary" className="ml-auto">
+                    <CheckCircle2 />
                     Joined
-                  </span>
+                  </Badge>
                 </div>
               )
             })}
@@ -185,34 +186,36 @@ function HackathonPreviewContent({
               const hoursLeft = Math.max(0, (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60))
 
               return (
-                <HoverCard key={invitation.id} openDelay={200} closeDelay={100}>
-                  <HoverCardTrigger asChild>
-                    <div className="flex items-center gap-2 cursor-default">
-                      <Avatar className="size-5 shrink-0">
-                        <AvatarFallback className="text-[9px]">
-                          <Mail className="size-2.5" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs text-muted-foreground truncate">{invitation.email}</span>
-                      <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0">
-                        <Clock className="size-3" />
-                        Pending
-                      </span>
-                      {teamInfo.isCaptain && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-4 hover:bg-destructive/10 shrink-0"
-                          onClick={() => handleCancelInvitation(invitation.id)}
-                          disabled={cancellingId === invitation.id}
-                        >
-                          <X className="size-3" />
-                          <span className="sr-only">Cancel</span>
-                        </Button>
-                      )}
-                    </div>
-                  </HoverCardTrigger>
-                  <HoverCardContent side="top" align="start" className="w-56">
+                <Popover key={invitation.id}>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="size-5 shrink-0">
+                      <AvatarFallback className="text-[9px]">
+                        <Mail className="size-2.5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <PopoverTrigger asChild>
+                      <button className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-xs text-muted-foreground truncate">{invitation.email}</span>
+                        <Badge variant="outline" className="ml-auto shrink-0">
+                          <Clock />
+                          Pending
+                        </Badge>
+                      </button>
+                    </PopoverTrigger>
+                    {teamInfo.isCaptain && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-4 shrink-0"
+                        onClick={() => handleCancelInvitation(invitation.id)}
+                        disabled={cancellingId === invitation.id}
+                      >
+                        <X className="size-3" />
+                        <span className="sr-only">Cancel</span>
+                      </Button>
+                    )}
+                  </div>
+                  <PopoverContent side="top" align="start" className="w-56">
                     <div className="space-y-2">
                       <div className="flex items-start gap-2">
                         <Mail className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
@@ -236,8 +239,8 @@ function HackathonPreviewContent({
                         </span>
                       </div>
                     </div>
-                  </HoverCardContent>
-                </HoverCard>
+                  </PopoverContent>
+                </Popover>
               )
             })}
           </div>

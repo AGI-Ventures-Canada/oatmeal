@@ -3,6 +3,8 @@ import type { Hackathon } from "@/lib/db/hackathon-types"
 import {
   createChainableMock,
   resetSupabaseMocks,
+  resetClerkMocks,
+  mockClerkClient,
   setMockFromImplementation,
   setMockRpcImplementation,
 } from "../lib/supabase-mock"
@@ -15,6 +17,7 @@ const {
   getParticipantCount,
   getRegistrationInfo,
   registerForHackathon,
+  getParticipantTeamInfo,
 } = await import("@/lib/services/hackathons")
 
 const mockHackathon: Hackathon = {
@@ -509,6 +512,103 @@ describe("Hackathons Service", () => {
       if (!result.success) {
         expect(result.code).toBe("no_result")
       }
+    })
+  })
+
+  describe("getParticipantTeamInfo", () => {
+    beforeEach(() => {
+      resetClerkMocks()
+    })
+
+    it("returns null when user has no team", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: null, error: null })
+      )
+
+      const result = await getParticipantTeamInfo("h1", "user_123")
+      expect(result).toBeNull()
+    })
+
+    it("includes email from Clerk for each member", async () => {
+      let callCount = 0
+      setMockFromImplementation((table) => {
+        callCount++
+        if (table === "hackathon_participants" && callCount === 1) {
+          return createChainableMock({ data: { team_id: "team_1" }, error: null })
+        }
+        if (table === "teams") {
+          return createChainableMock({
+            data: { id: "team_1", name: "Test Team", status: "forming", invite_code: "abc123", captain_clerk_user_id: "user_captain" },
+            error: null,
+          })
+        }
+        if (table === "hackathon_participants") {
+          return createChainableMock({
+            data: [{ clerk_user_id: "user_captain", role: "participant", registered_at: "2026-01-01T00:00:00Z" }],
+            error: null,
+          })
+        }
+        if (table === "team_invitations") {
+          return createChainableMock({ data: [], error: null })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      mockClerkClient.mockResolvedValueOnce({
+        users: {
+          getUserList: () =>
+            Promise.resolve({
+              data: [
+                {
+                  id: "user_captain",
+                  firstName: "Alex",
+                  lastName: "Smith",
+                  username: null,
+                  emailAddresses: [{ emailAddress: "alex@example.com" }],
+                },
+              ],
+            }),
+        },
+      })
+
+      const result = await getParticipantTeamInfo("h1", "user_captain")
+      expect(result).not.toBeNull()
+      expect(result!.members).toHaveLength(1)
+      expect(result!.members[0].email).toBe("alex@example.com")
+      expect(result!.members[0].displayName).toBe("Alex Smith")
+    })
+
+    it("sets email to null when Clerk call fails", async () => {
+      let callCount = 0
+      setMockFromImplementation((table) => {
+        callCount++
+        if (table === "hackathon_participants" && callCount === 1) {
+          return createChainableMock({ data: { team_id: "team_1" }, error: null })
+        }
+        if (table === "teams") {
+          return createChainableMock({
+            data: { id: "team_1", name: "Test Team", status: "forming", invite_code: "abc123", captain_clerk_user_id: "user_captain" },
+            error: null,
+          })
+        }
+        if (table === "hackathon_participants") {
+          return createChainableMock({
+            data: [{ clerk_user_id: "user_captain", role: "participant", registered_at: "2026-01-01T00:00:00Z" }],
+            error: null,
+          })
+        }
+        if (table === "team_invitations") {
+          return createChainableMock({ data: [], error: null })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      mockClerkClient.mockRejectedValueOnce(new Error("Clerk unavailable"))
+
+      const result = await getParticipantTeamInfo("h1", "user_captain")
+      expect(result).not.toBeNull()
+      expect(result!.members[0].email).toBeNull()
+      expect(result!.members[0].displayName).toBeNull()
     })
   })
 })
