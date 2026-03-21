@@ -304,7 +304,7 @@ describe("Judge Invitations Service", () => {
       expect(mockSendJudgeInvitationEmail).toHaveBeenCalledTimes(2)
     })
 
-    it("skips invitations that have already been emailed", async () => {
+    it("returns sent: 0 when DB returns empty result (emailed_at filter applied at query level)", async () => {
       const chain = createChainableMock({
         data: [],
         error: null,

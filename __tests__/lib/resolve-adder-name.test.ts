@@ -1,0 +1,79 @@
+import { describe, it, expect, mock, beforeEach } from "bun:test"
+import type { ClerkClient } from "@clerk/backend"
+
+const mockGetUser = mock(() =>
+  Promise.resolve({ firstName: "Jane", lastName: "Doe" })
+)
+const mockClerkClientFactory = mock(() =>
+  Promise.resolve({ users: { getUser: mockGetUser } })
+)
+
+mock.module("@clerk/nextjs/server", () => ({
+  clerkClient: mockClerkClientFactory,
+}))
+
+const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
+
+function makeClient(firstName: string | null, lastName: string | null): ClerkClient {
+  return {
+    users: { getUser: mock(() => Promise.resolve({ firstName, lastName })) },
+  } as unknown as ClerkClient
+}
+
+describe("resolveAdderName", () => {
+  beforeEach(() => {
+    mockGetUser.mockClear()
+    mockClerkClientFactory.mockClear()
+  })
+
+  it("returns 'An organizer' for non-user principal", async () => {
+    expect(await resolveAdderName({ kind: "api_key" })).toBe("An organizer")
+  })
+
+  it("returns 'An organizer' for user principal without userId", async () => {
+    expect(await resolveAdderName({ kind: "user" })).toBe("An organizer")
+  })
+
+  it("returns full name when both parts are present", async () => {
+    const result = await resolveAdderName({ kind: "user", userId: "u1" }, makeClient("Jane", "Doe"))
+    expect(result).toBe("Jane Doe")
+  })
+
+  it("returns first name only when last name is null", async () => {
+    const result = await resolveAdderName({ kind: "user", userId: "u1" }, makeClient("Jane", null))
+    expect(result).toBe("Jane")
+  })
+
+  it("returns last name only when first name is null", async () => {
+    const result = await resolveAdderName({ kind: "user", userId: "u1" }, makeClient(null, "Doe"))
+    expect(result).toBe("Doe")
+  })
+
+  it("returns 'An organizer' when both name parts are null", async () => {
+    const result = await resolveAdderName({ kind: "user", userId: "u1" }, makeClient(null, null))
+    expect(result).toBe("An organizer")
+  })
+
+  it("returns 'An organizer' when Clerk getUser throws", async () => {
+    const client = {
+      users: { getUser: mock(() => Promise.reject(new Error("Clerk error"))) },
+    } as unknown as ClerkClient
+    const result = await resolveAdderName({ kind: "user", userId: "u1" }, client)
+    expect(result).toBe("An organizer")
+  })
+
+  it("uses provided client and does not instantiate a new one", async () => {
+    const getUser = mock(() => Promise.resolve({ firstName: "Alex", lastName: null }))
+    const client = { users: { getUser } } as unknown as ClerkClient
+    await resolveAdderName({ kind: "user", userId: "u1" }, client)
+    expect(getUser).toHaveBeenCalledWith("u1")
+    expect(mockClerkClientFactory).not.toHaveBeenCalled()
+  })
+
+  it("instantiates clerkClient when no client is provided", async () => {
+    mockGetUser.mockResolvedValueOnce({ firstName: "Sam", lastName: "Smith" })
+    const result = await resolveAdderName({ kind: "user", userId: "u1" })
+    expect(result).toBe("Sam Smith")
+    expect(mockClerkClientFactory).toHaveBeenCalled()
+  })
+})
