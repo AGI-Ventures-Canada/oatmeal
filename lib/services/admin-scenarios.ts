@@ -1,5 +1,6 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
+import { getOrCreatePersonalTenant } from "@/lib/services/tenants"
 
 const AVAILABLE_SCENARIOS = [
   { name: "pre-registration", description: "Hackathon not yet open for registration (opens tomorrow)" },
@@ -25,10 +26,9 @@ const SEED_USERS = [
   "seed_user_eve_005",
 ]
 
-async function getOrCreateTenant(overrideTenantId?: string): Promise<string> {
-  const db = getSupabase()
-
+async function resolveScenarioTenant(overrideTenantId?: string): Promise<string> {
   if (overrideTenantId) {
+    const db = getSupabase()
     const { data: existing } = await db
       .from("tenants")
       .select("id")
@@ -41,25 +41,15 @@ async function getOrCreateTenant(overrideTenantId?: string): Promise<string> {
     return overrideTenantId
   }
 
-  const { data: tenant } = await db
-    .from("tenants")
-    .select("id")
-    .eq("clerk_user_id", DEV_USER_ID)
-    .single()
-
-  if (tenant) return tenant.id
-
-  const { data: newTenant, error } = await db
-    .from("tenants")
-    .insert({ clerk_user_id: DEV_USER_ID, name: "Test Organizer", slug: "test-org" })
-    .select("id")
-    .single()
-
-  if (error || !newTenant) {
-    throw new Error(`Failed to create tenant: ${error?.message}`)
+  const tenant = await getOrCreatePersonalTenant(DEV_USER_ID, "Test Organizer")
+  if (!tenant) {
+    throw new Error("Failed to create scenario tenant")
   }
+  return tenant.id
+}
 
-  return newTenant.id
+function uniqueSlug(base: string): string {
+  return `${base}-${Date.now().toString(36)}`
 }
 
 async function createTestHackathon(opts: {
@@ -75,7 +65,6 @@ async function createTestHackathon(opts: {
   resultsPublishedAt?: string | null
 }): Promise<string> {
   const db = getSupabase()
-  await db.from("hackathons").delete().eq("slug", opts.slug)
 
   const { data, error } = await db
     .from("hackathons")
@@ -224,9 +213,9 @@ async function addJudgingCriteria(hackathonId: string): Promise<string[]> {
 
 const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathonId: string; slug: string; tenantId: string }>> = {
   "pre-registration": async (overrideTenantId) => {
-    const tenantId = await getOrCreateTenant(overrideTenantId)
+    const tenantId = await resolveScenarioTenant(overrideTenantId)
     const now = new Date()
-    const slug = "test-pre-registration"
+    const slug = uniqueSlug("test-pre-registration")
     const hackathonId = await createTestHackathon({
       tenantId,
       slug,
@@ -241,9 +230,9 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
   },
 
   "registered-no-team": async (overrideTenantId) => {
-    const tenantId = await getOrCreateTenant(overrideTenantId)
+    const tenantId = await resolveScenarioTenant(overrideTenantId)
     const now = new Date()
-    const slug = "test-registered-no-team"
+    const slug = uniqueSlug("test-registered-no-team")
     const hackathonId = await createTestHackathon({
       tenantId,
       slug,
@@ -257,9 +246,9 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
   },
 
   "team-formed": async (overrideTenantId) => {
-    const tenantId = await getOrCreateTenant(overrideTenantId)
+    const tenantId = await resolveScenarioTenant(overrideTenantId)
     const now = new Date()
-    const slug = "test-team-formed"
+    const slug = uniqueSlug("test-team-formed")
     const hackathonId = await createTestHackathon({
       tenantId,
       slug,
@@ -273,9 +262,9 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
   },
 
   "submitted": async (overrideTenantId) => {
-    const tenantId = await getOrCreateTenant(overrideTenantId)
+    const tenantId = await resolveScenarioTenant(overrideTenantId)
     const now = new Date()
-    const slug = "test-submitted"
+    const slug = uniqueSlug("test-submitted")
     const hackathonId = await createTestHackathon({
       tenantId,
       slug,
@@ -291,10 +280,10 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
   },
 
   "judging": async (overrideTenantId) => {
-    const tenantId = await getOrCreateTenant(overrideTenantId)
+    const tenantId = await resolveScenarioTenant(overrideTenantId)
     const db = getSupabase()
     const now = new Date()
-    const slug = "test-judging"
+    const slug = uniqueSlug("test-judging")
     const hackathonId = await createTestHackathon({
       tenantId,
       slug,
@@ -353,7 +342,7 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
   "judging-in-progress": async (overrideTenantId) => {
     const result = await scenarioRunners["judging"](overrideTenantId)
     const db = getSupabase()
-    const slug = "test-judging-in-progress"
+    const slug = uniqueSlug("test-judging-in-progress")
 
     await db.from("hackathons").update({ slug, name: "Judging In Progress Test Hackathon" }).eq("id", result.hackathonId)
 
@@ -391,7 +380,7 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
   "results-ready": async (overrideTenantId) => {
     const result = await scenarioRunners["judging"](overrideTenantId)
     const db = getSupabase()
-    const slug = "test-results-ready"
+    const slug = uniqueSlug("test-results-ready")
 
     await db.from("hackathons").update({ slug, name: "Results Ready Test Hackathon" }).eq("id", result.hackathonId)
 
