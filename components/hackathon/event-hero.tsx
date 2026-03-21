@@ -269,7 +269,7 @@ export function EventHero({
           className="group w-fit max-w-full rounded-md px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/80 text-left scroll-mt-24"
         >
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl md:text-5xl font-bold break-words">
+            <h1 className="text-3xl md:text-5xl font-bold text-foreground break-words">
               {name || (
                 <span className="text-muted-foreground/60">Add your hackathon name</span>
               )}

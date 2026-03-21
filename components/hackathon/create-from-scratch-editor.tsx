@@ -27,17 +27,6 @@ export function CreateFromScratchEditor() {
       body: JSON.stringify({
         name: state.name,
         description: state.description,
-        startsAt: state.startsAt,
-        endsAt: state.endsAt,
-        registrationOpensAt: state.registrationOpensAt,
-        registrationClosesAt: state.registrationClosesAt,
-        locationType: state.locationType,
-        locationName: state.locationName,
-        locationUrl: state.locationUrl,
-        imageUrl: state.imageUrl,
-        sponsors: state.sponsors,
-        rules: state.rules,
-        prizes: state.prizes,
       }),
     })
 

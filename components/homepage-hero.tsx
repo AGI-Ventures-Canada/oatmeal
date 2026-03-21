@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Globe, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -9,7 +8,6 @@ import { CreateHackathonDialog } from "@/components/hackathon/create-hackathon-d
 import { InstallSkillButton } from "@/components/install-skill-button"
 
 export function HomepageHero() {
-  const router = useRouter()
   const [dialogOpen, setDialogOpen] = useState(false)
 
   return (
@@ -73,10 +71,6 @@ export function HomepageHero() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         initialMethod="external"
-        onAuthRequired={() => {
-          setDialogOpen(false)
-          router.push(`/sign-up?redirect_url=${encodeURIComponent("/home")}`)
-        }}
       />
     </section>
   )
