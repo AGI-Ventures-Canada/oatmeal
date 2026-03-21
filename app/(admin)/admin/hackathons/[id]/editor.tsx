@@ -56,6 +56,7 @@ export function AdminHackathonEditor({ hackathon }: { hackathon: Hackathon }) {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [deleteConfirmName, setDeleteConfirmName] = useState("")
 
   const [form, setForm] = useState({
     name: hackathon.name,
@@ -315,7 +316,7 @@ export function AdminHackathonEditor({ hackathon }: { hackathon: Hackathon }) {
             {saving ? "Saving..." : "Save changes"}
           </Button>
 
-          <AlertDialog>
+          <AlertDialog onOpenChange={(open) => { if (!open) setDeleteConfirmName("") }}>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" type="button" disabled={deleting}>
                 {deleting ? "Deleting..." : "Delete hackathon"}
@@ -328,9 +329,28 @@ export function AdminHackathonEditor({ hackathon }: { hackathon: Hackathon }) {
                   This permanently deletes &quot;{hackathon.name}&quot; and all associated data. This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="delete-confirm-name">Type <strong>{hackathon.name}</strong> to confirm</Label>
+                <Input
+                  id="delete-confirm-name"
+                  value={deleteConfirmName}
+                  onChange={(e) => setDeleteConfirmName(e.target.value)}
+                  placeholder={hackathon.name}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
+                  autoFocus
+                />
+              </div>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  disabled={deleteConfirmName !== hackathon.name}
+                >
+                  Delete
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

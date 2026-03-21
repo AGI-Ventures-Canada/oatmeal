@@ -102,9 +102,6 @@ export function requireAdmin(principal: Principal): asserts principal is AdminPr
 }
 
 export function requireAdminScopes(principal: AdminPrincipal | ApiKeyPrincipal, scopes: Scope[]): void {
-  if (principal.kind === "admin") {
-    return
-  }
   for (const scope of scopes) {
     if (!principal.scopes.includes(scope)) {
       throw new AuthError(`Missing required scope: ${scope}`, 403)

@@ -3,7 +3,7 @@ import { ScenarioRunner } from "./runner"
 
 export default function AdminScenariosPage() {
   const scenarios = listScenarios()
-  const isDeployedEnv = !!process.env.VERCEL_ENV
+  const isDeployedEnv = process.env.NODE_ENV === "production" || !!process.env.VERCEL_ENV
 
   return (
     <div className="space-y-6">
