@@ -37,6 +37,8 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [countdown, setCountdown] = useState(INVITE_COUNTDOWN)
+  const [progressValue, setProgressValue] = useState(0)
+  const rafRef = useRef<number | null>(null)
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
@@ -59,6 +61,25 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
       })
     }, 1000)
     return () => clearInterval(interval)
+  }, [success, open])
+
+  useEffect(() => {
+    if (!success || !open) {
+      setProgressValue(0)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      return
+    }
+    const start = performance.now()
+    const duration = INVITE_COUNTDOWN * 1000
+    const animate = (now: number) => {
+      const value = Math.min(((now - start) / duration) * 100, 100)
+      setProgressValue(value)
+      if (value < 100) rafRef.current = requestAnimationFrame(animate)
+    }
+    rafRef.current = requestAnimationFrame(animate)
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
   }, [success, open])
 
   useEffect(() => {
@@ -166,7 +187,7 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
                 </AlertDialogAction>
                 <div className="flex flex-col gap-1 w-full">
                   <p className="text-xs text-muted-foreground text-right">Closing automatically…</p>
-                  <Progress value={((INVITE_COUNTDOWN - countdown) / INVITE_COUNTDOWN) * 100} />
+                  <Progress value={progressValue} />
                 </div>
               </div>
             </AlertDialogFooter>
