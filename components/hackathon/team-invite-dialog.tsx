@@ -25,6 +25,8 @@ interface TeamInviteDialogProps {
   teamName: string
 }
 
+const INVITE_COUNTDOWN = 6
+
 export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDialogProps) {
   const router = useRouter()
   const emailInputRef = useRef<HTMLInputElement>(null)
@@ -33,7 +35,8 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [countdown, setCountdown] = useState(6)
+  const [progressValue, setProgressValue] = useState(0)
+  const rafRef = useRef<number | null>(null)
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
@@ -44,30 +47,31 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
   }, [open, success])
 
   useEffect(() => {
-    if (!success || !open) return
-    setCountdown(6)
-    const interval = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearInterval(interval)
-          return 0
-        }
-        return c - 1
-      })
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [success, open])
-
-  useEffect(() => {
-    if (countdown === 0 && success) {
-      setOpen(false)
-      setEmail("")
-      setError(null)
-      setSuccess(false)
-      setCountdown(6)
-      router.refresh()
+    if (!success || !open) {
+      setProgressValue(0)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      return
     }
-  }, [countdown, success, router])
+    const start = performance.now()
+    const duration = INVITE_COUNTDOWN * 1000
+    const animate = (now: number) => {
+      const value = Math.min(((now - start) / duration) * 100, 100)
+      setProgressValue(value)
+      if (value < 100) {
+        rafRef.current = requestAnimationFrame(animate)
+      } else {
+        setOpen(false)
+        setEmail("")
+        setError(null)
+        setSuccess(false)
+        router.refresh()
+      }
+    }
+    rafRef.current = requestAnimationFrame(animate)
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
+  }, [success, open, router])
 
   useEffect(() => {
     if (!success || !open) return
@@ -78,7 +82,6 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
         setEmail("")
         setError(null)
         setSuccess(false)
-        setCountdown(6)
         router.refresh()
       }
     }
@@ -117,7 +120,6 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
     if (!isOpen) {
       setEmail("")
       setError(null)
-      setCountdown(6)
       if (success) {
         setSuccess(false)
         router.refresh()
@@ -157,8 +159,12 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
               </div>
             </div>
             <AlertDialogFooter>
-              <AlertDialogAction onClick={() => handleOpenChange(false)}>
-                Done · {countdown}
+              <AlertDialogAction className="relative overflow-hidden" onClick={() => handleOpenChange(false)}>
+                <span
+                  className="absolute inset-0 origin-left bg-primary-foreground/20 transition-none"
+                  style={{ transform: `scaleX(${progressValue / 100})` }}
+                />
+                <span className="relative">Done</span>
               </AlertDialogAction>
             </AlertDialogFooter>
           </>

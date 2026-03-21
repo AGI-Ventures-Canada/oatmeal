@@ -16,7 +16,8 @@ import { SubmissionGallery, type GallerySubmission } from "@/components/hackatho
 import { TeamInviteDialog } from "@/components/hackathon/team-invite-dialog"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card"
+import { Badge } from "@/components/ui/badge"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { CheckCircle2, Crown, Clock, X, Lock, Scale, Mail, CalendarClock } from "lucide-react"
 import { formatDateTimeDisplay } from "@/lib/utils/format"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
@@ -139,7 +140,8 @@ function HackathonPreviewContent({
             </>
           )}
         </div>
-        {teamInfo && teamInfo.isCaptain && teamInfo.team.status === "forming" && (
+        {teamInfo && teamInfo.isCaptain && teamInfo.team.status === "forming" &&
+          (!hackathon.registration_closes_at || new Date(hackathon.registration_closes_at) > new Date()) && (
           <TeamInviteDialog
             teamId={teamInfo.team.id}
             hackathonId={hackathon.id}
@@ -148,87 +150,100 @@ function HackathonPreviewContent({
         )}
       </div>
       {teamInfo && (
-        <div className="flex items-center gap-1 pl-1">
-          <div className="flex -space-x-1.5">
+        <div className="space-y-1 pl-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">
+              {teamInfo.members.length + teamInfo.pendingInvitations.length} / {hackathon.max_team_size} members
+            </span>
+          </div>
+          <div className="space-y-0.5">
             {teamInfo.members.map((member) => {
               const isCurrentUser = member.clerkUserId === user?.id
-              const initials = isCurrentUser
-                ? (user?.firstName?.[0] || "?")
-                : "?"
+              const displayName = isCurrentUser
+                ? (user?.fullName || user?.firstName || member.displayName || "You")
+                : (member.displayName || "Teammate")
+              const initials = displayName[0]?.toUpperCase() ?? "?"
               return (
-                <Avatar key={member.clerkUserId} className="size-6 border-2 border-background">
-                  <AvatarFallback className="text-[10px]">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+                <div key={member.clerkUserId} className="flex items-center gap-2">
+                  <Avatar className="size-5 shrink-0">
+                    <AvatarFallback className="text-[9px]">{initials}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs truncate">{displayName}{isCurrentUser && " (you)"}</span>
+                  {member.email && <span className="text-xs text-muted-foreground truncate">{member.email}</span>}
+                  {member.isCaptain && <Crown className="size-3 text-primary shrink-0" />}
+                  <Badge variant="secondary" className="ml-auto">
+                    <CheckCircle2 />
+                    Joined
+                  </Badge>
+                </div>
+              )
+            })}
+            {teamInfo.pendingInvitations.map((invitation) => {
+              const sentAt = new Date(invitation.createdAt)
+              const expiresAt = new Date(invitation.expiresAt)
+              const now = new Date()
+              const isExpired = expiresAt < now
+              const hoursLeft = Math.max(0, (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60))
+
+              return (
+                <Popover key={invitation.id}>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="size-5 shrink-0">
+                      <AvatarFallback className="text-[9px]">
+                        <Mail className="size-2.5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <PopoverTrigger asChild>
+                      <button className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-xs text-muted-foreground truncate">{invitation.email}</span>
+                        <Badge variant="outline" className="ml-auto shrink-0">
+                          <Clock />
+                          Pending
+                        </Badge>
+                      </button>
+                    </PopoverTrigger>
+                    {teamInfo.isCaptain && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-4 shrink-0"
+                        onClick={() => handleCancelInvitation(invitation.id)}
+                        disabled={cancellingId === invitation.id}
+                      >
+                        <X className="size-3" />
+                        <span className="sr-only">Cancel</span>
+                      </Button>
+                    )}
+                  </div>
+                  <PopoverContent side="top" align="start" className="w-56">
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2">
+                        <Mail className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                        <span className="text-xs break-all">{invitation.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Clock className="size-3.5 shrink-0" />
+                        <span className="text-xs">
+                          Sent {sentAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CalendarClock className={`size-3.5 shrink-0 ${isExpired ? "text-destructive" : "text-muted-foreground"}`} />
+                        <span className={`text-xs ${isExpired ? "text-destructive" : "text-muted-foreground"}`}>
+                          {isExpired
+                            ? "Expired"
+                            : hoursLeft < 48
+                              ? `Expires in ${Math.ceil(hoursLeft)}h`
+                              : `Expires ${expiresAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )
             })}
           </div>
-          <span className="text-xs text-muted-foreground ml-1.5">
-            {teamInfo.members.length} member{teamInfo.members.length !== 1 ? "s" : ""}
-            {teamInfo.members.some(m => m.isCaptain && m.clerkUserId === user?.id) && (
-              <> · <Crown className="size-3 text-primary inline" /> Captain</>
-            )}
-          </span>
-        </div>
-      )}
-      {teamInfo?.isCaptain && teamInfo.pendingInvitations.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 pl-1">
-          <Clock className="size-3 text-muted-foreground shrink-0" />
-          {teamInfo.pendingInvitations.map((invitation) => {
-            const sentAt = new Date(invitation.createdAt)
-            const expiresAt = new Date(invitation.expiresAt)
-            const now = new Date()
-            const isExpired = expiresAt < now
-            const hoursLeft = Math.max(0, (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60))
-
-            return (
-              <HoverCard key={invitation.id} openDelay={200} closeDelay={100}>
-                <HoverCardTrigger asChild>
-                  <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 cursor-default">
-                    <span className="text-xs text-muted-foreground truncate max-w-24">
-                      {invitation.email}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-4 hover:bg-destructive/10"
-                      onClick={() => handleCancelInvitation(invitation.id)}
-                      disabled={cancellingId === invitation.id}
-                    >
-                      <X className="size-3" />
-                      <span className="sr-only">Cancel</span>
-                    </Button>
-                  </div>
-                </HoverCardTrigger>
-                <HoverCardContent side="top" align="start" className="w-56">
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2">
-                      <Mail className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                      <span className="text-xs break-all">{invitation.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="size-3.5 shrink-0" />
-                      <span className="text-xs">
-                        Sent {sentAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CalendarClock className={`size-3.5 shrink-0 ${isExpired ? "text-destructive" : "text-muted-foreground"}`} />
-                      <span className={`text-xs ${isExpired ? "text-destructive" : "text-muted-foreground"}`}>
-                        {isExpired
-                          ? "Expired"
-                          : hoursLeft < 48
-                            ? `Expires in ${Math.ceil(hoursLeft)}h`
-                            : `Expires ${expiresAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
-                        }
-                      </span>
-                    </div>
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
-            )
-          })}
         </div>
       )}
     </div>
