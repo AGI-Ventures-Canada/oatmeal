@@ -26,6 +26,8 @@ interface TeamInviteDialogProps {
   teamName: string
 }
 
+const INVITE_COUNTDOWN = 6
+
 export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDialogProps) {
   const router = useRouter()
   const emailInputRef = useRef<HTMLInputElement>(null)
@@ -34,7 +36,7 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [countdown, setCountdown] = useState(6)
+  const [countdown, setCountdown] = useState(INVITE_COUNTDOWN)
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
@@ -46,7 +48,7 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
 
   useEffect(() => {
     if (!success || !open) return
-    setCountdown(6)
+    setCountdown(INVITE_COUNTDOWN)
     const interval = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) {
@@ -65,7 +67,7 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
       setEmail("")
       setError(null)
       setSuccess(false)
-      setCountdown(6)
+      setCountdown(INVITE_COUNTDOWN)
       router.refresh()
     }
   }, [countdown, success, router])
@@ -79,7 +81,7 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
         setEmail("")
         setError(null)
         setSuccess(false)
-        setCountdown(6)
+        setCountdown(INVITE_COUNTDOWN)
         router.refresh()
       }
     }
@@ -118,7 +120,7 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
     if (!isOpen) {
       setEmail("")
       setError(null)
-      setCountdown(6)
+      setCountdown(INVITE_COUNTDOWN)
       if (success) {
         setSuccess(false)
         router.refresh()
@@ -162,7 +164,7 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
                 <AlertDialogAction onClick={() => handleOpenChange(false)}>
                   Done
                 </AlertDialogAction>
-                <Progress value={((6 - countdown) / 6) * 100} className="h-1 w-full" />
+                <Progress value={((INVITE_COUNTDOWN - countdown) / INVITE_COUNTDOWN) * 100} className="h-1 w-full" />
               </div>
             </AlertDialogFooter>
           </>
