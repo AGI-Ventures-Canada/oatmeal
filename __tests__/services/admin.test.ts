@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "bun:test"
+import { describe, expect, it, beforeEach, afterEach } from "bun:test"
 import {
   createChainableMock,
   resetSupabaseMocks,
@@ -11,6 +11,7 @@ import {
 
 const { getPlatformStats, listAllHackathons, getHackathonById, updateHackathonAsAdmin, deleteHackathon } =
   await import("@/lib/services/admin")
+const { runScenario } = await import("@/lib/services/admin-scenarios")
 
 describe("Admin Service", () => {
   beforeEach(() => {
@@ -118,6 +119,44 @@ describe("Admin Service", () => {
       )
 
       expect(deleteHackathon("h1")).rejects.toThrow("Failed to delete hackathon")
+    })
+  })
+
+  describe("listAllHackathons pagination", () => {
+    it("caps limit at 100", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: [], error: null, count: 0 })
+      )
+
+      const result = await listAllHackathons({ limit: 999999 })
+      expect(result.hackathons).toEqual([])
+    })
+
+    it("enforces minimum limit of 1", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: [], error: null, count: 0 })
+      )
+
+      const result = await listAllHackathons({ limit: -5 })
+      expect(result.hackathons).toEqual([])
+    })
+  })
+
+  describe("runScenario", () => {
+    const originalNodeEnv = process.env.NODE_ENV
+
+    afterEach(() => {
+      process.env.NODE_ENV = originalNodeEnv
+    })
+
+    it("throws in production environment", async () => {
+      process.env.NODE_ENV = "production"
+      expect(runScenario("pre-registration")).rejects.toThrow("Test scenarios cannot be run in production")
+    })
+
+    it("throws for unknown scenario", async () => {
+      process.env.NODE_ENV = "test"
+      expect(runScenario("nonexistent")).rejects.toThrow("Unknown scenario: nonexistent")
     })
   })
 })

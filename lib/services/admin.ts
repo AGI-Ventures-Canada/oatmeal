@@ -28,9 +28,12 @@ export type ListHackathonsOptions = {
   search?: string
 }
 
+const MAX_PAGE_SIZE = 100
+
 export async function listAllHackathons(options: ListHackathonsOptions = {}) {
   const db = getSupabase()
-  const { limit = 50, offset = 0, status, tenantId, search } = options
+  const { limit: rawLimit = 50, offset = 0, status, tenantId, search } = options
+  const limit = Math.min(Math.max(rawLimit, 1), MAX_PAGE_SIZE)
 
   let query = db
     .from("hackathons")
