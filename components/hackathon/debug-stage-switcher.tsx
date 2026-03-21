@@ -36,8 +36,8 @@ export function DebugStageSwitcher({ hackathonId, currentStatus }: DebugStageSwi
       })
       if (!res.ok) throw new Error("Failed")
       router.refresh()
-    } catch {
-      // silently reset on error
+    } catch (err) {
+      console.error("[DebugStageSwitcher] failed to update status:", err)
     } finally {
       setPending(null)
     }
@@ -58,7 +58,6 @@ export function DebugStageSwitcher({ hackathonId, currentStatus }: DebugStageSwi
               key={status}
               size="sm"
               variant={isActive ? "default" : "outline"}
-              className="h-7 text-xs px-2.5"
               disabled={!!pending}
               onClick={() => switchTo(status)}
             >
