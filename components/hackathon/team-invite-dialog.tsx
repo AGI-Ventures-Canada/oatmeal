@@ -181,14 +181,14 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
               </div>
             </div>
             <AlertDialogFooter>
-              <div className="flex flex-col gap-1 items-end">
+              <div className="flex items-center gap-3 w-full">
+                <div className="flex flex-col gap-1 flex-1">
+                  <p className="text-xs text-muted-foreground">Closing automatically…</p>
+                  <Progress value={progressValue} />
+                </div>
                 <AlertDialogAction onClick={() => handleOpenChange(false)}>
                   Done
                 </AlertDialogAction>
-                <div className="flex flex-col gap-1 w-full">
-                  <p className="text-xs text-muted-foreground text-right">Closing automatically…</p>
-                  <Progress value={progressValue} />
-                </div>
               </div>
             </AlertDialogFooter>
           </>
