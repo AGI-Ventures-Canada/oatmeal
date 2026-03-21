@@ -169,6 +169,8 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         throw new AuthError("confirm_name must match the hackathon name", 400)
       }
 
+      await deleteHackathon(params.id)
+
       await logAudit({
         principal,
         action: "admin.hackathon.deleted",
@@ -178,8 +180,6 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         metadata: { name: existing.name, slug: existing.slug },
         critical: true,
       })
-
-      await deleteHackathon(params.id)
 
       return { success: true }
     },

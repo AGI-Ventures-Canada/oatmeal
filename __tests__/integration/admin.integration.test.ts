@@ -535,7 +535,7 @@ describe("Admin API Routes", () => {
       )
     })
 
-    it("logs audit before delete (audit-then-delete order)", async () => {
+    it("deletes before logging audit (delete-then-audit order)", async () => {
       const callOrder: string[] = []
       mockResolvePrincipal.mockResolvedValue(adminPrincipal)
       mockGetHackathonById.mockResolvedValue({
@@ -561,10 +561,10 @@ describe("Admin API Routes", () => {
         })
       )
 
-      expect(callOrder).toEqual(["audit", "delete"])
+      expect(callOrder).toEqual(["delete", "audit"])
     })
 
-    it("aborts delete when audit fails", async () => {
+    it("returns 500 when audit fails after successful delete", async () => {
       mockResolvePrincipal.mockResolvedValue(adminPrincipal)
       mockGetHackathonById.mockResolvedValue({
         id: "h-1",
@@ -583,7 +583,7 @@ describe("Admin API Routes", () => {
       )
 
       expect(res.status).toBe(500)
-      expect(mockDeleteHackathon).not.toHaveBeenCalled()
+      expect(mockDeleteHackathon).toHaveBeenCalledWith("h-1")
     })
   })
 })
