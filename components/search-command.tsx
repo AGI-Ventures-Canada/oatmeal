@@ -27,15 +27,15 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
 } from "@/components/ui/command"
 
 const navigationItems = [
-  { title: "Dashboard", href: "/home", icon: Home, shortcut: "H" },
-  { title: "Browse Hackathons", href: "/browse", icon: Search, shortcut: "B" },
+  { title: "Dashboard", href: "/home", icon: Home },
+  { title: "Browse Hackathons", href: "/browse", icon: Search },
 ]
 
 const hackathonItems = [
+  { title: "Create Hackathon", href: "/home", icon: Plus },
   { title: "Participating", href: "/home?tab=participating", icon: Users },
   { title: "Judging", href: "/home?tab=judging", icon: Scale },
   { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
@@ -43,6 +43,7 @@ const hackathonItems = [
 ]
 
 const settingsItems = [
+  { title: "Settings", href: "/settings", icon: Settings },
   { title: "Organization Settings", href: "/settings/profile", icon: Building2 },
   { title: "API Keys", href: "/settings/api-keys", icon: Key },
   { title: "Schedules", href: "/settings/schedules", icon: Clock },
@@ -51,21 +52,11 @@ const settingsItems = [
   { title: "API Docs", href: "/docs", icon: BookOpen },
 ]
 
-interface SearchCommandProps {
-  onCreateHackathon?: () => void
-}
-
-export function SearchCommand({ onCreateHackathon }: SearchCommandProps) {
+export function SearchCommand() {
   const [open, setOpen] = useState(false)
   const [canScrollMore, setCanScrollMore] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-
-  function checkScroll() {
-    const el = listRef.current
-    if (!el) return
-    setCanScrollMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4)
-  }
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -77,6 +68,17 @@ export function SearchCommand({ onCreateHackathon }: SearchCommandProps) {
     document.addEventListener("keydown", down)
     return () => document.removeEventListener("keydown", down)
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const el = listRef.current
+    if (!el) return
+    const check = () =>
+      setCanScrollMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4)
+    check()
+    el.addEventListener("scroll", check)
+    return () => el.removeEventListener("scroll", check)
+  }, [open])
 
   function navigate(href: string) {
     router.push(href)
@@ -92,81 +94,58 @@ export function SearchCommand({ onCreateHackathon }: SearchCommandProps) {
       className="md:max-w-2xl"
     >
       <Command>
-      <CommandInput placeholder="Search pages and actions..." />
-      <div className="relative">
-      <CommandList
-        ref={listRef}
-        className="md:max-h-[420px]"
-        onScroll={checkScroll}
-        onLoad={checkScroll}
-      >
-        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandInput placeholder="Search pages and actions..." />
+        <div className="relative">
+          <CommandList ref={listRef} className="md:max-h-[420px]">
+            <CommandEmpty>No results found.</CommandEmpty>
 
-        <CommandGroup heading="Navigation">
-          {navigationItems.map((item) => (
-            <CommandItem
-              key={item.href}
-              value={item.title}
-              onSelect={() => navigate(item.href)}
-            >
-              <item.icon />
-              {item.title}
-              {item.shortcut && <CommandShortcut>{item.shortcut}</CommandShortcut>}
-            </CommandItem>
-          ))}
-        </CommandGroup>
+            <CommandGroup heading="Navigation">
+              {navigationItems.map((item) => (
+                <CommandItem
+                  key={item.href}
+                  value={item.title}
+                  onSelect={() => navigate(item.href)}
+                >
+                  <item.icon />
+                  {item.title}
+                </CommandItem>
+              ))}
+            </CommandGroup>
 
-        <CommandSeparator />
+            <CommandSeparator />
 
-        <CommandGroup heading="Hackathons">
-          <CommandItem
-            value="Create Hackathon"
-            onSelect={() => {
-              setOpen(false)
-              onCreateHackathon?.()
-            }}
-          >
-            <Plus />
-            Create Hackathon
-          </CommandItem>
-          {hackathonItems.map((item) => (
-            <CommandItem
-              key={item.href}
-              value={item.title}
-              onSelect={() => navigate(item.href)}
-            >
-              <item.icon />
-              {item.title}
-            </CommandItem>
-          ))}
-        </CommandGroup>
+            <CommandGroup heading="Hackathons">
+              {hackathonItems.map((item) => (
+                <CommandItem
+                  key={item.title}
+                  value={item.title}
+                  onSelect={() => navigate(item.href)}
+                >
+                  <item.icon />
+                  {item.title}
+                </CommandItem>
+              ))}
+            </CommandGroup>
 
-        <CommandSeparator />
+            <CommandSeparator />
 
-        <CommandGroup heading="Settings">
-          <CommandItem
-            value="Settings"
-            onSelect={() => navigate("/settings")}
-          >
-            <Settings />
-            Settings
-          </CommandItem>
-          {settingsItems.map((item) => (
-            <CommandItem
-              key={item.href}
-              value={item.title}
-              onSelect={() => navigate(item.href)}
-            >
-              <item.icon />
-              {item.title}
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </CommandList>
-      {canScrollMore && (
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-popover to-transparent" />
-      )}
-      </div>
+            <CommandGroup heading="Settings">
+              {settingsItems.map((item) => (
+                <CommandItem
+                  key={item.href}
+                  value={item.title}
+                  onSelect={() => navigate(item.href)}
+                >
+                  <item.icon />
+                  {item.title}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+          {canScrollMore && (
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-popover to-transparent" />
+          )}
+        </div>
       </Command>
     </CommandDialog>
   )
