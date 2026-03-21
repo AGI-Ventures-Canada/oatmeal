@@ -9,6 +9,9 @@ mock.module("next/navigation", () => ({
     prefetch: mock(() => {}),
   }),
   usePathname: () => "/e/test-hack/judge",
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 mock.module("@/components/hackathon/judging/scoring-panel", () => ({

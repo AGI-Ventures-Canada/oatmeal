@@ -29,6 +29,8 @@ import {
 type CreateHackathonDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialMethod?: "scratch" | "external" | null
+  onAuthRequired?: () => void
 }
 
 type CreateHackathonMethod = "scratch" | "external" | null
@@ -57,6 +59,8 @@ function resolveExternalImportPath(input: string): string | null {
 export function CreateHackathonDialog({
   open,
   onOpenChange,
+  initialMethod = null,
+  onAuthRequired,
 }: CreateHackathonDialogProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
@@ -73,13 +77,13 @@ export function CreateHackathonDialog({
     }
 
     setCurrentStep(0)
-    setMethod(null)
+    setMethod(initialMethod ?? null)
     setName("")
     setDescription("")
     setExternalUrl("")
     setError(null)
     setIsSubmitting(false)
-  }, [open])
+  }, [open, initialMethod])
 
   const externalImportPath = resolveExternalImportPath(externalUrl)
 
@@ -167,6 +171,11 @@ export function CreateHackathonDialog({
         }
 
         router.push(externalImportPath)
+        return
+      }
+
+      if (onAuthRequired) {
+        onAuthRequired()
         return
       }
 
@@ -379,7 +388,11 @@ export function CreateHackathonDialog({
                 onClick={() => {
                   setError(null)
                   if (currentStep === 0) {
-                    setMethod(null)
+                    if (initialMethod) {
+                      handleOpenChange(false)
+                    } else {
+                      setMethod(null)
+                    }
                     return
                   }
 
@@ -400,6 +413,8 @@ export function CreateHackathonDialog({
                   "Next"
                 ) : method === "external" ? (
                   "Continue"
+                ) : onAuthRequired ? (
+                  "Sign up to create"
                 ) : (
                   "Create Hackathon"
                 )}

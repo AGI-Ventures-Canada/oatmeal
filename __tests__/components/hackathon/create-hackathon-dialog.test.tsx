@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
+import * as dialogMock from "../../lib/dialog-mock"
 
 const mockPush = mock(() => {})
 const mockFetch = mock(() =>
@@ -15,33 +16,13 @@ mock.module("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
 }))
 
-mock.module("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode
-    open: boolean
-    onOpenChange?: (open: boolean) => void
-  }) =>
-    open ? (
-      <div>
-        <button type="button" onClick={() => onOpenChange?.(false)}>
-          Close Dialog
-        </button>
-        {children}
-      </div>
-    ) : null,
-  DialogContent: ({ children }: { children: React.ReactNode; className?: string }) => (
-    <div role="dialog">{children}</div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-}))
+mock.module("@/components/ui/dialog", () => dialogMock)
 
 const { CreateHackathonDialog } = await import("@/components/hackathon/create-hackathon-dialog")
 
@@ -174,5 +155,112 @@ describe("CreateHackathonDialog", () => {
     })
 
     expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  describe("initialMethod prop", () => {
+    it("skips the method chooser when initialMethod is scratch", () => {
+      render(
+        <CreateHackathonDialog open onOpenChange={() => {}} initialMethod="scratch" />
+      )
+
+      expect(screen.getByPlaceholderText("My Awesome Hackathon")).toBeDefined()
+      expect(screen.queryByText("From scratch")).toBeNull()
+      expect(screen.queryByText("From external event page")).toBeNull()
+    })
+
+    it("skips the method chooser when initialMethod is external", () => {
+      render(
+        <CreateHackathonDialog open onOpenChange={() => {}} initialMethod="external" />
+      )
+
+      expect(screen.getByPlaceholderText("eventbrite.com/e/my-event")).toBeDefined()
+      expect(screen.queryByText("From scratch")).toBeNull()
+      expect(screen.queryByText("From external event page")).toBeNull()
+    })
+
+    it("closes the dialog when pressing back on step 0 with initialMethod", () => {
+      const onOpenChange = mock(() => {})
+      render(
+        <CreateHackathonDialog open onOpenChange={onOpenChange} initialMethod="scratch" />
+      )
+
+      fireEvent.click(screen.getByRole("button", { name: "Back" }))
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+    })
+  })
+
+  describe("onAuthRequired prop (guest mode)", () => {
+    it("shows 'Sign up to create' on the final step", async () => {
+      const onAuthRequired = mock(() => {})
+      render(
+        <CreateHackathonDialog
+          open
+          onOpenChange={() => {}}
+          initialMethod="scratch"
+          onAuthRequired={onAuthRequired}
+        />
+      )
+
+      fireEvent.change(screen.getByPlaceholderText("My Awesome Hackathon"), {
+        target: { value: "Test Hackathon" },
+      })
+      fireEvent.click(screen.getByRole("button", { name: "Next" }))
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Sign up to create" })).toBeDefined()
+      })
+    })
+
+    it("calls onAuthRequired instead of making an API call on submit", async () => {
+      const onAuthRequired = mock(() => {})
+      render(
+        <CreateHackathonDialog
+          open
+          onOpenChange={() => {}}
+          initialMethod="scratch"
+          onAuthRequired={onAuthRequired}
+        />
+      )
+
+      fireEvent.change(screen.getByPlaceholderText("My Awesome Hackathon"), {
+        target: { value: "Test Hackathon" },
+      })
+      fireEvent.click(screen.getByRole("button", { name: "Next" }))
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Sign up to create" })).toBeDefined()
+      })
+
+      fireEvent.click(screen.getByRole("button", { name: "Sign up to create" }))
+
+      await waitFor(() => {
+        expect(onAuthRequired).toHaveBeenCalledTimes(1)
+      })
+
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+
+    it("still navigates for external import even with onAuthRequired", async () => {
+      const onAuthRequired = mock(() => {})
+      render(
+        <CreateHackathonDialog
+          open
+          onOpenChange={() => {}}
+          initialMethod="external"
+          onAuthRequired={onAuthRequired}
+        />
+      )
+
+      fireEvent.change(screen.getByPlaceholderText("eventbrite.com/e/my-event"), {
+        target: { value: "https://luma.com/test-event" },
+      })
+      fireEvent.click(screen.getByRole("button", { name: "Continue" }))
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith("/luma.com/test-event?edit=true")
+      })
+
+      expect(onAuthRequired).not.toHaveBeenCalled()
+    })
   })
 })

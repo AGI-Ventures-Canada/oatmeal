@@ -12,6 +12,10 @@ mock.module("next/navigation", () => ({
     replace: mock(() => {}),
     prefetch: mock(() => {}),
   }),
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 describe("ApiKeyCreateDialog", () => {

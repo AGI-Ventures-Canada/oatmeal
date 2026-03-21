@@ -1,27 +1,21 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test"
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react"
+import { clerkState, clerkMock, resetClerkState } from "../../lib/clerk-mock"
+import * as dialogMock from "../../lib/dialog-mock"
 
-const mockSetActive = mock(() => Promise.resolve())
 const mockPush = mock(() => {})
-let mockOrganization: { id: string; name: string } | null = null
-let mockMemberships: Array<{
-  organization: { id: string; name: string; imageUrl: string | null }
-}> = []
 
 mock.module("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
 }))
 
-mock.module("@clerk/nextjs", () => ({
-  useAuth: () => ({ isSignedIn: true }),
-  useOrganization: () => ({ organization: mockOrganization }),
-  useOrganizationList: () => ({
-    userMemberships: { data: mockMemberships },
-    setActive: mockSetActive,
-  }),
-}))
+mock.module("@clerk/nextjs", () => clerkMock)
 
 mock.module("next/image", () => ({
   default: (props: Record<string, unknown>) => {
@@ -30,29 +24,7 @@ mock.module("next/image", () => ({
   },
 }))
 
-mock.module("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode
-    open: boolean
-    onOpenChange?: (open: boolean) => void
-  }) =>
-    open ? (
-      <div>
-        <button type="button" onClick={() => onOpenChange?.(false)}>
-          Close Dialog
-        </button>
-        {children}
-      </div>
-    ) : null,
-  DialogContent: ({ children }: { children: React.ReactNode; className?: string }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-}))
+mock.module("@/components/ui/dialog", () => dialogMock)
 
 mock.module("@/components/create-organization-dialog", () => ({
   CreateOrganizationDialog: (props: { open: boolean; onSuccess?: () => void }) => {
@@ -71,9 +43,9 @@ const { CreateHackathonMenu } = await import(
 )
 
 beforeEach(() => {
-  mockOrganization = null
-  mockMemberships = []
-  mockSetActive.mockClear()
+  clerkState.organization = null
+  clerkState.memberships = []
+  clerkState.setActive.mockClear()
   mockPush.mockClear()
 })
 
@@ -90,7 +62,7 @@ describe("CreateHackathonMenu", () => {
 
   describe("when user has an active organization", () => {
     beforeEach(() => {
-      mockOrganization = { id: "org_1", name: "Test Org" }
+      clerkState.organization = { id: "org_1", name: "Test Org" }
     })
 
     it("opens the create hackathon dialog from the trigger", async () => {
@@ -105,8 +77,8 @@ describe("CreateHackathonMenu", () => {
 
   describe("when user has no active organization", () => {
     beforeEach(() => {
-      mockOrganization = null
-      mockMemberships = [
+      clerkState.organization = null
+      clerkState.memberships = [
         {
           organization: {
             id: "org_1",
@@ -167,7 +139,7 @@ describe("CreateHackathonMenu", () => {
       fireEvent.click(screen.getByText("Alpha Org"))
 
       await waitFor(() => {
-        expect(mockSetActive).toHaveBeenCalledWith({ organization: "org_1" })
+        expect(clerkState.setActive).toHaveBeenCalledWith({ organization: "org_1" })
         expect(screen.getByText(/Choose a starting point/i)).toBeDefined()
       })
     })
@@ -202,8 +174,8 @@ describe("CreateHackathonMenu", () => {
 
   describe("when user has no memberships", () => {
     beforeEach(() => {
-      mockOrganization = null
-      mockMemberships = []
+      clerkState.organization = null
+      clerkState.memberships = []
     })
 
     it("shows only create org button in org gate", async () => {

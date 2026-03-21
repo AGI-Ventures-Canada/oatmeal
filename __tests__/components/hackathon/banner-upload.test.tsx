@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import * as dialogMock from "../../lib/dialog-mock"
 
 const mockRefresh = mock(() => {})
 const mockFetch = mock(() =>
@@ -15,20 +16,17 @@ mock.module("next/navigation", () => ({
   useRouter: () => ({
     refresh: mockRefresh,
   }),
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 mock.module("react-easy-crop", () => ({
   default: () => null,
 }))
 
-mock.module("@/components/ui/dialog", () => ({
-  Dialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogContent: ({ children }: { children: React.ReactNode; className?: string }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}))
+mock.module("@/components/ui/dialog", () => dialogMock)
 
 mock.module("@/components/ui/alert-dialog", () => ({
   AlertDialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

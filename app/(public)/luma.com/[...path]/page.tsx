@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
 import { extractLumaEventData } from "@/lib/services/luma-import"
 import { extractLumaRichContent } from "@/lib/services/luma-extract"
+import { ttlCache } from "@/lib/utils/ttl-cache"
 import { createHackathonFromImport, createSponsorsFromImport, createPrizesFromImport } from "@/lib/services/luma-import-create"
 import { getOrCreateTenant } from "@/lib/services/tenants"
 import { logAudit } from "@/lib/services/audit"
@@ -18,7 +19,7 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { path } = await params
   const slug = path.join("/")
-  const eventData = await extractLumaEventData(slug)
+  const eventData = await ttlCache(`luma:data:${slug}`, () => extractLumaEventData(slug))
 
   if (!eventData) {
     return { title: "Import from Luma | Oatmeal" }
@@ -36,8 +37,8 @@ export default async function LumaImportPage({ params, searchParams }: PageProps
   const slug = path.join("/")
 
   const [eventData, richContent] = await Promise.all([
-    extractLumaEventData(slug),
-    extractLumaRichContent(slug),
+    ttlCache(`luma:data:${slug}`, () => extractLumaEventData(slug)),
+    ttlCache(`luma:rich:${slug}`, () => extractLumaRichContent(slug)),
   ])
 
   if (!eventData) {

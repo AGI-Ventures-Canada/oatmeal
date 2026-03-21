@@ -328,6 +328,7 @@ export async function registerForHackathon(
 export type TeamMember = {
   clerkUserId: string
   displayName: string | null
+  email: string | null
   role: "participant" | "judge" | "mentor" | "organizer"
   isCaptain: boolean
   registeredAt: string
@@ -397,6 +398,7 @@ export async function getParticipantTeamInfo(
 
   const memberUserIds = memberData.map((m) => m.clerk_user_id)
   const userDisplayNames: Record<string, string | null> = {}
+  const userEmails: Record<string, string | null> = {}
 
   if (memberUserIds.length > 0) {
     try {
@@ -407,15 +409,17 @@ export async function getParticipantTeamInfo(
           ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
           : user.username || null
         userDisplayNames[user.id] = displayName
+        userEmails[user.id] = user.emailAddresses[0]?.emailAddress ?? null
       }
     } catch {
-      // Silently fail - displayName will be null
+      // Silently fail - displayName/email will be null
     }
   }
 
   const members = memberData.map((m) => ({
     clerkUserId: m.clerk_user_id,
     displayName: userDisplayNames[m.clerk_user_id] || null,
+    email: userEmails[m.clerk_user_id] || null,
     role: m.role as TeamMember["role"],
     isCaptain: m.clerk_user_id === team.captain_clerk_user_id,
     registeredAt: m.registered_at,

@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
+import { DebugStageSwitcher } from "@/components/hackathon/debug-stage-switcher"
 
 type PageProps = {
   params: Promise<{ slug: string }>
@@ -34,8 +35,13 @@ export default async function ManagePage({ params }: PageProps) {
 
   const submissionCount = submissions.length
 
+  const isDev = process.env.NODE_ENV === "development"
+
   return (
     <div className="space-y-6">
+      {isDev && (
+        <DebugStageSwitcher hackathonId={hackathon.id} currentStatus={hackathon.status} />
+      )}
       <PageHeader
         breadcrumbs={[
           { label: "Dashboard", href: "/home" },

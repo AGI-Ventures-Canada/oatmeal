@@ -47,6 +47,9 @@ packages/sdk/dist/
 # Generated JS files in source directories (from accidental tsc)
 lib/**/*.js
 lib/**/*.js.map
+
+# fumadocs auto-generated source files
+/.source/
 lib/**/*.d.ts
 lib/**/*.d.ts.map
 
@@ -54,8 +57,12 @@ lib/**/*.d.ts.map
 specs.md
 examples/
 
-# Claude Code worktrees
+# Claude Code
 .claude/worktrees/
+.claude/scheduled_tasks.lock
+
+# Superset worktrees
+.superset/
 
 # IDE / tool config
 .continue/

@@ -101,10 +101,15 @@ export function RegistrationButton({
 
   if (closesAt && now > closesAt) {
     return (
-      <Button disabled variant="secondary" size="lg">
-        <Lock className="size-4" />
-        Registration Closed
-      </Button>
+      <div className="flex flex-col gap-1.5">
+        <Button disabled variant="secondary" size="lg">
+          <span className="line-through opacity-60">Register to Attend</span>
+        </Button>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Lock className="size-3 shrink-0" />
+          Registration closed {closesAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+        </div>
+      </div>
     )
   }
 
@@ -118,10 +123,15 @@ export function RegistrationButton({
       )
     }
     return (
-      <Button disabled variant="secondary" size="lg">
-        <Lock className="size-4" />
-        Registration Closed
-      </Button>
+      <div className="flex flex-col gap-1.5">
+        <Button disabled variant="secondary" size="lg">
+          <span className="line-through opacity-60">Register to Attend</span>
+        </Button>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Lock className="size-3 shrink-0" />
+          Registration closed
+        </div>
+      </div>
     )
   }
 
