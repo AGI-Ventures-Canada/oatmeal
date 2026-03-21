@@ -70,6 +70,7 @@ export type LogAuditInput = {
   resourceId?: string
   metadata?: Json
   targetTenantId?: string
+  critical?: boolean
 }
 
 export async function logAudit(input: LogAuditInput): Promise<AuditLog | null> {
@@ -92,6 +93,11 @@ export async function logAudit(input: LogAuditInput): Promise<AuditLog | null> {
     tenantId = principal.tenantId
     actorType = "user"
     actorId = principal.userId
+  } else if (principal.kind === "api_key" && input.targetTenantId) {
+    tenantId = input.targetTenantId
+    actorType = "api_key"
+    actorId = principal.keyId
+    metadata = { ...(input.metadata as Record<string, unknown> ?? {}), is_admin_action: true, admin_key_id: principal.keyId }
   } else {
     tenantId = principal.tenantId
     actorType = "api_key"
@@ -113,6 +119,9 @@ export async function logAudit(input: LogAuditInput): Promise<AuditLog | null> {
     .single()
 
   if (error || !data) {
+    if (input.critical) {
+      throw new Error(`Critical audit log failed: ${error?.message ?? "no data returned"}`)
+    }
     console.error("Failed to log audit:", error)
     return null
   }

@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia"
-import { resolvePrincipal, requireAdmin, AuthError } from "@/lib/auth/principal"
+import { resolvePrincipal, requireAdmin, requireAdminScopes, AuthError } from "@/lib/auth/principal"
 import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
 import { logAudit } from "@/lib/services/audit"
 import {
@@ -44,14 +44,16 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     const principal = await resolvePrincipal(request)
     requireAdmin(principal)
 
-    const result = checkRateLimit(`admin:${principal.userId}`, { maxRequests: 60, windowMs: 60_000 })
+    const rateLimitKey = principal.kind === "admin" ? `admin:${principal.userId}` : `admin-key:${principal.keyId}`
+    const result = checkRateLimit(rateLimitKey, { maxRequests: 60, windowMs: 60_000 })
     if (!result.allowed) {
       throw new RateLimitError(result.resetAt, result.remaining)
     }
 
     return { principal }
   })
-  .get("/stats", async () => {
+  .get("/stats", async ({ principal }) => {
+    requireAdminScopes(principal, ["admin:read"])
     const stats = await getPlatformStats()
     return stats
   }, {
@@ -62,7 +64,8 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
   })
   .get(
     "/hackathons",
-    async ({ query }) => {
+    async ({ query, principal }) => {
+      requireAdminScopes(principal, ["admin:read"])
       const result = await listAllHackathons({
         limit: query.limit,
         offset: query.offset,
@@ -88,7 +91,8 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
   )
   .get(
     "/hackathons/:id",
-    async ({ params }) => {
+    async ({ params, principal }) => {
+      requireAdminScopes(principal, ["admin:read"])
       const hackathon = await getHackathonById(params.id)
       if (!hackathon) {
         throw new AuthError("Hackathon not found", 404)
@@ -105,6 +109,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
   .patch(
     "/hackathons/:id",
     async ({ params, body, principal }) => {
+      requireAdminScopes(principal, ["admin:write"])
       const existing = await getHackathonById(params.id)
       if (!existing) {
         throw new AuthError("Hackathon not found", 404)
@@ -119,30 +124,31 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         resourceId: params.id,
         targetTenantId: existing.tenant_id,
         metadata: { fields: Object.keys(body) },
+        critical: true,
       })
 
       return updated
     },
     {
       body: t.Object({
-        name: t.Optional(t.String()),
-        slug: t.Optional(t.String()),
-        description: t.Optional(t.Nullable(t.String())),
+        name: t.Optional(t.String({ maxLength: 200 })),
+        slug: t.Optional(t.String({ maxLength: 200 })),
+        description: t.Optional(t.Nullable(t.String({ maxLength: 10000 }))),
         status: t.Optional(HackathonStatusEnum),
-        starts_at: t.Optional(t.Nullable(t.String())),
-        ends_at: t.Optional(t.Nullable(t.String())),
-        registration_opens_at: t.Optional(t.Nullable(t.String())),
-        registration_closes_at: t.Optional(t.Nullable(t.String())),
+        starts_at: t.Optional(t.Nullable(t.String({ maxLength: 100 }))),
+        ends_at: t.Optional(t.Nullable(t.String({ maxLength: 100 }))),
+        registration_opens_at: t.Optional(t.Nullable(t.String({ maxLength: 100 }))),
+        registration_closes_at: t.Optional(t.Nullable(t.String({ maxLength: 100 }))),
         min_team_size: t.Optional(t.Nullable(t.Number())),
         max_team_size: t.Optional(t.Nullable(t.Number())),
         max_participants: t.Optional(t.Nullable(t.Number())),
         allow_solo: t.Optional(t.Nullable(t.Boolean())),
         anonymous_judging: t.Optional(t.Boolean()),
-        rules: t.Optional(t.Nullable(t.String())),
+        rules: t.Optional(t.Nullable(t.String({ maxLength: 50000 }))),
         location_type: t.Optional(t.Nullable(LocationTypeEnum)),
-        location_name: t.Optional(t.Nullable(t.String())),
-        location_url: t.Optional(t.Nullable(t.String())),
-        results_published_at: t.Optional(t.Nullable(t.String())),
+        location_name: t.Optional(t.Nullable(t.String({ maxLength: 500 }))),
+        location_url: t.Optional(t.Nullable(t.String({ maxLength: 2000 }))),
+        results_published_at: t.Optional(t.Nullable(t.String({ maxLength: 100 }))),
       }),
       detail: {
         summary: "Update hackathon",
@@ -153,6 +159,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
   .delete(
     "/hackathons/:id",
     async ({ params, body, principal }) => {
+      requireAdminScopes(principal, ["admin:write"])
       const existing = await getHackathonById(params.id)
       if (!existing) {
         throw new AuthError("Hackathon not found", 404)
@@ -162,8 +169,6 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         throw new AuthError("confirm_name must match the hackathon name", 400)
       }
 
-      await deleteHackathon(params.id)
-
       await logAudit({
         principal,
         action: "admin.hackathon.deleted",
@@ -171,7 +176,10 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         resourceId: params.id,
         targetTenantId: existing.tenant_id,
         metadata: { name: existing.name, slug: existing.slug },
+        critical: true,
       })
+
+      await deleteHackathon(params.id)
 
       return { success: true }
     },
@@ -185,7 +193,8 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       },
     }
   )
-  .get("/scenarios", () => {
+  .get("/scenarios", ({ principal }) => {
+    requireAdminScopes(principal, ["admin:scenarios"])
     return { scenarios: listScenarios() }
   }, {
     detail: {
@@ -196,6 +205,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
   .post(
     "/scenarios/:name",
     async ({ params, body, principal }) => {
+      requireAdminScopes(principal, ["admin:scenarios"])
       const result = await runScenario(params.name, body?.tenant_id || undefined)
 
       await logAudit({
@@ -205,6 +215,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         resourceId: result.hackathonId,
         targetTenantId: result.tenantId,
         metadata: { scenario: params.name },
+        critical: true,
       })
 
       return result

@@ -50,9 +50,23 @@ mock.module("@/lib/auth/principal", () => {
 
   return {
     resolvePrincipal: mockResolvePrincipal,
-    requireAdmin: (principal: { kind: string }) => {
-      if (principal.kind !== "admin") {
-        throw new AuthError("Forbidden", 403)
+    requireAdmin: (principal: { kind: string; scopes?: string[] }) => {
+      if (principal.kind === "admin") return
+      if (
+        principal.kind === "api_key" &&
+        Array.isArray(principal.scopes) &&
+        ["admin:read", "admin:write", "admin:scenarios"].some((s) => principal.scopes!.includes(s))
+      ) {
+        return
+      }
+      throw new AuthError("Forbidden", 403)
+    },
+    requireAdminScopes: (principal: { kind: string; scopes?: string[] }, scopes: string[]) => {
+      if (principal.kind === "admin") return
+      for (const scope of scopes) {
+        if (!principal.scopes?.includes(scope)) {
+          throw new AuthError(`Missing required scope: ${scope}`, 403)
+        }
       }
     },
     isAdminEnabled: () => true,
@@ -87,6 +101,13 @@ const adminPrincipal = {
   kind: "admin" as const,
   userId: "admin-1",
   scopes: ["admin:read", "admin:write", "admin:scenarios"],
+}
+
+const readOnlyApiKeyPrincipal = {
+  kind: "api_key" as const,
+  tenantId: "t-1",
+  keyId: "key-readonly",
+  scopes: ["admin:read"],
 }
 
 const userPrincipal = {
@@ -409,6 +430,158 @@ describe("Admin API Routes", () => {
           metadata: { scenario: "pre-registration" },
         })
       )
+    })
+  })
+
+  describe("Per-endpoint scope enforcement", () => {
+    it("allows read-only API key to access GET /admin/stats", async () => {
+      mockResolvePrincipal.mockResolvedValue(readOnlyApiKeyPrincipal)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/stats")
+      )
+
+      expect(res.status).toBe(200)
+    })
+
+    it("allows read-only API key to access GET /admin/hackathons", async () => {
+      mockResolvePrincipal.mockResolvedValue(readOnlyApiKeyPrincipal)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/hackathons")
+      )
+
+      expect(res.status).toBe(200)
+    })
+
+    it("rejects read-only API key on PATCH /admin/hackathons/:id", async () => {
+      mockResolvePrincipal.mockResolvedValue(readOnlyApiKeyPrincipal)
+      mockGetHackathonById.mockResolvedValue({
+        id: "h-1",
+        name: "Test",
+        tenant_id: "t-1",
+      })
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/hackathons/h-1", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "New Name" }),
+        })
+      )
+
+      expect(res.status).toBe(403)
+      expect(mockUpdateHackathonAsAdmin).not.toHaveBeenCalled()
+    })
+
+    it("rejects read-only API key on DELETE /admin/hackathons/:id", async () => {
+      mockResolvePrincipal.mockResolvedValue(readOnlyApiKeyPrincipal)
+      mockGetHackathonById.mockResolvedValue({
+        id: "h-1",
+        name: "Doomed",
+        tenant_id: "t-1",
+      })
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/hackathons/h-1", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirm_name: "Doomed" }),
+        })
+      )
+
+      expect(res.status).toBe(403)
+      expect(mockDeleteHackathon).not.toHaveBeenCalled()
+    })
+
+    it("rejects read-only API key on POST /admin/scenarios/:name", async () => {
+      mockResolvePrincipal.mockResolvedValue(readOnlyApiKeyPrincipal)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenarios/pre-registration", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        })
+      )
+
+      expect(res.status).toBe(403)
+      expect(mockRunScenario).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("Critical audit logging", () => {
+    it("logs audit with critical flag on PATCH", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      mockGetHackathonById.mockResolvedValue({
+        id: "h-1",
+        name: "Test",
+        tenant_id: "t-1",
+      })
+      mockUpdateHackathonAsAdmin.mockResolvedValue({ id: "h-1", name: "Updated" })
+
+      await app.handle(
+        new Request("http://localhost/api/admin/hackathons/h-1", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Updated" }),
+        })
+      )
+
+      expect(mockLogAudit).toHaveBeenCalledWith(
+        expect.objectContaining({ critical: true })
+      )
+    })
+
+    it("logs audit before delete (audit-then-delete order)", async () => {
+      const callOrder: string[] = []
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      mockGetHackathonById.mockResolvedValue({
+        id: "h-1",
+        name: "Doomed",
+        slug: "doomed",
+        tenant_id: "t-1",
+      })
+      mockLogAudit.mockImplementation(() => {
+        callOrder.push("audit")
+        return Promise.resolve(null)
+      })
+      mockDeleteHackathon.mockImplementation(() => {
+        callOrder.push("delete")
+        return Promise.resolve()
+      })
+
+      await app.handle(
+        new Request("http://localhost/api/admin/hackathons/h-1", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirm_name: "Doomed" }),
+        })
+      )
+
+      expect(callOrder).toEqual(["audit", "delete"])
+    })
+
+    it("aborts delete when audit fails", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      mockGetHackathonById.mockResolvedValue({
+        id: "h-1",
+        name: "Doomed",
+        slug: "doomed",
+        tenant_id: "t-1",
+      })
+      mockLogAudit.mockRejectedValue(new Error("Critical audit log failed: DB error"))
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/hackathons/h-1", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirm_name: "Doomed" }),
+        })
+      )
+
+      expect(res.status).toBe(500)
+      expect(mockDeleteHackathon).not.toHaveBeenCalled()
     })
   })
 })

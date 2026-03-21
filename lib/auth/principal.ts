@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { AdminPrincipal, Principal, PrincipalKindMap, Scope } from "./types"
+import type { AdminPrincipal, ApiKeyPrincipal, Principal, PrincipalKindMap, Scope } from "./types"
 import { ADMIN_SCOPES, scopesForRole } from "./types"
 import { verifyApiKey } from "@/lib/services/api-keys"
 import { getOrCreateTenant, getOrCreatePersonalTenant } from "@/lib/services/tenants"
@@ -79,12 +79,32 @@ export class AuthError extends Error {
   }
 }
 
-export function requireAdmin(principal: Principal): asserts principal is AdminPrincipal {
+const ADMIN_API_KEY_SCOPES: Scope[] = ["admin:read", "admin:write", "admin:scenarios"]
+
+export function requireAdmin(principal: Principal): asserts principal is AdminPrincipal | ApiKeyPrincipal {
   if (!isAdminEnabled()) {
     throw new AuthError("Not found", 404)
   }
-  if (principal.kind !== "admin") {
-    throw new AuthError("Forbidden", 403)
+  if (principal.kind === "admin") {
+    return
+  }
+  if (
+    principal.kind === "api_key" &&
+    ADMIN_API_KEY_SCOPES.some((s) => principal.scopes.includes(s))
+  ) {
+    return
+  }
+  throw new AuthError("Forbidden", 403)
+}
+
+export function requireAdminScopes(principal: AdminPrincipal | ApiKeyPrincipal, scopes: Scope[]): void {
+  if (principal.kind === "admin") {
+    return
+  }
+  for (const scope of scopes) {
+    if (!principal.scopes.includes(scope)) {
+      throw new AuthError(`Missing required scope: ${scope}`, 403)
+    }
   }
 }
 

@@ -159,6 +159,15 @@ const BANNER = `
     schedules update <id>      Update a schedule
     schedules delete <id>      Delete a schedule
 
+  ${pc.dim("ADMIN (requires API key with admin:read, admin:write, admin:scenarios scopes)")}
+    admin stats                              Platform-wide statistics
+    admin hackathons list                    List all hackathons across tenants
+    admin hackathons get <id>                Get hackathon details
+    admin hackathons update <id>             Update any hackathon field
+    admin hackathons delete <id>             Delete a hackathon (requires name confirmation)
+    admin scenarios list                     List available test scenarios
+    admin scenarios run <name>               Run a test scenario
+
   ${pc.dim("GLOBAL OPTIONS")}
     --json           Output as JSON
     --yes, -y        Skip confirmation prompts
@@ -600,6 +609,65 @@ async function main() {
           }
           default:
             console.error(`Unknown schedules command: ${sub}`)
+            process.exit(1)
+        }
+        break
+      }
+
+      case "admin": {
+        const client = createAuthenticatedClient(flags)
+        switch (sub) {
+          case "stats": {
+            const { runAdminStats } = await import("./commands/admin/stats.js")
+            await runAdminStats(client, { json: flags.json })
+            break
+          }
+          case "hackathons":
+            switch (sub2) {
+              case "list": {
+                const { runAdminHackathonsList } = await import("./commands/admin/hackathons-list.js")
+                await runAdminHackathonsList(client, rest.slice(3), { json: flags.json })
+                break
+              }
+              case "get": {
+                const { runAdminHackathonsGet } = await import("./commands/admin/hackathons-get.js")
+                await runAdminHackathonsGet(client, rest[3], { json: flags.json })
+                break
+              }
+              case "update": {
+                const { runAdminHackathonsUpdate } = await import("./commands/admin/hackathons-update.js")
+                await runAdminHackathonsUpdate(client, rest[3], rest.slice(4), { json: flags.json })
+                break
+              }
+              case "delete": {
+                const { runAdminHackathonsDelete } = await import("./commands/admin/hackathons-delete.js")
+                await runAdminHackathonsDelete(client, rest[3], { yes: flags.yes })
+                break
+              }
+              default:
+                console.error(`Unknown admin hackathons command: ${sub2}`)
+                process.exit(1)
+            }
+            break
+          case "scenarios":
+            switch (sub2) {
+              case "list": {
+                const { runAdminScenariosList } = await import("./commands/admin/scenarios-list.js")
+                await runAdminScenariosList(client, { json: flags.json })
+                break
+              }
+              case "run": {
+                const { runAdminScenariosRun } = await import("./commands/admin/scenarios-run.js")
+                await runAdminScenariosRun(client, rest[3], rest.slice(4), { json: flags.json })
+                break
+              }
+              default:
+                console.error(`Unknown admin scenarios command: ${sub2}`)
+                process.exit(1)
+            }
+            break
+          default:
+            console.error(`Unknown admin command: ${sub}. Run "hackathon admin --help" for usage.`)
             process.exit(1)
         }
         break
