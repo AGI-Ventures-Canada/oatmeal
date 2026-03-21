@@ -1,4 +1,4 @@
-const DEFAULT_TTL_MS = 10 * 60 * 1000
+const DEFAULT_TTL_MS = 60 * 60 * 1000
 
 type CacheEntry<T> = {
   value: T
