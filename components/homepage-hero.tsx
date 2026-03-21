@@ -32,7 +32,7 @@ export function HomepageHero() {
                 <Plus className="size-4" />
                 Create from scratch
               </span>
-              <span className="text-xs opacity-80">
+              <span className="text-xs text-primary-foreground/80">
                 Start blank and add details as you go
               </span>
             </Link>
