@@ -15,7 +15,7 @@ export function listScenarios() {
   return AVAILABLE_SCENARIOS
 }
 
-const DEV_USER_ID = "user_38vEFI8UesKwM07qIuFNqEzFavS"
+const DEV_USER_ID = process.env.SCENARIO_DEV_USER_ID ?? "user_38vEFI8UesKwM07qIuFNqEzFavS"
 
 const SEED_USERS = [
   "seed_user_alice_001",
@@ -440,7 +440,7 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
 }
 
 export async function runScenario(name: string, tenantId?: string): Promise<{ hackathonId: string; slug: string; tenantId: string }> {
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
     throw new Error("Test scenarios cannot be run in production")
   }
 
