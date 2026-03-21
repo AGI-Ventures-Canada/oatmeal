@@ -164,7 +164,7 @@ export function TeamInviteDialog({ teamId, hackathonId, teamName }: TeamInviteDi
                 <AlertDialogAction onClick={() => handleOpenChange(false)}>
                   Done
                 </AlertDialogAction>
-                <Progress value={((INVITE_COUNTDOWN - countdown) / INVITE_COUNTDOWN) * 100} className="h-1 w-full" />
+                <Progress value={((INVITE_COUNTDOWN - countdown) / INVITE_COUNTDOWN) * 100} />
               </div>
             </AlertDialogFooter>
           </>
