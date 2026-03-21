@@ -9,7 +9,7 @@ type Scenario = {
   description: string
 }
 
-export function ScenarioRunner({ scenario }: { scenario: Scenario }) {
+export function ScenarioRunner({ scenario, disabled }: { scenario: Scenario; disabled?: boolean }) {
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<{ hackathonId: string; slug: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -43,9 +43,12 @@ export function ScenarioRunner({ scenario }: { scenario: Scenario }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">{scenario.description}</p>
-        <Button onClick={handleRun} disabled={running} size="sm">
+        <Button onClick={handleRun} disabled={running || disabled} size="sm" title={disabled ? "Only available in local development" : undefined}>
           {running ? "Running..." : "Run"}
         </Button>
+        {disabled && (
+          <p className="text-xs text-muted-foreground">Local development only</p>
+        )}
         {result && (
           <div className="space-y-1 text-sm">
             <a

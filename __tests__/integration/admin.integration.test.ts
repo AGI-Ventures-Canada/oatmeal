@@ -14,7 +14,7 @@ const mockListScenarios = mock(() => [
   { name: "pre-registration", description: "Test scenario" },
 ])
 const mockRunScenario = mock(() =>
-  Promise.resolve({ hackathonId: "h-1", tenantId: "t-1" })
+  Promise.resolve({ hackathonId: "h-1", slug: "test-pre-registration", tenantId: "t-1" })
 )
 
 mock.module("@/lib/services/admin", () => ({
@@ -410,6 +410,7 @@ describe("Admin API Routes", () => {
       mockResolvePrincipal.mockResolvedValue(adminPrincipal)
       mockRunScenario.mockResolvedValue({
         hackathonId: "h-new",
+        slug: "test-pre-registration",
         tenantId: "t-new",
       })
 
@@ -424,6 +425,7 @@ describe("Admin API Routes", () => {
 
       expect(res.status).toBe(200)
       expect(data.hackathonId).toBe("h-new")
+      expect(data.slug).toBe("test-pre-registration")
       expect(mockLogAudit).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "admin.scenario.created",

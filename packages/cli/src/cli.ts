@@ -164,7 +164,7 @@ const BANNER = `
     admin hackathons list                    List all hackathons across tenants
     admin hackathons get <id>                Get hackathon details
     admin hackathons update <id>             Update any hackathon field
-    admin hackathons delete <id>             Delete a hackathon (requires name confirmation)
+    admin hackathons delete <id>             Delete a hackathon (--yes skips name confirmation)
     admin scenarios list                     List available test scenarios
     admin scenarios run <name>               Run a test scenario
 
