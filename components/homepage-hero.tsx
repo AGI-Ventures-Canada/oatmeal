@@ -21,11 +21,7 @@ export function HomepageHero() {
         </p>
 
         <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button
-            size="lg"
-            className="h-auto flex-col items-start gap-1.5 py-4 px-6 sm:min-w-[220px]"
-            asChild
-          >
+          <Button size="hero" asChild>
             <Link href="/create">
               <span className="flex items-center gap-2 text-sm font-medium">
                 <Plus className="size-4" />
@@ -38,9 +34,8 @@ export function HomepageHero() {
           </Button>
 
           <Button
-            size="lg"
+            size="hero"
             variant="outline"
-            className="h-auto flex-col items-start gap-1.5 py-4 px-6 sm:min-w-[220px]"
             onClick={() => setDialogOpen(true)}
           >
             <span className="flex items-center gap-2 text-sm font-medium">
@@ -56,12 +51,9 @@ export function HomepageHero() {
         <div className="mt-12">
           <InstallSkillButton
             trigger={
-              <button
-                type="button"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <Button variant="link" size="sm">
                 Or manage hackathons from your AI agent
-              </button>
+              </Button>
             }
           />
         </div>
