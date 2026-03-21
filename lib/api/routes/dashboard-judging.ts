@@ -335,13 +335,13 @@ export const dashboardJudgingRoutes = new Elysia()
 
         const hackathon = result.hackathon
         if (hackathon.status !== "draft") {
-          const { clerkClient } = await import("@clerk/nextjs/server")
-          const client = await clerkClient()
           try {
+            const { clerkClient } = await import("@clerk/nextjs/server")
+            const client = await clerkClient()
             const judgeUser = await client.users.getUser(typedBody.clerkUserId)
             const judgeEmail = judgeUser.primaryEmailAddress?.emailAddress
             if (judgeEmail) {
-              const addedByName = await resolveAdderName(principal)
+              const addedByName = await resolveAdderName(principal, client)
               const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
               sendJudgeAddedNotification({
                 to: judgeEmail,
@@ -391,7 +391,7 @@ export const dashboardJudgingRoutes = new Elysia()
             const hackathon = result.hackathon
             if (hackathon.status !== "draft") {
               try {
-                const addedByName = await resolveAdderName(principal)
+                const addedByName = await resolveAdderName(principal, client)
                 const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
                 sendJudgeAddedNotification({
                   to: email,
@@ -443,23 +443,15 @@ export const dashboardJudgingRoutes = new Elysia()
         const hackathon = result.hackathon
 
         if (hackathon.status !== "draft") {
-          let inviterName = "An organizer"
-          if (principal.kind === "user") {
-            try {
-              const inviterUser = await client.users.getUser(principal.userId)
-              inviterName = [inviterUser.firstName, inviterUser.lastName].filter(Boolean).join(" ") || "An organizer"
-            } catch {
-              // fall back to default
-            }
-          }
+          const inviterName = await resolveAdderName(principal, client)
           const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
-          await sendJudgeInvitationEmail({
+          sendJudgeInvitationEmail({
             to: email,
             hackathonName: hackathon.name,
             inviterName,
             inviteToken: inviteResult.invitation.token,
             expiresAt: inviteResult.invitation.expires_at,
-          })
+          }).catch(console.error)
         }
 
         await logAudit({

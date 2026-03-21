@@ -197,6 +197,8 @@ export async function sendPendingJudgeInvitationEmails(
   hackathonName: string,
   inviterName: string
 ): Promise<{ sent: number }> {
+  // Known edge case: if a hackathon cycles draft→active→draft→active, pending invitations
+  // will be emailed again on each transition. An emailed_at column would prevent duplicates.
   const pending = await listJudgeInvitations(hackathonId, "pending")
 
   if (pending.length === 0) return { sent: 0 }
