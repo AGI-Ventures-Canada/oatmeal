@@ -270,7 +270,9 @@ export function EventHero({
         >
           <div className="flex items-center gap-2">
             <h1 className="text-3xl md:text-5xl font-bold text-foreground break-words">
-              {name}
+              {name || (
+                <span className="text-muted-foreground/60">Add your hackathon name</span>
+              )}
             </h1>
             <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-end mb-2">
               Edit

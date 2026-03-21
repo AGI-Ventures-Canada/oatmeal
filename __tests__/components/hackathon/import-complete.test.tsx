@@ -6,6 +6,8 @@ mock.module("next/navigation", () => ({
   useRouter: () => ({ push: mock(() => {}), replace: mockReplace, refresh: mock(() => {}), prefetch: mock(() => {}) }),
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => "/luma.com/test-event",
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
 }))
 
 const { ImportComplete } = await import("@/components/hackathon/import-complete")
