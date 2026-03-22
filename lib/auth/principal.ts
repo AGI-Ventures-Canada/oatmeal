@@ -1,9 +1,13 @@
 import { auth } from "@clerk/nextjs/server"
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { Principal, PrincipalKindMap, Scope } from "./types"
-import { scopesForRole } from "./types"
+import type { AdminPrincipal, ApiKeyPrincipal, Principal, PrincipalKindMap, Scope } from "./types"
+import { ADMIN_SCOPES, scopesForRole } from "./types"
 import { verifyApiKey } from "@/lib/services/api-keys"
 import { getOrCreateTenant, getOrCreatePersonalTenant } from "@/lib/services/tenants"
+
+export function isAdminEnabled(): boolean {
+  return process.env.ADMIN_ENABLED === "true"
+}
 
 export async function resolvePrincipal(request: Request): Promise<Principal> {
   const authHeader = request.headers.get("authorization")
@@ -27,9 +31,21 @@ export async function resolvePrincipal(request: Request): Promise<Principal> {
     }
   }
 
-  const { userId, orgId, orgRole } = await auth()
+  const session = await auth()
+  const { userId, orgId, orgRole } = session
   if (!userId) {
     return { kind: "anon" }
+  }
+
+  const metadata = (session.sessionClaims as Record<string, unknown>)?.metadata as
+    | Record<string, unknown>
+    | undefined
+  if (isAdminEnabled() && metadata?.admin === true) {
+    return {
+      kind: "admin",
+      userId,
+      scopes: ADMIN_SCOPES,
+    }
   }
 
   let tenant
@@ -60,6 +76,36 @@ export class AuthError extends Error {
   ) {
     super(message)
     this.name = "AuthError"
+  }
+}
+
+const ADMIN_API_KEY_SCOPES: Scope[] = ["admin:read", "admin:write", "admin:scenarios"]
+
+// Outer gate: confirms admin is enabled and the principal holds at least one admin scope.
+// Per-endpoint scope enforcement is done separately via requireAdminScopes — keep both checks;
+// collapsing them would either over-restrict (blocking valid admin Clerk sessions) or
+// under-restrict (skipping scope verification on specific endpoints).
+export function requireAdmin(principal: Principal): asserts principal is AdminPrincipal | ApiKeyPrincipal {
+  if (!isAdminEnabled()) {
+    throw new AuthError("Not found", 404)
+  }
+  if (principal.kind === "admin") {
+    return
+  }
+  if (
+    principal.kind === "api_key" &&
+    ADMIN_API_KEY_SCOPES.some((s) => principal.scopes.includes(s))
+  ) {
+    return
+  }
+  throw new AuthError("Forbidden", 403)
+}
+
+export function requireAdminScopes(principal: AdminPrincipal | ApiKeyPrincipal, scopes: Scope[]): void {
+  for (const scope of scopes) {
+    if (!principal.scopes.includes(scope)) {
+      throw new AuthError(`Missing required scope: ${scope}`, 403)
+    }
   }
 }
 

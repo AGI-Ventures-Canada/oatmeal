@@ -94,6 +94,7 @@ describe("Public Hackathons Service", () => {
       const chain = createChainableMock({
         data: [{ ...mockHackathon, organizer: mockOrganizer }],
         error: null,
+        count: 1,
       })
       setMockFromImplementation(() => chain)
 
@@ -121,6 +122,7 @@ describe("Public Hackathons Service", () => {
       const chain = createChainableMock({
         data: [{ ...mockHackathon, organizer: mockOrganizer }],
         error: null,
+        count: 1,
       })
       setMockFromImplementation(() => chain)
 
@@ -134,6 +136,7 @@ describe("Public Hackathons Service", () => {
       const chain = createChainableMock({
         data: [{ ...mockHackathon, organizer: mockOrganizer }],
         error: null,
+        count: 1,
       })
       setMockFromImplementation(() => chain)
 
@@ -147,6 +150,7 @@ describe("Public Hackathons Service", () => {
       const chain = createChainableMock({
         data: [],
         error: null,
+        count: 0,
       })
       setMockFromImplementation(() => chain)
 
@@ -156,14 +160,14 @@ describe("Public Hackathons Service", () => {
       expect(chain.or).not.toHaveBeenCalled()
     })
 
-    it("paginates results", async () => {
-      const items = Array.from({ length: 15 }, (_, i) => ({
+    it("paginates results with SQL-level limit/offset", async () => {
+      const pageItems = Array.from({ length: 6 }, (_, i) => ({
         ...mockHackathon,
-        id: `id-${i}`,
-        name: `Hackathon ${i}`,
+        id: `id-${i + 9}`,
+        name: `Hackathon ${i + 9}`,
         organizer: mockOrganizer,
       }))
-      const chain = createChainableMock({ data: items, error: null })
+      const chain = createChainableMock({ data: pageItems, error: null, count: 15 })
       setMockFromImplementation(() => chain)
 
       const result = await listPublicHackathons({ page: 2, limit: 9 })

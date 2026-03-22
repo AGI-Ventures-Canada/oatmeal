@@ -31,7 +31,6 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        breadcrumbs={[{ label: "Dashboard" }]}
         title="Dashboard"
         description="Your hackathons at a glance"
       />

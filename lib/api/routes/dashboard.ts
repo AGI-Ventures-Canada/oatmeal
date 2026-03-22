@@ -11,6 +11,7 @@ import { dashboardResultsRoutes } from "./dashboard-results"
 import { dashboardJudgeDisplayRoutes } from "./dashboard-judge-display"
 import { getEffectiveStatus } from "@/lib/utils/timeline"
 import type { Scope } from "@/lib/auth/types"
+import { ALL_SCOPES } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
 
 export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
@@ -171,10 +172,14 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     async ({ principal, body }) => {
       requirePrincipal(principal, ["user"], ["keys:write"])
 
+      const sanitizedScopes = body.scopes
+        ? (body.scopes.filter((s) => ALL_SCOPES.includes(s as Scope)) as Scope[])
+        : undefined
+
       const result = await createApiKey({
         tenantId: principal.tenantId,
         name: body.name,
-        scopes: body.scopes as Scope[] | undefined,
+        scopes: sanitizedScopes,
       })
 
       if (!result) {
