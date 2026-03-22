@@ -121,41 +121,51 @@ export async function listPublicHackathons(
   options?: { search?: string; page?: number; limit?: number }
 ): Promise<{ hackathons: HackathonWithOrganizer[]; total: number }> {
   const client = getSupabase() as unknown as SupabaseClient
+  const page = options?.page ?? 1
+  const limit = options?.limit ?? 9
+  const offset = (page - 1) * limit
 
-  let query = client
+  const publicStatuses = ["published", "registration_open", "active", "judging", "completed"]
+
+  let countQuery = client
+    .from("hackathons")
+    .select("id", { count: "exact", head: true })
+    .in("status", publicStatuses)
+
+  let dataQuery = client
     .from("hackathons")
     .select(`
       *,
       organizer:tenants!tenant_id(id, name, slug, logo_url, logo_url_dark, clerk_org_id)
     `)
-    .in("status", ["published", "registration_open", "active", "judging", "completed"])
+    .in("status", publicStatuses)
+    .order("status", { ascending: true })
     .order("starts_at", { ascending: true })
+    .range(offset, offset + limit - 1)
 
   if (options?.search && options.search.length >= 2) {
     const sanitized = options.search.replace(/[%_().,\\]/g, "")
     if (sanitized.length >= 2) {
-      query = query.or(`name.ilike.%${sanitized}%,description.ilike.%${sanitized}%`)
+      const filter = `name.ilike.%${sanitized}%,description.ilike.%${sanitized}%`
+      countQuery = countQuery.or(filter)
+      dataQuery = dataQuery.or(filter)
     }
   }
 
-  const { data, error } = await query
+  const [{ count, error: countError }, { data, error }] = await Promise.all([
+    countQuery,
+    dataQuery,
+  ])
 
-  if (error) {
-    console.error("Failed to list public hackathons:", error)
+  if (error || countError) {
+    console.error("Failed to list public hackathons:", error ?? countError)
     return { hackathons: [], total: 0 }
   }
 
-  const sorted = sortByStatusPriority(data as unknown as HackathonWithOrganizer[])
-  const total = sorted.length
-
-  const page = options?.page ?? 1
-  const limit = options?.limit ?? total
-  const start = (page - 1) * limit
-  const hackathons = sorted
-    .slice(start, start + limit)
+  const hackathons = sortByStatusPriority(data as unknown as HackathonWithOrganizer[])
     .map((h) => ({ ...h, status: getEffectiveStatus(h) })) as unknown as HackathonWithOrganizer[]
 
-  return { hackathons, total }
+  return { hackathons, total: count ?? 0 }
 }
 
 export type OrganizerCheckResult =

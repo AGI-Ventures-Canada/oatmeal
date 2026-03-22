@@ -58,6 +58,9 @@ export type AuditAction =
   | "results.published"
   | "results.unpublished"
   | "cli_auth.completed"
+  | "admin.hackathon.updated"
+  | "admin.hackathon.deleted"
+  | "admin.scenario.created"
 
 export type LogAuditInput = {
   principal: Exclude<Principal, { kind: "anon" }>
@@ -65,27 +68,59 @@ export type LogAuditInput = {
   resourceType: string
   resourceId?: string
   metadata?: Json
+  targetTenantId?: string
+  critical?: boolean
 }
 
 export async function logAudit(input: LogAuditInput): Promise<AuditLog | null> {
+  const { principal } = input
+
+  let tenantId: string
+  let actorType: "user" | "api_key"
+  let actorId: string
+  let metadata = input.metadata
+
+  if (principal.kind === "admin") {
+    if (!input.targetTenantId) {
+      throw new Error("Admin audit log requires targetTenantId")
+    }
+    tenantId = input.targetTenantId
+    actorType = "user"
+    actorId = principal.userId
+    metadata = { ...(input.metadata as Record<string, unknown> ?? {}), is_admin_action: true, admin_user_id: principal.userId }
+  } else if (principal.kind === "user") {
+    tenantId = principal.tenantId
+    actorType = "user"
+    actorId = principal.userId
+  } else if (principal.kind === "api_key" && input.targetTenantId) {
+    tenantId = input.targetTenantId
+    actorType = "api_key"
+    actorId = principal.keyId
+    metadata = { ...(input.metadata as Record<string, unknown> ?? {}), is_admin_action: true, admin_key_id: principal.keyId }
+  } else {
+    tenantId = principal.tenantId
+    actorType = "api_key"
+    actorId = principal.keyId
+  }
+
   const { data, error } = await getSupabase()
     .from("audit_logs")
     .insert({
-      tenant_id: input.principal.tenantId,
+      tenant_id: tenantId,
       action: input.action,
-      actor_type: input.principal.kind === "user" ? "user" : "api_key",
-      actor_id:
-        input.principal.kind === "user"
-          ? input.principal.userId
-          : input.principal.keyId,
+      actor_type: actorType,
+      actor_id: actorId,
       resource_type: input.resourceType,
       resource_id: input.resourceId,
-      metadata: input.metadata,
+      metadata,
     })
     .select()
     .single()
 
   if (error || !data) {
+    if (input.critical) {
+      throw new Error(`Critical audit log failed: ${error?.message ?? "no data returned"}`)
+    }
     console.error("Failed to log audit:", error)
     return null
   }

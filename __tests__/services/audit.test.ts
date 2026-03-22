@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "bun:test"
-import type { UserPrincipal, ApiKeyPrincipal } from "@/lib/auth/types"
+import type { UserPrincipal, ApiKeyPrincipal, AdminPrincipal } from "@/lib/auth/types"
 import {
   createChainableMock,
   resetSupabaseMocks,
@@ -22,6 +22,12 @@ const mockApiKeyPrincipal: ApiKeyPrincipal = {
   tenantId: "tenant-123",
   keyId: "key-456",
   scopes: ["hackathons:read", "hackathons:write"],
+}
+
+const mockAdminPrincipal: AdminPrincipal = {
+  kind: "admin",
+  userId: "admin-789",
+  scopes: ["admin:read", "admin:write", "admin:scenarios"],
 }
 
 describe("Audit Service", () => {
@@ -153,6 +159,50 @@ describe("Audit Service", () => {
 
       expect(result).not.toBeNull()
       expect(result?.metadata).toBeNull()
+    })
+
+    it("creates audit log for admin principal with targetTenantId", async () => {
+      const mockAuditLog = {
+        id: "audit-admin-1",
+        tenant_id: "target-tenant-123",
+        action: "admin.hackathon.updated",
+        actor_type: "user",
+        actor_id: "admin-789",
+        resource_type: "hackathon",
+        resource_id: "h-123",
+        metadata: { is_admin_action: true, admin_user_id: "admin-789", fields: ["status"] },
+        created_at: "2024-01-01T00:00:00Z",
+      }
+
+      const chain = createChainableMock({
+        data: mockAuditLog,
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await logAudit({
+        principal: mockAdminPrincipal,
+        action: "admin.hackathon.updated",
+        resourceType: "hackathon",
+        resourceId: "h-123",
+        targetTenantId: "target-tenant-123",
+        metadata: { fields: ["status"] },
+      })
+
+      expect(result).not.toBeNull()
+      expect(result?.action).toBe("admin.hackathon.updated")
+      expect(result?.actor_id).toBe("admin-789")
+    })
+
+    it("throws for admin principal without targetTenantId", async () => {
+      expect(
+        logAudit({
+          principal: mockAdminPrincipal,
+          action: "admin.hackathon.updated",
+          resourceType: "hackathon",
+          resourceId: "h-123",
+        })
+      ).rejects.toThrow("Admin audit log requires targetTenantId")
     })
 
     it("returns null on database error", async () => {

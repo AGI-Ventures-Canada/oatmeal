@@ -14,6 +14,9 @@ export type Scope =
   | "schedules:write"
   | "org:read"
   | "org:write"
+  | "admin:read"
+  | "admin:write"
+  | "admin:scenarios"
 
 export const ALL_SCOPES: Scope[] = [
   "keys:read",
@@ -31,6 +34,13 @@ export const ALL_SCOPES: Scope[] = [
   "schedules:write",
   "org:read",
   "org:write",
+]
+
+export const ADMIN_SCOPES: Scope[] = [
+  ...ALL_SCOPES,
+  "admin:read",
+  "admin:write",
+  "admin:scenarios",
 ]
 
 export const DEFAULT_API_KEY_SCOPES: Scope[] = [
@@ -60,15 +70,22 @@ export type ApiKeyPrincipal = {
   scopes: Scope[]
 }
 
+export type AdminPrincipal = {
+  kind: "admin"
+  userId: string
+  scopes: Scope[]
+}
+
 export type AnonPrincipal = {
   kind: "anon"
 }
 
-export type Principal = UserPrincipal | ApiKeyPrincipal | AnonPrincipal
+export type Principal = UserPrincipal | ApiKeyPrincipal | AdminPrincipal | AnonPrincipal
 
 export type PrincipalKindMap = {
   user: UserPrincipal
   api_key: ApiKeyPrincipal
+  admin: AdminPrincipal
   anon: AnonPrincipal
 }
 
