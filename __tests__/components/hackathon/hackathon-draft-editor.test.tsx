@@ -1,6 +1,10 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test"
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react"
-import * as dialogMock from "../../lib/dialog-mock"
+import {
+  resetComponentMocks,
+  setRouter,
+  setPathname,
+} from "../../lib/component-mocks"
 
 const storage = new Map<string, string>()
 globalThis.localStorage = {
@@ -14,18 +18,10 @@ globalThis.localStorage = {
 
 import { clerkState, clerkMock, resetClerkState } from "../../lib/clerk-mock"
 
-const mockPush = mock(() => {})
-const mockClipboardWriteText = mock(() => Promise.resolve())
-
 mock.module("@clerk/nextjs", () => clerkMock)
 
-mock.module("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, refresh: mock(() => {}), replace: mock(() => {}), prefetch: mock(() => {}) }),
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => "/luma.com/test",
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-}))
+const mockPush = mock(() => {})
+const mockClipboardWriteText = mock(() => Promise.resolve())
 
 mock.module("next/image", () => ({
   default: (props: Record<string, unknown>) => {
@@ -33,8 +29,6 @@ mock.module("next/image", () => ({
     return <img src={src as string} alt={alt as string} width={width as number} height={height as number} {...rest} />
   },
 }))
-
-mock.module("@/components/ui/dialog", () => dialogMock)
 
 mock.module("@/components/hackathon/preview/hackathon-preview-client", () => ({
   HackathonPreviewClient: (props: { onBannerChange?: (imageUrl: string | null) => void }) => (
@@ -84,6 +78,7 @@ const defaultState = {
 }
 
 beforeEach(() => {
+  resetComponentMocks()
   clerkState.isSignedIn = true
   clerkState.organization = { id: "org_1", name: "Test Org" }
   clerkState.memberships = []
@@ -91,6 +86,8 @@ beforeEach(() => {
   mockPush.mockClear()
   mockClipboardWriteText.mockClear()
   storage.clear()
+  setRouter({ push: mockPush })
+  setPathname("/luma.com/test")
   Object.defineProperty(globalThis.navigator, "clipboard", {
     value: { writeText: mockClipboardWriteText },
     configurable: true,

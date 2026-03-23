@@ -1,22 +1,7 @@
 import React, { useState, createContext } from "react";
-import { describe, expect, it, afterEach, mock } from "bun:test";
+import { describe, expect, it, afterEach, beforeEach, mock } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import * as dialogMock from "../lib/dialog-mock";
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    push: mock(() => {}),
-    refresh: mock(() => {}),
-    replace: mock(() => {}),
-    prefetch: mock(() => {}),
-  }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}));
-
-mock.module("@/components/ui/dialog", () => dialogMock);
+import { resetComponentMocks, useRealInstallSkillButton } from "../lib/component-mocks";
 
 mock.module("@/components/ui/accordion", () => {
   function Accordion({ children }: { children: React.ReactNode; type?: string; collapsible?: boolean }) {
@@ -47,6 +32,11 @@ mock.module("@/components/ui/accordion", () => {
 const { InstallSkillButton } = await import("@/components/install-skill-button");
 
 describe("InstallSkillButton", () => {
+  beforeEach(() => {
+    resetComponentMocks();
+    useRealInstallSkillButton();
+  });
+
   afterEach(() => {
     cleanup();
   });
@@ -55,12 +45,20 @@ describe("InstallSkillButton", () => {
     render(<InstallSkillButton />);
     const button = screen.getByRole("button", { name: /Install Skill/i });
     expect(button).toBeDefined();
+    expect(button.textContent).toContain("Install Skill");
   });
 
   it("renders a custom trigger when provided", () => {
     render(<InstallSkillButton trigger={<button>Custom Trigger</button>} />);
     const button = screen.getByRole("button", { name: "Custom Trigger" });
     expect(button).toBeDefined();
+    expect(button.textContent).toBe("Custom Trigger");
+  });
+
+  it("has correct button type", () => {
+    render(<InstallSkillButton />);
+    const button = screen.getByRole("button", { name: /install skill/i });
+    expect(button.getAttribute("type")).toBe("button");
   });
 
   it("has aria attributes for dialog trigger", () => {

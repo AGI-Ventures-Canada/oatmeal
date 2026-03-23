@@ -1294,9 +1294,9 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
 
     const client = await clerkClient()
     const user = await client.users.getUser(userId)
-    const userEmail = user.primaryEmailAddress?.emailAddress
+    const userEmails = user.emailAddresses.map((e) => e.emailAddress)
 
-    if (!userEmail) {
+    if (userEmails.length === 0) {
       return new Response(
         JSON.stringify({ error: "No email address found", code: "no_email" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
@@ -1304,7 +1304,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     }
 
     const { acceptJudgeInvitation } = await import("@/lib/services/judge-invitations")
-    const result = await acceptJudgeInvitation(params.token, userId, userEmail)
+    const result = await acceptJudgeInvitation(params.token, userId, userEmails)
 
     if (!result.success) {
       const statusCode = result.code === "not_found" ? 404 : 400

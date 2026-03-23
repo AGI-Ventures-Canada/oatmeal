@@ -1,23 +1,11 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from "bun:test"
 import { render, screen, cleanup } from "@testing-library/react"
+import { resetComponentMocks, setRouter } from "../../lib/component-mocks"
 import { ApiKeyTable } from "@/components/dashboard/api-key-table"
 import type { ApiKeyDisplay } from "@/lib/types/dashboard"
 
 const mockPush = mock(() => {})
 const mockRefresh = mock(() => {})
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-    refresh: mockRefresh,
-    replace: mock(() => {}),
-    prefetch: mock(() => {}),
-  }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}))
 
 afterEach(() => {
   cleanup()
@@ -55,8 +43,10 @@ const mockKeys: ApiKeyDisplay[] = [
 
 describe("ApiKeyTable", () => {
   beforeEach(() => {
+    resetComponentMocks()
     mockPush.mockClear()
     mockRefresh.mockClear()
+    setRouter({ push: mockPush, refresh: mockRefresh })
   })
 
   it("renders empty state when no keys", () => {

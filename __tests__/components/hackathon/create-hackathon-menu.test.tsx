@@ -1,21 +1,16 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test"
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react"
-import { clerkState, clerkMock, resetClerkState } from "../../lib/clerk-mock"
-import * as dialogMock from "../../lib/dialog-mock"
-
-const mockPush = mock(() => {})
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}))
+import {
+  resetComponentMocks,
+  setRouter,
+  setCreateOrganizationDialog,
+  useRealCreateHackathonMenu,
+} from "../../lib/component-mocks"
+import { clerkState, clerkMock } from "../../lib/clerk-mock"
 
 mock.module("@clerk/nextjs", () => clerkMock)
+
+const mockPush = mock(() => {})
 
 mock.module("next/image", () => ({
   default: (props: Record<string, unknown>) => {
@@ -24,29 +19,27 @@ mock.module("next/image", () => ({
   },
 }))
 
-mock.module("@/components/ui/dialog", () => dialogMock)
-
-mock.module("@/components/create-organization-dialog", () => ({
-  CreateOrganizationDialog: (props: { open: boolean; onSuccess?: () => void }) => {
-    return props.open ? (
-      <div data-testid="create-org-dialog">
-        <button type="button" data-testid="simulate-org-created" onClick={() => props.onSuccess?.()}>
-          Simulate Org Created
-        </button>
-      </div>
-    ) : null
-  },
-}))
-
 const { CreateHackathonMenu } = await import(
   "../../../components/hackathon/create-hackathon-menu"
 )
 
 beforeEach(() => {
+  resetComponentMocks()
+  useRealCreateHackathonMenu()
   clerkState.organization = null
   clerkState.memberships = []
   clerkState.setActive.mockClear()
   mockPush.mockClear()
+  setRouter({ push: mockPush })
+  setCreateOrganizationDialog(({ open, onSuccess }) =>
+    open ? (
+      <div data-testid="create-org-dialog">
+        <button type="button" data-testid="simulate-org-created" onClick={() => onSuccess?.()}>
+          Simulate Org Created
+        </button>
+      </div>
+    ) : null,
+  )
 })
 
 afterEach(() => {

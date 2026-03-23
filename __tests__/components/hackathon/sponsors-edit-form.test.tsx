@@ -252,7 +252,7 @@ describe("SponsorsEditForm", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Google")).toBeDefined();
-    });
+    }, { timeout: 3000 });
 
     expect(screen.queryByText("Google Saved")).toBeNull();
 

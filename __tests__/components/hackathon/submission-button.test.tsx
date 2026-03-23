@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
-import * as dialogMock from "../../lib/dialog-mock"
+import { resetComponentMocks, setRouter } from "../../lib/component-mocks"
 
 const mockRefresh = mock(() => {})
 const mockFetch = mock(() =>
@@ -16,23 +16,13 @@ import { clerkState, clerkMock, resetClerkState } from "../../lib/clerk-mock"
 
 mock.module("@clerk/nextjs", () => clerkMock)
 
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    refresh: mockRefresh,
-  }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}))
-
-mock.module("@/components/ui/dialog", () => dialogMock)
-
 const { SubmissionButton } = await import("@/components/hackathon/submission-button")
 
 beforeEach(() => {
+  resetComponentMocks()
   clerkState.isLoaded = true
   clerkState.isSignedIn = true
+  setRouter({ refresh: mockRefresh })
   window.localStorage.clear()
   mockRefresh.mockClear()
   mockFetch.mockClear()

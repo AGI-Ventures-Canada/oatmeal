@@ -37,7 +37,7 @@ export function InstallSkillButton({ trigger }: InstallSkillButtonProps) {
     <Dialog>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button variant="outline">
+          <Button type="button" variant="outline">
             <Download className="size-4 mr-2" />
             Install Skill
           </Button>

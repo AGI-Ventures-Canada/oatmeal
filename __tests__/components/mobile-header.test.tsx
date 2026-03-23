@@ -1,22 +1,20 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test"
 import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react"
+import {
+  resetComponentMocks,
+  setPathname,
+  setRouter,
+  setCreateOrganizationDialog,
+} from "../lib/component-mocks"
 import { clerkState, clerkMock, resetClerkState } from "../lib/clerk-mock"
+
+mock.module("@clerk/nextjs", () => clerkMock)
 
 const mockPush = mock(() => {})
 const mockSetTheme = mock(() => {})
 
 let mockTheme = "system"
 let mockPathname = "/home"
-
-mock.module("next/navigation", () => ({
-  usePathname: () => mockPathname,
-  useSearchParams: () => new URLSearchParams(),
-  useRouter: () => ({ push: mockPush }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-}))
-
-mock.module("@clerk/nextjs", () => clerkMock)
 
 mock.module("next-themes", () => ({
   useTheme: () => ({ theme: mockTheme, setTheme: mockSetTheme }),
@@ -53,38 +51,11 @@ mock.module("next/link", () => ({
   ),
 }))
 
-mock.module("@/components/hackathon/create-hackathon-menu", () => ({
-  CreateHackathonMenu: ({ trigger }: { trigger: React.ReactNode }) => (
-    <div data-testid="create-hackathon-menu">{trigger}</div>
-  ),
-}))
-
-mock.module("@/components/install-skill-button", () => ({
-  InstallSkillButton: ({ trigger }: { trigger: React.ReactNode }) => (
-    <div data-testid="install-skill-button">{trigger}</div>
-  ),
-}))
-
-mock.module("@/components/create-organization-dialog", () => ({
-  CreateOrganizationDialog: ({
-    open,
-    onOpenChange,
-  }: {
-    open: boolean
-    onOpenChange: (v: boolean) => void
-  }) =>
-    open ? (
-      <div data-testid="create-org-dialog">
-        <button type="button" onClick={() => onOpenChange(false)}>
-          Close Org Dialog
-        </button>
-      </div>
-    ) : null,
-}))
 
 const { MobileHeader } = await import("@/components/mobile-header")
 
 beforeEach(() => {
+  resetComponentMocks()
   resetClerkState()
   clerkState.user = {
     id: "user_123",
@@ -96,6 +67,17 @@ beforeEach(() => {
   mockPathname = "/home"
   mockPush.mockClear()
   mockSetTheme.mockClear()
+  setRouter({ push: mockPush })
+  setPathname(mockPathname)
+  setCreateOrganizationDialog(({ open, onOpenChange }) =>
+    open ? (
+      <div data-testid="create-org-dialog">
+        <button type="button" onClick={() => onOpenChange?.(false)}>
+          Close Org Dialog
+        </button>
+      </div>
+    ) : null,
+  )
 })
 
 afterEach(() => {
@@ -305,6 +287,7 @@ describe("MobileHeader", () => {
 
     it("switches to personal workspace when Personal Workspace is clicked", () => {
       mockPathname = "/hackathons/123"
+      setPathname(mockPathname)
       openOrgSwitcher()
       const personalButtons = screen.getAllByText("Personal Workspace")
       const personalButton = personalButtons
@@ -318,6 +301,7 @@ describe("MobileHeader", () => {
 
     it("switches to a different org when clicked", () => {
       mockPathname = "/hackathons/123"
+      setPathname(mockPathname)
       openOrgSwitcher()
       fireEvent.click(screen.getByText("Second Org"))
       expect(clerkState.setActive).toHaveBeenCalledWith({

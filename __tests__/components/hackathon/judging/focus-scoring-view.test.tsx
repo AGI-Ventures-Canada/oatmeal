@@ -1,18 +1,6 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from "bun:test"
 import { render, screen, cleanup, fireEvent } from "@testing-library/react"
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    push: mock(() => {}),
-    refresh: mock(() => {}),
-    replace: mock(() => {}),
-    prefetch: mock(() => {}),
-  }),
-  usePathname: () => "/e/test-hack/judge",
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  useSearchParams: () => new URLSearchParams(),
-}))
+import { resetComponentMocks, setPathname } from "../../../lib/component-mocks"
 
 mock.module("@/components/hackathon/judging/scoring-panel", () => ({
   ScoringPanel: (props: { assignmentId: string; cancelLabel?: string; onClose: () => void; onScoreSubmitted: () => void }) => (
@@ -38,6 +26,8 @@ describe("FocusScoringView", () => {
   const onScoreSubmitted = mock(() => {})
 
   beforeEach(() => {
+    resetComponentMocks()
+    setPathname("/e/test-hack/judge")
     onScoreSubmitted.mockClear()
   })
 

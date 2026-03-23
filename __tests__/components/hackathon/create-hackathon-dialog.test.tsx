@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
-import * as dialogMock from "../../lib/dialog-mock"
+import { resetComponentMocks, setRouter } from "../../lib/component-mocks"
 
 const mockPush = mock(() => {})
 const mockFetch = mock(() =>
@@ -12,23 +12,13 @@ const mockFetch = mock(() =>
   )
 )
 
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}))
-
-mock.module("@/components/ui/dialog", () => dialogMock)
-
 const { CreateHackathonDialog } = await import("@/components/hackathon/create-hackathon-dialog")
 
 beforeEach(() => {
+  resetComponentMocks()
   mockPush.mockClear()
   mockFetch.mockClear()
+  setRouter({ push: mockPush })
   mockFetch.mockImplementation(() =>
     Promise.resolve(
       new Response(JSON.stringify({ slug: "my-awesome-hackathon" }), {

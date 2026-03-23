@@ -59,6 +59,8 @@ export function EmailChipsInput({
     ...existingEmails,
     ...entries.map((e) => e.email),
   ]
+  const allEmailsRef = useRef(allEmails)
+  allEmailsRef.current = allEmails
 
   const searchUsers = useCallback(async (query: string) => {
     if (!query.includes("@") || query.indexOf("@") === query.length - 1) {
@@ -82,7 +84,7 @@ export function EmailChipsInput({
       if (res.ok) {
         const data = await res.json()
         const filtered = (data.users || []).filter(
-          (u: UserSearchResult) => !allEmails.includes(u.email)
+          (u: UserSearchResult) => !allEmailsRef.current.includes(u.email)
         )
         setSearchResults(filtered)
         setShowDropdown(filtered.length > 0)
@@ -93,7 +95,7 @@ export function EmailChipsInput({
     } finally {
       setSearching(false)
     }
-  }, [hackathonId, allEmails])
+  }, [hackathonId])
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
