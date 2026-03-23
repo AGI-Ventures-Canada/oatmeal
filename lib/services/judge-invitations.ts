@@ -97,7 +97,7 @@ export type AcceptJudgeInvitationResult =
 export async function acceptJudgeInvitation(
   token: string,
   clerkUserId: string,
-  userEmail: string
+  userEmails: string | string[]
 ): Promise<AcceptJudgeInvitationResult> {
   const client = getSupabase() as unknown as SupabaseClient
 
@@ -115,7 +115,12 @@ export async function acceptJudgeInvitation(
     return { success: false, error: "Invitation has expired", code: "expired" }
   }
 
-  if (invitation.email.toLowerCase() !== userEmail.toLowerCase()) {
+  const emails = Array.isArray(userEmails) ? userEmails : [userEmails]
+  const matchesInvitation = emails.some(
+    (e) => e.toLowerCase() === invitation.email.toLowerCase()
+  )
+
+  if (!matchesInvitation) {
     return { success: false, error: "Your email does not match the invitation", code: "email_mismatch" }
   }
 
@@ -185,6 +190,50 @@ export async function cancelJudgeInvitation(
     .eq("id", invitationId)
 
   return { success: !error }
+}
+
+export async function sendPendingJudgeInvitationEmails(
+  hackathonId: string,
+  hackathonName: string,
+  inviterName: string
+): Promise<{ sent: number }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: pending } = await client
+    .from("judge_invitations")
+    .select("*")
+    .eq("hackathon_id", hackathonId)
+    .eq("status", "pending")
+    .is("emailed_at", null)
+
+  if (!pending || pending.length === 0) return { sent: 0 }
+
+  const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
+
+  const results = await Promise.allSettled(
+    (pending as JudgeInvitation[]).map(async (invitation) => {
+      const result = await sendJudgeInvitationEmail({
+        to: invitation.email,
+        hackathonName,
+        inviterName,
+        inviteToken: invitation.token,
+        expiresAt: invitation.expires_at,
+      })
+      if (result.success) {
+        await client
+          .from("judge_invitations")
+          .update({ emailed_at: new Date().toISOString() })
+          .eq("id", invitation.id)
+      }
+      return result
+    })
+  )
+
+  const sent = results.filter(
+    (r) => r.status === "fulfilled" && r.value.success
+  ).length
+
+  return { sent }
 }
 
 export async function listJudgeInvitations(

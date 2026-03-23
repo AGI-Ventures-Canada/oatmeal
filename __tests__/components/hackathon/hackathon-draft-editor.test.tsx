@@ -1,6 +1,15 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test"
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react"
-import * as dialogMock from "../../lib/dialog-mock"
+import {
+  resetComponentMocks,
+  setRouter,
+  setPathname,
+  setClerkIsSignedIn,
+  setClerkUser,
+  setClerkOrganization,
+  setClerkMemberships,
+  setClerkSetActive,
+} from "../../lib/component-mocks"
 
 const storage = new Map<string, string>()
 globalThis.localStorage = {
@@ -14,19 +23,6 @@ globalThis.localStorage = {
 
 import { clerkState, clerkMock, resetClerkState } from "../../lib/clerk-mock"
 
-const mockPush = mock(() => {})
-const mockClipboardWriteText = mock(() => Promise.resolve())
-
-mock.module("@clerk/nextjs", () => clerkMock)
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, refresh: mock(() => {}), replace: mock(() => {}), prefetch: mock(() => {}) }),
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => "/luma.com/test",
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-}))
-
 mock.module("next/image", () => ({
   default: (props: Record<string, unknown>) => {
     const { src, alt, width, height, ...rest } = props
@@ -34,7 +30,24 @@ mock.module("next/image", () => ({
   },
 }))
 
-mock.module("@/components/ui/dialog", () => dialogMock)
+mock.module("@/components/ui/dialog", () => ({
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) => open !== false ? <div>{children}</div> : null,
+  DialogContent: ({ children }: { children: React.ReactNode; className?: string }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  DialogTrigger: ({ children, asChild, ...props }: { children: React.ReactNode; asChild?: boolean; [key: string]: unknown }) => (
+    <div {...props}>{children}</div>
+  ),
+  DialogClose: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+    <button type="button" {...props}>{children}</button>
+  ),
+  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div>{children}</div>
+  ),
+  DialogOverlay: ({ className }: { className?: string }) => <div />,
+  DialogPortal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
 
 mock.module("@/components/hackathon/preview/hackathon-preview-client", () => ({
   HackathonPreviewClient: (props: { onBannerChange?: (imageUrl: string | null) => void }) => (
@@ -84,13 +97,21 @@ const defaultState = {
 }
 
 beforeEach(() => {
-  clerkState.isSignedIn = true
-  clerkState.organization = { id: "org_1", name: "Test Org" }
-  clerkState.memberships = []
-  clerkState.setActive.mockClear()
+  resetComponentMocks()
+  mockIsSignedIn = true
+  mockOrganization = { id: "org_1", name: "Test Org" }
+  mockMemberships = []
+  mockSetActive.mockClear()
   mockPush.mockClear()
   mockClipboardWriteText.mockClear()
   storage.clear()
+  setRouter({ push: mockPush })
+  setPathname("/luma.com/test")
+  setClerkIsSignedIn(mockIsSignedIn)
+  setClerkUser({ id: "user_test" })
+  setClerkOrganization(mockOrganization)
+  setClerkMemberships(mockMemberships)
+  setClerkSetActive(mockSetActive)
   Object.defineProperty(globalThis.navigator, "clipboard", {
     value: { writeText: mockClipboardWriteText },
     configurable: true,
@@ -141,6 +162,8 @@ describe("HackathonDraftEditor", () => {
         { organization: { id: "org_1", name: "Alpha Org", imageUrl: null } },
         { organization: { id: "org_2", name: "Beta Org", imageUrl: "https://example.com/beta.png" } },
       ]
+      setClerkOrganization(null)
+      setClerkMemberships(mockMemberships)
     })
 
     it("shows org gate dialog when submitting without org", async () => {
@@ -163,8 +186,9 @@ describe("HackathonDraftEditor", () => {
     })
 
     it("auto-submits after selecting an organization", async () => {
-      clerkState.setActive.mockImplementation(async () => {
-        clerkState.organization = { id: "org_1", name: "Alpha Org" }
+      mockSetActive.mockImplementation(async () => {
+        mockOrganization = { id: "org_1", name: "Alpha Org" }
+        setClerkOrganization(mockOrganization)
       })
       renderEditor()
       fireEvent.click(screen.getByText("Create Event"))
@@ -186,7 +210,8 @@ describe("HackathonDraftEditor", () => {
       fireEvent.click(screen.getByText("Create New Organization"))
 
       await waitFor(() => screen.getByTestId("simulate-org-created"))
-      clerkState.organization = { id: "org_new", name: "New Org" }
+      mockOrganization = { id: "org_new", name: "New Org" }
+      setClerkOrganization(mockOrganization)
       fireEvent.click(screen.getByTestId("simulate-org-created"))
 
       await waitFor(() => {
@@ -206,7 +231,8 @@ describe("HackathonDraftEditor", () => {
 
   describe("sign in gate", () => {
     beforeEach(() => {
-      clerkState.isSignedIn = false
+      mockIsSignedIn = false
+      setClerkIsSignedIn(false)
     })
 
     it("shows sign in dialog when not signed in", async () => {

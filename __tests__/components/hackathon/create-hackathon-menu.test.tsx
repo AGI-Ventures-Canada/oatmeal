@@ -1,21 +1,16 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test"
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react"
-import { clerkState, clerkMock, resetClerkState } from "../../lib/clerk-mock"
-import * as dialogMock from "../../lib/dialog-mock"
+import {
+  resetComponentMocks,
+  setRouter,
+  setClerkOrganization,
+  setClerkMemberships,
+  setClerkSetActive,
+  setCreateOrganizationDialog,
+  useRealCreateHackathonMenu,
+} from "../../lib/component-mocks"
 
 const mockPush = mock(() => {})
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}))
-
-mock.module("@clerk/nextjs", () => clerkMock)
 
 mock.module("next/image", () => ({
   default: (props: Record<string, unknown>) => {
@@ -24,29 +19,30 @@ mock.module("next/image", () => ({
   },
 }))
 
-mock.module("@/components/ui/dialog", () => dialogMock)
-
-mock.module("@/components/create-organization-dialog", () => ({
-  CreateOrganizationDialog: (props: { open: boolean; onSuccess?: () => void }) => {
-    return props.open ? (
-      <div data-testid="create-org-dialog">
-        <button type="button" data-testid="simulate-org-created" onClick={() => props.onSuccess?.()}>
-          Simulate Org Created
-        </button>
-      </div>
-    ) : null
-  },
-}))
-
 const { CreateHackathonMenu } = await import(
   "../../../components/hackathon/create-hackathon-menu"
 )
 
 beforeEach(() => {
-  clerkState.organization = null
-  clerkState.memberships = []
-  clerkState.setActive.mockClear()
+  resetComponentMocks()
+  useRealCreateHackathonMenu()
+  mockOrganization = null
+  mockMemberships = []
+  mockSetActive.mockClear()
   mockPush.mockClear()
+  setRouter({ push: mockPush })
+  setClerkOrganization(mockOrganization)
+  setClerkMemberships(mockMemberships)
+  setClerkSetActive(mockSetActive)
+  setCreateOrganizationDialog(({ open, onSuccess }) =>
+    open ? (
+      <div data-testid="create-org-dialog">
+        <button type="button" data-testid="simulate-org-created" onClick={() => onSuccess?.()}>
+          Simulate Org Created
+        </button>
+      </div>
+    ) : null,
+  )
 })
 
 afterEach(() => {
@@ -62,7 +58,8 @@ describe("CreateHackathonMenu", () => {
 
   describe("when user has an active organization", () => {
     beforeEach(() => {
-      clerkState.organization = { id: "org_1", name: "Test Org" }
+      mockOrganization = { id: "org_1", name: "Test Org" }
+      setClerkOrganization(mockOrganization)
     })
 
     it("opens the create hackathon dialog from the trigger", async () => {
@@ -90,6 +87,8 @@ describe("CreateHackathonMenu", () => {
           organization: { id: "org_2", name: "Beta Org", imageUrl: null },
         },
       ]
+      setClerkOrganization(mockOrganization)
+      setClerkMemberships(mockMemberships)
     })
 
     it("shows org gate dialog from the trigger", async () => {
@@ -174,8 +173,10 @@ describe("CreateHackathonMenu", () => {
 
   describe("when user has no memberships", () => {
     beforeEach(() => {
-      clerkState.organization = null
-      clerkState.memberships = []
+      mockOrganization = null
+      mockMemberships = []
+      setClerkOrganization(null)
+      setClerkMemberships([])
     })
 
     it("shows only create org button in org gate", async () => {

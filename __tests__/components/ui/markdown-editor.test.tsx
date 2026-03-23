@@ -1,22 +1,13 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from "bun:test"
 import { render, screen, cleanup, fireEvent } from "@testing-library/react"
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    push: mock(() => {}),
-    refresh: mock(() => {}),
-    replace: mock(() => {}),
-    prefetch: mock(() => {}),
-  }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}))
+import { resetComponentMocks } from "../../lib/component-mocks"
 
 const { MarkdownEditor } = await import("@/components/ui/markdown-editor")
 
 describe("MarkdownEditor", () => {
+  beforeEach(() => {
+    resetComponentMocks()
+  })
   afterEach(cleanup)
 
   it("renders Write and Preview tabs", () => {

@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requirePrincipal } from "@/lib/auth/principal"
 import { logAudit } from "@/lib/services/audit"
+import { resolveAdderName } from "@/lib/auth/resolve-adder-name"
 
 export const dashboardJudgingRoutes = new Elysia()
   .derive(async ({ request }) => {
@@ -321,6 +322,9 @@ export const dashboardJudgingRoutes = new Elysia()
 
       const typedBody = body as { clerkUserId?: string; email?: string }
 
+      const { clerkClient } = await import("@clerk/nextjs/server")
+      const client = await clerkClient()
+
       if (typedBody.clerkUserId) {
         const { addJudge } = await import("@/lib/services/judging")
         const addResult = await addJudge(params.id, typedBody.clerkUserId)
@@ -330,6 +334,26 @@ export const dashboardJudgingRoutes = new Elysia()
             status: 400,
             headers: { "Content-Type": "application/json" },
           })
+        }
+
+        const hackathon = result.hackathon
+        if (hackathon.status !== "draft") {
+          try {
+            const judgeUser = await client.users.getUser(typedBody.clerkUserId)
+            const judgeEmail = judgeUser.primaryEmailAddress?.emailAddress
+            if (judgeEmail) {
+              const addedByName = await resolveAdderName(principal, client)
+              const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
+              sendJudgeAddedNotification({
+                to: judgeEmail,
+                hackathonName: hackathon.name,
+                hackathonSlug: hackathon.slug,
+                addedByName,
+              }).catch(console.error)
+            }
+          } catch {
+            // non-blocking — judge was still added
+          }
         }
 
         await logAudit({
@@ -349,9 +373,6 @@ export const dashboardJudgingRoutes = new Elysia()
       if (typedBody.email) {
         const email = typedBody.email
 
-        const { clerkClient } = await import("@clerk/nextjs/server")
-        const client = await clerkClient()
-
         try {
           const users = await client.users.getUserList({ emailAddress: [email] })
           if (users.data.length > 0) {
@@ -363,6 +384,22 @@ export const dashboardJudgingRoutes = new Elysia()
                 status: 400,
                 headers: { "Content-Type": "application/json" },
               })
+            }
+
+            const hackathon = result.hackathon
+            if (hackathon.status !== "draft") {
+              try {
+                const addedByName = await resolveAdderName(principal, client)
+                const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
+                sendJudgeAddedNotification({
+                  to: email,
+                  hackathonName: hackathon.name,
+                  hackathonSlug: hackathon.slug,
+                  addedByName,
+                }).catch(console.error)
+              } catch {
+                // non-blocking — judge was still added
+              }
             }
 
             await logAudit({
@@ -402,23 +439,18 @@ export const dashboardJudgingRoutes = new Elysia()
         }
 
         const hackathon = result.hackathon
-        let inviterName = "An organizer"
-        if (principal.kind === "user") {
-          try {
-            const inviterUser = await client.users.getUser(principal.userId)
-            inviterName = [inviterUser.firstName, inviterUser.lastName].filter(Boolean).join(" ") || "An organizer"
-          } catch {
-            // fall back to default
-          }
+
+        if (hackathon.status !== "draft") {
+          const inviterName = await resolveAdderName(principal, client)
+          const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
+          sendJudgeInvitationEmail({
+            to: email,
+            hackathonName: hackathon.name,
+            inviterName,
+            inviteToken: inviteResult.invitation.token,
+            expiresAt: inviteResult.invitation.expires_at,
+          }).catch(console.error)
         }
-        const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
-        await sendJudgeInvitationEmail({
-          to: email,
-          hackathonName: hackathon.name,
-          inviterName,
-          inviteToken: inviteResult.invitation.token,
-          expiresAt: inviteResult.invitation.expires_at,
-        })
 
         await logAudit({
           principal,

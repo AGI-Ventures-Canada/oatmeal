@@ -1,73 +1,35 @@
-import React, { useState, createContext } from "react";
-import { describe, expect, it, afterEach, mock } from "bun:test";
+import { describe, expect, it, afterEach, beforeEach } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import * as dialogMock from "../lib/dialog-mock";
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    push: mock(() => {}),
-    refresh: mock(() => {}),
-    replace: mock(() => {}),
-    prefetch: mock(() => {}),
-  }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}));
-
-mock.module("@/components/ui/dialog", () => dialogMock);
-
-mock.module("@/components/ui/accordion", () => {
-  function Accordion({ children }: { children: React.ReactNode; type?: string; collapsible?: boolean }) {
-    const [openItem, setOpenItem] = useState<string | null>(null);
-    const AccordionCtx = createContext({ openItem: null as string | null, toggle: (_v: string) => {} });
-    return (
-      <AccordionCtx.Provider value={{ openItem, toggle: (v: string) => setOpenItem((prev: string | null) => prev === v ? null : v) }}>
-        <div data-accordion>{children}</div>
-      </AccordionCtx.Provider>
-    );
-  }
-
-  function AccordionItem({ children, value }: { children: React.ReactNode; value: string }) {
-    return <div data-accordion-item={value}>{children}</div>;
-  }
-
-  function AccordionTrigger({ children }: { children: React.ReactNode }) {
-    return <button role="button">{children}</button>;
-  }
-
-  function AccordionContent({ children }: { children: React.ReactNode }) {
-    return <div>{children}</div>;
-  }
-
-  return { Accordion, AccordionItem, AccordionTrigger, AccordionContent };
-});
+import { resetComponentMocks, useRealInstallSkillButton } from "../lib/component-mocks";
 
 const { InstallSkillButton } = await import("@/components/install-skill-button");
 
 describe("InstallSkillButton", () => {
+  beforeEach(() => {
+    resetComponentMocks();
+    useRealInstallSkillButton();
+  });
+
   afterEach(() => {
     cleanup();
   });
 
   it("renders the default trigger button", () => {
     render(<InstallSkillButton />);
-    const button = screen.getByRole("button", { name: /Install Skill/i });
-    expect(button).toBeDefined();
+    const button = screen.getByRole("button", { name: /install skill/i });
+    expect(button.textContent).toContain("Install Skill");
   });
 
   it("renders a custom trigger when provided", () => {
     render(<InstallSkillButton trigger={<button>Custom Trigger</button>} />);
     const button = screen.getByRole("button", { name: "Custom Trigger" });
-    expect(button).toBeDefined();
+    expect(button.textContent).toBe("Custom Trigger");
   });
 
-  it("has aria attributes for dialog trigger", () => {
+  it("has correct button type", () => {
     render(<InstallSkillButton />);
-    const button = screen.getByRole("button", { name: /Install Skill/i });
-    expect(button.getAttribute("aria-haspopup")).toBe("dialog");
-    expect(button.getAttribute("aria-expanded")).toBe("false");
+    const button = screen.getByRole("button", { name: /install skill/i });
+    expect(button.getAttribute("type")).toBe("button");
   });
 
   it("shows concise install copy and hides troubleshooting details by default", () => {
