@@ -1,8 +1,10 @@
 import { auth } from "@clerk/nextjs/server"
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { CliAuthClient } from "@/components/cli-auth/cli-auth-client"
 import { completeCliAuthSession } from "@/lib/services/cli-auth"
 import { getOrCreateTenant, getOrCreatePersonalTenant } from "@/lib/services/tenants"
+import { logAudit } from "@/lib/services/audit"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -38,6 +40,9 @@ export default async function CliAuthPage({ searchParams }: PageProps) {
     redirect(`/sign-in?redirect_url=/cli-auth?token=${encodeURIComponent(token)}`)
   }
 
+  const headersList = await headers()
+  const hostname = headersList.get("host")?.split(":")[0]
+
   let tenant
   if (orgId) {
     tenant = await getOrCreateTenant(orgId)
@@ -50,11 +55,26 @@ export default async function CliAuthPage({ searchParams }: PageProps) {
     result = { success: false, error: "Could not resolve your account. Please try again." }
   } else {
     try {
-      result = await completeCliAuthSession(token, tenant.id, "cli-auth")
+      result = await completeCliAuthSession(token, tenant.id, hostname)
+      if (result.success) {
+        await logAudit({
+          principal: {
+            kind: "user",
+            tenantId: tenant.id,
+            userId,
+            orgId: orgId ?? null,
+            orgRole: null,
+            scopes: [],
+          },
+          action: "cli_auth.completed",
+          resourceType: "cli_auth_session",
+          resourceId: token.slice(0, 12),
+        })
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error"
       console.error("[cli-auth] Failed to complete session:", message)
-      result = { success: false, error: message }
+      result = { success: false, error: "Something went wrong. Please try again." }
     }
   }
 

@@ -2190,7 +2190,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       const message = err instanceof Error ? err.message : "Unknown error"
       console.error("[cli-auth/complete] Failed:", message, err instanceof Error ? err.stack : "")
       return new Response(
-        JSON.stringify({ error: message }),
+        JSON.stringify({ error: "Internal server error" }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       )
     }
