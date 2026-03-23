@@ -3,12 +3,12 @@ import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/re
 import {
   resetComponentMocks,
   setRouter,
-  setClerkOrganization,
-  setClerkMemberships,
-  setClerkSetActive,
   setCreateOrganizationDialog,
   useRealCreateHackathonMenu,
 } from "../../lib/component-mocks"
+import { clerkState, clerkMock } from "../../lib/clerk-mock"
+
+mock.module("@clerk/nextjs", () => clerkMock)
 
 const mockPush = mock(() => {})
 
@@ -26,14 +26,11 @@ const { CreateHackathonMenu } = await import(
 beforeEach(() => {
   resetComponentMocks()
   useRealCreateHackathonMenu()
-  mockOrganization = null
-  mockMemberships = []
-  mockSetActive.mockClear()
+  clerkState.organization = null
+  clerkState.memberships = []
+  clerkState.setActive.mockClear()
   mockPush.mockClear()
   setRouter({ push: mockPush })
-  setClerkOrganization(mockOrganization)
-  setClerkMemberships(mockMemberships)
-  setClerkSetActive(mockSetActive)
   setCreateOrganizationDialog(({ open, onSuccess }) =>
     open ? (
       <div data-testid="create-org-dialog">
@@ -58,8 +55,7 @@ describe("CreateHackathonMenu", () => {
 
   describe("when user has an active organization", () => {
     beforeEach(() => {
-      mockOrganization = { id: "org_1", name: "Test Org" }
-      setClerkOrganization(mockOrganization)
+      clerkState.organization = { id: "org_1", name: "Test Org" }
     })
 
     it("opens the create hackathon dialog from the trigger", async () => {
@@ -87,8 +83,6 @@ describe("CreateHackathonMenu", () => {
           organization: { id: "org_2", name: "Beta Org", imageUrl: null },
         },
       ]
-      setClerkOrganization(mockOrganization)
-      setClerkMemberships(mockMemberships)
     })
 
     it("shows org gate dialog from the trigger", async () => {
@@ -173,10 +167,8 @@ describe("CreateHackathonMenu", () => {
 
   describe("when user has no memberships", () => {
     beforeEach(() => {
-      mockOrganization = null
-      mockMemberships = []
-      setClerkOrganization(null)
-      setClerkMemberships([])
+      clerkState.organization = null
+      clerkState.memberships = []
     })
 
     it("shows only create org button in org gate", async () => {

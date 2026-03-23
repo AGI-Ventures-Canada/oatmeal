@@ -56,7 +56,15 @@ const mockFetch = mock((input: string | URL | Request, init?: RequestInit) => {
   );
 });
 
-import { resetComponentMocks, setRouter } from "../../lib/component-mocks";
+mock.module("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: mockRefresh,
+  }),
+  redirect: mock(() => {}),
+  notFound: mock(() => {}),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 mock.module("next/link", () => ({
   default: ({
@@ -121,8 +129,6 @@ mock.module("@/components/ui/kbd", () => ({
 const { SponsorsEditForm } = await import("@/components/hackathon/edit-drawer/sponsors-edit-form");
 
 beforeEach(() => {
-  resetComponentMocks();
-  setRouter({ refresh: mockRefresh });
   mockRefresh.mockClear();
   mockCloseDrawer.mockClear();
   mockFetch.mockClear();
@@ -246,7 +252,7 @@ describe("SponsorsEditForm", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Google")).toBeDefined();
-    });
+    }, { timeout: 3000 });
 
     expect(screen.queryByText("Google Saved")).toBeNull();
 

@@ -1,11 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
-import {
-  resetComponentMocks,
-  setRouter,
-  setClerkIsSignedIn,
-  setClerkUser,
-} from "../../lib/component-mocks"
+import { resetComponentMocks, setRouter } from "../../lib/component-mocks"
 
 const mockRefresh = mock(() => {})
 const mockFetch = mock(() =>
@@ -19,52 +14,15 @@ const mockFetch = mock(() =>
 
 import { clerkState, clerkMock, resetClerkState } from "../../lib/clerk-mock"
 
-mock.module("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode
-    open?: boolean
-    onOpenChange?: (open: boolean) => void
-  }) =>
-    open !== false ? (
-      <div>
-        <button type="button" onClick={() => onOpenChange?.(false)}>
-          Close Dialog
-        </button>
-        {children}
-      </div>
-    ) : null,
-  DialogContent: ({ children }: { children: React.ReactNode; className?: string }) => (
-    <div role="dialog">{children}</div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-  DialogTrigger: ({ children, asChild, ...props }: { children: React.ReactNode; asChild?: boolean; [key: string]: unknown }) => (
-    <div {...props}>{children}</div>
-  ),
-  DialogClose: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
-    <button type="button" {...props}>{children}</button>
-  ),
-  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div>{children}</div>
-  ),
-  DialogOverlay: ({ className }: { className?: string }) => <div />,
-  DialogPortal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}))
+mock.module("@clerk/nextjs", () => clerkMock)
 
 const { SubmissionButton } = await import("@/components/hackathon/submission-button")
 
 beforeEach(() => {
   resetComponentMocks()
-  mockIsLoaded = true
-  mockIsSignedIn = true
+  clerkState.isLoaded = true
+  clerkState.isSignedIn = true
   setRouter({ refresh: mockRefresh })
-  setClerkIsSignedIn(mockIsSignedIn)
-  setClerkUser({ id: "user_test" })
   window.localStorage.clear()
   mockRefresh.mockClear()
   mockFetch.mockClear()

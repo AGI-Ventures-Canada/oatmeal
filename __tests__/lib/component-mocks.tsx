@@ -1,3 +1,4 @@
+import React from "react"
 import { mock } from "bun:test"
 
 // ============================================================================
@@ -175,17 +176,31 @@ mock.module("@clerk/nextjs", () => ({
 }))
 
 mock.module("@/components/ui/dialog", () => ({
-  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
-    open !== false ? <div>{children}</div> : null,
+  Dialog: ({ children, open, onOpenChange }: { children: React.ReactNode; open?: boolean; onOpenChange?: (v: boolean) => void }) => {
+    const isControlled = open !== undefined
+    if (isControlled && !open) return null
+    return (
+      <div>
+        {isControlled && <button type="button" onClick={() => onOpenChange?.(false)}>Close Dialog</button>}
+        {children}
+      </div>
+    )
+  },
   DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div role="dialog" className={className}>{children}</div>
   ),
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-  DialogTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean; [key: string]: unknown }) => (
-    <div>{children}</div>
-  ),
+  DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean; [key: string]: unknown }) => {
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
+        "aria-haspopup": "dialog",
+        "aria-expanded": "false",
+      })
+    }
+    return <button type="button" aria-haspopup="dialog" aria-expanded={false}>{children}</button>
+  },
   DialogClose: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
     <button type="button" {...props}>{children}</button>
   ),

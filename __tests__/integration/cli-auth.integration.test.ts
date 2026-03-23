@@ -84,7 +84,8 @@ mock.module("@/lib/services/submissions", () => ({
 mock.module("@/lib/utils/url", () => ({
   urlInputProps: { type: "text", inputMode: "url", autoCapitalize: "none", spellCheck: false },
   normalizeUrl: mock((url: string) => url),
-  normalizeOptionalUrl: mock((url: string | undefined) => url ?? null),
+  normalizeUrlFieldValue: mock((url: string) => url),
+  normalizeOptionalUrl: mock((url: string | null | undefined) => url ?? null),
 }))
 
 const { Elysia } = await import("elysia")

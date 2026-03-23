@@ -1,6 +1,33 @@
-import { describe, expect, it, afterEach, beforeEach } from "bun:test";
+import React, { useState, createContext } from "react";
+import { describe, expect, it, afterEach, beforeEach, mock } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { resetComponentMocks, useRealInstallSkillButton } from "../lib/component-mocks";
+
+mock.module("@/components/ui/accordion", () => {
+  function Accordion({ children }: { children: React.ReactNode; type?: string; collapsible?: boolean }) {
+    const [openItem, setOpenItem] = useState<string | null>(null);
+    const AccordionCtx = createContext({ openItem: null as string | null, toggle: (_v: string) => {} });
+    return (
+      <AccordionCtx.Provider value={{ openItem, toggle: (v: string) => setOpenItem((prev: string | null) => prev === v ? null : v) }}>
+        <div data-accordion>{children}</div>
+      </AccordionCtx.Provider>
+    );
+  }
+
+  function AccordionItem({ children, value }: { children: React.ReactNode; value: string }) {
+    return <div data-accordion-item={value}>{children}</div>;
+  }
+
+  function AccordionTrigger({ children }: { children: React.ReactNode }) {
+    return <button role="button">{children}</button>;
+  }
+
+  function AccordionContent({ children }: { children: React.ReactNode }) {
+    return <div>{children}</div>;
+  }
+
+  return { Accordion, AccordionItem, AccordionTrigger, AccordionContent };
+});
 
 const { InstallSkillButton } = await import("@/components/install-skill-button");
 
@@ -16,13 +43,15 @@ describe("InstallSkillButton", () => {
 
   it("renders the default trigger button", () => {
     render(<InstallSkillButton />);
-    const button = screen.getByRole("button", { name: /install skill/i });
+    const button = screen.getByRole("button", { name: /Install Skill/i });
+    expect(button).toBeDefined();
     expect(button.textContent).toContain("Install Skill");
   });
 
   it("renders a custom trigger when provided", () => {
     render(<InstallSkillButton trigger={<button>Custom Trigger</button>} />);
     const button = screen.getByRole("button", { name: "Custom Trigger" });
+    expect(button).toBeDefined();
     expect(button.textContent).toBe("Custom Trigger");
   });
 
@@ -30,6 +59,13 @@ describe("InstallSkillButton", () => {
     render(<InstallSkillButton />);
     const button = screen.getByRole("button", { name: /install skill/i });
     expect(button.getAttribute("type")).toBe("button");
+  });
+
+  it("has aria attributes for dialog trigger", () => {
+    render(<InstallSkillButton />);
+    const button = screen.getByRole("button", { name: /Install Skill/i });
+    expect(button.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
   });
 
   it("shows concise install copy and hides troubleshooting details by default", () => {

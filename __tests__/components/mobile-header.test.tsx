@@ -4,14 +4,11 @@ import {
   resetComponentMocks,
   setPathname,
   setRouter,
-  setClerkIsSignedIn,
-  setClerkUser,
-  setClerkInstance,
-  setClerkOrganization,
-  setClerkMemberships,
-  setClerkSetActive,
   setCreateOrganizationDialog,
 } from "../lib/component-mocks"
+import { clerkState, clerkMock, resetClerkState } from "../lib/clerk-mock"
+
+mock.module("@clerk/nextjs", () => clerkMock)
 
 const mockPush = mock(() => {})
 const mockSetTheme = mock(() => {})
@@ -59,9 +56,9 @@ const { MobileHeader } = await import("@/components/mobile-header")
 
 beforeEach(() => {
   resetComponentMocks()
-  mockIsSignedIn = true
-  mockUser = {
-    firstName: "Alex",
+  resetClerkState()
+  clerkState.user = {
+    id: "user_123",
     fullName: "Alex Ivany",
     firstName: "Alex",
     imageUrl: null,
@@ -72,12 +69,6 @@ beforeEach(() => {
   mockSetTheme.mockClear()
   setRouter({ push: mockPush })
   setPathname(mockPathname)
-  setClerkIsSignedIn(mockIsSignedIn)
-  setClerkUser(mockUser as Record<string, unknown>)
-  setClerkInstance({ openUserProfile: mockOpenUserProfile, signOut: mockSignOut })
-  setClerkOrganization(mockOrganization)
-  setClerkMemberships(mockMemberships)
-  setClerkSetActive(mockSetActive)
   setCreateOrganizationDialog(({ open, onOpenChange }) =>
     open ? (
       <div data-testid="create-org-dialog">
@@ -124,8 +115,7 @@ describe("MobileHeader", () => {
     })
 
     it("shows user image when imageUrl is provided", () => {
-      mockUser = { ...mockUser!, imageUrl: "https://example.com/avatar.png" }
-      setClerkUser(mockUser as Record<string, unknown>)
+      clerkState.user = { ...clerkState.user!, imageUrl: "https://example.com/avatar.png" }
       render(<MobileHeader />)
       const img = screen.getByAltText("Alex Ivany")
       expect(img.getAttribute("src")).toBe("https://example.com/avatar.png")
@@ -140,10 +130,8 @@ describe("MobileHeader", () => {
     })
 
     it("does not show avatar when signed out", () => {
-      mockIsSignedIn = false
-      mockUser = null
-      setClerkIsSignedIn(false)
-      setClerkUser(null)
+      clerkState.isSignedIn = false
+      clerkState.user = null
       render(<MobileHeader />)
       const header = getHeader()
       expect(within(header).queryByRole("button", { name: /user/i })).toBeNull()
@@ -191,10 +179,8 @@ describe("MobileHeader", () => {
     })
 
     it("shows sign in link when signed out", () => {
-      mockIsSignedIn = false
-      mockUser = null
-      setClerkIsSignedIn(false)
-      setClerkUser(null)
+      clerkState.isSignedIn = false
+      clerkState.user = null
       openMenu()
       expect(screen.getByText("Sign in")).toBeDefined()
     })
@@ -260,8 +246,6 @@ describe("MobileHeader", () => {
           },
         },
       ]
-      setClerkOrganization(mockOrganization)
-      setClerkMemberships(mockMemberships)
     })
 
     function openOrgSwitcher() {
@@ -278,8 +262,7 @@ describe("MobileHeader", () => {
     })
 
     it("shows Personal Workspace when no org is active", () => {
-      mockOrganization = null
-      setClerkOrganization(null)
+      clerkState.organization = null
       openMenu()
       expect(
         screen.getAllByText("Personal Workspace").length
@@ -341,7 +324,6 @@ describe("MobileHeader", () => {
         name: "Alpha Corp",
         imageUrl: null,
       }
-      setClerkOrganization(mockOrganization)
       openMenu()
       const rootNav = getOverlay().querySelector("nav")!
       const orgButton = within(rootNav)
@@ -380,10 +362,8 @@ describe("MobileHeader", () => {
     })
 
     it("does not show theme toggle when signed out", () => {
-      mockIsSignedIn = false
-      mockUser = null
-      setClerkIsSignedIn(false)
-      setClerkUser(null)
+      clerkState.isSignedIn = false
+      clerkState.user = null
       openMenu()
       expect(screen.queryByText("Theme")).toBeNull()
     })
