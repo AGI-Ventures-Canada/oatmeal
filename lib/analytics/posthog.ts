@@ -24,7 +24,14 @@ export function trackEvent(
   const client = getClient()
   if (!client) return
 
-  client.capture({ distinctId, event, properties })
+  client.capture({
+    distinctId,
+    event,
+    properties: {
+      ...properties,
+      environment: process.env.VERCEL_ENV || "development",
+    },
+  })
 }
 
 export function identifyUser(

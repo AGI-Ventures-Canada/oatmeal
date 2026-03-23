@@ -38,7 +38,7 @@ describe("Server Analytics", () => {
     expect(mockCapture).toHaveBeenCalledWith({
       distinctId: "user-123",
       event: "hackathon.created",
-      properties: { hackathonId: "h1" },
+      properties: { hackathonId: "h1", environment: "development" },
     })
   })
 
