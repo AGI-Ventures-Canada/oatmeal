@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemedClerkProvider } from "@/components/clerk-provider"
 import { PostHogProvider } from "@/components/posthog-provider"
+import { SearchCommand } from "@/components/search-command"
 import "./globals.css"
 
 const jetbrainsMono = JetBrains_Mono({
@@ -38,6 +39,7 @@ export default function RootLayout({
         <ThemeProvider>
           <ThemedClerkProvider>
             <PostHogProvider>{children}</PostHogProvider>
+            <SearchCommand />
           </ThemedClerkProvider>
         </ThemeProvider>
       </body>

@@ -83,6 +83,7 @@ export function SearchCommand() {
   const [canScrollMore, setCanScrollMore] = useState(false)
   const [events, setEvents] = useState<HackathonResult[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
+  const [fetchedQuery, setFetchedQuery] = useState("")
   const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const { organization } = useOrganization()
@@ -110,6 +111,7 @@ export function SearchCommand() {
   useEffect(() => {
     const delay = open && query.length >= 2 ? 300 : 0
     const timer = setTimeout(() => {
+      setFetchedQuery(query)
       if (!open || query.length < 2) {
         setEvents([])
         setEventsLoading(false)
@@ -168,6 +170,7 @@ export function SearchCommand() {
       setCanScrollMore(false)
       setQuery("")
       setEvents([])
+      setFetchedQuery("")
     }
   }
 
@@ -195,7 +198,8 @@ export function SearchCommand() {
 
   const matchedDocs = q ? searchDocs(q, 2) : []
 
-  const hasSearchResults = eventsLoading || matchedEvents.length > 0 || matchedFunctionality.length > 0 || matchedDocs.length > 0
+  const debouncePending = open && query.length >= 2 && query !== fetchedQuery
+  const hasSearchResults = debouncePending || eventsLoading || matchedEvents.length > 0 || matchedFunctionality.length > 0 || matchedDocs.length > 0
 
   return (
     <>
@@ -216,11 +220,13 @@ export function SearchCommand() {
             <CommandList className="max-h-[60vh] md:max-h-[420px]" onScroll={checkScroll}>
               {q ? (
                 <>
-                  <CommandEmpty>No results found.</CommandEmpty>
-                  {(eventsLoading || matchedEvents.length > 0) && (
+                  {!hasSearchResults && (
+                    <div className="py-6 text-center text-sm text-muted-foreground">No results found.</div>
+                  )}
+                  {(debouncePending || eventsLoading || matchedEvents.length > 0) && (
                     <>
                       <CommandGroup heading="Events">
-                        {eventsLoading ? (
+                        {debouncePending || eventsLoading ? (
                           <div className="px-2 py-1.5 text-sm text-muted-foreground">Searching events...</div>
                         ) : (
                           matchedEvents.map((event) => {
@@ -271,7 +277,6 @@ export function SearchCommand() {
                       ))}
                     </CommandGroup>
                   )}
-                  {!hasSearchResults && null}
                 </>
               ) : (
                 <>

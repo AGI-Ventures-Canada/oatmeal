@@ -25,7 +25,7 @@ import {
   Download,
   Compass,
 } from "lucide-react"
-import { Kbd } from "@/components/ui/kbd"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useSearchParams, useRouter } from "next/navigation"
@@ -246,7 +246,7 @@ export function AppSidebarSimple() {
             >
               <Search className="size-4" />
               <span className="text-sm flex-1">Search</span>
-              <Kbd>⌘K</Kbd>
+              <KbdGroup><Kbd>⌘</Kbd>+<Kbd>K</Kbd></KbdGroup>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
