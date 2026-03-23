@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Hackathon, HackathonParticipant } from "@/lib/db/hackathon-types"
 import { sortByStartDate } from "@/lib/utils/format"
 import { clerkClient } from "@clerk/nextjs/server"
+import { trackEvent } from "@/lib/analytics/posthog"
 
 type ParticipantWithHackathon = HackathonParticipant & {
   hackathons: Hackathon
@@ -186,6 +187,11 @@ export async function createHackathon(
     return null
   }
 
+  trackEvent(tenantId, "hackathon.created", {
+    hackathonId: data.id,
+    name: input.name,
+  })
+
   return data as unknown as Hackathon
 }
 
@@ -315,6 +321,11 @@ export async function registerForHackathon(
   }
 
   if (result.success) {
+    trackEvent(clerkUserId, "hackathon.registered", {
+      hackathonId,
+      participantId: result.participant_id,
+      teamId: result.team_id,
+    })
     return { success: true, participantId: result.participant_id, teamId: result.team_id }
   }
 

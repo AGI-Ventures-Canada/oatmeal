@@ -1,6 +1,7 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Submission } from "@/lib/db/hackathon-types"
+import { trackEvent } from "@/lib/analytics/posthog"
 
 export type ParticipantInfo = {
   participantId: string
@@ -103,6 +104,13 @@ export async function createSubmission(
     console.error("Failed to create submission:", error)
     return null
   }
+
+  const distinctId = teamId || participantId
+  trackEvent(distinctId, "submission.created", {
+    hackathonId,
+    submissionId: data.id,
+    title: input.title,
+  })
 
   return data as unknown as Submission
 }
