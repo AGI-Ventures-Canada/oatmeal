@@ -1,18 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import * as dialogMock from "../lib/dialog-mock"
+import { resetComponentMocks, setRouter } from "../lib/component-mocks"
 
 const mockPush = mock(() => {})
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}))
 
 mock.module("next/link", () => ({
   default: ({
@@ -35,6 +26,8 @@ mock.module("@/components/ui/dialog", () => dialogMock)
 const { HomepageHero } = await import("@/components/homepage-hero")
 
 beforeEach(() => {
+  resetComponentMocks()
+  setRouter({ push: mockPush })
   mockPush.mockClear()
 })
 
