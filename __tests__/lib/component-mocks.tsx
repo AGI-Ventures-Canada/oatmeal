@@ -1,5 +1,6 @@
 import React from "react"
 import { mock } from "bun:test"
+import { clerkState, resetClerkState } from "./clerk-mock"
 
 // ============================================================================
 // Next.js Navigation State
@@ -33,47 +34,40 @@ export function getRouter() {
 }
 
 // ============================================================================
-// Clerk State
+// Clerk State (delegates to shared clerkState from clerk-mock)
 // ============================================================================
 
-let currentAuth: Record<string, unknown> = { isSignedIn: true, userId: "user_test", orgId: null, orgRole: null }
-let currentUser: Record<string, unknown> | null = { id: "user_test", firstName: "Test", fullName: "Test User", imageUrl: null, emailAddresses: [] }
-let currentIsSignedIn = true
-let currentClerk: Record<string, unknown> = {}
-let currentOrganization: Record<string, unknown> | null = null
-let currentMemberships: Array<Record<string, unknown>> = []
-let currentSetActive = mock(() => Promise.resolve())
-
-export function setClerkAuth(auth: Record<string, unknown>) {
-  currentAuth = auth
+export function setClerkAuth(auth: { isSignedIn?: boolean; userId?: string }) {
+  if (auth.isSignedIn !== undefined) clerkState.isSignedIn = auth.isSignedIn
+  if (auth.userId !== undefined) clerkState.userId = auth.userId
 }
 
 export function setClerkUser(user: Record<string, unknown> | null) {
-  currentUser = user
+  clerkState.user = user as typeof clerkState.user
 }
 
 export function setClerkIsSignedIn(isSignedIn: boolean) {
-  currentIsSignedIn = isSignedIn
+  clerkState.isSignedIn = isSignedIn
 }
 
-export function setClerkInstance(clerk: Record<string, unknown>) {
-  currentClerk = { ...currentClerk, ...clerk }
+export function setClerkInstance(_clerk: Record<string, unknown>) {
+  // No-op: openUserProfile/signOut are on clerkState directly
 }
 
 export function setClerkOrganization(org: Record<string, unknown> | null) {
-  currentOrganization = org
+  clerkState.organization = org as typeof clerkState.organization
 }
 
 export function setClerkMemberships(memberships: Array<Record<string, unknown>>) {
-  currentMemberships = memberships
+  clerkState.memberships = memberships as typeof clerkState.memberships
 }
 
-export function setClerkSetActive(fn: typeof currentSetActive) {
-  currentSetActive = fn
+export function setClerkSetActive(fn: () => Promise<void>) {
+  clerkState.setActive.mockImplementation(fn)
 }
 
 export function getSetActive() {
-  return currentSetActive
+  return clerkState.setActive
 }
 
 // ============================================================================
@@ -137,13 +131,7 @@ export function resetComponentMocks() {
     back: mock(() => {}),
     forward: mock(() => {}),
   }
-  currentAuth = { isSignedIn: true, userId: "user_test", orgId: null, orgRole: null }
-  currentUser = { id: "user_test", firstName: "Test", fullName: "Test User", imageUrl: null, emailAddresses: [] }
-  currentIsSignedIn = true
-  currentClerk = {}
-  currentOrganization = null
-  currentMemberships = []
-  currentSetActive = mock(() => Promise.resolve())
+  resetClerkState()
   createHackathonMenuImpl = ({ trigger }: { trigger: React.ReactNode }) => <div data-testid="create-hackathon-menu">{trigger}</div>
   installSkillButtonImpl = ({ trigger }: { trigger?: React.ReactNode }) => <div data-testid="install-skill-button">{trigger}</div>
   createOrganizationDialogImpl = ({ open }: { open: boolean }) =>
@@ -164,15 +152,15 @@ mock.module("next/navigation", () => ({
 }))
 
 mock.module("@clerk/nextjs", () => ({
-  useAuth: () => ({ isSignedIn: currentIsSignedIn, userId: currentAuth.userId, orgId: currentAuth.orgId, orgRole: currentAuth.orgRole }),
-  useUser: () => ({ isLoaded: true, isSignedIn: currentIsSignedIn, user: currentUser }),
-  useClerk: () => currentClerk,
-  useOrganization: () => ({ organization: currentOrganization }),
+  useAuth: () => ({ isSignedIn: clerkState.isSignedIn, userId: clerkState.userId }),
+  useUser: () => ({ isLoaded: clerkState.isLoaded, isSignedIn: clerkState.isSignedIn, user: clerkState.isSignedIn ? clerkState.user : null }),
+  useClerk: () => ({ openUserProfile: clerkState.openUserProfile, signOut: clerkState.signOut }),
+  useOrganization: () => ({ organization: clerkState.organization }),
   useOrganizationList: () => ({
-    userMemberships: { data: currentMemberships },
-    setActive: currentSetActive,
+    userMemberships: { data: clerkState.memberships },
+    setActive: clerkState.setActive,
   }),
-  auth: mock(() => Promise.resolve({ userId: currentAuth.userId ?? "user_test", orgId: currentAuth.orgId ?? null })),
+  auth: mock(() => Promise.resolve({ userId: clerkState.userId ?? "user_test", orgId: null })),
 }))
 
 mock.module("@/components/ui/dialog", () => ({
