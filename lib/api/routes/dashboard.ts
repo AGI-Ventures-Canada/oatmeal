@@ -31,7 +31,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         },
       })
     }
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
+    console.error("[dashboard] Unhandled error:", error instanceof Error ? error.message : error, error instanceof Error ? error.stack : "")
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     })
@@ -2166,24 +2167,33 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       )
     }
 
-    const { completeCliAuthSession } = await import("@/lib/services/cli-auth")
-    const result = await completeCliAuthSession(body.deviceToken, principal.tenantId, body.hostname)
+    try {
+      const { completeCliAuthSession } = await import("@/lib/services/cli-auth")
+      const result = await completeCliAuthSession(body.deviceToken, principal.tenantId, body.hostname)
 
-    if (!result.success) {
+      if (!result.success) {
+        return new Response(
+          JSON.stringify({ error: result.error }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      await logAudit({
+        principal,
+        action: "cli_auth.completed",
+        resourceType: "cli_auth_session",
+        resourceId: body.deviceToken.slice(0, 12),
+      })
+
+      return { success: true }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error"
+      console.error("[cli-auth/complete] Failed:", message, err instanceof Error ? err.stack : "")
       return new Response(
-        JSON.stringify({ error: result.error }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: message }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
       )
     }
-
-    await logAudit({
-      principal,
-      action: "cli_auth.completed",
-      resourceType: "cli_auth_session",
-      resourceId: body.deviceToken.slice(0, 12),
-    })
-
-    return { success: true }
   }, {
     detail: {
       summary: "Complete CLI auth",

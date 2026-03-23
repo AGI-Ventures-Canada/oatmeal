@@ -7,6 +7,9 @@ import { importRoutes, dashboardImportRoutes } from "./routes/import"
 import { adminRoutes } from "./routes/admin"
 
 export const api = new Elysia({ prefix: "/api" })
+  .onError(({ error, path }) => {
+    console.error(`[api] Error on ${path}:`, error instanceof Error ? error.message : error, error instanceof Error ? error.stack : "")
+  })
   .use(
     swagger({
       path: "/swagger",

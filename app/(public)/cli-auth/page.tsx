@@ -1,6 +1,8 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { CliAuthClient } from "@/components/cli-auth/cli-auth-client"
+import { completeCliAuthSession } from "@/lib/services/cli-auth"
+import { getOrCreateTenant, getOrCreatePersonalTenant } from "@/lib/services/tenants"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -30,15 +32,35 @@ export default async function CliAuthPage({ searchParams }: PageProps) {
     )
   }
 
-  const { userId } = await auth()
+  const { userId, orgId } = await auth()
 
   if (!userId) {
     redirect(`/sign-in?redirect_url=/cli-auth?token=${encodeURIComponent(token)}`)
   }
 
+  let tenant
+  if (orgId) {
+    tenant = await getOrCreateTenant(orgId)
+  } else {
+    tenant = await getOrCreatePersonalTenant(userId)
+  }
+
+  let result: { success: boolean; error?: string }
+  if (!tenant) {
+    result = { success: false, error: "Could not resolve your account. Please try again." }
+  } else {
+    try {
+      result = await completeCliAuthSession(token, tenant.id, "cli-auth")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error"
+      console.error("[cli-auth] Failed to complete session:", message)
+      result = { success: false, error: message }
+    }
+  }
+
   return (
     <div className="min-h-[calc(100vh-80px)] flex items-center justify-center p-4">
-      <CliAuthClient token={token} />
+      <CliAuthClient result={result} />
     </div>
   )
 }
