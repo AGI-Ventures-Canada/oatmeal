@@ -76,6 +76,39 @@ describe("Rate Limiting", () => {
       expect(result.remaining).toBe(9)
     })
 
+    it("fails open when allowed field is wrong type", async () => {
+      setMockRpcImplementation(() =>
+        Promise.resolve({ data: { allowed: "yes", remaining: 9, reset_at: Date.now() + 60000 }, error: null })
+      )
+
+      const result = await checkRateLimit("test-key", { maxRequests: 10, windowMs: 60000 })
+
+      expect(result.allowed).toBe(true)
+      expect(result.remaining).toBe(9)
+    })
+
+    it("fails open when remaining field is wrong type", async () => {
+      setMockRpcImplementation(() =>
+        Promise.resolve({ data: { allowed: true, remaining: "nine", reset_at: Date.now() + 60000 }, error: null })
+      )
+
+      const result = await checkRateLimit("test-key", { maxRequests: 10, windowMs: 60000 })
+
+      expect(result.allowed).toBe(true)
+      expect(result.remaining).toBe(9)
+    })
+
+    it("fails open when reset_at field is wrong type", async () => {
+      setMockRpcImplementation(() =>
+        Promise.resolve({ data: { allowed: true, remaining: 9, reset_at: null }, error: null })
+      )
+
+      const result = await checkRateLimit("test-key", { maxRequests: 10, windowMs: 60000 })
+
+      expect(result.allowed).toBe(true)
+      expect(result.remaining).toBe(9)
+    })
+
     it("passes correct parameters to RPC", async () => {
       let capturedParams: Record<string, unknown> = {}
       setMockRpcImplementation((fn, params) => {

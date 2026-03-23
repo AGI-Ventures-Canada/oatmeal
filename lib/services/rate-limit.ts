@@ -36,10 +36,22 @@ export async function checkRateLimit(
   }
 
   const result = data as Record<string, unknown>
+  if (
+    typeof result.allowed !== "boolean" ||
+    typeof result.remaining !== "number" ||
+    typeof result.reset_at !== "number"
+  ) {
+    return {
+      allowed: true,
+      remaining: config.maxRequests - 1,
+      resetAt: Date.now() + config.windowMs,
+    }
+  }
+
   return {
-    allowed: result.allowed as boolean,
-    remaining: result.remaining as number,
-    resetAt: result.reset_at as number,
+    allowed: result.allowed,
+    remaining: result.remaining,
+    resetAt: result.reset_at,
   }
 }
 

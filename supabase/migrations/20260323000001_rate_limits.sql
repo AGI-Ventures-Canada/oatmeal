@@ -57,14 +57,6 @@ BEGIN
 
   UPDATE rate_limits SET count = v_count + 1 WHERE key = p_key;
 
-  -- Probabilistic lazy cleanup: on ~1% of calls, delete up to 100 expired rows.
-  -- Avoids pg_cron dependency while keeping the table from growing unboundedly.
-  IF random() < 0.01 THEN
-    DELETE FROM rate_limits WHERE ctid IN (
-      SELECT ctid FROM rate_limits WHERE reset_at < v_now LIMIT 100
-    );
-  END IF;
-
   -- v_count >= p_max_requests was already handled above, so allowed is always
   -- true here. remaining is at least 0 by the same guarantee.
   RETURN jsonb_build_object(
