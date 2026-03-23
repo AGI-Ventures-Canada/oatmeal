@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS rate_limits (
 ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Deny all access to rate_limits" ON rate_limits FOR ALL USING (false);
 
+CREATE INDEX IF NOT EXISTS rate_limits_reset_at_idx ON rate_limits (reset_at);
+
 CREATE OR REPLACE FUNCTION check_rate_limit(
   p_key text,
   p_max_requests integer,
@@ -24,6 +26,12 @@ BEGIN
   -- FOR UPDATE locks only the row for p_key, so concurrent requests for
   -- different keys never block each other. This matches the pattern used
   -- in register_for_hackathon, accept_team_invitation, and judging assignment.
+  --
+  -- Race on first insert: if no row exists yet, FOR UPDATE acquires no lock,
+  -- so two simultaneous requests for a new key both see NOT FOUND and both
+  -- enter the upsert branch. The second upsert resets count=1, losing one
+  -- increment. This allows one extra request at the start of the first window
+  -- for a brand-new key. Acceptable for a rate limiter (fails permissively).
   SELECT count, reset_at INTO v_count, v_reset_at
   FROM rate_limits WHERE key = p_key FOR UPDATE;
 
@@ -57,9 +65,11 @@ BEGIN
     );
   END IF;
 
+  -- v_count >= p_max_requests was already handled above, so allowed is always
+  -- true here. remaining is at least 0 by the same guarantee.
   RETURN jsonb_build_object(
-    'allowed', v_count + 1 <= p_max_requests,
-    'remaining', GREATEST(p_max_requests - (v_count + 1), 0),
+    'allowed', true,
+    'remaining', p_max_requests - (v_count + 1),
     'reset_at', v_reset_at
   );
 END;
