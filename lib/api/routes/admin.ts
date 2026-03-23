@@ -45,7 +45,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     requireAdmin(principal)
 
     const rateLimitKey = principal.kind === "admin" ? `admin:${principal.userId}` : `admin-key:${principal.keyId}`
-    const result = checkRateLimit(rateLimitKey, { maxRequests: 60, windowMs: 60_000 })
+    const result = await checkRateLimit(rateLimitKey, { maxRequests: 60, windowMs: 60_000 })
     if (!result.allowed) {
       throw new RateLimitError(result.resetAt, result.remaining)
     }

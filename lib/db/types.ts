@@ -1018,6 +1018,24 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          count: number
+          key: string
+          reset_at: number
+        }
+        Insert: {
+          count?: number
+          key: string
+          reset_at?: number
+        }
+        Update: {
+          count?: number
+          key?: string
+          reset_at?: number
+        }
+        Relationships: []
+      }
       schedules: {
         Row: {
           agent_id: string | null
@@ -1517,6 +1535,10 @@ export type Database = {
           results_count: number
           success: boolean
         }[]
+      }
+      check_rate_limit: {
+        Args: { p_key: string; p_max_requests: number; p_window_ms: number }
+        Returns: Json
       }
       effective_hackathon_status: {
         Args: {
