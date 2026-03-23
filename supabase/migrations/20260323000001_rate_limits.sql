@@ -21,6 +21,9 @@ DECLARE
 BEGIN
   v_now := (extract(epoch from clock_timestamp()) * 1000)::bigint;
 
+  -- FOR UPDATE locks only the row for p_key, so concurrent requests for
+  -- different keys never block each other. This matches the pattern used
+  -- in register_for_hackathon, accept_team_invitation, and judging assignment.
   SELECT count, reset_at INTO v_count, v_reset_at
   FROM rate_limits WHERE key = p_key FOR UPDATE;
 
@@ -46,10 +49,40 @@ BEGIN
 
   UPDATE rate_limits SET count = v_count + 1 WHERE key = p_key;
 
+  -- Probabilistic lazy cleanup: on ~1% of calls, delete up to 100 expired rows.
+  -- Avoids pg_cron dependency while keeping the table from growing unboundedly.
+  IF random() < 0.01 THEN
+    DELETE FROM rate_limits WHERE ctid IN (
+      SELECT ctid FROM rate_limits WHERE reset_at < v_now LIMIT 100
+    );
+  END IF;
+
   RETURN jsonb_build_object(
     'allowed', v_count + 1 <= p_max_requests,
     'remaining', GREATEST(p_max_requests - (v_count + 1), 0),
     'reset_at', v_reset_at
   );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION cleanup_expired_rate_limits(
+  p_limit integer DEFAULT 1000
+) RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_deleted integer;
+BEGIN
+  WITH deleted AS (
+    DELETE FROM rate_limits
+    WHERE ctid IN (
+      SELECT ctid FROM rate_limits
+      WHERE reset_at < (extract(epoch from clock_timestamp()) * 1000)::bigint
+      LIMIT p_limit
+    )
+    RETURNING 1
+  )
+  SELECT count(*) INTO v_deleted FROM deleted;
+  RETURN v_deleted;
 END;
 $$;

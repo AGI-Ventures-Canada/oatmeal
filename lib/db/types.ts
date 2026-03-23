@@ -1540,6 +1540,10 @@ export type Database = {
         Args: { p_key: string; p_max_requests: number; p_window_ms: number }
         Returns: Json
       }
+      cleanup_expired_rate_limits: {
+        Args: { p_limit?: number }
+        Returns: number
+      }
       effective_hackathon_status: {
         Args: {
           ends_at: string

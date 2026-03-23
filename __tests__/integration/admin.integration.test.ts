@@ -17,6 +17,12 @@ const mockRunScenario = mock(() =>
   Promise.resolve({ hackathonId: "h-1", slug: "test-pre-registration", tenantId: "t-1" })
 )
 
+const mockRpc = mock(() => Promise.resolve({ data: 42, error: null }))
+
+mock.module("@/lib/db/client", () => ({
+  supabase: () => ({ rpc: mockRpc }),
+}))
+
 mock.module("@/lib/services/admin", () => ({
   getPlatformStats: mockGetPlatformStats,
   listAllHackathons: mockListAllHackathons,
@@ -130,6 +136,8 @@ describe("Admin API Routes", () => {
     mockLogAudit.mockReset()
     mockListScenarios.mockReset()
     mockRunScenario.mockReset()
+    mockRpc.mockReset()
+    mockRpc.mockResolvedValue({ data: 42, error: null })
 
     mockGetPlatformStats.mockResolvedValue({
       tenants: 5,
@@ -509,6 +517,83 @@ describe("Admin API Routes", () => {
 
       expect(res.status).toBe(403)
       expect(mockRunScenario).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("POST /admin/maintenance/cleanup-rate-limits", () => {
+    it("returns deleted count for admin", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      mockRpc.mockResolvedValue({ data: 37, error: null })
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/maintenance/cleanup-rate-limits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.deleted).toBe(37)
+    })
+
+    it("passes limit param to RPC", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+
+      await app.handle(
+        new Request("http://localhost/api/admin/maintenance/cleanup-rate-limits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 500 }),
+        })
+      )
+
+      expect(mockRpc).toHaveBeenCalledWith("cleanup_expired_rate_limits", { p_limit: 500 })
+    })
+
+    it("uses default limit of 1000 when not specified", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+
+      await app.handle(
+        new Request("http://localhost/api/admin/maintenance/cleanup-rate-limits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        })
+      )
+
+      expect(mockRpc).toHaveBeenCalledWith("cleanup_expired_rate_limits", { p_limit: 1000 })
+    })
+
+    it("rejects read-only API key (requires admin:write)", async () => {
+      mockResolvePrincipal.mockResolvedValue(readOnlyApiKeyPrincipal)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/maintenance/cleanup-rate-limits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        })
+      )
+
+      expect(res.status).toBe(403)
+      expect(mockRpc).not.toHaveBeenCalled()
+    })
+
+    it("returns 500 on RPC error", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      mockRpc.mockResolvedValue({ data: null, error: { message: "connection failed" } })
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/maintenance/cleanup-rate-limits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        })
+      )
+
+      expect(res.status).toBe(500)
     })
   })
 

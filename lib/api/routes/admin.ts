@@ -10,6 +10,7 @@ import {
   deleteHackathon,
 } from "@/lib/services/admin"
 import { listScenarios, runScenario } from "@/lib/services/admin-scenarios"
+import { supabase } from "@/lib/db/client"
 
 const HackathonStatusEnum = t.Union([
   t.Literal("draft"),
@@ -229,6 +230,30 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       detail: {
         summary: "Run test scenario",
         description: "Run a test scenario to seed the database with sample data.",
+      },
+    }
+  )
+  .post(
+    "/maintenance/cleanup-rate-limits",
+    async ({ body, principal }) => {
+      requireAdminScopes(principal, ["admin:write"])
+      const db = supabase()
+      const limit = body?.limit ?? 1000
+      const { data, error } = await db.rpc("cleanup_expired_rate_limits", { p_limit: limit })
+      if (error) {
+        throw new Error(error.message)
+      }
+      return { deleted: data as number }
+    },
+    {
+      body: t.Optional(
+        t.Object({
+          limit: t.Optional(t.Number({ description: "Max rows to delete (default 1000)" })),
+        })
+      ),
+      detail: {
+        summary: "Clean up expired rate limit rows",
+        description: "Deletes expired rows from the rate_limits table. Safe to call at any time.",
       },
     }
   )
