@@ -1,7 +1,11 @@
 import { homedir } from "node:os"
 import { join } from "node:path"
+import { createRequire } from "node:module"
 
-export const VERSION = "0.1.0"
+const require = createRequire(import.meta.url)
+const pkg = require("../package.json") as { version: string }
+
+export const VERSION = pkg.version
 export const DEFAULT_BASE_URL = "https://getoatmeal.com"
 export const CONFIG_DIR = join(homedir(), ".hackathon")
 export const CONFIG_FILE = join(CONFIG_DIR, "config.json")
