@@ -1,10 +1,6 @@
 import { AuthError } from "@/lib/auth/principal"
 import { RateLimitError, getRateLimitHeaders } from "@/lib/services/rate-limit"
 
-// The `error.name` fallbacks below guard against cross-module-boundary cases where two
-// separate copies of a class exist (e.g. different Bun module instances in tests), causing
-// `instanceof` to return false even for the same class. Checking `.name` makes the handler
-// resilient without relaxing type safety elsewhere.
 export function handleRouteError(error: unknown): Response {
   if (error instanceof AuthError || (error instanceof Error && error.name === "AuthError")) {
     const e = error as AuthError

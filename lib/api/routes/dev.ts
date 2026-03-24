@@ -1,8 +1,6 @@
 import { Elysia, t } from "elysia"
 import { HackathonStatusEnum } from "@/lib/api/validators"
 
-// No auth: only mounted when NODE_ENV === "development" (see lib/api/index.ts).
-// Never add this route to a production-visible mount.
 export const devRoutes = new Elysia({ prefix: "/dev" }).patch(
   "/hackathons/:id/status",
   async ({ params, body }) => {

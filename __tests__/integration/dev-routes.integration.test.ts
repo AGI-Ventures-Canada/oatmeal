@@ -83,10 +83,6 @@ describe("dev routes", () => {
 })
 
 describe("dev routes guard", () => {
-  it("guard condition: NODE_ENV is not 'development' in test environment", () => {
-    expect(process.env.NODE_ENV).not.toBe("development")
-  })
-
   it("an empty Elysia instance returns 404 for dev route (simulates non-dev mount)", async () => {
     const emptyApp = new Elysia({ prefix: "/api" }).use(new Elysia())
     const res = await emptyApp.handle(

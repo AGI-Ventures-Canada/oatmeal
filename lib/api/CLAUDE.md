@@ -8,6 +8,10 @@ All API routes are handled by a single Elysia instance via a Next.js catch-all r
 - `app/api/[[...slugs]]/route.ts` delegates to Elysia
 - Elysia instance defined in `lib/api/index.ts`
 
+## Dev Routes
+
+`lib/api/routes/dev.ts` exports `devRoutes`, which has **no auth**. It is only safe because `lib/api/index.ts` conditionally mounts it when `NODE_ENV === "development"`. Never add it to a production-visible mount.
+
 ## Route Namespaces
 
 ```
@@ -22,6 +26,10 @@ All API routes are handled by a single Elysia instance via a Next.js catch-all r
 - `/credentials/*` - Contains sensitive secrets
 - `/hackathons/participating`, `/hackathons/sponsored` - User-specific views
 - `/organizations/search` - User-specific search
+
+## Error Handling
+
+`handleRouteError` in `lib/api/routes/errors.ts` checks both `instanceof` and `error.name` for `AuthError` and `RateLimitError`. The `.name` fallback guards against cross-module-boundary cases where Bun loads two separate copies of the same class (e.g. in tests), causing `instanceof` to return false for an otherwise identical class.
 
 ## Key Patterns
 
