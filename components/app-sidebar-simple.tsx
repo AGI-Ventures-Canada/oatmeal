@@ -60,6 +60,7 @@ import { ThemeSwitcher } from "@/components/theme-switcher"
 import { CreateHackathonMenu } from "@/components/hackathon/create-hackathon-menu"
 import { CreateOrganizationDialog } from "@/components/create-organization-dialog"
 import { InstallSkillButton } from "@/components/install-skill-button"
+import { OPEN_SEARCH_EVENT } from "@/components/search-command"
 
 const mainItems = [
   { title: "Dashboard", href: "/home", icon: Home },
@@ -242,7 +243,7 @@ export function AppSidebarSimple() {
           <SidebarMenuItem>
             <SidebarMenuButton
               className="h-9 text-muted-foreground"
-              onClick={() => document.dispatchEvent(new CustomEvent("open-search"))}
+              onClick={() => document.dispatchEvent(new CustomEvent(OPEN_SEARCH_EVENT))}
             >
               <Search className="size-4" />
               <span className="text-sm flex-1">Search</span>

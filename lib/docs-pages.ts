@@ -1,3 +1,6 @@
+// Manually maintained — must stay in sync with the actual doc routes in app/docs/.
+// When adding, renaming, or removing a doc page, update this array and the
+// PINNED_DOC_URLS constant in components/search-command.tsx if needed.
 export type DocPage = {
   title: string
   description: string

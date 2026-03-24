@@ -44,7 +44,7 @@ afterEach(() => {
   globalThis.fetch = globalFetch
 })
 
-const { SearchCommand } = await import("@/components/search-command")
+const { SearchCommand, OPEN_SEARCH_EVENT } = await import("@/components/search-command")
 
 function openMenu() {
   render(<SearchCommand />)
@@ -82,7 +82,7 @@ describe("SearchCommand", () => {
 
     it("opens when open-search custom event is dispatched", async () => {
       render(<SearchCommand />)
-      document.dispatchEvent(new CustomEvent("open-search"))
+      document.dispatchEvent(new CustomEvent(OPEN_SEARCH_EVENT))
       await waitFor(() => expect(screen.getByRole("dialog")).toBeDefined())
     })
   })
@@ -323,5 +323,6 @@ describe("SearchCommand", () => {
       fireEvent.click(screen.getByText("Create Hackathon"))
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
     })
+
   })
 })
