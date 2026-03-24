@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks"
 import { auth } from "@clerk/nextjs/server"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { AdminPrincipal, ApiKeyPrincipal, Principal, PrincipalKindMap, Scope } from "./types"
@@ -12,28 +13,32 @@ export function isAdminEnabled(): boolean {
 const principalCache = new WeakMap<Request, Principal>()
 
 type ClerkSession = Awaited<ReturnType<typeof auth>>
-const clerkSessionCache = new WeakMap<Request, ClerkSession>()
 
 /**
- * Fallback: store session by a unique request identifier in case
- * Elysia creates a new Request object (breaking WeakMap identity).
+ * Uses Node.js AsyncLocalStorage to pass the Clerk session from the
+ * Next.js route handler level into Elysia's derive hooks.
+ *
+ * This works because V8's async/await always preserves AsyncLocalStorage
+ * context — even through Elysia's code-generated handlers — whereas
+ * Next.js's own AsyncLocalStorage (used by Clerk's auth()) gets lost
+ * inside Elysia's compiled route pipeline.
  */
-let lastPreResolvedSession: { url: string; session: ClerkSession } | null = null
+const clerkSessionStorage = new AsyncLocalStorage<ClerkSession>()
 
 /**
- * Pre-resolve Clerk auth at the Next.js route handler level where
- * AsyncLocalStorage context is guaranteed, before passing to Elysia.
- * Elysia's code-generated handlers can lose the Next.js async context,
- * causing auth() to return { userId: null } inside derive hooks.
+ * Pre-resolve Clerk auth and run the callback within an AsyncLocalStorage
+ * context that carries the session. resolvePrincipal reads from this store.
  */
-export async function preResolveAuth(request: Request): Promise<void> {
-  if (request.headers.get("authorization")?.startsWith("Bearer sk_")) return
+export async function withPreResolvedAuth<T>(request: Request, fn: () => Promise<T>): Promise<T> {
+  if (request.headers.get("authorization")?.startsWith("Bearer sk_")) {
+    return fn()
+  }
   try {
     const session = await auth()
-    clerkSessionCache.set(request, session)
-    lastPreResolvedSession = { url: request.url, session }
+    return clerkSessionStorage.run(session, fn)
   } catch (err) {
     console.error("[auth:pre] failed:", err instanceof Error ? err.message : err)
+    return fn()
   }
 }
 
@@ -70,17 +75,7 @@ async function resolvePrincipalUncached(request: Request): Promise<Principal> {
 
   let session
   try {
-    // Try WeakMap first (same Request object), then fallback to last pre-resolved
-    // session (for when Elysia creates a new Request), then call auth() directly
-    const cached = clerkSessionCache.get(request)
-    if (cached) {
-      session = cached
-    } else if (lastPreResolvedSession) {
-      session = lastPreResolvedSession.session
-      lastPreResolvedSession = null
-    } else {
-      session = await auth()
-    }
+    session = clerkSessionStorage.getStore() ?? await auth()
   } catch (err) {
     console.error("[auth] Clerk auth() threw:", err instanceof Error ? err.message : err)
     return { kind: "anon" }

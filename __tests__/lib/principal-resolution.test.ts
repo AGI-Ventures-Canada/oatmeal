@@ -6,7 +6,7 @@ import {
   createChainableMock,
 } from "./supabase-mock"
 
-const { resolvePrincipal, preResolveAuth } = await import("@/lib/auth/principal")
+const { resolvePrincipal, withPreResolvedAuth } = await import("@/lib/auth/principal")
 
 describe("resolvePrincipal", () => {
   beforeEach(() => {
@@ -286,12 +286,12 @@ describe("resolvePrincipal with Elysia double derive", () => {
   })
 })
 
-describe("preResolveAuth", () => {
+describe("withPreResolvedAuth", () => {
   beforeEach(() => {
     resetAllMocks()
   })
 
-  it("caches Clerk session so resolvePrincipal uses it instead of calling auth()", async () => {
+  it("passes Clerk session via AsyncLocalStorage so resolvePrincipal uses it", async () => {
     let authCallCount = 0
     mockAuth.mockImplementation(() => {
       authCallCount++
@@ -311,24 +311,25 @@ describe("preResolveAuth", () => {
     )
 
     const request = new Request("http://localhost/api/dashboard/hackathons")
-    await preResolveAuth(request)
 
-    // auth() was called once by preResolveAuth
-    expect(authCallCount).toBe(1)
+    await withPreResolvedAuth(request, async () => {
+      // auth() was called once by withPreResolvedAuth
+      expect(authCallCount).toBe(1)
 
-    // Now make auth() return anon (simulating lost async context in Elysia)
-    mockAuth.mockImplementation(() =>
-      Promise.resolve({ userId: null, orgId: null, orgRole: null })
-    )
+      // Now make auth() return anon (simulating lost async context in Elysia)
+      mockAuth.mockImplementation(() =>
+        Promise.resolve({ userId: null, orgId: null, orgRole: null })
+      )
 
-    // resolvePrincipal should use the pre-resolved session, not call auth() again
-    const principal = await resolvePrincipal(request)
-    expect(principal.kind).toBe("user")
-    if (principal.kind === "user") {
-      expect(principal.tenantId).toBe("tenant-123")
-    }
-    // auth() should NOT have been called again
-    expect(authCallCount).toBe(1)
+      // resolvePrincipal should use the pre-resolved session from AsyncLocalStorage
+      const principal = await resolvePrincipal(request)
+      expect(principal.kind).toBe("user")
+      if (principal.kind === "user") {
+        expect(principal.tenantId).toBe("tenant-123")
+      }
+      // auth() should NOT have been called again
+      expect(authCallCount).toBe(1)
+    })
   })
 
   it("skips pre-resolve for API key requests", async () => {
@@ -341,9 +342,10 @@ describe("preResolveAuth", () => {
     const request = new Request("http://localhost/api/dashboard/hackathons", {
       headers: { Authorization: "Bearer sk_live_abc123" },
     })
-    await preResolveAuth(request)
 
-    // auth() should NOT be called for API key requests
-    expect(authCallCount).toBe(0)
+    await withPreResolvedAuth(request, async () => {
+      // auth() should NOT be called for API key requests
+      expect(authCallCount).toBe(0)
+    })
   })
 })

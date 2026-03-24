@@ -1,10 +1,8 @@
 import { api } from "@/lib/api"
-import { auth } from "@clerk/nextjs/server"
-import { preResolveAuth } from "@/lib/auth/principal"
+import { withPreResolvedAuth } from "@/lib/auth/principal"
 
 async function handler(request: Request) {
-  await preResolveAuth(request)
-  return api.fetch(request)
+  return withPreResolvedAuth(request, async () => api.fetch(request))
 }
 
 export const GET = handler
