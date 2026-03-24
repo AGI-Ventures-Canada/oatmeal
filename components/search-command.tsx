@@ -208,6 +208,7 @@ export function SearchCommand() {
         title="Search"
         description="Navigate to any page or action"
         className="md:max-w-2xl"
+        contentStyle={{ top: "calc(50vh - 235px)", translate: "-50% 0" }}
       >
         <Command shouldFilter={false}>
           <CommandInput
