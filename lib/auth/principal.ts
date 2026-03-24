@@ -42,9 +42,17 @@ async function resolvePrincipalUncached(request: Request): Promise<Principal> {
     }
   }
 
-  const session = await auth()
+  let session
+  try {
+    session = await auth()
+  } catch (err) {
+    console.error("[auth] Clerk auth() threw:", err instanceof Error ? err.message : err)
+    return { kind: "anon" }
+  }
+
   const { userId, orgId, orgRole } = session
   if (!userId) {
+    console.warn("[auth] No userId from Clerk session", { path: new URL(request.url).pathname })
     return { kind: "anon" }
   }
 
@@ -60,13 +68,19 @@ async function resolvePrincipalUncached(request: Request): Promise<Principal> {
   }
 
   let tenant
-  if (orgId) {
-    tenant = await getOrCreateTenant(orgId)
-  } else {
-    tenant = await getOrCreatePersonalTenant(userId)
+  try {
+    if (orgId) {
+      tenant = await getOrCreateTenant(orgId)
+    } else {
+      tenant = await getOrCreatePersonalTenant(userId)
+    }
+  } catch (err) {
+    console.error("[auth] Tenant resolution failed:", { userId, orgId, error: err instanceof Error ? err.message : err })
+    return { kind: "anon" }
   }
 
   if (!tenant) {
+    console.error("[auth] Tenant is null after getOrCreate:", { userId, orgId })
     return { kind: "anon" }
   }
 
