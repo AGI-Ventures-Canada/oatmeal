@@ -580,8 +580,7 @@ Beyond the standard Clerk/Supabase keys, these secrets must be in `.env.local` f
 |----------|---------|---------------|
 | `API_KEY_SECRET` | Hashes API keys before storing in the database | `openssl rand -hex 32` |
 | `ENCRYPTION_KEY` | Encrypts API keys in CLI auth sessions (must be exactly 64 hex chars / 32 bytes) | `openssl rand -hex 32` |
-| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog project API key for analytics (Vercel only) | PostHog dashboard |
-| `NEXT_PUBLIC_POSTHOG_HOST` | PostHog ingest host (optional, defaults to `https://us.i.posthog.com`) | — |
+| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog project API key for analytics (Vercel production only) | PostHog dashboard |
 
 Without `ENCRYPTION_KEY`, CLI login (`hackathon login`) will fail with "Internal server error" because `completeCliAuthSession` calls `encryptToken()` which requires it.
 
