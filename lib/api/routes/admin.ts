@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requireAdmin, requireAdminScopes, AuthError } from "@/lib/auth/principal"
 import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
+import { handleRouteError } from "./errors"
 import { logAudit } from "@/lib/services/audit"
 import {
   getPlatformStats,
@@ -28,21 +29,7 @@ const LocationTypeEnum = t.Union([
 ])
 
 export const adminRoutes = new Elysia({ prefix: "/admin" })
-  .onError(({ error, set }) => {
-    if (error instanceof AuthError || (error instanceof Error && error.name === "AuthError")) {
-      const e = error as AuthError
-      set.status = e.statusCode
-      return { error: e.message }
-    }
-    if (error instanceof RateLimitError || (error instanceof Error && error.name === "RateLimitError")) {
-      const e = error as RateLimitError
-      set.status = 429
-      set.headers = getRateLimitHeaders({ allowed: false, remaining: e.remaining, resetAt: e.resetAt }) as Record<string, string>
-      return { error: "Rate limit exceeded" }
-    }
-    set.status = 500
-    return { error: "Internal server error" }
-  })
+  .onError(({ error }) => handleRouteError(error))
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     requireAdmin(principal)

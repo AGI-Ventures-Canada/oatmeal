@@ -41,6 +41,7 @@ export const devRoutes = new Elysia({ prefix: "/dev" }).patch(
       })
     }
 
+    console.log(`[dev] hackathon ${params.id} status → ${hackathon.status}`)
     return { id: hackathon.id, status: hackathon.status }
   },
   {

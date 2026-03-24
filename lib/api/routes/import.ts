@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import { extractLumaEventData } from "@/lib/services/luma-import"
 import { resolvePrincipal, requirePrincipal, AuthError } from "@/lib/auth/principal"
+import { handleRouteError } from "./errors"
 import { logAudit } from "@/lib/services/audit"
 import { normalizeUrl } from "@/lib/utils/url"
 
@@ -52,15 +53,7 @@ export const importRoutes = new Elysia({ prefix: "/public/import" })
   )
 
 export const dashboardImportRoutes = new Elysia({ prefix: "/dashboard/import" })
-  .onError(({ error, set }) => {
-    if (error instanceof AuthError || (error instanceof Error && error.name === "AuthError")) {
-      const e = error as AuthError
-      set.status = e.statusCode
-      return { error: e.message }
-    }
-    set.status = 500
-    return { error: "Internal server error" }
-  })
+  .onError(({ error }) => handleRouteError(error))
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     return { principal }
