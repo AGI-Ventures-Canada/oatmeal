@@ -23,11 +23,11 @@ const nextConfig: NextConfig = {
         destination: "/llms.mdx/docs/:path*",
       },
       {
-        source: "/ingest/static/:path*",
+        source: "/t/static/:path*",
         destination: "https://us-assets.i.posthog.com/static/:path*",
       },
       {
-        source: "/ingest/:path*",
+        source: "/t/:path*",
         destination: "https://us.i.posthog.com/:path*",
       },
     ]
