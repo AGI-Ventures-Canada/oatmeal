@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test"
+import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
 
 const mockUpdateHackathonSettings = mock(() => Promise.resolve(null))
 
@@ -32,12 +32,19 @@ const PATCH = (id: string, status: string) =>
   )
 
 describe("dev routes", () => {
+  const originalNodeEnv = process.env.NODE_ENV
+
   beforeEach(() => {
+    Object.assign(process.env, { NODE_ENV: "development" })
     mockUpdateHackathonSettings.mockReset()
     mockSupabaseChain.from.mockClear()
     mockSupabaseChain.select.mockClear()
     mockSupabaseChain.eq.mockClear()
     mockSupabaseChain.single.mockReset()
+  })
+
+  afterEach(() => {
+    Object.assign(process.env, { NODE_ENV: originalNodeEnv })
   })
 
   it("returns 404 when hackathon not found", async () => {
@@ -86,6 +93,20 @@ describe("dev routes", () => {
 })
 
 describe("dev routes guard", () => {
+  const originalNodeEnv = process.env.NODE_ENV
+
+  afterEach(() => {
+    Object.assign(process.env, { NODE_ENV: originalNodeEnv })
+  })
+
+  it("returns 403 when NODE_ENV is not development (runtime defence-in-depth)", async () => {
+    Object.assign(process.env, { NODE_ENV: "production" })
+    const res = await PATCH("hackathon-abc", "active")
+    expect(res.status).toBe(403)
+    const body = await res.json()
+    expect(body.error).toBe("Forbidden")
+  })
+
   it("an empty Elysia instance returns 404 for dev route (simulates non-dev mount)", async () => {
     const emptyApp = new Elysia({ prefix: "/api" }).use(new Elysia())
     const res = await emptyApp.handle(

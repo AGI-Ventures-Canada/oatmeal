@@ -4,6 +4,11 @@ import { HackathonStatusEnum } from "@/lib/api/validators"
 export const devRoutes = new Elysia({ prefix: "/dev" }).patch(
   "/hackathons/:id/status",
   async ({ params, body, set }) => {
+    if (process.env.NODE_ENV !== "development") {
+      set.status = 403
+      return { error: "Forbidden" }
+    }
+
     const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
     const { supabase } = await import("@/lib/db/client")
 
