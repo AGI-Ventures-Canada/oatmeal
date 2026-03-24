@@ -2,6 +2,7 @@ import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react"
 
 const mockPush = mock(() => {})
+let mockIsSignedIn = true
 let mockOrganization: { id: string; name: string } | null = null
 let mockOrganizedResponse: object = { hackathons: [] }
 let mockPublicResponse: object = { hackathons: [] }
@@ -11,6 +12,7 @@ mock.module("next/navigation", () => ({
 }))
 
 mock.module("@clerk/nextjs", () => ({
+  useAuth: () => ({ isSignedIn: mockIsSignedIn }),
   useOrganization: () => ({ organization: mockOrganization }),
 }))
 
@@ -27,6 +29,7 @@ mock.module("@/components/org-gate-dialog", () => ({
 const globalFetch = globalThis.fetch
 beforeEach(() => {
   mockPush.mockClear()
+  mockIsSignedIn = true
   mockOrganization = null
   mockOrganizedResponse = { hackathons: [] }
   mockPublicResponse = { hackathons: [] }

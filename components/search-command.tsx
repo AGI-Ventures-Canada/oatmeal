@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/command"
 import { CreateHackathonDialog } from "@/components/hackathon/create-hackathon-dialog"
 import { OrgGateDialog } from "@/components/org-gate-dialog"
-import { searchDocs } from "@/lib/docs-pages"
+import { DOC_PAGES, searchDocs } from "@/lib/docs-pages"
 
 type HackathonResult = { id: string; name: string; slug: string; isOrganized?: boolean }
 
@@ -145,7 +145,7 @@ export function SearchCommand() {
         .finally(() => setEventsLoading(false))
     }, delay)
     return () => clearTimeout(timer)
-  }, [open, query])
+  }, [open, query, isSignedIn])
 
   useEffect(() => {
     if (!open) return
@@ -182,7 +182,7 @@ export function SearchCommand() {
 
   function navigate(href: string) {
     router.push(href)
-    setOpen(false)
+    handleOpenChange(false)
   }
 
   function handleCreateHackathon() {
@@ -346,11 +346,9 @@ export function SearchCommand() {
                   <CommandSeparator />
 
                   <CommandGroup heading="Docs">
-                    {[
-                      { title: "Getting Started", url: "/docs/getting-started" },
-                      { title: "Authentication", url: "/docs/authentication" },
-                      { title: "Hackathons API", url: "/docs/sdk/hackathons" },
-                    ].map((doc) => (
+                    {DOC_PAGES.filter((p) =>
+                      ["/docs/getting-started", "/docs/authentication", "/docs/sdk/hackathons"].includes(p.url)
+                    ).map((doc) => (
                       <CommandItem
                         key={doc.url}
                         value={doc.url}
