@@ -12,6 +12,8 @@ All API routes are handled by a single Elysia instance via a Next.js catch-all r
 
 `lib/api/routes/dev.ts` exports `devRoutes`, which has **no auth**. It is only safe because `lib/api/index.ts` conditionally mounts it when `NODE_ENV === "development"`. Never add it to a production-visible mount.
 
+The handler uses dynamic `import()` for `@/lib/services/public-hackathons` and `@/lib/db/client` to avoid circular dependency issues that arise when those modules are imported at the top level in this file.
+
 ## Route Namespaces
 
 ```
