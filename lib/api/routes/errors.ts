@@ -19,7 +19,6 @@ export function handleRouteError(error: unknown): Response {
       },
     })
   }
-  console.error("[api] unhandled error", error)
   return new Response(JSON.stringify({ error: "Internal server error" }), {
     status: 500,
     headers: { "Content-Type": "application/json" },
