@@ -33,6 +33,10 @@ The handler uses dynamic `import()` for `@/lib/services/public-hackathons` and `
 
 `handleRouteError` in `lib/api/routes/errors.ts` checks both `instanceof` and `error.name` for `AuthError` and `RateLimitError`. The `.name` fallback guards against cross-module-boundary cases where Bun loads two separate copies of the same class (e.g. in tests), causing `instanceof` to return false for an otherwise identical class.
 
+Errors with a `code` property (Elysia-managed errors such as `NOT_FOUND`, `VALIDATION`, and `PARSE`) are returned as `undefined` so Elysia uses its own native status codes (404, 422, 400). Do not remove this branch — without it, `handleRouteError` would override those responses with a 500.
+
+`handleRouteError` uses `set.status` instead of returning a `new Response` because Elysia 1.4.x ignores the HTTP status of a `Response` object returned from `onError` — only mutations to the `set` context object are respected.
+
 ## Key Patterns
 
 ### Elysia + Next.js Integration
