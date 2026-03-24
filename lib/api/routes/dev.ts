@@ -3,7 +3,7 @@ import { HackathonStatusEnum } from "@/lib/api/validators"
 
 export const devRoutes = new Elysia({ prefix: "/dev" }).patch(
   "/hackathons/:id/status",
-  async ({ params, body }) => {
+  async ({ params, body, set }) => {
     const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
     const { supabase } = await import("@/lib/db/client")
 
@@ -15,10 +15,8 @@ export const devRoutes = new Elysia({ prefix: "/dev" }).patch(
       .single()
 
     if (!row) {
-      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
+      set.status = 404
+      return { error: "Hackathon not found" }
     }
 
     const hackathon = await updateHackathonSettings(params.id, row.tenant_id, {
@@ -26,13 +24,11 @@ export const devRoutes = new Elysia({ prefix: "/dev" }).patch(
     })
 
     if (!hackathon) {
-      return new Response(JSON.stringify({ error: "Update failed" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      })
+      set.status = 500
+      return { error: "Update failed" }
     }
 
-    console.log(`[dev] hackathon ${params.id} status → ${hackathon.status}`)
+    if (process.env.DEBUG) console.log(`[dev] hackathon ${params.id} status → ${hackathon.status}`)
     return { id: hackathon.id, status: hackathon.status }
   },
   {
