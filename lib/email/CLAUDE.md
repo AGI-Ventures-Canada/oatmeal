@@ -90,6 +90,10 @@ const isValid = verifyResendWebhook(rawBody, {
 })
 ```
 
+## Failure Modes
+
+`sendEmail` catches a missing `RESEND_API_KEY` (thrown by `getResendClient`) and returns `null` with a `console.warn` instead of propagating the exception. Callers already handle `null`, so this is intentional for local-dev resilience. **Production implication:** if `RESEND_API_KEY` is removed from the environment, emails will silently stop sending — there will be no uncaught exception or 5xx alert, only a `[email] Resend client unavailable` warn in the logs. Monitor for this warn in production rather than relying on exception alerting.
+
 ## Environment Variables
 
 | Variable | Description |
