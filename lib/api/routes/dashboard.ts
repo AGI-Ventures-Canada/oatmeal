@@ -41,7 +41,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     const principal = await resolvePrincipal(request)
 
     if (principal.kind === "api_key") {
-      const result = checkRateLimit(`api_key:${principal.keyId}:dashboard`)
+      const result = await checkRateLimit(`api_key:${principal.keyId}:dashboard`)
       if (!result.allowed) {
         throw new RateLimitError(result.resetAt, result.remaining)
       }
@@ -2013,7 +2013,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     async ({ principal, params, body }) => {
       requirePrincipal(principal, ["user"])
 
-      const rateLimitResult = checkRateLimit(`team_invitation:${params.teamId}`, {
+      const rateLimitResult = await checkRateLimit(`team_invitation:${params.teamId}`, {
         maxRequests: 10,
         windowMs: 60_000,
       })

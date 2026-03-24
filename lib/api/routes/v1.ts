@@ -3,6 +3,7 @@ import { resolvePrincipal, requirePrincipal, AuthError } from "@/lib/auth/princi
 import { createJob, getJobById, cancelJob, startJobWorkflow } from "@/lib/services/jobs"
 import { logAudit } from "@/lib/services/audit"
 import { checkRateLimit, getRateLimitHeaders, defaultRateLimits, RateLimitError } from "@/lib/services/rate-limit"
+import { trackEvent, isCliRequest, getCliVersion } from "@/lib/analytics/posthog"
 import type { Json } from "@/lib/db/types"
 import { normalizeUrl } from "@/lib/utils/url"
 
@@ -30,12 +31,25 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
   })
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
-    return { principal }
+    const source = isCliRequest(request) ? "cli" as const : "api" as const
+    const cliVersion = getCliVersion(request)
+
+    if (principal.kind === "api_key") {
+      const url = new URL(request.url)
+      trackEvent(principal.keyId, "api.request", {
+        source,
+        method: request.method,
+        path: url.pathname,
+        ...(cliVersion && { cliVersion }),
+      })
+    }
+
+    return { principal, source }
   })
   .get("/whoami", async ({ principal }) => {
     requirePrincipal(principal, ["api_key"])
 
-    const rateLimit = checkRateLimit(`api_key:${principal.keyId}:default`)
+    const rateLimit = await checkRateLimit(`api_key:${principal.keyId}:default`)
     if (!rateLimit.allowed) {
       throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
     }
@@ -60,7 +74,7 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
     async ({ principal, body, request }) => {
       requirePrincipal(principal, ["api_key"], ["hackathons:write"])
 
-      const rateLimit = checkRateLimit(
+      const rateLimit = await checkRateLimit(
         `api_key:${principal.keyId}:jobs:create`,
         defaultRateLimits["api_key:default"]
       )
@@ -114,7 +128,7 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
   .get("/jobs/:id", async ({ principal, params }) => {
     requirePrincipal(principal, ["api_key"], ["hackathons:read"])
 
-    const rateLimit = checkRateLimit(`api_key:${principal.keyId}:default`)
+    const rateLimit = await checkRateLimit(`api_key:${principal.keyId}:default`)
     if (!rateLimit.allowed) {
       throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
     }
@@ -144,7 +158,7 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
   .get("/jobs/:id/result", async ({ principal, params }) => {
     requirePrincipal(principal, ["api_key"], ["hackathons:read"])
 
-    const rateLimit = checkRateLimit(`api_key:${principal.keyId}:default`)
+    const rateLimit = await checkRateLimit(`api_key:${principal.keyId}:default`)
     if (!rateLimit.allowed) {
       throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
     }
@@ -186,7 +200,7 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
   .post("/jobs/:id/cancel", async ({ principal, params }) => {
     requirePrincipal(principal, ["api_key"], ["hackathons:write"])
 
-    const rateLimit = checkRateLimit(`api_key:${principal.keyId}:default`)
+    const rateLimit = await checkRateLimit(`api_key:${principal.keyId}:default`)
     if (!rateLimit.allowed) {
       throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
     }
@@ -219,7 +233,7 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
   .get("/webhooks", async ({ principal }) => {
     requirePrincipal(principal, ["api_key"], ["webhooks:read"])
 
-    const rateLimit = checkRateLimit(`api_key:${principal.keyId}:default`)
+    const rateLimit = await checkRateLimit(`api_key:${principal.keyId}:default`)
     if (!rateLimit.allowed) {
       throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
     }
@@ -249,7 +263,7 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
     async ({ principal, body }) => {
       requirePrincipal(principal, ["api_key"], ["webhooks:write"])
 
-      const rateLimit = checkRateLimit(`api_key:${principal.keyId}:default`)
+      const rateLimit = await checkRateLimit(`api_key:${principal.keyId}:default`)
       if (!rateLimit.allowed) {
         throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
       }
@@ -311,7 +325,7 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
   .delete("/webhooks/:id", async ({ principal, params }) => {
     requirePrincipal(principal, ["api_key"], ["webhooks:write"])
 
-    const rateLimit = checkRateLimit(`api_key:${principal.keyId}:default`)
+    const rateLimit = await checkRateLimit(`api_key:${principal.keyId}:default`)
     if (!rateLimit.allowed) {
       throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
     }

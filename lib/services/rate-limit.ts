@@ -1,12 +1,4 @@
-// TODO: Replace with Redis/Upstash for production. In-memory Map doesn't persist
-// across serverless cold starts and isn't shared across instances.
-
-type RateLimitEntry = {
-  count: number
-  resetAt: number
-}
-
-const rateLimitStore = new Map<string, RateLimitEntry>()
+import { supabase } from "@/lib/db/client"
 
 export type RateLimitConfig = {
   maxRequests: number
@@ -24,36 +16,42 @@ export type RateLimitResult = {
   resetAt: number
 }
 
-export function checkRateLimit(
+export async function checkRateLimit(
   key: string,
   config: RateLimitConfig = defaultRateLimits["api_key:default"]
-): RateLimitResult {
-  const now = Date.now()
-  const entry = rateLimitStore.get(key)
+): Promise<RateLimitResult> {
+  const db = supabase()
+  const { data, error } = await db.rpc("check_rate_limit", {
+    p_key: key,
+    p_max_requests: config.maxRequests,
+    p_window_ms: config.windowMs,
+  })
 
-  if (!entry || now >= entry.resetAt) {
-    const resetAt = now + config.windowMs
-    rateLimitStore.set(key, { count: 1, resetAt })
+  if (error || !data || typeof data !== "object") {
     return {
       allowed: true,
       remaining: config.maxRequests - 1,
-      resetAt,
+      resetAt: Date.now() + config.windowMs,
     }
   }
 
-  if (entry.count >= config.maxRequests) {
+  const result = data as Record<string, unknown>
+  if (
+    typeof result.allowed !== "boolean" ||
+    typeof result.remaining !== "number" ||
+    typeof result.reset_at !== "number"
+  ) {
     return {
-      allowed: false,
-      remaining: 0,
-      resetAt: entry.resetAt,
+      allowed: true,
+      remaining: config.maxRequests - 1,
+      resetAt: Date.now() + config.windowMs,
     }
   }
 
-  entry.count++
   return {
-    allowed: true,
-    remaining: config.maxRequests - entry.count,
-    resetAt: entry.resetAt,
+    allowed: result.allowed,
+    remaining: result.remaining,
+    resetAt: result.reset_at,
   }
 }
 
@@ -73,12 +71,3 @@ export class RateLimitError extends Error {
     this.name = "RateLimitError"
   }
 }
-
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now >= entry.resetAt) {
-      rateLimitStore.delete(key)
-    }
-  }
-}, 60_000)
