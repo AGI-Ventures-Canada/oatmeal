@@ -94,5 +94,4 @@ describe("dev routes guard", () => {
     )
     expect(res.status).toBe(404)
   })
-
 })
