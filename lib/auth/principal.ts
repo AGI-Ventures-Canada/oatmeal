@@ -15,6 +15,12 @@ type ClerkSession = Awaited<ReturnType<typeof auth>>
 const clerkSessionCache = new WeakMap<Request, ClerkSession>()
 
 /**
+ * Fallback: store session by a unique request identifier in case
+ * Elysia creates a new Request object (breaking WeakMap identity).
+ */
+let lastPreResolvedSession: { url: string; session: ClerkSession } | null = null
+
+/**
  * Pre-resolve Clerk auth at the Next.js route handler level where
  * AsyncLocalStorage context is guaranteed, before passing to Elysia.
  * Elysia's code-generated handlers can lose the Next.js async context,
@@ -25,12 +31,7 @@ export async function preResolveAuth(request: Request): Promise<void> {
   try {
     const session = await auth()
     clerkSessionCache.set(request, session)
-    const path = new URL(request.url).pathname
-    if (!session.userId) {
-      const hasCookie = (request.headers.get("cookie") ?? "").includes("__session")
-      const authKeys = Object.keys(session).filter((k) => (session as Record<string, unknown>)[k] != null)
-      console.error("[auth:pre]", path, "userId=null", `cookie=${hasCookie}`, `authKeys=[${authKeys}]`)
-    }
+    lastPreResolvedSession = { url: request.url, session }
   } catch (err) {
     console.error("[auth:pre] failed:", err instanceof Error ? err.message : err)
   }
@@ -69,7 +70,17 @@ async function resolvePrincipalUncached(request: Request): Promise<Principal> {
 
   let session
   try {
-    session = clerkSessionCache.get(request) ?? await auth()
+    // Try WeakMap first (same Request object), then fallback to last pre-resolved
+    // session (for when Elysia creates a new Request), then call auth() directly
+    const cached = clerkSessionCache.get(request)
+    if (cached) {
+      session = cached
+    } else if (lastPreResolvedSession) {
+      session = lastPreResolvedSession.session
+      lastPreResolvedSession = null
+    } else {
+      session = await auth()
+    }
   } catch (err) {
     console.error("[auth] Clerk auth() threw:", err instanceof Error ? err.message : err)
     return { kind: "anon" }
