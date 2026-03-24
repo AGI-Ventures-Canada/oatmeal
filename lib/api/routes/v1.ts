@@ -9,18 +9,20 @@ import { normalizeUrl } from "@/lib/utils/url"
 
 export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
   .onError(({ error }) => {
-    if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: error.statusCode,
+    if (error instanceof AuthError || (error instanceof Error && error.name === "AuthError")) {
+      const e = error as AuthError
+      return new Response(JSON.stringify({ error: e.message }), {
+        status: e.statusCode,
         headers: { "Content-Type": "application/json" },
       })
     }
-    if (error instanceof RateLimitError) {
+    if (error instanceof RateLimitError || (error instanceof Error && error.name === "RateLimitError")) {
+      const e = error as RateLimitError
       return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
         status: 429,
         headers: {
           "Content-Type": "application/json",
-          ...getRateLimitHeaders({ allowed: false, remaining: error.remaining, resetAt: error.resetAt }),
+          ...getRateLimitHeaders({ allowed: false, remaining: e.remaining, resetAt: e.resetAt }),
         },
       })
     }

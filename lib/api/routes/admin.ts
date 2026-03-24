@@ -29,13 +29,15 @@ const LocationTypeEnum = t.Union([
 
 export const adminRoutes = new Elysia({ prefix: "/admin" })
   .onError(({ error, set }) => {
-    if (error instanceof AuthError) {
-      set.status = error.statusCode
-      return { error: error.message }
+    if (error instanceof AuthError || (error instanceof Error && error.name === "AuthError")) {
+      const e = error as AuthError
+      set.status = e.statusCode
+      return { error: e.message }
     }
-    if (error instanceof RateLimitError) {
+    if (error instanceof RateLimitError || (error instanceof Error && error.name === "RateLimitError")) {
+      const e = error as RateLimitError
       set.status = 429
-      set.headers = getRateLimitHeaders({ allowed: false, remaining: error.remaining, resetAt: error.resetAt }) as Record<string, string>
+      set.headers = getRateLimitHeaders({ allowed: false, remaining: e.remaining, resetAt: e.resetAt }) as Record<string, string>
       return { error: "Rate limit exceeded" }
     }
     set.status = 500

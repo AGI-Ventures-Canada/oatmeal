@@ -28,7 +28,12 @@ export interface SendEmailResult {
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult | null> {
-  const client = getResendClient()
+  let client: Resend
+  try {
+    client = getResendClient()
+  } catch {
+    return null
+  }
   const fromEmail = input.from ?? process.env.RESEND_FROM_EMAIL
   if (!fromEmail) {
     console.error(
