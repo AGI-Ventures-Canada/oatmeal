@@ -4,7 +4,6 @@ import { loadConfig } from "./config.js"
 import { VERSION, DEFAULT_BASE_URL } from "./constants.js"
 import { ApiError, AuthError, ConfigError, ScopeError } from "./errors.js"
 import { formatError } from "./output.js"
-import { trackCliEvent } from "./analytics.js"
 
 interface GlobalFlags {
   json: boolean
@@ -201,11 +200,6 @@ async function main() {
   const command = rest[0]
   const sub = rest[1]
   const sub2 = rest[2]
-
-  trackCliEvent("cli.command", {
-    command,
-    subcommand: sub,
-  })
 
   try {
     switch (command) {

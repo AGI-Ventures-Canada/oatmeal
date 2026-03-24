@@ -585,7 +585,7 @@ Beyond the standard Clerk/Supabase keys, these secrets must be in `.env.local` f
 
 Without `ENCRYPTION_KEY`, CLI login (`hackathon login`) will fail with "Internal server error" because `completeCliAuthSession` calls `encryptToken()` which requires it.
 
-PostHog analytics is **deployed environments only** — do NOT set `NEXT_PUBLIC_POSTHOG_KEY` in `.env.local`. Set it in Vercel for both Production and Preview environments. Server-side events include `environment` property (`"production"` or `"preview"`) from `VERCEL_ENV` so you can filter staging vs production in the PostHog dashboard. For CLI analytics, set `HACKATHON_POSTHOG_KEY` as an environment variable.
+PostHog analytics is **production only** — do NOT set `NEXT_PUBLIC_POSTHOG_KEY` in `.env.local`. Set it in Vercel for Production only. CLI usage is tracked server-side via the `User-Agent: hackathon-cli/<version>` header — no PostHog key needed on the client.
 
 ### Local Supabase Port Assignments
 

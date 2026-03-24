@@ -1,4 +1,4 @@
-import { REQUEST_TIMEOUT_MS } from "./constants.js"
+import { REQUEST_TIMEOUT_MS, VERSION } from "./constants.js"
 import { ApiError, AuthError, ScopeError } from "./errors.js"
 
 interface ClientOptions {
@@ -53,7 +53,9 @@ export class OatmealClient {
       if (qs) url += `?${qs}`
     }
 
-    const headers: Record<string, string> = {}
+    const headers: Record<string, string> = {
+      "User-Agent": `hackathon-cli/${VERSION}`,
+    }
     if (this.apiKey) {
       headers["Authorization"] = `Bearer ${this.apiKey}`
     }

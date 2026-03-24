@@ -44,6 +44,17 @@ export function identifyUser(
   client.identify({ distinctId, properties })
 }
 
+export function isCliRequest(request: Request): boolean {
+  const ua = request.headers.get("user-agent") || ""
+  return ua.startsWith("hackathon-cli/")
+}
+
+export function getCliVersion(request: Request): string | null {
+  const ua = request.headers.get("user-agent") || ""
+  const match = ua.match(/^hackathon-cli\/(.+)$/)
+  return match ? match[1] : null
+}
+
 export async function shutdownAnalytics() {
   if (!_client) return
   await _client.shutdown()
