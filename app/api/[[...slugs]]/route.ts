@@ -1,4 +1,5 @@
 import { api } from "@/lib/api"
+import { auth } from "@clerk/nextjs/server"
 import { preResolveAuth } from "@/lib/auth/principal"
 
 async function handler(request: Request) {
@@ -11,3 +12,4 @@ export const POST = handler
 export const PUT = handler
 export const DELETE = handler
 export const PATCH = handler
+

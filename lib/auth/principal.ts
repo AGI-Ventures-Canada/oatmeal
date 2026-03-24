@@ -25,8 +25,13 @@ export async function preResolveAuth(request: Request): Promise<void> {
   try {
     const session = await auth()
     clerkSessionCache.set(request, session)
+    const path = new URL(request.url).pathname
+    if (!session.userId) {
+      const hasCookie = (request.headers.get("cookie") ?? "").includes("__session")
+      console.warn("[auth:pre]", path, "userId=null", `cookie=${hasCookie}`)
+    }
   } catch (err) {
-    console.error("[auth] preResolveAuth failed:", err instanceof Error ? err.message : err)
+    console.error("[auth:pre] failed:", err instanceof Error ? err.message : err)
   }
 }
 
