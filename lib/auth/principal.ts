@@ -1,4 +1,3 @@
-import { AsyncLocalStorage } from "node:async_hooks"
 import { auth } from "@clerk/nextjs/server"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { AdminPrincipal, ApiKeyPrincipal, Principal, PrincipalKindMap, Scope } from "./types"
@@ -10,48 +9,7 @@ export function isAdminEnabled(): boolean {
   return process.env.ADMIN_ENABLED === "true"
 }
 
-const principalCache = new WeakMap<Request, Principal>()
-
-type ClerkSession = Awaited<ReturnType<typeof auth>>
-
-/**
- * Uses Node.js AsyncLocalStorage to pass the Clerk session from the
- * Next.js route handler level into Elysia's derive hooks.
- *
- * This works because V8's async/await always preserves AsyncLocalStorage
- * context — even through Elysia's code-generated handlers — whereas
- * Next.js's own AsyncLocalStorage (used by Clerk's auth()) gets lost
- * inside Elysia's compiled route pipeline.
- */
-const clerkSessionStorage = new AsyncLocalStorage<ClerkSession>()
-
-/**
- * Pre-resolve Clerk auth and run the callback within an AsyncLocalStorage
- * context that carries the session. resolvePrincipal reads from this store.
- */
-export async function withPreResolvedAuth<T>(request: Request, fn: () => Promise<T>): Promise<T> {
-  if (request.headers.get("authorization")?.startsWith("Bearer sk_")) {
-    return fn()
-  }
-  try {
-    const session = await auth()
-    return clerkSessionStorage.run(session, fn)
-  } catch (err) {
-    console.error("[auth:pre] failed:", err instanceof Error ? err.message : err)
-    return fn()
-  }
-}
-
 export async function resolvePrincipal(request: Request): Promise<Principal> {
-  const cached = principalCache.get(request)
-  if (cached) return cached
-
-  const principal = await resolvePrincipalUncached(request)
-  principalCache.set(request, principal)
-  return principal
-}
-
-async function resolvePrincipalUncached(request: Request): Promise<Principal> {
   const authHeader = request.headers.get("authorization")
 
   if (authHeader?.startsWith("Bearer sk_")) {
@@ -73,17 +31,9 @@ async function resolvePrincipalUncached(request: Request): Promise<Principal> {
     }
   }
 
-  let session
-  try {
-    session = clerkSessionStorage.getStore() ?? await auth()
-  } catch (err) {
-    console.error("[auth] Clerk auth() threw:", err instanceof Error ? err.message : err)
-    return { kind: "anon" }
-  }
-
+  const session = await auth()
   const { userId, orgId, orgRole } = session
   if (!userId) {
-    console.error("[auth] No userId from Clerk session", { path: new URL(request.url).pathname })
     return { kind: "anon" }
   }
 
@@ -99,19 +49,13 @@ async function resolvePrincipalUncached(request: Request): Promise<Principal> {
   }
 
   let tenant
-  try {
-    if (orgId) {
-      tenant = await getOrCreateTenant(orgId)
-    } else {
-      tenant = await getOrCreatePersonalTenant(userId)
-    }
-  } catch (err) {
-    console.error("[auth] Tenant resolution failed:", { userId, orgId, error: err instanceof Error ? err.message : err })
-    return { kind: "anon" }
+  if (orgId) {
+    tenant = await getOrCreateTenant(orgId)
+  } else {
+    tenant = await getOrCreatePersonalTenant(userId)
   }
 
   if (!tenant) {
-    console.error("[auth] Tenant is null after getOrCreate:", { userId, orgId })
     return { kind: "anon" }
   }
 
