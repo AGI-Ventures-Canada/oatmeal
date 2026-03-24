@@ -50,6 +50,18 @@ import { auth } from "@clerk/nextjs/server"
 })
 ```
 
+### Child Route Derive Hooks and Auth Caching
+
+**CRITICAL: Never call `resolvePrincipal()` in child route `.derive()` hooks without the per-request cache.**
+
+When a child Elysia instance (e.g., `dashboardJudgingRoutes`) is `.use()`'d into a parent that already has a `.derive()` calling `resolvePrincipal()`, Elysia runs **both** derives. The second `resolvePrincipal()` call can fail in Elysia's async context, silently overwriting the valid principal with `{ kind: "anon" }` and causing `Unauthorized` errors.
+
+`resolvePrincipal()` in `lib/auth/principal.ts` uses a `WeakMap<Request, Principal>` cache to ensure auth resolves only once per request. **Do not bypass or duplicate this pattern.** If you extract routes into a new child file:
+
+1. Keep the `.derive()` with `resolvePrincipal()` for TypeScript type inference — the cache makes it a no-op on the second call
+2. Never inline the auth logic directly (skipping the cache)
+3. Never create a parallel auth resolution function
+
 ### AI SDK Streaming
 ```typescript
 import { streamText } from "ai"
