@@ -1,6 +1,6 @@
 ---
 name: posthog-analytics
-description: PostHog analytics setup, patterns, and troubleshooting for the Oatmeal platform. Use when debugging missing PostHog events, adding new tracked events, modifying the /ingest proxy, or troubleshooting analytics on production.
+description: PostHog analytics setup, patterns, and troubleshooting for the Oatmeal platform. Use when debugging missing PostHog events, adding new tracked events, modifying the /t proxy, or troubleshooting analytics on production.
 allowed-tools: Read, Glob, Grep, Bash(curl:*), Bash(vercel:*), Bash(git:*), Bash(bun:*), Write, Edit
 ---
 
@@ -21,21 +21,21 @@ PostHog is integrated at three levels:
 | `instrumentation-client.ts` | Client-side PostHog init (Next.js 15.3+ pattern) |
 | `components/posthog-provider.tsx` | Clerk user identification + `PostHogProvider` wrapper |
 | `lib/analytics/posthog.ts` | Server-side tracking (`trackEvent`, `identifyUser`, `isCliRequest`) |
-| `next.config.ts` | `/ingest` rewrites to proxy PostHog through our domain |
-| `proxy.ts` | Excludes `/ingest` from Clerk middleware |
+| `next.config.ts` | `/t` rewrites to proxy PostHog through our domain |
+| `proxy.ts` | Excludes `/t` from Clerk middleware |
 
 ## Proxy Setup
 
-PostHog requests are proxied through `/ingest/*` to bypass ad blockers:
+PostHog requests are proxied through `/t/*` to bypass ad blockers:
 
 ```
-/ingest/static/*  →  https://us-assets.i.posthog.com/static/*
-/ingest/*         →  https://us.i.posthog.com/*
+/t/static/*  →  https://us-assets.i.posthog.com/static/*
+/t/*         →  https://us.i.posthog.com/*
 ```
 
-Configured in `next.config.ts` rewrites. The `/ingest` path is excluded from Clerk middleware in `proxy.ts`.
+Configured in `next.config.ts` rewrites. The `/t` path is excluded from Clerk middleware in `proxy.ts`.
 
-**Critical: `skipTrailingSlashRedirect: true`** must be set in `next.config.ts`. Without it, Vercel 308-redirects `/ingest/e/` → `/ingest/e`, which drops the POST body and silently loses all events.
+**Critical: `skipTrailingSlashRedirect: true`** must be set in `next.config.ts`. Without it, Vercel 308-redirects `/t/e/` → `/t/e`, which drops the POST body and silently loses all events.
 
 ## Environment Variables
 
@@ -45,7 +45,7 @@ Configured in `next.config.ts` rewrites. The `/ingest` path is excluded from Cle
 
 **Do NOT set in `.env.local`** — local dev should not track. Do NOT set for Preview/Staging.
 
-The host is not needed as an env var — the `/ingest` proxy path is hardcoded.
+The host is not needed as an env var — the `/t` proxy path is hardcoded.
 
 ## CLI Tracking
 
@@ -71,15 +71,15 @@ No PostHog SDK or env vars are needed in the CLI package.
    ```
    If not found, the env var was added after the last build. Trigger a redeploy: `vercel --prod`
 
-3. **Check the /ingest proxy returns 200:**
+3. **Check the /t proxy returns 200:**
    ```bash
-   curl -s "https://www.getoatmeal.com/ingest/decide" | head -20
+   curl -s "https://www.getoatmeal.com/t/decide" | head -20
    ```
    Should return JSON from PostHog, not a redirect or error.
 
 4. **Test sending an event directly:**
    ```bash
-   curl -s -X POST "https://www.getoatmeal.com/ingest/e" \
+   curl -s -X POST "https://www.getoatmeal.com/t/e" \
      -H "Content-Type: application/json" \
      -d '{"api_key":"YOUR_KEY","event":"test","properties":{"distinct_id":"debug"}}'
    ```
@@ -87,7 +87,7 @@ No PostHog SDK or env vars are needed in the CLI package.
 
 5. **Check for trailing slash redirects:**
    ```bash
-   curl -sI -X POST "https://www.getoatmeal.com/ingest/e/" | grep -i "HTTP\|location"
+   curl -sI -X POST "https://www.getoatmeal.com/t/e/" | grep -i "HTTP\|location"
    ```
    If you see a 308 redirect, `skipTrailingSlashRedirect: true` is missing from `next.config.ts`.
 
