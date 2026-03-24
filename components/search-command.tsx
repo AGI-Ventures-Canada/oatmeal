@@ -37,25 +37,6 @@ import { DOC_PAGES, searchDocs } from "@/lib/docs-pages"
 
 type HackathonResult = { id: string; name: string; slug: string; isOrganized?: boolean }
 
-const publicFunctionalityItems = [
-  { title: "Explore Hackathons", href: "/browse", icon: Search },
-  { title: "API Docs", href: "/docs", icon: BookOpen },
-]
-
-const authedFunctionalityItems = [
-  { title: "Dashboard", href: "/home", icon: Home },
-  { title: "Participating", href: "/home?tab=participating", icon: Users },
-  { title: "Judging", href: "/home?tab=judging", icon: Scale },
-  { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
-  { title: "Sponsoring", href: "/home?tab=sponsored", icon: Star },
-  { title: "Settings", href: "/settings", icon: Settings },
-  { title: "Organization Settings", href: "/settings/profile", icon: Building2 },
-  { title: "API Keys", href: "/settings/api-keys", icon: Key },
-  { title: "Schedules", href: "/settings/schedules", icon: Clock },
-  { title: "Webhooks", href: "/settings/webhooks", icon: Webhook },
-  { title: "Integrations", href: "/settings/integrations", icon: Plug },
-]
-
 const navigationItems = [
   { title: "Dashboard", href: "/home", icon: Home },
   { title: "Explore Hackathons", href: "/browse", icon: Search },
@@ -77,6 +58,11 @@ const settingsItems = [
   { title: "Integrations", href: "/settings/integrations", icon: Plug },
   { title: "API Docs", href: "/docs", icon: BookOpen },
 ]
+
+const authedFunctionalityItems = [...navigationItems, ...hackathonItems, ...settingsItems]
+const publicFunctionalityItems = [navigationItems[1], settingsItems[6]]
+
+const PINNED_DOC_URLS = ["/docs/getting-started", "/docs/authentication", "/docs/sdk/hackathons"]
 
 export function SearchCommand() {
   const [open, setOpen] = useState(false)
@@ -346,9 +332,7 @@ export function SearchCommand() {
                   <CommandSeparator />
 
                   <CommandGroup heading="Docs">
-                    {DOC_PAGES.filter((p) =>
-                      ["/docs/getting-started", "/docs/authentication", "/docs/sdk/hackathons"].includes(p.url)
-                    ).map((doc) => (
+                    {DOC_PAGES.filter((p) => PINNED_DOC_URLS.includes(p.url)).map((doc) => (
                       <CommandItem
                         key={doc.url}
                         value={doc.url}
