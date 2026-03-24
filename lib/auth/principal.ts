@@ -28,7 +28,8 @@ export async function preResolveAuth(request: Request): Promise<void> {
     const path = new URL(request.url).pathname
     if (!session.userId) {
       const hasCookie = (request.headers.get("cookie") ?? "").includes("__session")
-      console.error("[auth:pre]", path, "userId=null", `cookie=${hasCookie}`)
+      const authKeys = Object.keys(session).filter((k) => (session as Record<string, unknown>)[k] != null)
+      console.error("[auth:pre]", path, "userId=null", `cookie=${hasCookie}`, `authKeys=[${authKeys}]`)
     }
   } catch (err) {
     console.error("[auth:pre] failed:", err instanceof Error ? err.message : err)
