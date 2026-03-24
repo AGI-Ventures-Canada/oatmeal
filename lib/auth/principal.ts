@@ -28,7 +28,7 @@ export async function preResolveAuth(request: Request): Promise<void> {
     const path = new URL(request.url).pathname
     if (!session.userId) {
       const hasCookie = (request.headers.get("cookie") ?? "").includes("__session")
-      console.warn("[auth:pre]", path, "userId=null", `cookie=${hasCookie}`)
+      console.error("[auth:pre]", path, "userId=null", `cookie=${hasCookie}`)
     }
   } catch (err) {
     console.error("[auth:pre] failed:", err instanceof Error ? err.message : err)
@@ -76,7 +76,7 @@ async function resolvePrincipalUncached(request: Request): Promise<Principal> {
 
   const { userId, orgId, orgRole } = session
   if (!userId) {
-    console.warn("[auth] No userId from Clerk session", { path: new URL(request.url).pathname })
+    console.error("[auth] No userId from Clerk session", { path: new URL(request.url).pathname })
     return { kind: "anon" }
   }
 

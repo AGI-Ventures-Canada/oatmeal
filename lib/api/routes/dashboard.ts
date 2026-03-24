@@ -15,9 +15,13 @@ import { ALL_SCOPES } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
 
 export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
-  .onError(({ error }) => {
+  .onError(({ error, request }) => {
     if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message }), {
+      const hasCookie = (request.headers.get("cookie") ?? "").includes("__session")
+      const hasClerkCookie = (request.headers.get("cookie") ?? "").includes("__clerk")
+      const debug = { hasCookie, hasClerkCookie, path: new URL(request.url).pathname }
+      console.error("[dashboard] AuthError:", error.message, JSON.stringify(debug))
+      return new Response(JSON.stringify({ error: error.message, debug }), {
         status: error.statusCode,
         headers: { "Content-Type": "application/json" },
       })
