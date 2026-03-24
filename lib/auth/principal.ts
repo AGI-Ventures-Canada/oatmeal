@@ -9,7 +9,18 @@ export function isAdminEnabled(): boolean {
   return process.env.ADMIN_ENABLED === "true"
 }
 
+const principalCache = new WeakMap<Request, Principal>()
+
 export async function resolvePrincipal(request: Request): Promise<Principal> {
+  const cached = principalCache.get(request)
+  if (cached) return cached
+
+  const principal = await resolvePrincipalUncached(request)
+  principalCache.set(request, principal)
+  return principal
+}
+
+async function resolvePrincipalUncached(request: Request): Promise<Principal> {
   const authHeader = request.headers.get("authorization")
 
   if (authHeader?.startsWith("Bearer sk_")) {
