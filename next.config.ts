@@ -3,6 +3,7 @@ import { withWorkflow } from "workflow/next"
 import { createMDX } from "fumadocs-mdx/next"
 
 const nextConfig: NextConfig = {
+  skipTrailingSlashRedirect: true,
   env: {
     NEXT_PUBLIC_APP_URL:
       process.env.NEXT_PUBLIC_APP_URL ??
