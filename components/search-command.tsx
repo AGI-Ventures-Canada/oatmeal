@@ -60,7 +60,9 @@ const settingsItems = [
 ]
 
 const authedFunctionalityItems = [...navigationItems, ...hackathonItems, ...settingsItems]
-const publicFunctionalityItems = [navigationItems[1], settingsItems[6]]
+const publicFunctionalityItems = authedFunctionalityItems.filter(
+  (i) => i.href === "/browse" || i.href === "/docs"
+)
 
 const PINNED_DOC_URLS = ["/docs/getting-started", "/docs/authentication", "/docs/sdk/hackathons"]
 
@@ -72,6 +74,7 @@ export function SearchCommand() {
   const [canScrollMore, setCanScrollMore] = useState(false)
   const [events, setEvents] = useState<HackathonResult[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventsError, setEventsError] = useState(false)
   const [fetchedQuery, setFetchedQuery] = useState("")
   const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -108,6 +111,7 @@ export function SearchCommand() {
         return
       }
       setEventsLoading(true)
+      setEventsError(false)
       const q = encodeURIComponent(query)
       Promise.all([
         fetch(`/api/public/hackathons?q=${q}&limit=5`).then((res) => (res.ok ? res.json() : null)),
@@ -127,7 +131,7 @@ export function SearchCommand() {
           }
           setEvents(results)
         })
-        .catch(() => {})
+        .catch(() => { setEventsError(true) })
         .finally(() => setEventsLoading(false))
     }, delay)
     return () => clearTimeout(timer)
@@ -162,6 +166,7 @@ export function SearchCommand() {
       setCanScrollMore(false)
       setQuery("")
       setEvents([])
+      setEventsError(false)
       setFetchedQuery("")
     }
   }
@@ -187,13 +192,13 @@ export function SearchCommand() {
   const allFunctionalityItems = isSignedIn ? authedFunctionalityItems : publicFunctionalityItems
 
   const matchedFunctionality = q
-    ? allFunctionalityItems.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 1)
+    ? allFunctionalityItems.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 3)
     : []
 
-  const matchedDocs = q ? searchDocs(q) : []
+  const matchedDocs = q ? searchDocs(q, 4) : []
 
   const debouncePending = open && query.length >= 2 && query !== fetchedQuery
-  const hasSearchResults = debouncePending || eventsLoading || matchedEvents.length > 0 || matchedFunctionality.length > 0 || matchedDocs.length > 0
+  const hasSearchResults = debouncePending || eventsLoading || eventsError || matchedEvents.length > 0 || matchedFunctionality.length > 0 || matchedDocs.length > 0
 
   return (
     <>
@@ -217,11 +222,13 @@ export function SearchCommand() {
                   {!hasSearchResults && (
                     <div className="py-6 text-center text-sm text-muted-foreground">No results found.</div>
                   )}
-                  {(debouncePending || eventsLoading || matchedEvents.length > 0) && (
+                  {(debouncePending || eventsLoading || eventsError || matchedEvents.length > 0) && (
                     <>
                       <CommandGroup heading="Events">
                         {debouncePending || eventsLoading ? (
                           <div className="px-2 py-1.5 text-sm text-muted-foreground">Searching events...</div>
+                        ) : eventsError ? (
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">Search failed. Try again.</div>
                         ) : (
                           matchedEvents.map((event) => {
                             const href = event.isOrganized ? `/e/${event.slug}/manage` : `/e/${event.slug}`

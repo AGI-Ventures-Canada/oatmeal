@@ -177,19 +177,21 @@ describe("SearchCommand", () => {
       })
     })
 
-    it("shows Pages group with top 1 functionality match", async () => {
+    it("shows Pages group with up to 3 functionality matches", async () => {
       openMenu()
       await waitFor(() => screen.getByRole("dialog"))
       fireEvent.change(screen.getByPlaceholderText("Search pages, events, and docs..."), {
-        target: { value: "webhook" },
+        target: { value: "settings" },
       })
       await waitFor(() => {
         expect(screen.getByText("Pages")).toBeDefined()
-        expect(screen.getAllByText("Webhooks").length).toBe(1)
+        const items = screen.getAllByText(/Settings/)
+        expect(items.length).toBeGreaterThanOrEqual(2)
+        expect(items.length).toBeLessThanOrEqual(3)
       })
     })
 
-    it("shows Docs group with top 2 docs matches when typing", async () => {
+    it("shows Docs group with up to 4 docs matches when typing", async () => {
       openMenu()
       await waitFor(() => screen.getByRole("dialog"))
       fireEvent.change(screen.getByPlaceholderText("Search pages, events, and docs..."), {
@@ -199,7 +201,9 @@ describe("SearchCommand", () => {
         expect(screen.getByText("Docs")).toBeDefined()
         expect(screen.getByText("Judging Modes")).toBeDefined()
         expect(screen.getByText("Managing Judges & Scoring")).toBeDefined()
-        expect(screen.queryByText("Judging API")).toBeNull()
+        expect(screen.getByText("Judging API")).toBeDefined()
+        const items = screen.getAllByText(/[Jj]udg/)
+        expect(items.length).toBeLessThanOrEqual(4)
       })
     })
 
