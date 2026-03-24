@@ -184,15 +184,13 @@ export function SearchCommand() {
 
   const matchedEvents = q ? events.slice(0, 5) : []
 
-  const allFunctionalityItems = isSignedIn
-    ? [...authedFunctionalityItems, ...publicFunctionalityItems]
-    : publicFunctionalityItems
+  const allFunctionalityItems = isSignedIn ? authedFunctionalityItems : publicFunctionalityItems
 
   const matchedFunctionality = q
     ? allFunctionalityItems.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 1)
     : []
 
-  const matchedDocs = q ? searchDocs(q, 2) : []
+  const matchedDocs = q ? searchDocs(q) : []
 
   const debouncePending = open && query.length >= 2 && query !== fetchedQuery
   const hasSearchResults = debouncePending || eventsLoading || matchedEvents.length > 0 || matchedFunctionality.length > 0 || matchedDocs.length > 0
