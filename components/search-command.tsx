@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useOrganization } from "@clerk/nextjs"
+import { useAuth, useOrganization } from "@clerk/nextjs"
 import {
   Home,
   Search,
@@ -37,9 +37,13 @@ import { searchDocs } from "@/lib/docs-pages"
 
 type HackathonResult = { id: string; name: string; slug: string; isOrganized?: boolean }
 
-const allFunctionalityItems = [
-  { title: "Dashboard", href: "/home", icon: Home },
+const publicFunctionalityItems = [
   { title: "Explore Hackathons", href: "/browse", icon: Search },
+  { title: "API Docs", href: "/docs", icon: BookOpen },
+]
+
+const authedFunctionalityItems = [
+  { title: "Dashboard", href: "/home", icon: Home },
   { title: "Participating", href: "/home?tab=participating", icon: Users },
   { title: "Judging", href: "/home?tab=judging", icon: Scale },
   { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
@@ -50,7 +54,6 @@ const allFunctionalityItems = [
   { title: "Schedules", href: "/settings/schedules", icon: Clock },
   { title: "Webhooks", href: "/settings/webhooks", icon: Webhook },
   { title: "Integrations", href: "/settings/integrations", icon: Plug },
-  { title: "API Docs", href: "/docs", icon: BookOpen },
 ]
 
 const navigationItems = [
@@ -86,6 +89,7 @@ export function SearchCommand() {
   const [fetchedQuery, setFetchedQuery] = useState("")
   const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const { isSignedIn } = useAuth()
   const { organization } = useOrganization()
 
   function getListEl() {
@@ -96,17 +100,17 @@ export function SearchCommand() {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
-        setOpen((prev) => !prev)
+        if (isSignedIn) setOpen((prev) => !prev)
       }
     }
-    const openHandler = () => setOpen(true)
+    const openHandler = () => { if (isSignedIn) setOpen(true) }
     document.addEventListener("keydown", down)
     document.addEventListener("open-search", openHandler)
     return () => {
       document.removeEventListener("keydown", down)
       document.removeEventListener("open-search", openHandler)
     }
-  }, [])
+  }, [isSignedIn])
 
   useEffect(() => {
     const delay = open && query.length >= 2 ? 300 : 0
@@ -121,7 +125,9 @@ export function SearchCommand() {
       const q = encodeURIComponent(query)
       Promise.all([
         fetch(`/api/public/hackathons?q=${q}&limit=5`).then((res) => (res.ok ? res.json() : null)),
-        fetch(`/api/dashboard/hackathons?q=${q}`).then((res) => (res.ok ? res.json() : null)),
+        isSignedIn
+          ? fetch(`/api/dashboard/hackathons?q=${q}`).then((res) => (res.ok ? res.json() : null))
+          : Promise.resolve(null),
       ])
         .then(([pub, organized]) => {
           const seen = new Set<string>()
@@ -191,6 +197,10 @@ export function SearchCommand() {
   const q = query.toLowerCase()
 
   const matchedEvents = q ? events.slice(0, 5) : []
+
+  const allFunctionalityItems = isSignedIn
+    ? [...authedFunctionalityItems, ...publicFunctionalityItems]
+    : publicFunctionalityItems
 
   const matchedFunctionality = q
     ? allFunctionalityItems.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 1)
@@ -295,39 +305,43 @@ export function SearchCommand() {
                     ))}
                   </CommandGroup>
 
-                  <CommandSeparator />
+                  {isSignedIn && (
+                    <>
+                      <CommandSeparator />
 
-                  <CommandGroup heading="Hackathons">
-                    <CommandItem value="create-hackathon" onSelect={handleCreateHackathon}>
-                      <Plus />
-                      Create Hackathon
-                    </CommandItem>
-                    {hackathonItems.map((item) => (
-                      <CommandItem
-                        key={item.href}
-                        value={item.href}
-                        onSelect={() => navigate(item.href)}
-                      >
-                        <item.icon />
-                        {item.title}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
+                      <CommandGroup heading="Hackathons">
+                        <CommandItem value="create-hackathon" onSelect={handleCreateHackathon}>
+                          <Plus />
+                          Create Hackathon
+                        </CommandItem>
+                        {hackathonItems.map((item) => (
+                          <CommandItem
+                            key={item.href}
+                            value={item.href}
+                            onSelect={() => navigate(item.href)}
+                          >
+                            <item.icon />
+                            {item.title}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
 
-                  <CommandSeparator />
+                      <CommandSeparator />
 
-                  <CommandGroup heading="Settings">
-                    {settingsItems.map((item) => (
-                      <CommandItem
-                        key={item.href}
-                        value={item.href}
-                        onSelect={() => navigate(item.href)}
-                      >
-                        <item.icon />
-                        {item.title}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
+                      <CommandGroup heading="Settings">
+                        {settingsItems.map((item) => (
+                          <CommandItem
+                            key={item.href}
+                            value={item.href}
+                            onSelect={() => navigate(item.href)}
+                          >
+                            <item.icon />
+                            {item.title}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </>
+                  )}
 
                   <CommandSeparator />
 
