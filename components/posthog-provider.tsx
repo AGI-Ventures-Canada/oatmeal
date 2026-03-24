@@ -24,18 +24,6 @@ function PostHogIdentifier() {
 }
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_POSTHOG_KEY && !posthog.__loaded) {
-      posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-        api_host: "/ingest",
-        ui_host: "https://us.posthog.com",
-        person_profiles: "identified_only",
-        capture_pageview: true,
-        capture_pageleave: true,
-      })
-    }
-  }, [])
-
   if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return <>{children}</>
 
   return (
