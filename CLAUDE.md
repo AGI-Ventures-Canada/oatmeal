@@ -254,6 +254,7 @@ This ensures consistent theming and proper dark mode support.
 
 ### Supabase
 
+- **Never pass unvalidated strings to UUID column queries** — PostgreSQL throws `invalid input syntax for type uuid` which causes 500 errors. Use `isValidUuid()` from `lib/utils/uuid.ts` to validate route params before querying. The `HackathonDraftEditor` uses `id: "draft"` as a placeholder, so any component rendered during draft mode could trigger API calls with non-UUID IDs.
 - Use Service Key in API endpoints to bypass RLS policies
 - Handle auth and roles in the application layer, not RLS
 - Never apply migrations directly to production - use PR workflow

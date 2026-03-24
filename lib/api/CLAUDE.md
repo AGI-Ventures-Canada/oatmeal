@@ -62,6 +62,21 @@ When a child Elysia instance (e.g., `dashboardJudgingRoutes`) is `.use()`'d into
 2. Never inline the auth logic directly (skipping the cache)
 3. Never create a parallel auth resolution function
 
+### UUID Validation for Route Parameters
+
+**CRITICAL: All `:id` route parameters that query UUID columns must be validated before hitting the database.**
+
+The `hackathons.id` column (and most primary keys) are `uuid` type. If a non-UUID string like `"draft"` reaches PostgreSQL via `.eq("id", value)`, it throws `invalid input syntax for type uuid` which cascades as a 500 error.
+
+`checkHackathonOrganizer()` in `lib/services/public-hackathons.ts` validates with `isValidUuid()` from `lib/utils/uuid.ts`. When adding new routes that query by ID:
+
+1. Always route through `checkHackathonOrganizer()` for hackathon IDs — it validates UUID format and ownership in one call
+2. For non-hackathon UUID params, call `isValidUuid(params.id)` and return 404 early if invalid
+3. Never pass unvalidated route params directly to `.eq("id", ...)` queries
+4. In tests, use valid UUID strings (e.g., `"11111111-1111-1111-1111-111111111111"`) not short placeholders like `"h1"`
+
+This matters because the `HackathonDraftEditor` component uses `id: "draft"` as a placeholder before persistence — any component rendering during draft mode could trigger API calls with this non-UUID ID.
+
 ### AI SDK Streaming
 ```typescript
 import { streamText } from "ai"
