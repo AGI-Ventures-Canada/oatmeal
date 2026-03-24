@@ -20,7 +20,7 @@ const LocationTypeEnum = t.Union([
 ])
 
 export const adminRoutes = new Elysia({ prefix: "/admin" })
-  .onError(({ error, path }) => handleRouteError(error, path))
+  .onError(({ error, set, path }) => handleRouteError(error, set, path))
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     requireAdmin(principal)

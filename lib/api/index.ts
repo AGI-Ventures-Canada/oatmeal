@@ -9,7 +9,7 @@ import { devRoutes } from "./routes/dev"
 import { handleRouteError } from "./routes/errors"
 
 export const api = new Elysia({ prefix: "/api" })
-  .onError(({ error, path }) => handleRouteError(error, path))
+  .onError(({ error, set, path }) => handleRouteError(error, set, path))
   .use(
     swagger({
       path: "/swagger",

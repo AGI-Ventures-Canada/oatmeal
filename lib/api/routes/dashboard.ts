@@ -16,7 +16,7 @@ import { ALL_SCOPES } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
 
 export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
-  .onError(({ error, path }) => handleRouteError(error, path))
+  .onError(({ error, set, path }) => handleRouteError(error, set, path))
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
 

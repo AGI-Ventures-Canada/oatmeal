@@ -53,7 +53,7 @@ export const importRoutes = new Elysia({ prefix: "/public/import" })
   )
 
 export const dashboardImportRoutes = new Elysia({ prefix: "/dashboard/import" })
-  .onError(({ error, path }) => handleRouteError(error, path))
+  .onError(({ error, set, path }) => handleRouteError(error, set, path))
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     return { principal }

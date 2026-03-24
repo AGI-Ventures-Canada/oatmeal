@@ -34,6 +34,9 @@ const PATCH = (id: string, status: string) =>
 describe("dev routes", () => {
   beforeEach(() => {
     mockUpdateHackathonSettings.mockReset()
+    mockSupabaseChain.from.mockClear()
+    mockSupabaseChain.select.mockClear()
+    mockSupabaseChain.eq.mockClear()
     mockSupabaseChain.single.mockReset()
   })
 
