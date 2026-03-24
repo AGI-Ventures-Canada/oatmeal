@@ -9,12 +9,7 @@ import { devRoutes } from "./routes/dev"
 import { handleRouteError } from "./routes/errors"
 
 export const api = new Elysia({ prefix: "/api" })
-  .onError(({ error, path }) => {
-    if (!(error instanceof Error) || (error.name !== "AuthError" && error.name !== "RateLimitError")) {
-      console.error(`[api] Error on ${path}:`, error instanceof Error ? error.message : error, error instanceof Error ? error.stack : "")
-    }
-    return handleRouteError(error)
-  })
+  .onError(({ error, path }) => handleRouteError(error, path))
   .use(
     swagger({
       path: "/swagger",

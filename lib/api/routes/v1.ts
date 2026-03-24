@@ -9,7 +9,7 @@ import type { Json } from "@/lib/db/types"
 import { normalizeUrl } from "@/lib/utils/url"
 
 export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
-  .onError(({ error }) => handleRouteError(error))
+  .onError(({ error, path }) => handleRouteError(error, path))
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     const source = isCliRequest(request) ? "cli" as const : "api" as const

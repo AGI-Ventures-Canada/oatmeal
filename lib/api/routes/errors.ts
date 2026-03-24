@@ -1,7 +1,7 @@
 import { AuthError } from "@/lib/auth/principal"
 import { RateLimitError, getRateLimitHeaders } from "@/lib/services/rate-limit"
 
-export function handleRouteError(error: unknown): Response {
+export function handleRouteError(error: unknown, path?: string): Response {
   if (error instanceof AuthError || (error instanceof Error && error.name === "AuthError")) {
     const e = error as AuthError
     return new Response(JSON.stringify({ error: e.message }), {
@@ -19,6 +19,8 @@ export function handleRouteError(error: unknown): Response {
       },
     })
   }
+  const location = path ? ` on ${path}` : ""
+  console.error(`[api] unhandled error${location}:`, error instanceof Error ? error.message : error, error instanceof Error ? error.stack : "")
   return new Response(JSON.stringify({ error: "Internal server error" }), {
     status: 500,
     headers: { "Content-Type": "application/json" },

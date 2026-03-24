@@ -34,7 +34,7 @@ export async function resolvePrincipal(request: Request): Promise<Principal> {
   const session = await auth()
   const { userId, orgId, orgRole } = session
   if (!userId) {
-    console.warn("[auth] resolvePrincipal: Clerk auth() returned null userId")
+    if (process.env.DEBUG) console.warn("[auth] resolvePrincipal: Clerk auth() returned null userId")
     return { kind: "anon" }
   }
 
@@ -57,7 +57,7 @@ export async function resolvePrincipal(request: Request): Promise<Principal> {
   }
 
   if (!tenant) {
-    console.warn("[auth] resolvePrincipal: tenant lookup returned null for userId:", userId)
+    if (process.env.DEBUG) console.warn("[auth] resolvePrincipal: tenant lookup returned null for userId:", userId)
     return { kind: "anon" }
   }
 
