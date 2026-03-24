@@ -82,7 +82,7 @@ describe("handleRouteError", () => {
   })
 })
 
-describe("handleRouteError as Elysia onError — parent fires first", () => {
+describe("handleRouteError as Elysia onError — parent catches child errors", () => {
   it("parent onError correctly returns 401 for AuthError thrown in a child plugin", async () => {
     const childPlugin = new Elysia({ prefix: "/child" })
       .get("/test", () => {

@@ -3,13 +3,11 @@ import { resolvePrincipal, requirePrincipal, AuthError } from "@/lib/auth/princi
 import { createJob, getJobById, cancelJob, startJobWorkflow } from "@/lib/services/jobs"
 import { logAudit } from "@/lib/services/audit"
 import { checkRateLimit, getRateLimitHeaders, defaultRateLimits, RateLimitError } from "@/lib/services/rate-limit"
-import { handleRouteError } from "./errors"
 import { trackEvent, isCliRequest, getCliVersion } from "@/lib/analytics/posthog"
 import type { Json } from "@/lib/db/types"
 import { normalizeUrl } from "@/lib/utils/url"
 
 export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
-  .onError(({ error, set, path }) => handleRouteError(error, set, path))
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     const source = isCliRequest(request) ? "cli" as const : "api" as const

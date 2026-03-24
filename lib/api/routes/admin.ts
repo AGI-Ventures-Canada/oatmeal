@@ -1,7 +1,6 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requireAdmin, requireAdminScopes, AuthError } from "@/lib/auth/principal"
 import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
-import { handleRouteError } from "./errors"
 import { logAudit } from "@/lib/services/audit"
 import {
   getPlatformStats,
@@ -20,7 +19,6 @@ const LocationTypeEnum = t.Union([
 ])
 
 export const adminRoutes = new Elysia({ prefix: "/admin" })
-  .onError(({ error, set, path }) => handleRouteError(error, set, path))
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     requireAdmin(principal)

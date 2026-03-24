@@ -14,6 +14,8 @@ All API routes are handled by a single Elysia instance via a Next.js catch-all r
 
 The handler uses dynamic `import()` for `@/lib/services/public-hackathons` and `@/lib/db/client` to avoid circular dependency issues that arise when those modules are imported at the top level in this file.
 
+The handler calls bare `supabase()` (anon key) rather than the service-role client. The read is dev-only and the blast radius is negligible, but if this handler is ever extended to write data it should switch to the service-role client for consistency with the rest of the API layer.
+
 ## Route Namespaces
 
 ```
@@ -31,7 +33,9 @@ The handler uses dynamic `import()` for `@/lib/services/public-hackathons` and `
 
 ## Error Handling
 
-`handleRouteError` in `lib/api/routes/errors.ts` checks both `instanceof` and `error.name` for `AuthError` and `RateLimitError`. The `.name` fallback guards against cross-module-boundary cases where Bun loads two separate copies of the same class (e.g. in tests), causing `instanceof` to return false for an otherwise identical class.
+`handleRouteError` in `lib/api/routes/errors.ts` is registered **once**, on the top-level `api` instance in `lib/api/index.ts`. Do not add per-route `onError` calls to child plugins — Elysia fires the closest handler first, so a child-level `onError` would shadow the parent and create a maintenance trap where future handlers can silently diverge.
+
+`handleRouteError` checks both `instanceof` and `error.name` for `AuthError` and `RateLimitError`. The `.name` fallback guards against cross-module-boundary cases where Bun loads two separate copies of the same class (e.g. in tests), causing `instanceof` to return false for an otherwise identical class.
 
 Errors with a `code` property (Elysia-managed errors such as `NOT_FOUND`, `VALIDATION`, and `PARSE`) are returned as `undefined` so Elysia uses its own native status codes (404, 422, 400). Do not remove this branch — without it, `handleRouteError` would override those responses with a 500.
 

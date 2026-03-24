@@ -5,7 +5,6 @@ import { createApiKey, listApiKeys, revokeApiKey, getApiKeyById } from "@/lib/se
 import { listJobs, getJobById } from "@/lib/services/jobs"
 import { logAudit } from "@/lib/services/audit"
 import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
-import { handleRouteError } from "./errors"
 import { dashboardJudgingRoutes } from "./dashboard-judging"
 import { dashboardPrizesRoutes } from "./dashboard-prizes"
 import { dashboardResultsRoutes } from "./dashboard-results"
@@ -16,7 +15,6 @@ import { ALL_SCOPES } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
 
 export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
-  .onError(({ error, set, path }) => handleRouteError(error, set, path))
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
 

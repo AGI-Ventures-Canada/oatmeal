@@ -85,8 +85,11 @@ mock.module("@/lib/services/rate-limit", () => ({
 
 const { Elysia } = await import("elysia")
 const { v1Routes } = await import("@/lib/api/routes/v1")
+const { handleRouteError } = await import("@/lib/api/routes/errors")
 
-const app = new Elysia({ prefix: "/api" }).use(v1Routes)
+const app = new Elysia({ prefix: "/api" })
+  .onError(({ error, set, path }) => handleRouteError(error, set, path))
+  .use(v1Routes)
 
 const mockApiKeyPrincipal = {
   kind: "api_key" as const,

@@ -128,8 +128,11 @@ mock.module("@/lib/services/rate-limit", () => ({
 
 const { Elysia } = await import("elysia")
 const { dashboardJudgingRoutes } = await import("@/lib/api/routes/dashboard-judging")
+const { handleRouteError } = await import("@/lib/api/routes/errors")
 
-const app = new Elysia({ prefix: "/api/dashboard" }).use(dashboardJudgingRoutes)
+const app = new Elysia({ prefix: "/api/dashboard" })
+  .onError(({ error, set, path }) => handleRouteError(error, set, path))
+  .use(dashboardJudgingRoutes)
 
 const mockUserPrincipal = {
   kind: "user" as const,
