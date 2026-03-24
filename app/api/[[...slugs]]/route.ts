@@ -1,7 +1,13 @@
 import { api } from "@/lib/api"
+import { preResolveAuth } from "@/lib/auth/principal"
 
-export const GET = api.fetch
-export const POST = api.fetch
-export const PUT = api.fetch
-export const DELETE = api.fetch
-export const PATCH = api.fetch
+async function handler(request: Request) {
+  await preResolveAuth(request)
+  return api.fetch(request)
+}
+
+export const GET = handler
+export const POST = handler
+export const PUT = handler
+export const DELETE = handler
+export const PATCH = handler

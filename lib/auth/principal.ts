@@ -11,6 +11,25 @@ export function isAdminEnabled(): boolean {
 
 const principalCache = new WeakMap<Request, Principal>()
 
+type ClerkSession = Awaited<ReturnType<typeof auth>>
+const clerkSessionCache = new WeakMap<Request, ClerkSession>()
+
+/**
+ * Pre-resolve Clerk auth at the Next.js route handler level where
+ * AsyncLocalStorage context is guaranteed, before passing to Elysia.
+ * Elysia's code-generated handlers can lose the Next.js async context,
+ * causing auth() to return { userId: null } inside derive hooks.
+ */
+export async function preResolveAuth(request: Request): Promise<void> {
+  if (request.headers.get("authorization")?.startsWith("Bearer sk_")) return
+  try {
+    const session = await auth()
+    clerkSessionCache.set(request, session)
+  } catch (err) {
+    console.error("[auth] preResolveAuth failed:", err instanceof Error ? err.message : err)
+  }
+}
+
 export async function resolvePrincipal(request: Request): Promise<Principal> {
   const cached = principalCache.get(request)
   if (cached) return cached
@@ -44,7 +63,7 @@ async function resolvePrincipalUncached(request: Request): Promise<Principal> {
 
   let session
   try {
-    session = await auth()
+    session = clerkSessionCache.get(request) ?? await auth()
   } catch (err) {
     console.error("[auth] Clerk auth() threw:", err instanceof Error ? err.message : err)
     return { kind: "anon" }
