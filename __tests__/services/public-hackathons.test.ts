@@ -12,8 +12,8 @@ const { getPublicHackathon, listPublicHackathons, getHackathonByIdForOrganizer, 
 )
 
 const mockHackathon: Hackathon = {
-  id: "h1",
-  tenant_id: "t1",
+  id: "11111111-1111-1111-1111-111111111111",
+  tenant_id: "22222222-2222-2222-2222-222222222222",
   name: "Test Hackathon",
   slug: "test-hackathon",
   description: "A test hackathon",
@@ -185,7 +185,7 @@ describe("Public Hackathons Service", () => {
       })
       setMockFromImplementation(() => chain)
 
-      const result = await getHackathonByIdForOrganizer("h1", "t1")
+      const result = await getHackathonByIdForOrganizer("11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222")
 
       expect(result).not.toBeNull()
       expect(result?.name).toBe("Test Hackathon")
@@ -198,7 +198,7 @@ describe("Public Hackathons Service", () => {
       })
       setMockFromImplementation(() => chain)
 
-      const result = await getHackathonByIdForOrganizer("h1", "wrong-tenant")
+      const result = await getHackathonByIdForOrganizer("11111111-1111-1111-1111-111111111111", "wrong-tenant")
 
       expect(result).toBeNull()
     })
@@ -212,7 +212,7 @@ describe("Public Hackathons Service", () => {
       })
       setMockFromImplementation(() => chain)
 
-      const result = await checkHackathonOrganizer("h1", "t1")
+      const result = await checkHackathonOrganizer("11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222")
 
       expect(result.status).toBe("ok")
       if (result.status === "ok") {
@@ -227,8 +227,13 @@ describe("Public Hackathons Service", () => {
       })
       setMockFromImplementation(() => chain)
 
-      const result = await checkHackathonOrganizer("nonexistent", "t1")
+      const result = await checkHackathonOrganizer("99999999-9999-9999-9999-999999999999", "22222222-2222-2222-2222-222222222222")
 
+      expect(result.status).toBe("not_found")
+    })
+
+    it("returns not_found for non-UUID IDs like 'draft'", async () => {
+      const result = await checkHackathonOrganizer("draft", "22222222-2222-2222-2222-222222222222")
       expect(result.status).toBe("not_found")
     })
 
@@ -239,7 +244,7 @@ describe("Public Hackathons Service", () => {
       })
       setMockFromImplementation(() => chain)
 
-      const result = await checkHackathonOrganizer("h1", "wrong-tenant")
+      const result = await checkHackathonOrganizer("11111111-1111-1111-1111-111111111111", "wrong-tenant")
 
       expect(result.status).toBe("not_authorized")
     })
