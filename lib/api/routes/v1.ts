@@ -3,6 +3,7 @@ import { resolvePrincipal, requirePrincipal, AuthError } from "@/lib/auth/princi
 import { createJob, getJobById, cancelJob, startJobWorkflow } from "@/lib/services/jobs"
 import { logAudit } from "@/lib/services/audit"
 import { checkRateLimit, getRateLimitHeaders, defaultRateLimits, RateLimitError } from "@/lib/services/rate-limit"
+import { trackEvent, isCliRequest, getCliVersion } from "@/lib/analytics/posthog"
 import type { Json } from "@/lib/db/types"
 import { normalizeUrl } from "@/lib/utils/url"
 
@@ -30,7 +31,20 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
   })
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
-    return { principal }
+    const source = isCliRequest(request) ? "cli" as const : "api" as const
+    const cliVersion = getCliVersion(request)
+
+    if (principal.kind === "api_key") {
+      const url = new URL(request.url)
+      trackEvent(principal.keyId, "api.request", {
+        source,
+        method: request.method,
+        path: url.pathname,
+        ...(cliVersion && { cliVersion }),
+      })
+    }
+
+    return { principal, source }
   })
   .get("/whoami", async ({ principal }) => {
     requirePrincipal(principal, ["api_key"])
