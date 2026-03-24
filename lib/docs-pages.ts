@@ -45,6 +45,8 @@ export const DOC_PAGES: DocPage[] = [
   { title: "Hackathon Organizer Skill", description: "AI skill with best practices and tips for planning and running successful hackathons.", url: "/docs/skills/hackathon-organizer" },
 ]
 
+export const PINNED_DOC_URLS = ["/docs/getting-started", "/docs/authentication", "/docs/sdk/hackathons"]
+
 export function searchDocs(query: string, limit = 2): DocPage[] {
   const q = query.toLowerCase()
   return DOC_PAGES.filter(

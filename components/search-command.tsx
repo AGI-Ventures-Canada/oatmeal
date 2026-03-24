@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/command"
 import { CreateHackathonDialog } from "@/components/hackathon/create-hackathon-dialog"
 import { OrgGateDialog } from "@/components/org-gate-dialog"
-import { DOC_PAGES, searchDocs } from "@/lib/docs-pages"
+import { DOC_PAGES, PINNED_DOC_URLS, searchDocs } from "@/lib/docs-pages"
 
 type HackathonResult = { id: string; name: string; slug: string; isOrganized?: boolean }
 
@@ -64,7 +64,6 @@ const publicFunctionalityItems = authedFunctionalityItems.filter(
   (i) => i.href === "/browse" || i.href === "/docs"
 )
 
-const PINNED_DOC_URLS = ["/docs/getting-started", "/docs/authentication", "/docs/sdk/hackathons"]
 
 export const OPEN_SEARCH_EVENT = "open-search"
 
@@ -212,7 +211,7 @@ export function SearchCommand() {
         title="Search"
         description="Navigate to any page or action"
         className="md:max-w-2xl"
-        contentStyle={{ top: "calc(50vh - 235px)", translate: "-50% 0" }}
+        contentStyle={{ top: "calc(50vh - 235px)" /* 235px ≈ half max dialog height (420px list + ~50px input) */, translate: "-50% 0" }}
       >
         <Command shouldFilter={false}>
           <CommandInput
