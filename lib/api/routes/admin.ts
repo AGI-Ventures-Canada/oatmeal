@@ -12,16 +12,7 @@ import {
 } from "@/lib/services/admin"
 import { listScenarios, runScenario } from "@/lib/services/admin-scenarios"
 import { supabase } from "@/lib/db/client"
-
-const HackathonStatusEnum = t.Union([
-  t.Literal("draft"),
-  t.Literal("published"),
-  t.Literal("registration_open"),
-  t.Literal("active"),
-  t.Literal("judging"),
-  t.Literal("completed"),
-  t.Literal("archived"),
-])
+import { HackathonStatusEnum } from "@/lib/api/validators"
 
 const LocationTypeEnum = t.Union([
   t.Literal("in_person"),

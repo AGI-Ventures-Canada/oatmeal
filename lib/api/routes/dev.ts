@@ -1,15 +1,8 @@
 import { Elysia, t } from "elysia"
+import { HackathonStatusEnum } from "@/lib/api/validators"
 
-const HackathonStatusEnum = t.Union([
-  t.Literal("draft"),
-  t.Literal("published"),
-  t.Literal("registration_open"),
-  t.Literal("active"),
-  t.Literal("judging"),
-  t.Literal("completed"),
-  t.Literal("archived"),
-])
-
+// No auth: only mounted when NODE_ENV === "development" (see lib/api/index.ts).
+// Never add this route to a production-visible mount.
 export const devRoutes = new Elysia({ prefix: "/dev" }).patch(
   "/hackathons/:id/status",
   async ({ params, body }) => {
