@@ -101,6 +101,8 @@ describe("Admin Auth", () => {
       const adminPrincipal = {
         kind: "admin" as const,
         userId: "admin-user",
+        tenantId: "tenant-1",
+        orgId: null,
         scopes: ["admin:read" as const, "admin:write" as const, "admin:scenarios" as const],
       }
 
@@ -126,6 +128,8 @@ describe("Admin Auth", () => {
       const adminPrincipal = {
         kind: "admin" as const,
         userId: "admin-user",
+        tenantId: "tenant-1",
+        orgId: null,
         scopes: ["admin:read" as const, "admin:write" as const, "admin:scenarios" as const],
       }
 

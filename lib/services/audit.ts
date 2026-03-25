@@ -81,10 +81,11 @@ export async function logAudit(input: LogAuditInput): Promise<AuditLog | null> {
   let metadata = input.metadata
 
   if (principal.kind === "admin") {
-    if (!input.targetTenantId) {
+    const resolvedTenantId = input.targetTenantId ?? principal.tenantId
+    if (!resolvedTenantId) {
       throw new Error("Admin audit log requires targetTenantId")
     }
-    tenantId = input.targetTenantId
+    tenantId = resolvedTenantId
     actorType = "user"
     actorId = principal.userId
     metadata = { ...(input.metadata as Record<string, unknown> ?? {}), is_admin_action: true, admin_user_id: principal.userId }

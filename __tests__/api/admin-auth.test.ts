@@ -21,6 +21,8 @@ function withAdminEnabled(fn: () => void) {
 const adminPrincipal: AdminPrincipal = {
   kind: "admin",
   userId: "user-123",
+  tenantId: "tenant-123",
+  orgId: null,
   scopes: ADMIN_SCOPES,
 }
 

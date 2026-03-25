@@ -109,6 +109,8 @@ const app = new Elysia({ prefix: "/api" })
 const adminPrincipal = {
   kind: "admin" as const,
   userId: "admin-1",
+  tenantId: "tenant-1",
+  orgId: null,
   scopes: ["admin:read", "admin:write", "admin:scenarios"],
 }
 
