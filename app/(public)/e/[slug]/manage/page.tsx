@@ -1,21 +1,44 @@
 import { notFound } from "next/navigation"
+import Link from "next/link"
 import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { getHackathonSubmissions } from "@/lib/services/submissions"
-import { getJudgingProgress, getJudgingSetupStatus, listJudgingCriteria } from "@/lib/services/judging"
-import { listPrizes } from "@/lib/services/prizes"
+import { getJudgingProgress, getJudgingSetupStatus, listJudgingCriteria, listJudges, listJudgeAssignments } from "@/lib/services/judging"
+import { listJudgeInvitations } from "@/lib/services/judge-invitations"
+import { listPrizes, listPrizeAssignments } from "@/lib/services/prizes"
+import { getResults } from "@/lib/services/results"
 import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
-import { PageHeader } from "@/components/page-header"
+import type { HackathonStatus } from "@/lib/db/hackathon-types"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
 import { DebugStageSwitcher } from "@/components/hackathon/debug-stage-switcher"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import { CriteriaConfig } from "@/components/hackathon/judging/criteria-config"
+import { JudgingModeToggle } from "@/components/hackathon/judging/judging-mode-toggle"
+import { JudgeAssignments } from "@/components/hackathon/judging/judge-assignments"
+import { ScoringProgress } from "@/components/hackathon/judging/scoring-progress"
+import { PrizesManager } from "@/components/hackathon/prizes/prizes-manager"
+import { ResultsDashboard } from "@/components/hackathon/results/results-dashboard"
 
 type PageProps = {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ tab?: string; jtab?: string; ptab?: string }>
 }
 
-export default async function ManagePage({ params }: PageProps) {
+const VALID_TABS = ["edit", "judges", "prizes"]
+const VALID_JTABS = ["criteria", "assignments", "progress"]
+const VALID_PTABS = ["prizes", "results"]
+
+function getDefaultTab(status: HackathonStatus): "edit" | "judges" | "prizes" {
+  if (status === "draft" || status === "published") return "edit"
+  if (status === "completed" || status === "archived") return "prizes"
+  return "judges"
+}
+
+export default async function ManagePage({ params, searchParams }: PageProps) {
   const { slug } = await params
+  const { tab, jtab, ptab } = await searchParams
   const result = await getManageHackathon(slug)
 
   if (!result.ok) {
@@ -24,18 +47,39 @@ export default async function ManagePage({ params }: PageProps) {
 
   const { hackathon } = result
 
-  const [submissions, judgingProgress, judgingSetupStatus, prizes, judgeDisplayCount, criteria] = await Promise.all([
+  const [
+    submissions,
+    judgingProgress,
+    judgingSetupStatus,
+    prizes,
+    prizeAssignments,
+    judgeDisplayCount,
+    criteria,
+    judges,
+    assignments,
+    pendingInvitations,
+    results,
+  ] = await Promise.all([
     getHackathonSubmissions(hackathon.id),
     getJudgingProgress(hackathon.id),
     getJudgingSetupStatus(hackathon.id),
     listPrizes(hackathon.id),
+    listPrizeAssignments(hackathon.id),
     countJudgeDisplayProfiles(hackathon.id),
     listJudgingCriteria(hackathon.id),
+    listJudges(hackathon.id),
+    listJudgeAssignments(hackathon.id),
+    listJudgeInvitations(hackathon.id, "pending"),
+    getResults(hackathon.id),
   ])
 
   const submissionCount = submissions.length
-
+  const incompleteAssignments = judgingProgress.totalAssignments - judgingProgress.completedAssignments
   const isDev = process.env.NODE_ENV === "development"
+
+  const activeTab = tab && VALID_TABS.includes(tab) ? tab : getDefaultTab(hackathon.status)
+  const activeJtab = jtab && VALID_JTABS.includes(jtab) ? jtab : "criteria"
+  const activePtab = ptab && VALID_PTABS.includes(ptab) ? ptab : "prizes"
 
   return (
     <div className="space-y-6">
@@ -49,20 +93,6 @@ export default async function ManagePage({ params }: PageProps) {
           endsAt={hackathon.ends_at}
         />
       )}
-      <PageHeader
-        breadcrumbs={[
-          { label: "Dashboard", href: "/home" },
-          { label: hackathon.name },
-        ]}
-        actions={
-          <HackathonPageActions
-            slug={hackathon.slug}
-            isOrganizer={true}
-            submissionCount={submissionCount}
-          />
-        }
-      />
-
       <LifecycleStepper
         hackathonId={hackathon.id}
         hackathonSlug={hackathon.slug}
@@ -85,9 +115,163 @@ export default async function ManagePage({ params }: PageProps) {
         criteriaCount={criteria.length}
       />
 
-      <div className="rounded-lg border overflow-hidden">
-        <HackathonPreviewClient hackathon={hackathon} isEditable={true} />
-      </div>
+      <Tabs defaultValue={activeTab} className="space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <Breadcrumb className="shrink-0">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/home">Dashboard</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{hackathon.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <HackathonPageActions
+                slug={hackathon.slug}
+                isOrganizer={true}
+                submissionCount={submissionCount}
+              />
+            </div>
+            <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
+              <TabsList variant="line">
+                <TabsTrigger value="edit">Edit</TabsTrigger>
+                <TabsTrigger value="judges">Judges</TabsTrigger>
+                <TabsTrigger value="prizes">Prizes</TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
+        </div>
+
+        <TabsContent value="edit" forceMount className="data-[state=inactive]:hidden">
+          <div className="rounded-lg border overflow-hidden">
+            <HackathonPreviewClient hackathon={hackathon} isEditable={true} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="judges" forceMount className="data-[state=inactive]:hidden">
+          <Tabs defaultValue={activeJtab} className="space-y-6">
+            <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
+              <TabsList>
+                <TabsTrigger value="criteria">Criteria</TabsTrigger>
+                <TabsTrigger value="assignments">Judges & Assignments</TabsTrigger>
+                <TabsTrigger value="progress">Progress</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="criteria" forceMount className="data-[state=inactive]:hidden">
+              <div className="space-y-6">
+                <JudgingModeToggle
+                  hackathonId={hackathon.id}
+                  initialMode={hackathon.judging_mode}
+                />
+                <CriteriaConfig
+                  hackathonId={hackathon.id}
+                  initialCriteria={criteria.map((c) => ({
+                    id: c.id,
+                    name: c.name,
+                    description: c.description,
+                    maxScore: c.max_score,
+                    weight: Number(c.weight),
+                    displayOrder: c.display_order,
+                    createdAt: c.created_at,
+                  }))}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="assignments" forceMount className="data-[state=inactive]:hidden">
+              <JudgeAssignments
+                hackathonId={hackathon.id}
+                initialJudges={judges}
+                initialAssignments={assignments.map((a) => ({
+                  id: a.id,
+                  judgeParticipantId: a.judge_participant_id,
+                  judgeName: a.judgeName,
+                  judgeEmail: a.judgeEmail,
+                  submissionId: a.submission_id,
+                  submissionTitle: a.submissionTitle,
+                  isComplete: a.is_complete,
+                  assignedAt: a.assigned_at,
+                }))}
+                initialInvitations={pendingInvitations.map((inv) => ({
+                  id: inv.id,
+                  email: inv.email,
+                  status: inv.status,
+                  expiresAt: inv.expires_at,
+                  createdAt: inv.created_at,
+                }))}
+                submissions={submissions.map((s) => ({ id: s.id, title: s.title }))}
+                anonymousJudging={hackathon.anonymous_judging}
+              />
+            </TabsContent>
+
+            <TabsContent value="progress" forceMount className="data-[state=inactive]:hidden">
+              <ScoringProgress progress={judgingProgress} />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="prizes" forceMount className="data-[state=inactive]:hidden">
+          <Tabs defaultValue={activePtab} className="space-y-6">
+            <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
+              <TabsList>
+                <TabsTrigger value="prizes">Prizes</TabsTrigger>
+                <TabsTrigger value="results">Results</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="prizes" forceMount className="data-[state=inactive]:hidden">
+              <PrizesManager
+                hackathonId={hackathon.id}
+                initialPrizes={prizes.map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  description: p.description,
+                  value: p.value,
+                  displayOrder: p.display_order,
+                  createdAt: p.created_at,
+                }))}
+                initialAssignments={prizeAssignments.map((a) => ({
+                  id: a.id,
+                  prizeId: a.prize_id,
+                  prizeName: a.prizeName,
+                  submissionId: a.submission_id,
+                  submissionTitle: a.submissionTitle,
+                  teamName: a.teamName,
+                  assignedAt: a.assigned_at,
+                }))}
+                submissions={submissions.map((s) => ({ id: s.id, title: s.title }))}
+              />
+            </TabsContent>
+
+            <TabsContent value="results" forceMount className="data-[state=inactive]:hidden">
+              <ResultsDashboard
+                hackathonId={hackathon.id}
+                initialResults={results.map((r) => ({
+                  id: r.id,
+                  rank: r.rank,
+                  submissionId: r.submission_id,
+                  submissionTitle: r.submissionTitle,
+                  teamName: r.teamName,
+                  totalScore: r.total_score,
+                  weightedScore: r.weighted_score,
+                  judgeCount: r.judge_count,
+                  publishedAt: r.published_at,
+                  prizes: r.prizes,
+                }))}
+                isPublished={hackathon.results_published_at !== null}
+                incompleteAssignments={incompleteAssignments}
+              />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
