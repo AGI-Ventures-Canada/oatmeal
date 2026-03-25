@@ -60,10 +60,8 @@ const settingsItems = [
 ]
 
 const authedFunctionalityItems = [...navigationItems, ...hackathonItems, ...settingsItems]
-const publicFunctionalityItems = authedFunctionalityItems.filter(
-  (i) => i.href === "/browse" || i.href === "/docs"
-)
 
+const DIALOG_VERTICAL_OFFSET = 235
 
 export const OPEN_SEARCH_EVENT = "open-search"
 
@@ -103,6 +101,7 @@ export function SearchCommand() {
   }, [isSignedIn])
 
   useEffect(() => {
+    let active = true
     const delay = open && query.length >= 2 ? 300 : 0
     const timer = setTimeout(() => {
       if (!open || query.length < 2) {
@@ -121,6 +120,7 @@ export function SearchCommand() {
           : Promise.resolve(null),
       ])
         .then(([pub, organized]) => {
+          if (!active) return
           const seen = new Set<string>()
           const results: HackathonResult[] = []
           for (const h of (organized?.hackathons ?? [])) {
@@ -133,10 +133,13 @@ export function SearchCommand() {
           setFetchedQuery(query)
           setEvents(results)
         })
-        .catch(() => { setEventsError(true) })
-        .finally(() => setEventsLoading(false))
+        .catch(() => { if (active) setEventsError(true) })
+        .finally(() => { if (active) setEventsLoading(false) })
     }, delay)
-    return () => clearTimeout(timer)
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
   }, [open, query, isSignedIn])
 
   useEffect(() => {
@@ -192,10 +195,8 @@ export function SearchCommand() {
 
   const matchedEvents = q ? events.slice(0, 5) : []
 
-  const allFunctionalityItems = isSignedIn ? authedFunctionalityItems : publicFunctionalityItems
-
   const matchedFunctionality = q
-    ? allFunctionalityItems.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 3)
+    ? authedFunctionalityItems.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 3)
     : []
 
   const matchedDocs = q ? searchDocs(q, 4) : []
@@ -211,7 +212,7 @@ export function SearchCommand() {
         title="Search"
         description="Navigate to any page or action"
         className="md:max-w-2xl"
-        contentStyle={{ top: "calc(50vh - 235px)" /* 235px ≈ half max dialog height (420px list + ~50px input) */, translate: "-50% 0" }}
+        contentStyle={{ top: `calc(50vh - ${DIALOG_VERTICAL_OFFSET}px)`, translate: "-50% 0" }}
       >
         <Command shouldFilter={false}>
           <CommandInput
