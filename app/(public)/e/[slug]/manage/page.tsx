@@ -40,7 +40,14 @@ export default async function ManagePage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       {isDev && (
-        <DebugStageSwitcher hackathonId={hackathon.id} currentStatus={hackathon.status} />
+        <DebugStageSwitcher
+          hackathonId={hackathon.id}
+          currentStatus={hackathon.status}
+          registrationOpensAt={hackathon.registration_opens_at}
+          registrationClosesAt={hackathon.registration_closes_at}
+          startsAt={hackathon.starts_at}
+          endsAt={hackathon.ends_at}
+        />
       )}
       <PageHeader
         breadcrumbs={[

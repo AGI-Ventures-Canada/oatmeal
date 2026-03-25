@@ -27,6 +27,8 @@ const mockApiKeyPrincipal: ApiKeyPrincipal = {
 const mockAdminPrincipal: AdminPrincipal = {
   kind: "admin",
   userId: "admin-789",
+  tenantId: "tenant-123",
+  orgId: null,
   scopes: ["admin:read", "admin:write", "admin:scenarios"],
 }
 
@@ -194,10 +196,17 @@ describe("Audit Service", () => {
       expect(result?.actor_id).toBe("admin-789")
     })
 
-    it("throws for admin principal without targetTenantId", async () => {
+    it("throws for admin principal without targetTenantId and no principal tenantId", async () => {
+      const noTenantAdminPrincipal: AdminPrincipal = {
+        kind: "admin",
+        userId: "admin-789",
+        tenantId: null,
+        orgId: null,
+        scopes: ["admin:read", "admin:write", "admin:scenarios"],
+      }
       expect(
         logAudit({
-          principal: mockAdminPrincipal,
+          principal: noTenantAdminPrincipal,
           action: "admin.hackathon.updated",
           resourceType: "hackathon",
           resourceId: "h-123",

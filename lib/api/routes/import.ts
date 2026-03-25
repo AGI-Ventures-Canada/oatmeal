@@ -52,14 +52,6 @@ export const importRoutes = new Elysia({ prefix: "/public/import" })
   )
 
 export const dashboardImportRoutes = new Elysia({ prefix: "/dashboard/import" })
-  .onError(({ error, set }) => {
-    if (error instanceof AuthError) {
-      set.status = error.statusCode
-      return { error: error.message }
-    }
-    set.status = 500
-    return { error: "Internal server error" }
-  })
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     return { principal }

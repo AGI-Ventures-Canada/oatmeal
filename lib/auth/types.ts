@@ -73,6 +73,8 @@ export type ApiKeyPrincipal = {
 export type AdminPrincipal = {
   kind: "admin"
   userId: string
+  tenantId: string | null
+  orgId: string | null
   scopes: Scope[]
 }
 

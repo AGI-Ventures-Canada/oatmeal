@@ -8,27 +8,6 @@ import type { Json } from "@/lib/db/types"
 import { normalizeUrl } from "@/lib/utils/url"
 
 export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
-  .onError(({ error }) => {
-    if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: error.statusCode,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-    if (error instanceof RateLimitError) {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          ...getRateLimitHeaders({ allowed: false, remaining: error.remaining, resetAt: error.resetAt }),
-        },
-      })
-    }
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    })
-  })
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     const source = isCliRequest(request) ? "cli" as const : "api" as const

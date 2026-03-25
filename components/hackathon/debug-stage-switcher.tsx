@@ -4,7 +4,9 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { FlaskConical, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
+import { getTimelineState } from "@/lib/utils/timeline"
 
 const ALL_STAGES: { status: HackathonStatus; label: string }[] = [
   { status: "draft", label: "Draft" },
@@ -19,17 +21,36 @@ const ALL_STAGES: { status: HackathonStatus; label: string }[] = [
 interface DebugStageSwitcherProps {
   hackathonId: string
   currentStatus: HackathonStatus
+  registrationOpensAt?: string | null
+  registrationClosesAt?: string | null
+  startsAt?: string | null
+  endsAt?: string | null
 }
 
-export function DebugStageSwitcher({ hackathonId, currentStatus }: DebugStageSwitcherProps) {
+export function DebugStageSwitcher({
+  hackathonId,
+  currentStatus,
+  registrationOpensAt,
+  registrationClosesAt,
+  startsAt,
+  endsAt,
+}: DebugStageSwitcherProps) {
   const router = useRouter()
   const [pending, setPending] = useState<HackathonStatus | null>(null)
+
+  const timelineState = getTimelineState({
+    status: currentStatus,
+    registration_opens_at: registrationOpensAt,
+    registration_closes_at: registrationClosesAt,
+    starts_at: startsAt,
+    ends_at: endsAt,
+  })
 
   async function switchTo(status: HackathonStatus) {
     if (status === currentStatus || pending) return
     setPending(status)
     try {
-      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
+      const res = await fetch(`/api/dev/hackathons/${hackathonId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -50,6 +71,9 @@ export function DebugStageSwitcher({ hackathonId, currentStatus }: DebugStageSwi
           <FlaskConical className="size-3.5" />
           <span className="font-medium">Dev</span>
         </div>
+        <Badge variant={timelineState.variant} className="text-xs">
+          {timelineState.label}
+        </Badge>
         {ALL_STAGES.map(({ status, label }) => {
           const isActive = status === currentStatus
           const isLoading = pending === status

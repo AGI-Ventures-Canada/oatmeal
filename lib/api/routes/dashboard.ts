@@ -15,28 +15,6 @@ import { ALL_SCOPES } from "@/lib/auth/types"
 import type { WebhookEvent } from "@/lib/db/hackathon-types"
 
 export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
-  .onError(({ error }) => {
-    if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: error.statusCode,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-    if (error instanceof RateLimitError) {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          ...getRateLimitHeaders({ allowed: false, remaining: error.remaining, resetAt: error.resetAt }),
-        },
-      })
-    }
-    console.error("[dashboard] Unhandled error:", error instanceof Error ? error.message : error, error instanceof Error ? error.stack : "")
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    })
-  })
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
 

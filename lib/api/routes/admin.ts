@@ -11,16 +11,7 @@ import {
 } from "@/lib/services/admin"
 import { listScenarios, runScenario } from "@/lib/services/admin-scenarios"
 import { supabase } from "@/lib/db/client"
-
-const HackathonStatusEnum = t.Union([
-  t.Literal("draft"),
-  t.Literal("published"),
-  t.Literal("registration_open"),
-  t.Literal("active"),
-  t.Literal("judging"),
-  t.Literal("completed"),
-  t.Literal("archived"),
-])
+import { HackathonStatusEnum } from "@/lib/api/validators"
 
 const LocationTypeEnum = t.Union([
   t.Literal("in_person"),
@@ -28,19 +19,6 @@ const LocationTypeEnum = t.Union([
 ])
 
 export const adminRoutes = new Elysia({ prefix: "/admin" })
-  .onError(({ error, set }) => {
-    if (error instanceof AuthError) {
-      set.status = error.statusCode
-      return { error: error.message }
-    }
-    if (error instanceof RateLimitError) {
-      set.status = 429
-      set.headers = getRateLimitHeaders({ allowed: false, remaining: error.remaining, resetAt: error.resetAt }) as Record<string, string>
-      return { error: "Rate limit exceeded" }
-    }
-    set.status = 500
-    return { error: "Internal server error" }
-  })
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     requireAdmin(principal)

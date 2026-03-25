@@ -144,8 +144,11 @@ mock.module("@/lib/services/rate-limit", () => ({
 }))
 
 const { dashboardRoutes } = await import("@/lib/api/routes/dashboard")
+const { handleRouteError } = await import("@/lib/api/routes/errors")
 
-const app = new Elysia({ prefix: "/api" }).use(dashboardRoutes)
+const app = new Elysia({ prefix: "/api" })
+  .onError(({ error, set, path }) => handleRouteError(error, set, path))
+  .use(dashboardRoutes)
 
 const mockUserPrincipal = {
   kind: "user" as const,
