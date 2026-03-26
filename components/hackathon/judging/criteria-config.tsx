@@ -4,13 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -325,22 +319,23 @@ export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: Cr
                   />
                 </div>
                 {isRubric ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="criteria-category">Category</Label>
-                    <Select
-                      value={form.category}
-                      onValueChange={(value) =>
-                        setForm({ ...form, category: value as CriterionCategory })
+                  <div className="flex items-start gap-3 rounded-md border p-3">
+                    <Checkbox
+                      id="criteria-core"
+                      checked={form.category === "core"}
+                      onCheckedChange={(checked) =>
+                        setForm({ ...form, category: checked ? "core" : "bonus" })
                       }
-                    >
-                      <SelectTrigger id="criteria-category">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="core">Core</SelectItem>
-                        <SelectItem value="bonus">Bonus</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      className="mt-0.5"
+                    />
+                    <div className="flex flex-col gap-0.5">
+                      <Label htmlFor="criteria-core" className="cursor-pointer font-medium text-sm">
+                        Core criterion
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Counts 2x toward the final score. Uncheck for optional criteria that count 1x.
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
@@ -445,8 +440,8 @@ export function CriteriaConfig({ hackathonId, judgingMode, initialCriteria }: Cr
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm">{c.name}</span>
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">
-                      {c.category ?? "core"}
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                      {(c.category ?? "core") === "core" ? "Core · 2x" : "Optional · 1x"}
                     </span>
                   </div>
                   {c.description && (
