@@ -73,13 +73,16 @@ export function DebugStageSwitcher({
   const router = useRouter()
   const [pending, setPending] = useState<HackathonStatus | null>(null)
   const [expanded, setExpanded] = useState(false)
-  const [position, setPosition] = useState(() => {
-    if (typeof window === "undefined") return { x: 0, y: 0 }
-    return { x: window.innerWidth - BUTTON_W - EDGE_MARGIN, y: window.innerHeight - BUTTON_H - EDGE_MARGIN }
-  })
+  const [mounted, setMounted] = useState(false)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
   const [edge, setEdge] = useState<Edge>("bottom-right")
   const [isSnapping, setIsSnapping] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+
+  useEffect(() => {
+    setPosition({ x: window.innerWidth - BUTTON_W - EDGE_MARGIN, y: window.innerHeight - BUTTON_H - EDGE_MARGIN })
+    setMounted(true)
+  }, [])
   const isDragging = useRef(false)
   const dragStart = useRef({ x: 0, y: 0, posX: 0, posY: 0 })
   const hasMoved = useRef(false)
@@ -195,6 +198,8 @@ export function DebugStageSwitcher({
     edgeY === "bottom" ? "origin-bottom" : edgeY === "center" ? "origin-center" : "origin-top",
   )
 
+  if (!mounted) return null
+
   return (
     <div
       className={cn(
@@ -266,9 +271,14 @@ export function DebugStageSwitcher({
         <div
           ref={buttonRef}
           className={cn(
-            "flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-primary-foreground shadow-[0_4px_20px_rgba(0,0,0,0.4)] transition-all duration-150",
-            isHovered && "scale-105 shadow-[0_6px_28px_rgba(0,0,0,0.5)]",
+            "flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-primary-foreground transition-all duration-150",
+            isHovered && "scale-105",
           )}
+          style={{
+            boxShadow: isHovered
+              ? "0 8px 32px color-mix(in oklch, var(--primary) 50%, transparent)"
+              : "0 4px 20px color-mix(in oklch, var(--primary) 35%, transparent)",
+          }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
