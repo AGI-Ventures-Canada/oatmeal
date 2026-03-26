@@ -22,6 +22,7 @@ type CriterionWithScore = {
   description: string | null
   max_score: number
   weight: number
+  category?: string | null
   currentScore: number | null
   rubricLevels?: { id: string; level_number: number; label: string; description: string | null }[]
 }
@@ -253,7 +254,11 @@ export function ScoringPanel({
                   <p className="text-xs text-muted-foreground">{c.description}</p>
                 )}
               </div>
-              <Badge variant="secondary">{c.weight}x</Badge>
+              <Badge variant="secondary">
+                {c.rubricLevels && c.rubricLevels.length > 0
+                  ? ((c.category ?? "core") === "core" ? "2x" : "1x")
+                  : `${c.weight}x`}
+              </Badge>
             </div>
             {c.rubricLevels && c.rubricLevels.length > 0 ? (
               <RubricLevelSelector
