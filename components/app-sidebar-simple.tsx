@@ -23,7 +23,9 @@ import {
   ExternalLink,
   Plus,
   Download,
+  Compass,
 } from "lucide-react"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useSearchParams, useRouter } from "next/navigation"
@@ -58,10 +60,11 @@ import { ThemeSwitcher } from "@/components/theme-switcher"
 import { CreateHackathonMenu } from "@/components/hackathon/create-hackathon-menu"
 import { CreateOrganizationDialog } from "@/components/create-organization-dialog"
 import { InstallSkillButton } from "@/components/install-skill-button"
+import { OPEN_SEARCH_EVENT } from "@/components/search-command"
 
 const mainItems = [
   { title: "Dashboard", href: "/home", icon: Home },
-  { title: "Browse", href: "/browse", icon: Search },
+  { title: "Explore", href: "/browse", icon: Compass },
 ]
 
 const hackathonItems = [
@@ -234,6 +237,18 @@ export function AppSidebarSimple() {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              className="h-9 text-muted-foreground"
+              onClick={() => document.dispatchEvent(new CustomEvent(OPEN_SEARCH_EVENT))}
+            >
+              <Search className="size-4" />
+              <span className="text-sm flex-1">Search</span>
+              <KbdGroup><Kbd>⌘</Kbd>+<Kbd>K</Kbd></KbdGroup>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
