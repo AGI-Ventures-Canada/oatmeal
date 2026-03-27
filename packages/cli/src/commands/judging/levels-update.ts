@@ -1,13 +1,6 @@
 import type { OatmealClient } from "../../client.js"
 import { formatJson, formatSuccess } from "../../output.js"
-
-interface RubricLevel {
-  id: string
-  criteriaId: string
-  levelNumber: number
-  label: string
-  description?: string
-}
+import type { RubricLevel } from "../../types.js"
 
 interface LevelsUpdateOptions {
   hackathonId?: string

@@ -946,6 +946,7 @@ export type Database = {
       }
       judging_criteria: {
         Row: {
+          category: Database["public"]["Enums"]["criterion_category"] | null
           category_id: string | null
           created_at: string
           description: string | null
@@ -959,6 +960,7 @@ export type Database = {
           weight: number
         }
         Insert: {
+          category?: Database["public"]["Enums"]["criterion_category"] | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -972,6 +974,7 @@ export type Database = {
           weight?: number
         }
         Update: {
+          category?: Database["public"]["Enums"]["criterion_category"] | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -1419,6 +1422,41 @@ export type Database = {
             columns: ["hackathon_id"]
             isOneToOne: false
             referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rubric_levels: {
+        Row: {
+          created_at: string
+          criteria_id: string
+          description: string | null
+          id: string
+          label: string
+          level_number: number
+        }
+        Insert: {
+          created_at?: string
+          criteria_id: string
+          description?: string | null
+          id?: string
+          label: string
+          level_number: number
+        }
+        Update: {
+          created_at?: string
+          criteria_id?: string
+          description?: string | null
+          id?: string
+          label?: string
+          level_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rubric_levels_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "judging_criteria"
             referencedColumns: ["id"]
           },
         ]
@@ -2147,6 +2185,7 @@ export type Database = {
     }
     Enums: {
       actor_type: "user" | "api_key"
+      criterion_category: "core" | "bonus"
       hackathon_phase:
         | "build"
         | "submission_open"
@@ -2169,7 +2208,7 @@ export type Database = {
         | "expired"
         | "cancelled"
       job_status: "queued" | "running" | "succeeded" | "failed" | "canceled"
-      judging_mode: "points" | "subjective"
+      judging_mode: "points" | "subjective" | "rubric"
       location_type: "in_person" | "virtual"
       mentor_request_status: "open" | "claimed" | "resolved" | "cancelled"
       participant_role: "participant" | "judge" | "mentor" | "organizer"
@@ -2329,6 +2368,7 @@ export const Constants = {
   public: {
     Enums: {
       actor_type: ["user", "api_key"],
+      criterion_category: ["core", "bonus"],
       hackathon_phase: [
         "build",
         "submission_open",
@@ -2354,7 +2394,7 @@ export const Constants = {
         "cancelled",
       ],
       job_status: ["queued", "running", "succeeded", "failed", "canceled"],
-      judging_mode: ["points", "subjective"],
+      judging_mode: ["points", "subjective", "rubric"],
       location_type: ["in_person", "virtual"],
       mentor_request_status: ["open", "claimed", "resolved", "cancelled"],
       participant_role: ["participant", "judge", "mentor", "organizer"],

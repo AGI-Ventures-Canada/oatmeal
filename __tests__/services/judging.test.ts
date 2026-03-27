@@ -1487,8 +1487,33 @@ describe("Judging Service", () => {
         return createChainableMock({ data: [{ criteria_id: "c1" }, { criteria_id: "c1" }, { criteria_id: "c1" }], error: null })
       })
 
-      const result = await getJudgingSetupStatus("h1")
+      const result = await getJudgingSetupStatus("h1", "rubric")
       expect(result.judgeCount).toBe(1)
+      expect(result.hasCriteria).toBe(true)
+      expect(result.allCriteriaHaveLevels).toBe(true)
+      expect(result.isReady).toBe(true)
+    })
+
+    it("skips rubric level check for points mode", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({ data: [{ id: "c1" }], error: null })
+        }
+        if (callCount === 2) {
+          return createChainableMock({ data: [{ id: "j1" }], error: null })
+        }
+        if (callCount === 3) {
+          return createChainableMock({ data: [{ id: "s1" }], error: null })
+        }
+        if (callCount === 4) {
+          return createChainableMock({ data: [{ submission_id: "s1" }], error: null })
+        }
+        return createChainableMock({ data: [], error: null })
+      })
+
+      const result = await getJudgingSetupStatus("h1", "points")
       expect(result.hasCriteria).toBe(true)
       expect(result.allCriteriaHaveLevels).toBe(true)
       expect(result.isReady).toBe(true)

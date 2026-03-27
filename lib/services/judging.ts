@@ -902,7 +902,7 @@ export type JudgingSetupStatus = {
   isReady: boolean
 }
 
-export async function getJudgingSetupStatus(hackathonId: string): Promise<JudgingSetupStatus> {
+export async function getJudgingSetupStatus(hackathonId: string, judgingMode?: string): Promise<JudgingSetupStatus> {
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data: criteria } = await client
@@ -937,7 +937,7 @@ export async function getJudgingSetupStatus(hackathonId: string): Promise<Judgin
   const hasUnassignedSubmissions = (submissions ?? []).some(s => !assignedSubmissionIds.has(s.id))
 
   let allCriteriaHaveLevels = true
-  if (hasCriteria && criteria) {
+  if (judgingMode === "rubric" && hasCriteria && criteria) {
     const criteriaIds = criteria.map(c => c.id)
     const { data: levels } = await client
       .from("rubric_levels")
