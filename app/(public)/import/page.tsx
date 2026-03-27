@@ -4,7 +4,7 @@ import { TriangleAlert } from "lucide-react"
 import { EventImportEditor } from "@/components/hackathon/event-import-editor"
 import { extractExternalEventData, extractExternalRichContent } from "@/lib/services/external-import"
 import { ttlCache } from "@/lib/utils/ttl-cache"
-import { normalizeUrl } from "@/lib/utils/url"
+import { normalizeUrl, isSafeExternalUrl } from "@/lib/utils/url"
 import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
 
@@ -21,6 +21,10 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   }
 
   const normalized = normalizeUrl(rawUrl)
+  if (!isSafeExternalUrl(normalized)) {
+    return { title: "Import from Event Page | Oatmeal" }
+  }
+
   const eventData = await ttlCache(`import:data:${normalized}`, () => extractExternalEventData(normalized))
 
   if (!eventData) {
@@ -42,6 +46,10 @@ export default async function EventImportPage({ searchParams }: PageProps) {
   }
 
   const normalizedUrl = normalizeUrl(rawUrl)
+
+  if (!isSafeExternalUrl(normalizedUrl)) {
+    notFound()
+  }
 
   const [eventData, richContent] = await Promise.all([
     ttlCache(`import:data:${normalizedUrl}`, () => extractExternalEventData(normalizedUrl)),

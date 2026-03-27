@@ -102,7 +102,28 @@ describe("POST /api/public/import/url", () => {
   })
 
   it("rejects loopback addresses", async () => {
-    for (const url of ["https://127.0.0.1/secret", "https://localhost/secret"]) {
+    for (const url of [
+      "https://127.0.0.1/secret",
+      "https://localhost/secret",
+      "https://[::1]/secret",
+    ]) {
+      const res = await api.handle(
+        new Request("http://localhost/api/public/import/url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        })
+      )
+      expect(res.status).toBe(400)
+    }
+  })
+
+  it("rejects IPv6 private and link-local addresses", async () => {
+    for (const url of [
+      "https://[fd00::1]/internal",
+      "https://[fe80::1]/link-local",
+      "https://[fc00::1]/unique-local",
+    ]) {
       const res = await api.handle(
         new Request("http://localhost/api/public/import/url", {
           method: "POST",
