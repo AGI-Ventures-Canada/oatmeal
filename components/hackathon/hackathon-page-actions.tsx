@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, FolderOpen, Gavel, Medal } from "lucide-react"
+import { ExternalLink, FolderOpen } from "lucide-react"
 interface HackathonPageActionsProps {
   slug: string
   isOrganizer: boolean
@@ -32,18 +32,6 @@ export function HackathonPageActions({
               <Badge variant="secondary" className="hidden sm:inline-flex ml-2">
                 {submissionCount}
               </Badge>
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/e/${slug}/manage/judging`}>
-              <Gavel className="sm:mr-2 size-4" />
-              <span className="hidden sm:inline">Judging</span>
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/e/${slug}/manage/results`}>
-              <Medal className="sm:mr-2 size-4" />
-              <span className="hidden sm:inline">Results</span>
             </Link>
           </Button>
         </>

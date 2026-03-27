@@ -6,5 +6,5 @@ type PageProps = {
 
 export default async function PrizesPage({ params }: PageProps) {
   const { slug } = await params
-  redirect(`/e/${slug}/manage/judging?tab=prizes`)
+  redirect(`/e/${slug}/manage?tab=prizes`)
 }

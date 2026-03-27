@@ -55,7 +55,7 @@ export function JudgingModeToggle({
         <RadioGroup value={mode} onValueChange={handleChange}>
           <div className="flex items-start gap-3">
             <RadioGroupItem value="points" id="mode-points" className="mt-1" />
-            <Label htmlFor="mode-points" className="flex flex-col gap-1 cursor-pointer">
+            <Label htmlFor="mode-points" className="flex flex-col gap-1 cursor-pointer items-start">
               <span className="font-medium">Points</span>
               <span className="text-sm text-muted-foreground font-normal">
                 Judges score each criterion. Rankings computed from weighted scores.
@@ -64,7 +64,7 @@ export function JudgingModeToggle({
           </div>
           <div className="flex items-start gap-3 mt-4">
             <RadioGroupItem value="subjective" id="mode-subjective" className="mt-1" />
-            <Label htmlFor="mode-subjective" className="flex flex-col gap-1 cursor-pointer">
+            <Label htmlFor="mode-subjective" className="flex flex-col gap-1 cursor-pointer items-start">
               <span className="font-medium">Subjective</span>
               <span className="text-sm text-muted-foreground font-normal">
                 Judges pick their favorite projects per prize category with reasoning.

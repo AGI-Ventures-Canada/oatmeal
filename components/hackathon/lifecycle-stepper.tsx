@@ -287,7 +287,7 @@ export function LifecycleStepper({
             description: "Some submissions don't have judges assigned yet",
             buttonText: "Assign Submissions",
             onClick: () =>
-              router.push(`/e/${hackathonSlug}/manage/judging?tab=assignments`),
+              router.push(`/e/${hackathonSlug}/manage?tab=judges&jtab=assignments`),
           }
         return {
           title: "Start Judging",

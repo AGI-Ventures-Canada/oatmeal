@@ -1,21 +1,34 @@
+import { Suspense } from "react"
 import { notFound } from "next/navigation"
+import Link from "next/link"
 import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { getHackathonSubmissions } from "@/lib/services/submissions"
 import { getJudgingProgress, getJudgingSetupStatus, listJudgingCriteria } from "@/lib/services/judging"
 import { listPrizes } from "@/lib/services/prizes"
 import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
-import { PageHeader } from "@/components/page-header"
+import { VALID_TABS, VALID_JTABS, VALID_PTABS, getDefaultTab, resolveTab } from "@/lib/utils/manage-tabs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
 import { DebugStageSwitcher } from "@/components/hackathon/debug-stage-switcher"
+import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsUrlSync } from "./_tabs-url-sync"
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import { JudgesTabContent } from "./_judges-tab"
+import { PrizesTabContent } from "./_prizes-tab"
 
 type PageProps = {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ tab?: string; jtab?: string; ptab?: string }>
 }
 
-export default async function ManagePage({ params }: PageProps) {
+function TabLoadingSkeleton() {
+  return <div className="h-64 rounded-lg bg-muted animate-pulse" />
+}
+
+export default async function ManagePage({ params, searchParams }: PageProps) {
   const { slug } = await params
+  const { tab, jtab, ptab } = await searchParams
   const result = await getManageHackathon(slug)
 
   if (!result.ok) {
@@ -24,7 +37,14 @@ export default async function ManagePage({ params }: PageProps) {
 
   const { hackathon } = result
 
-  const [submissions, judgingProgress, judgingSetupStatus, prizes, judgeDisplayCount, criteria] = await Promise.all([
+  const [
+    submissions,
+    judgingProgress,
+    judgingSetupStatus,
+    prizes,
+    judgeDisplayCount,
+    criteria,
+  ] = await Promise.all([
     getHackathonSubmissions(hackathon.id),
     getJudgingProgress(hackathon.id),
     getJudgingSetupStatus(hackathon.id),
@@ -34,8 +54,14 @@ export default async function ManagePage({ params }: PageProps) {
   ])
 
   const submissionCount = submissions.length
-
+  const incompleteAssignments = judgingProgress.totalAssignments - judgingProgress.completedAssignments
   const isDev = process.env.NODE_ENV === "development"
+
+  const activeTab = resolveTab(tab, VALID_TABS, getDefaultTab(hackathon.status))
+  const activeJtab = resolveTab(jtab, VALID_JTABS, "criteria")
+  const activePtab = resolveTab(ptab, VALID_PTABS, "prizes")
+
+  const submissionsForSelect = submissions.map((s) => ({ id: s.id, title: s.title }))
 
   return (
     <div className="space-y-6">
@@ -49,20 +75,6 @@ export default async function ManagePage({ params }: PageProps) {
           endsAt={hackathon.ends_at}
         />
       )}
-      <PageHeader
-        breadcrumbs={[
-          { label: "Dashboard", href: "/home" },
-          { label: hackathon.name },
-        ]}
-        actions={
-          <HackathonPageActions
-            slug={hackathon.slug}
-            isOrganizer={true}
-            submissionCount={submissionCount}
-          />
-        }
-      />
-
       <LifecycleStepper
         hackathonId={hackathon.id}
         hackathonSlug={hackathon.slug}
@@ -85,9 +97,72 @@ export default async function ManagePage({ params }: PageProps) {
         criteriaCount={criteria.length}
       />
 
-      <div className="rounded-lg border overflow-hidden">
-        <HackathonPreviewClient hackathon={hackathon} isEditable={true} />
-      </div>
+      <TabsUrlSync paramKey="tab" value={activeTab} className="space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <Breadcrumb className="shrink-0">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/home">Dashboard</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{hackathon.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <HackathonPageActions
+                slug={hackathon.slug}
+                isOrganizer={true}
+                submissionCount={submissionCount}
+              />
+            </div>
+            <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
+              <TabsList variant="line">
+                <TabsTrigger value="edit">Edit</TabsTrigger>
+                <TabsTrigger value="judges">Judges</TabsTrigger>
+                <TabsTrigger value="prizes">Prizes</TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
+        </div>
+
+        <TabsContent value="edit" forceMount className="data-[state=inactive]:hidden">
+          <div className="rounded-lg border overflow-hidden">
+            <HackathonPreviewClient hackathon={hackathon} isEditable={true} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="judges" forceMount className="data-[state=inactive]:hidden">
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <JudgesTabContent
+              hackathonId={hackathon.id}
+              activeJtab={activeJtab}
+              criteria={criteria}
+              submissions={submissionsForSelect}
+              judgingMode={hackathon.judging_mode}
+              anonymousJudging={hackathon.anonymous_judging}
+              judgingProgress={judgingProgress}
+            />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="prizes" forceMount className="data-[state=inactive]:hidden">
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <PrizesTabContent
+              hackathonId={hackathon.id}
+              activePtab={activePtab}
+              prizes={prizes}
+              submissions={submissionsForSelect}
+              resultsPublishedAt={hackathon.results_published_at}
+              incompleteAssignments={incompleteAssignments}
+            />
+          </Suspense>
+        </TabsContent>
+      </TabsUrlSync>
     </div>
   )
 }
