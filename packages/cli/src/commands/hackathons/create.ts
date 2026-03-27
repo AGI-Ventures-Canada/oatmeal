@@ -52,21 +52,7 @@ export async function runHackathonsCreate(
   let description = options.description
 
   if (options.fromUrl) {
-    const isLumaUrl = (() => {
-      try {
-        const normalized = options.fromUrl.startsWith("http") ? options.fromUrl : `https://${options.fromUrl}`
-        const { hostname } = new URL(normalized)
-        return hostname === "lu.ma" || hostname === "www.lu.ma" || hostname === "luma.com" || hostname === "www.luma.com"
-      } catch {
-        return false
-      }
-    })()
-
-    const importEndpoint = isLumaUrl
-      ? "/api/dashboard/import/luma-url"
-      : "/api/dashboard/import/event-page-url"
-
-    const hackathon = await client.post<ImportedHackathonResponse>(importEndpoint, {
+    const hackathon = await client.post<ImportedHackathonResponse>("/api/dashboard/import/url", {
       url: options.fromUrl,
       name,
       description,

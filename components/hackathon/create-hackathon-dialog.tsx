@@ -38,18 +38,7 @@ type CreateHackathonMethod = "scratch" | "external" | null
 function resolveExternalImportPath(input: string): string | null {
   try {
     const normalizedUrl = normalizeUrl(input)
-    const url = new URL(normalizedUrl)
-
-    if (
-      url.hostname === "luma.com" ||
-      url.hostname === "www.luma.com" ||
-      url.hostname === "lu.ma" ||
-      url.hostname === "www.lu.ma"
-    ) {
-      const path = url.pathname.replace(/^\/+/, "")
-      return path ? `/luma.com/${path}?edit=true` : null
-    }
-
+    new URL(normalizedUrl)
     return `/import?url=${encodeURIComponent(normalizedUrl)}`
   } catch {
     return null
@@ -70,6 +59,7 @@ export function CreateHackathonDialog({
   const [externalUrl, setExternalUrl] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [importFailedUrl, setImportFailedUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
@@ -83,6 +73,7 @@ export function CreateHackathonDialog({
     setExternalUrl("")
     setError(null)
     setIsSubmitting(false)
+    setImportFailedUrl(null)
   }, [open, initialMethod])
 
   const externalImportPath = resolveExternalImportPath(externalUrl)
@@ -171,31 +162,16 @@ export function CreateHackathonDialog({
         }
 
         const normalizedUrl = normalizeUrl(externalUrl)
-        const parsedUrl = new URL(normalizedUrl)
-        const isLuma =
-          parsedUrl.hostname === "luma.com" ||
-          parsedUrl.hostname === "www.luma.com" ||
-          parsedUrl.hostname === "lu.ma" ||
-          parsedUrl.hostname === "www.lu.ma"
 
-        let validationRes: Response
-        if (isLuma) {
-          const slug = parsedUrl.pathname.replace(/^\/+/, "")
-          validationRes = await fetch("/api/public/import/luma", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slug }),
-          })
-        } else {
-          validationRes = await fetch("/api/public/import/event-page-url", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: normalizedUrl }),
-          })
-        }
+        const validationRes = await fetch("/api/public/import/url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: normalizedUrl }),
+        })
 
         if (!validationRes.ok) {
           setError("We couldn't find any event details at that URL. Check the link and try again.")
+          setImportFailedUrl(normalizedUrl)
           return
         }
 
@@ -393,6 +369,7 @@ export function CreateHackathonDialog({
                     onChange={(e) => {
                       setExternalUrl(e.target.value)
                       setError(null)
+                      setImportFailedUrl(null)
                     }}
                     onBlur={() => setExternalUrl(normalizeUrlFieldValue(externalUrl))}
                     autoFocus
@@ -432,7 +409,10 @@ export function CreateHackathonDialog({
                 Back
               </Button>
 
-              <Button type="submit" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting || (method === "external" && importFailedUrl !== null)}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />

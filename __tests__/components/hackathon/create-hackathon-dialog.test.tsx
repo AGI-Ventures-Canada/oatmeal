@@ -100,7 +100,7 @@ describe("CreateHackathonDialog", () => {
     })
   })
 
-  it("routes external event pages through the import flow", async () => {
+  it("routes Luma event pages through the import flow", async () => {
     renderDialog()
 
     const dialog = screen.getByRole("dialog")
@@ -116,10 +116,9 @@ describe("CreateHackathonDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continue" }))
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/luma.com/sfagents?edit=true")
+      expect(mockPush).toHaveBeenCalledWith("/import?url=https%3A%2F%2Fluma.com%2Fsfagents")
     })
 
-    expect(mockFetch).not.toHaveBeenCalled()
     expect(screen.queryByText(/Expected import:/)).toBeNull()
   })
 
@@ -143,8 +142,6 @@ describe("CreateHackathonDialog", () => {
         "/import?url=https%3A%2F%2Fwww.eventbrite.com%2Fe%2Fdevops-for-genai-hackathon-ottawa-2026-tickets-1984872192158"
       )
     })
-
-    expect(mockFetch).not.toHaveBeenCalled()
   })
 
   describe("initialMethod prop", () => {
@@ -247,7 +244,7 @@ describe("CreateHackathonDialog", () => {
       fireEvent.click(screen.getByRole("button", { name: "Continue" }))
 
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledWith("/luma.com/test-event?edit=true")
+        expect(mockPush).toHaveBeenCalledWith("/import?url=https%3A%2F%2Fluma.com%2Ftest-event")
       })
 
       expect(onAuthRequired).not.toHaveBeenCalled()

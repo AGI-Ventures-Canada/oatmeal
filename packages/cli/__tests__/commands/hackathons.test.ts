@@ -125,7 +125,7 @@ describe("hackathons commands", () => {
       const init = mockFetch.mock.calls[0][1] as RequestInit
       const body = JSON.parse(init.body as string)
 
-      expect(url).toContain("/api/dashboard/import/luma-url")
+      expect(url).toContain("/api/dashboard/import/url")
       expect(body).toEqual({
         url: "lu.ma/imported-hack",
         name: "Imported Hack Override",
@@ -153,7 +153,7 @@ describe("hackathons commands", () => {
       const init = mockFetch.mock.calls[0][1] as RequestInit
       const body = JSON.parse(init.body as string)
 
-      expect(url).toContain("/api/dashboard/import/event-page-url")
+      expect(url).toContain("/api/dashboard/import/url")
       expect(body).toEqual({
         url: "https://devpost.com/hackathon/test",
         name: undefined,
