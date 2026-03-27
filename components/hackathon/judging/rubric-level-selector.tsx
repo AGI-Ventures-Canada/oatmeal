@@ -30,8 +30,8 @@ export function RubricLevelSelector({ levels, selectedLevel, onSelect }: Props) 
           className={cn(
             "flex items-start gap-3 rounded-md border p-3 text-left transition-colors",
             selectedLevel === level.level_number
-              ? "border-primary bg-primary/5"
-              : "border-border hover:bg-muted/50"
+              ? "border-primary bg-muted"
+              : "border-border hover:bg-muted"
           )}
         >
           <span className={cn(

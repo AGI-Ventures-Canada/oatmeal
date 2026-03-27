@@ -62,7 +62,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
   ] = await Promise.all([
     getHackathonSubmissions(hackathon.id),
     getJudgingProgress(hackathon.id),
-    getJudgingSetupStatus(hackathon.id),
+    getJudgingSetupStatus(hackathon.id, hackathon.judging_mode),
     listPrizes(hackathon.id),
     countJudgeDisplayProfiles(hackathon.id),
     listJudgingCriteria(hackathon.id),

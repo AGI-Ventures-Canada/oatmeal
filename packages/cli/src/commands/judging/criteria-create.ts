@@ -1,6 +1,6 @@
 import * as p from "@clack/prompts"
 import type { OatmealClient } from "../../client.js"
-import { formatJson, formatSuccess, formatWarning } from "../../output.js"
+import { formatJson, formatSuccess } from "../../output.js"
 import type { JudgingCriteria } from "../../types.js"
 
 interface CriteriaCreateOptions {
@@ -46,14 +46,6 @@ export async function runCriteriaCreate(
 ): Promise<void> {
   const options = parseCriteriaCreateOptions(args)
 
-  if (options.maxScore !== undefined) {
-    console.warn(formatWarning("--max-score is deprecated and has no effect in rubric mode"))
-  }
-
-  if (options.weight !== undefined) {
-    console.warn(formatWarning("--weight is deprecated and has no effect in rubric mode"))
-  }
-
   let name = options.name
 
   if (!name && process.stdout.isTTY) {
@@ -80,6 +72,8 @@ export async function runCriteriaCreate(
       name,
       description: options.description,
       category,
+      ...(options.maxScore !== undefined && { maxScore: options.maxScore }),
+      ...(options.weight !== undefined && { weight: options.weight }),
     }
   )
 

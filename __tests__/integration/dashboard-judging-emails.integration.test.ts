@@ -32,7 +32,7 @@ mock.module("@/lib/services/judging", () => ({
   getAssignmentDetail: mock(() => Promise.resolve(null)),
   submitScores: mock(() => Promise.resolve({ success: false, error: "", code: "" })),
   saveNotes: mock(() => Promise.resolve(false)),
-  getJudgingSetupStatus: mock(() => Promise.resolve({ judgeCount: 0, hasUnassignedSubmissions: false })),
+  getJudgingSetupStatus: mock(() => Promise.resolve({ hasCriteria: false, allCriteriaHaveLevels: true, judgeCount: 0, hasSubmissions: false, hasUnassignedSubmissions: false, isReady: false })),
 }))
 
 const mockCreateJudgeInvitation = mock(() =>

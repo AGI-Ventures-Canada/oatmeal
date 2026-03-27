@@ -1008,7 +1008,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     const { listRubricLevels } = await import("@/lib/services/rubric-levels")
 
     const criteriaWithLevels = await Promise.all(
-      detail.criteria.map(async (c: { id: string; [key: string]: unknown }) => ({
+      detail.criteria.map(async (c) => ({
         ...c,
         rubricLevels: await listRubricLevels(c.id),
       }))

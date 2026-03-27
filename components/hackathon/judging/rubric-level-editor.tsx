@@ -38,6 +38,7 @@ export function RubricLevelEditor({
   const [addError, setAddError] = useState<string | null>(null)
 
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const sorted = [...levels].sort((a, b) => b.level_number - a.level_number)
 
@@ -98,14 +99,19 @@ export function RubricLevelEditor({
 
   async function handleDelete(levelId: string) {
     setDeletingId(levelId)
+    setDeleteError(null)
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/judging/criteria/${criteriaId}/levels/${levelId}`,
         { method: "DELETE" }
       )
-      if (!res.ok) throw new Error("Failed to delete")
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to delete")
+      }
       onLevelsChange(levels.filter((l) => l.id !== levelId))
-    } catch {
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete level")
     } finally {
       setDeletingId(null)
     }
@@ -157,6 +163,7 @@ export function RubricLevelEditor({
           level_number: nextLevel,
           label: addForm.label.trim(),
           description: addForm.description.trim() || null,
+          created_at: new Date().toISOString(),
         },
       ])
       setAddingNew(false)
@@ -286,6 +293,10 @@ export function RubricLevelEditor({
           )}
         </div>
       ))}
+
+      {deleteError && (
+        <p className="text-sm text-destructive">{deleteError}</p>
+      )}
 
       {addingNew ? (
         <div

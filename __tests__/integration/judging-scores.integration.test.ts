@@ -69,7 +69,7 @@ mock.module("@/lib/services/judging", () => ({
   getAssignmentDetail: mock(() => Promise.resolve(null)),
   submitScores: mockSubmitScores,
   saveNotes: mock(() => Promise.resolve(true)),
-  getJudgingSetupStatus: mock(() => Promise.resolve({ judgeCount: 0, hasUnassignedSubmissions: false })),
+  getJudgingSetupStatus: mock(() => Promise.resolve({ hasCriteria: false, allCriteriaHaveLevels: true, judgeCount: 0, hasSubmissions: false, hasUnassignedSubmissions: false, isReady: false })),
 }))
 
 mock.module("@/lib/utils/sort-hackathons", () => ({

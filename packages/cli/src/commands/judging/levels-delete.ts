@@ -1,14 +1,7 @@
 import * as p from "@clack/prompts"
 import type { OatmealClient } from "../../client.js"
 import { formatJson, formatSuccess, formatTable } from "../../output.js"
-
-interface RubricLevel {
-  id: string
-  criteriaId: string
-  levelNumber: number
-  label: string
-  description?: string
-}
+import type { RubricLevel } from "../../types.js"
 
 export async function runLevelsDelete(
   client: OatmealClient,
