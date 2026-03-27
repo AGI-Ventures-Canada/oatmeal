@@ -326,6 +326,7 @@ function HackathonPreviewContent({
               hackathonId={hackathon.id}
               initialPrizes={hackathon.prizes}
               onSaveAndNext={() => handleSaveAndNext("prizes")}
+              onSave={onFormSave ? (data) => onFormSave(data) : undefined}
             />
           </div>
         </div>

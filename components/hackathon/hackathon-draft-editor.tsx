@@ -103,7 +103,21 @@ function stateToHackathon(state: DraftState): PublicHackathon {
       created_at: new Date().toISOString(),
     })),
     judges: [],
-    prizes: [],
+    prizes: state.prizes.map((p, i) => ({
+      id: `draft-${i}`,
+      hackathon_id: "draft",
+      name: p.name,
+      description: p.description,
+      value: p.value,
+      type: "favorite" as const,
+      rank: null,
+      kind: "other",
+      display_value: null,
+      criteria_id: null,
+      display_order: i,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })),
   }
 }
 
@@ -222,6 +236,7 @@ export function HackathonDraftEditor({
       if ("locationUrl" in data) next.locationUrl = data.locationUrl as string | null
       if ("imageUrl" in data) next.imageUrl = data.imageUrl as string | null
       if ("sponsors" in data) next.sponsors = data.sponsors as DraftSponsor[]
+      if ("prizes" in data) next.prizes = data.prizes as DraftPrize[]
       if ("rules" in data) next.rules = data.rules as string | null
       return next
     })
