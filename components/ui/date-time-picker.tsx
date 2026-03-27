@@ -142,7 +142,10 @@ export function DateTimePicker({
   }
 
   function handlePeriodKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
-    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleConfirm();
+    } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       e.preventDefault();
       handlePeriodToggle();
     } else if (e.key.toLowerCase() === "a") {
