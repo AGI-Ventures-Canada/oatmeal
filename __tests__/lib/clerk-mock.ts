@@ -46,6 +46,7 @@ export const clerkMock = {
   }),
   useAuth: () => ({
     isSignedIn: clerkState.isSignedIn,
+    isLoaded: clerkState.isLoaded,
     userId: clerkState.userId,
   }),
   useClerk: () => ({
