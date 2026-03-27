@@ -4,10 +4,42 @@ import { logAudit } from "@/lib/services/audit"
 import { normalizeUrl } from "@/lib/utils/url"
 import { extractExternalEventData, extractExternalRichContent, isLumaUrl } from "@/lib/services/external-import"
 
+function isSafePublicUrl(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`)
+
+    if (url.protocol !== "https:") return false
+
+    const hostname = url.hostname.toLowerCase()
+
+    if (hostname === "localhost" || hostname === "0.0.0.0" || hostname === "::1") return false
+
+    const octets = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+    if (octets) {
+      const [a, b] = [Number(octets[1]), Number(octets[2])]
+      if (a === 127) return false
+      if (a === 10) return false
+      if (a === 172 && b >= 16 && b <= 31) return false
+      if (a === 192 && b === 168) return false
+      if (a === 169 && b === 254) return false
+      if (a === 100 && b >= 64 && b <= 127) return false
+    }
+
+    return true
+  } catch {
+    return false
+  }
+}
+
 export const importRoutes = new Elysia({ prefix: "/public/import" })
   .post(
     "/url",
     async ({ body, set }) => {
+      if (!isSafePublicUrl(body.url)) {
+        set.status = 400
+        return { error: "Invalid or disallowed URL" }
+      }
+
       const data = await extractExternalEventData(body.url)
 
       if (!data) {

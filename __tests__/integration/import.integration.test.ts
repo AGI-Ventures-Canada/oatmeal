@@ -100,4 +100,56 @@ describe("POST /api/public/import/url", () => {
 
     expect(res.status).toBe(422)
   })
+
+  it("rejects loopback addresses", async () => {
+    for (const url of ["https://127.0.0.1/secret", "https://localhost/secret"]) {
+      const res = await api.handle(
+        new Request("http://localhost/api/public/import/url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        })
+      )
+      expect(res.status).toBe(400)
+    }
+  })
+
+  it("rejects cloud metadata endpoint", async () => {
+    const res = await api.handle(
+      new Request("http://localhost/api/public/import/url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: "https://169.254.169.254/latest/meta-data/" }),
+      })
+    )
+    expect(res.status).toBe(400)
+  })
+
+  it("rejects private IP ranges", async () => {
+    for (const url of [
+      "https://10.0.0.1/internal",
+      "https://192.168.1.1/admin",
+      "https://172.16.0.1/secret",
+    ]) {
+      const res = await api.handle(
+        new Request("http://localhost/api/public/import/url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        })
+      )
+      expect(res.status).toBe(400)
+    }
+  })
+
+  it("rejects non-HTTPS URLs", async () => {
+    const res = await api.handle(
+      new Request("http://localhost/api/public/import/url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: "http://luma.com/event" }),
+      })
+    )
+    expect(res.status).toBe(400)
+  })
 })
