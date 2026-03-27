@@ -138,10 +138,9 @@ export function DateTimeRangePicker({
       const newTime = { ...prev, [field]: validated }
       const date = target === "from" ? pendingRange?.from : pendingRange?.to
       if (date) {
-        setPendingRange((r) => ({
-          ...r,
-          [target]: applyTime(date, newTime),
-        }))
+        setPendingRange((r) =>
+          r ? { ...r, [target]: applyTime(date, newTime) } : r,
+        )
       }
       return newTime
     })
@@ -150,14 +149,13 @@ export function DateTimeRangePicker({
   function handlePeriodToggle(target: "from" | "to") {
     const setter = target === "from" ? setFromTime : setToTime
     setter((prev) => {
-      const newPeriod = prev.period === "AM" ? "PM" : "AM"
+      const newPeriod: "AM" | "PM" = prev.period === "AM" ? "PM" : "AM"
       const newTime = { ...prev, period: newPeriod }
       const date = target === "from" ? pendingRange?.from : pendingRange?.to
       if (date) {
-        setPendingRange((r) => ({
-          ...r,
-          [target]: applyTime(date, newTime),
-        }))
+        setPendingRange((r) =>
+          r ? { ...r, [target]: applyTime(date, newTime) } : r,
+        )
       }
       return newTime
     })
@@ -189,10 +187,9 @@ export function DateTimeRangePicker({
       const newTime = { ...prev, period: newPeriod }
       const date = target === "from" ? pendingRange?.from : pendingRange?.to
       if (date) {
-        setPendingRange((r) => ({
-          ...r,
-          [target]: applyTime(date, newTime),
-        }))
+        setPendingRange((r) =>
+          r ? { ...r, [target]: applyTime(date, newTime) } : r,
+        )
       }
       return newTime
     })
@@ -366,6 +363,7 @@ export function DateTimeRangePicker({
           numberOfMonths={isMobile ? 1 : 2}
           className="w-full"
           fixedWeeks
+          showOutsideDays={false}
           classNames={{
             months: "flex gap-0 flex-col md:flex-row relative",
             month: "flex flex-col w-full gap-4 px-4 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
