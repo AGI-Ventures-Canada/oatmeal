@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -28,10 +28,18 @@ export function SignInRequiredDialog({
 }: SignInRequiredDialogProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const currentSearchParams = useSearchParams()
 
-  const redirectUrl = redirectQuery
-    ? `${pathname}?${redirectQuery}`
-    : pathname
+  const redirectUrl = (() => {
+    const params = new URLSearchParams(currentSearchParams.toString())
+    if (redirectQuery) {
+      new URLSearchParams(redirectQuery).forEach((value, key) => {
+        params.set(key, value)
+      })
+    }
+    const search = params.toString()
+    return `${pathname}${search ? `?${search}` : ""}`
+  })()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

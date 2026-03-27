@@ -152,7 +152,7 @@ mock.module("next/navigation", () => ({
 }))
 
 mock.module("@clerk/nextjs", () => ({
-  useAuth: () => ({ isSignedIn: clerkState.isSignedIn, userId: clerkState.userId }),
+  useAuth: () => ({ isSignedIn: clerkState.isSignedIn, isLoaded: clerkState.isLoaded, userId: clerkState.userId }),
   useUser: () => ({ isLoaded: clerkState.isLoaded, isSignedIn: clerkState.isSignedIn, user: clerkState.isSignedIn ? clerkState.user : null }),
   useClerk: () => ({ openUserProfile: clerkState.openUserProfile, signOut: clerkState.signOut }),
   useOrganization: () => ({ organization: clerkState.organization }),
