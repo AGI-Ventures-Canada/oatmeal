@@ -1,15 +1,10 @@
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import Link from "next/link"
-import { auth } from "@clerk/nextjs/server"
 import { TriangleAlert } from "lucide-react"
 import { EventImportEditor } from "@/components/hackathon/event-import-editor"
-import { extractExternalEventData, extractExternalRichContent, isLumaUrl } from "@/lib/services/external-import"
+import { extractExternalEventData, extractExternalRichContent } from "@/lib/services/external-import"
 import { ttlCache } from "@/lib/utils/ttl-cache"
 import { normalizeUrl } from "@/lib/utils/url"
-import { createHackathonFromImport, createSponsorsFromImport, createPrizesFromImport } from "@/lib/services/luma-import-create"
-import { getOrCreateTenant } from "@/lib/services/tenants"
-import { logAudit } from "@/lib/services/audit"
-import { scopesForRole } from "@/lib/auth/types"
 import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
 
@@ -47,7 +42,6 @@ export default async function EventImportPage({ searchParams }: PageProps) {
   }
 
   const normalizedUrl = normalizeUrl(rawUrl)
-  const editMode = query.edit === "true"
 
   const [eventData, richContent] = await Promise.all([
     ttlCache(`import:data:${normalizedUrl}`, () => extractExternalEventData(normalizedUrl)),
@@ -70,61 +64,6 @@ export default async function EventImportPage({ searchParams }: PageProps) {
         </div>
       </div>
     )
-  }
-
-  const { userId, orgId, orgRole } = await auth()
-  const tenant = orgId ? await getOrCreateTenant(orgId) : null
-
-  if (tenant && userId && !editMode) {
-    const hackathon = await createHackathonFromImport(tenant.id, {
-      name: eventData.name,
-      description: eventData.description,
-      startsAt: eventData.startsAt,
-      endsAt: eventData.endsAt,
-      locationType: eventData.locationType,
-      locationName: eventData.locationName,
-      locationUrl: eventData.locationUrl,
-      imageUrl: eventData.imageUrl,
-      rules: richContent?.rules ?? null,
-    })
-
-    if (hackathon) {
-      if (richContent?.sponsors?.length) {
-        await createSponsorsFromImport(hackathon.id, richContent.sponsors)
-      }
-
-      if (richContent?.prizes?.length) {
-        await createPrizesFromImport(hackathon.id, richContent.prizes)
-      }
-
-      const source = isLumaUrl(normalizedUrl) ? "luma_import" : "event_page_import"
-
-      const principal = {
-        kind: "user" as const,
-        tenantId: tenant.id,
-        userId,
-        orgId: orgId ?? null,
-        orgRole: orgRole ?? null,
-        scopes: scopesForRole(orgRole ?? null),
-      }
-
-      await logAudit({
-        principal,
-        action: "hackathon.created",
-        resourceType: "hackathon",
-        resourceId: hackathon.id,
-        metadata: { source, sourceUrl: normalizedUrl },
-      })
-
-      const { triggerWebhooks } = await import("@/lib/services/webhooks")
-      triggerWebhooks(tenant.id, "hackathon.created", {
-        event: "hackathon.created",
-        timestamp: new Date().toISOString(),
-        data: { hackathonId: hackathon.id, source, sourceUrl: normalizedUrl },
-      }).catch(console.error)
-
-      redirect(`/e/${hackathon.slug}/manage`)
-    }
   }
 
   return (

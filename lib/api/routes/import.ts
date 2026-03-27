@@ -35,12 +35,14 @@ export const importRoutes = new Elysia({ prefix: "/public/import" })
   .post(
     "/url",
     async ({ body, set }) => {
-      if (!isSafePublicUrl(body.url)) {
+      const url = normalizeUrl(body.url)
+
+      if (!isSafePublicUrl(url)) {
         set.status = 400
         return { error: "Invalid or disallowed URL" }
       }
 
-      const data = await extractExternalEventData(body.url)
+      const data = await extractExternalEventData(url)
 
       if (!data) {
         set.status = 404
@@ -161,6 +163,12 @@ export const dashboardImportRoutes = new Elysia({ prefix: "/dashboard/import" })
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
       const url = normalizeUrl(body.url)
+
+      if (!isSafePublicUrl(url)) {
+        set.status = 400
+        return { error: "Invalid or disallowed URL" }
+      }
+
       const [eventData, richContent] = await Promise.all([
         extractExternalEventData(url),
         extractExternalRichContent(url),

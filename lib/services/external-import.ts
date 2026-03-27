@@ -1,4 +1,3 @@
-import { normalizeUrl } from "@/lib/utils/url"
 import { extractLumaEventData } from "@/lib/services/luma-import"
 import { extractEventPageData } from "@/lib/services/event-page-import"
 import { extractLumaRichContent, extractEventPageRichContent } from "@/lib/services/luma-extract"
@@ -37,7 +36,7 @@ export async function extractExternalEventData(url: string): Promise<EventPageDa
     return extractLumaEventData(slug)
   }
 
-  return extractEventPageData(normalizeUrl(url))
+  return extractEventPageData(url)
 }
 
 export async function extractExternalRichContent(url: string): Promise<EventPageRichContent | null> {
@@ -47,5 +46,5 @@ export async function extractExternalRichContent(url: string): Promise<EventPage
     return extractLumaRichContent(slug)
   }
 
-  return extractEventPageRichContent(normalizeUrl(url))
+  return extractEventPageRichContent(url)
 }
