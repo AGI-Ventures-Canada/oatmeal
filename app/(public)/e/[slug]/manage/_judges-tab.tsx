@@ -34,7 +34,7 @@ export async function JudgesTabContent({
   ])
 
   return (
-    <TabsUrlSync paramKey="jtab" defaultValue={activeJtab} className="space-y-6">
+    <TabsUrlSync paramKey="jtab" value={activeJtab} className="space-y-6">
       <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
         <TabsList>
           <TabsTrigger value="criteria">Criteria</TabsTrigger>

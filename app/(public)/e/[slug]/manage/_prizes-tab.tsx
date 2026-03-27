@@ -28,7 +28,7 @@ export async function PrizesTabContent({
   ])
 
   return (
-    <TabsUrlSync paramKey="ptab" defaultValue={activePtab} className="space-y-6">
+    <TabsUrlSync paramKey="ptab" value={activePtab} className="space-y-6">
       <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
         <TabsList>
           <TabsTrigger value="prizes">Prizes</TabsTrigger>

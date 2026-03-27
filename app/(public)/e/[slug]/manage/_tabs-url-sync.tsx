@@ -6,12 +6,12 @@ import { Tabs } from "@/components/ui/tabs"
 
 export function TabsUrlSync({
   paramKey,
-  defaultValue,
+  value,
   className,
   children,
 }: {
   paramKey: string
-  defaultValue: string
+  value: string
   className?: string
   children: React.ReactNode
 }) {
@@ -19,16 +19,16 @@ export function TabsUrlSync({
   const searchParams = useSearchParams()
 
   const handleChange = useCallback(
-    (value: string) => {
+    (next: string) => {
       const params = new URLSearchParams(searchParams.toString())
-      params.set(paramKey, value)
+      params.set(paramKey, next)
       router.replace(`?${params.toString()}`, { scroll: false })
     },
     [router, searchParams, paramKey],
   )
 
   return (
-    <Tabs defaultValue={defaultValue} onValueChange={handleChange} className={className}>
+    <Tabs value={value} onValueChange={handleChange} className={className}>
       {children}
     </Tabs>
   )

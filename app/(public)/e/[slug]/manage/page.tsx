@@ -97,7 +97,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
         criteriaCount={criteria.length}
       />
 
-      <TabsUrlSync paramKey="tab" defaultValue={activeTab} className="space-y-6">
+      <TabsUrlSync paramKey="tab" value={activeTab} className="space-y-6">
         <div className="flex items-center justify-between gap-4">
           <Breadcrumb className="shrink-0">
             <BreadcrumbList>
