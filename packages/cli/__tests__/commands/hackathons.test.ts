@@ -137,6 +137,34 @@ describe("hackathons commands", () => {
         slug: "imported-hack",
       })
     })
+
+    it("imports a hackathon from a non-Luma event page URL", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ id: "ep-id", name: "Devpost Hack", slug: "devpost-hack" })
+      )
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runHackathonsCreate } = await import("../../src/commands/hackathons/create")
+      await runHackathonsCreate(client, [
+        "--from-url", "https://devpost.com/hackathon/test",
+        "--json",
+      ])
+
+      const url = mockFetch.mock.calls[0][0] as string
+      const init = mockFetch.mock.calls[0][1] as RequestInit
+      const body = JSON.parse(init.body as string)
+
+      expect(url).toContain("/api/dashboard/import/event-page-url")
+      expect(body).toEqual({
+        url: "https://devpost.com/hackathon/test",
+        name: undefined,
+        description: undefined,
+      })
+      expect(JSON.parse(consoleLogSpy.mock.calls[0][0])).toEqual({
+        id: "ep-id",
+        name: "Devpost Hack",
+        slug: "devpost-hack",
+      })
+    })
   })
 
   describe("update", () => {

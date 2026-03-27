@@ -170,6 +170,35 @@ export function CreateHackathonDialog({
           return
         }
 
+        const normalizedUrl = normalizeUrl(externalUrl)
+        const parsedUrl = new URL(normalizedUrl)
+        const isLuma =
+          parsedUrl.hostname === "luma.com" ||
+          parsedUrl.hostname === "www.luma.com" ||
+          parsedUrl.hostname === "lu.ma" ||
+          parsedUrl.hostname === "www.lu.ma"
+
+        let validationRes: Response
+        if (isLuma) {
+          const slug = parsedUrl.pathname.replace(/^\/+/, "")
+          validationRes = await fetch("/api/public/import/luma", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ slug }),
+          })
+        } else {
+          validationRes = await fetch("/api/public/import/event-page-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: normalizedUrl }),
+          })
+        }
+
+        if (!validationRes.ok) {
+          setError("We couldn't find any event details at that URL. Check the link and try again.")
+          return
+        }
+
         router.push(externalImportPath)
         return
       }

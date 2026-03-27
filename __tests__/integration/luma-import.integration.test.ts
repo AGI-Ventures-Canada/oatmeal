@@ -9,14 +9,21 @@ mock.module("@/lib/services/luma-import-create", () => ({
   createPrizesFromImport: mockCreatePrizesFromImport,
 }))
 
+const mockExtractEventPageData = mock(() => Promise.resolve(null))
+mock.module("@/lib/services/event-page-import", () => ({
+  extractEventPageData: mockExtractEventPageData,
+}))
+
 const mockExtractLumaEventData = mock(() => Promise.resolve(null))
 mock.module("@/lib/services/luma-import", () => ({
   extractLumaEventData: mockExtractLumaEventData,
 }))
 
 const mockExtractLumaRichContent = mock(() => Promise.resolve(null))
+const mockExtractEventPageRichContent = mock(() => Promise.resolve(null))
 mock.module("@/lib/services/luma-extract", () => ({
   extractLumaRichContent: mockExtractLumaRichContent,
+  extractEventPageRichContent: mockExtractEventPageRichContent,
 }))
 
 const mockLogAudit = mock(() => Promise.resolve())
@@ -64,6 +71,8 @@ describe("POST /api/dashboard/import/luma", () => {
     mockCreatePrizesFromImport.mockClear()
     mockExtractLumaEventData.mockClear()
     mockExtractLumaRichContent.mockClear()
+    mockExtractEventPageData.mockClear()
+    mockExtractEventPageRichContent.mockClear()
     mockLogAudit.mockClear()
     mockTriggerWebhooks.mockClear()
     mockAuth.mockClear()
@@ -233,6 +242,150 @@ describe("POST /api/dashboard/import/luma", () => {
     expect(mockCreatePrizesFromImport).toHaveBeenCalledWith("h2", [
       { name: "Grand Prize", description: null, value: "$5,000" },
     ])
+  })
+
+  it("creates hackathon from a non-Luma event page URL with rich content", async () => {
+    mockVerifyApiKey.mockResolvedValueOnce({
+      id: "key-1",
+      tenant_id: "tenant-1",
+      scopes: ["hackathons:write"],
+    })
+
+    mockExtractEventPageData.mockResolvedValueOnce({
+      name: "Devpost Hackathon",
+      description: "A hackathon on Devpost",
+      startsAt: "2026-06-01T09:00:00",
+      endsAt: "2026-06-02T17:00:00",
+      locationType: "virtual",
+      locationName: null,
+      locationUrl: "https://devpost.com/hackathon",
+      imageUrl: "https://devpost.com/banner.png",
+    })
+
+    mockExtractEventPageRichContent.mockResolvedValueOnce({
+      sponsors: [{ name: "Stripe", tier: "gold" }],
+      rules: "Teams of 1-4. No pre-built projects.",
+      prizes: [{ name: "Best Overall", description: null, value: "$10,000" }],
+    })
+
+    mockCreateHackathonFromImport.mockResolvedValueOnce({
+      id: "h-devpost",
+      name: "Devpost Hackathon",
+      slug: "devpost-hackathon",
+    })
+
+    const res = await api.handle(
+      new Request("http://localhost/api/dashboard/import/event-page-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer sk_live_test",
+        },
+        body: JSON.stringify({
+          url: "https://devpost.com/hackathon/test",
+        }),
+      })
+    )
+
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.id).toBe("h-devpost")
+    expect(data.slug).toBe("devpost-hackathon")
+    expect(mockExtractEventPageData).toHaveBeenCalledWith("https://devpost.com/hackathon/test")
+    expect(mockExtractEventPageRichContent).toHaveBeenCalledWith("https://devpost.com/hackathon/test")
+    expect(mockCreateHackathonFromImport).toHaveBeenCalledWith("tenant-1", {
+      name: "Devpost Hackathon",
+      description: "A hackathon on Devpost",
+      startsAt: "2026-06-01T09:00:00",
+      endsAt: "2026-06-02T17:00:00",
+      locationType: "virtual",
+      locationName: null,
+      locationUrl: "https://devpost.com/hackathon",
+      imageUrl: "https://devpost.com/banner.png",
+      rules: "Teams of 1-4. No pre-built projects.",
+    })
+    expect(mockCreateSponsorsFromImport).toHaveBeenCalledWith("h-devpost", [
+      { name: "Stripe", tier: "gold" },
+    ])
+    expect(mockCreatePrizesFromImport).toHaveBeenCalledWith("h-devpost", [
+      { name: "Best Overall", description: null, value: "$10,000" },
+    ])
+  })
+
+  it("returns 404 when event page URL yields no extractable data", async () => {
+    mockVerifyApiKey.mockResolvedValueOnce({
+      id: "key-1",
+      tenant_id: "tenant-1",
+      scopes: ["hackathons:write"],
+    })
+
+    mockExtractEventPageData.mockResolvedValueOnce(null)
+
+    const res = await api.handle(
+      new Request("http://localhost/api/dashboard/import/event-page-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer sk_live_test",
+        },
+        body: JSON.stringify({ url: "https://example.com/no-schema" }),
+      })
+    )
+
+    expect(res.status).toBe(404)
+  })
+
+  it("returns 401 for event-page-url when not authenticated", async () => {
+    mockAuth.mockResolvedValueOnce({ userId: null, orgId: null, orgRole: null })
+
+    const res = await api.handle(
+      new Request("http://localhost/api/dashboard/import/event-page-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: "https://devpost.com/hackathon/test" }),
+      })
+    )
+
+    expect(res.status).toBe(401)
+  })
+
+  it("returns event data from public event-page-url endpoint without auth", async () => {
+    mockExtractEventPageData.mockResolvedValueOnce({
+      name: "Public Event",
+      description: "A public event",
+      startsAt: "2026-06-01T09:00:00",
+      endsAt: "2026-06-01T17:00:00",
+      locationType: "virtual",
+      locationName: null,
+      locationUrl: null,
+      imageUrl: null,
+    })
+
+    const res = await api.handle(
+      new Request("http://localhost/api/public/import/event-page-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: "https://devpost.com/hackathon/test" }),
+      })
+    )
+
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.name).toBe("Public Event")
+  })
+
+  it("returns 404 from public event-page-url endpoint when no data extracted", async () => {
+    mockExtractEventPageData.mockResolvedValueOnce(null)
+
+    const res = await api.handle(
+      new Request("http://localhost/api/public/import/event-page-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: "https://example.com/no-schema" }),
+      })
+    )
+
+    expect(res.status).toBe(404)
   })
 
   it("rejects unsupported non-Luma URLs", async () => {
