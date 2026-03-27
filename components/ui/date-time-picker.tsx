@@ -38,6 +38,18 @@ function to24Hour(hours12: number, period: "AM" | "PM"): number {
   return hours12 === 12 ? 12 : hours12 + 12;
 }
 
+function buildDate(
+  baseDate: Date,
+  time: { hours: string; minutes: string; period: "AM" | "PM" },
+): Date {
+  const hours12 = parseInt(time.hours, 10) || 12;
+  const hours24 = to24Hour(hours12, time.period);
+  const minutes = parseInt(time.minutes, 10) || 0;
+  const d = new Date(baseDate);
+  d.setHours(hours24, minutes, 0, 0);
+  return d;
+}
+
 export function DateTimePicker({
   value,
   onChange,
@@ -48,6 +60,8 @@ export function DateTimePicker({
   className,
 }: DateTimePickerProps) {
   const [open, setOpen] = React.useState(false);
+
+  const [pendingDate, setPendingDate] = React.useState<Date | null>(null);
   const [time, setTime] = React.useState(() => {
     if (value) {
       const { hours, period } = to12Hour(value.getHours());
@@ -71,18 +85,26 @@ export function DateTimePicker({
     }
   }, [value]);
 
+  React.useEffect(() => {
+    if (open) {
+      setPendingDate(value ?? null);
+      if (value) {
+        const { hours, period } = to12Hour(value.getHours());
+        setTime({
+          hours: hours.toString().padStart(2, "0"),
+          minutes: value.getMinutes().toString().padStart(2, "0"),
+          period,
+        });
+      }
+    }
+  }, [open, value]);
+
   function handleDateSelect(date: Date | undefined) {
     if (!date) {
-      onChange?.(null);
+      setPendingDate(null);
       return;
     }
-
-    const hours12 = parseInt(time.hours, 10) || 12;
-    const hours24 = to24Hour(hours12, time.period);
-    const minutes = parseInt(time.minutes, 10) || 0;
-    const newDate = new Date(date);
-    newDate.setHours(hours24, minutes, 0, 0);
-    onChange?.(newDate);
+    setPendingDate(buildDate(date, time));
   }
 
   function handleTimeChange(field: "hours" | "minutes", newValue: string) {
@@ -101,40 +123,22 @@ export function DateTimePicker({
     const newTime = { ...time, [field]: validated };
     setTime(newTime);
 
-    if (value) {
-      const hours12 =
-        parseInt(field === "hours" ? validated : time.hours, 10) || 12;
-      const hours24 = to24Hour(hours12, time.period);
-      const minutes =
-        parseInt(field === "minutes" ? validated : time.minutes, 10) || 0;
-      const newDate = new Date(value);
-      newDate.setHours(hours24, minutes, 0, 0);
-      onChange?.(newDate);
+    if (pendingDate) {
+      setPendingDate(buildDate(pendingDate, newTime));
     }
   }
 
   function updatePeriod(newPeriod: "AM" | "PM") {
     if (time.period === newPeriod) return;
-    if (value) {
-      const hours12 = parseInt(time.hours, 10) || 12;
-      const hours24 = to24Hour(hours12, newPeriod);
-      const newDate = new Date(value);
-      newDate.setHours(hours24, value.getMinutes(), 0, 0);
-      onChange?.(newDate);
+    const newTime = { ...time, period: newPeriod };
+    setTime(newTime);
+    if (pendingDate) {
+      setPendingDate(buildDate(pendingDate, newTime));
     }
-    setTime((prev) => ({ ...prev, period: newPeriod }));
   }
 
   function handlePeriodToggle() {
-    const newPeriod = time.period === "AM" ? "PM" : "AM";
-    if (value) {
-      const hours12 = parseInt(time.hours, 10) || 12;
-      const hours24 = to24Hour(hours12, newPeriod);
-      const newDate = new Date(value);
-      newDate.setHours(hours24, value.getMinutes(), 0, 0);
-      onChange?.(newDate);
-    }
-    setTime((prev) => ({ ...prev, period: newPeriod }));
+    updatePeriod(time.period === "AM" ? "PM" : "AM");
   }
 
   function handlePeriodKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
@@ -161,6 +165,12 @@ export function DateTimePicker({
     field: "hours" | "minutes",
     e: React.KeyboardEvent<HTMLInputElement>,
   ) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleConfirm();
+      return;
+    }
+
     if (!/^\d$/.test(e.key)) return;
 
     e.preventDefault();
@@ -181,12 +191,46 @@ export function DateTimePicker({
     handleTimeChange(field, newVal);
   }
 
+  function handleConfirm() {
+    onChange?.(pendingDate);
+    setOpen(false);
+  }
+
+  function handleClear() {
+    onChange?.(null);
+    setOpen(false);
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      setPendingDate(value ?? null);
+      if (value) {
+        const { hours, period } = to12Hour(value.getHours());
+        setTime({
+          hours: hours.toString().padStart(2, "0"),
+          minutes: value.getMinutes().toString().padStart(2, "0"),
+          period,
+        });
+      } else {
+        setTime({ hours: "12", minutes: "00", period: "PM" });
+      }
+    }
+    setOpen(nextOpen);
+  }
+
+  function handlePopoverKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Enter" && !e.defaultPrevented) {
+      e.preventDefault();
+      handleConfirm();
+    }
+  }
+
   return (
     <>
       {name && (
         <input type="hidden" name={name} value={value?.toISOString() ?? ""} />
       )}
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
             id={id}
@@ -202,10 +246,14 @@ export function DateTimePicker({
             {value ? format(value, "PPP 'at' h:mm a") : placeholder}
           </Button>
         </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent
+        className="w-auto p-0"
+        align="start"
+        onKeyDown={handlePopoverKeyDown}
+      >
         <Calendar
           mode="single"
-          selected={value ?? undefined}
+          selected={pendingDate ?? undefined}
           onSelect={handleDateSelect}
           className="w-full"
           initialFocus
@@ -258,6 +306,27 @@ export function DateTimePicker({
               {time.period}
             </Button>
           </div>
+        </div>
+        <div className="border-t p-3 flex items-center justify-between">
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleConfirm}
+            disabled={!pendingDate}
+          >
+            Done
+          </Button>
+          {(value || pendingDate) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={handleClear}
+            >
+              Clear
+            </Button>
+          )}
         </div>
       </PopoverContent>
       </Popover>
