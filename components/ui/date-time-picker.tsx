@@ -315,6 +315,9 @@ export function DateTimePicker({
             type="button"
             size="sm"
             onClick={handleConfirm}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.preventDefault()
+            }}
             disabled={!pendingDate}
           >
             Done

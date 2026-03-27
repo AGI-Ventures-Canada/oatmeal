@@ -134,30 +134,29 @@ export function DateTimeRangePicker({
     }
 
     const setter = target === "from" ? setFromTime : setToTime
-    setter((prev) => {
-      const newTime = { ...prev, [field]: validated }
-      const date = target === "from" ? pendingRange?.from : pendingRange?.to
-      if (date) {
-        setPendingRange((r) =>
-          r ? { ...r, [target]: applyTime(date, newTime) } : r,
-        )
-      }
-      return newTime
+    setter((prev) => ({ ...prev, [field]: validated }))
+    setPendingRange((r) => {
+      if (!r) return r
+      const date = r[target]
+      if (!date) return r
+      const currentTime = target === "from" ? fromTime : toTime
+      const newTime = { ...currentTime, [field]: validated }
+      return { ...r, [target]: applyTime(date, newTime) }
     })
   }
 
   function handlePeriodToggle(target: "from" | "to") {
     const setter = target === "from" ? setFromTime : setToTime
-    setter((prev) => {
-      const newPeriod: "AM" | "PM" = prev.period === "AM" ? "PM" : "AM"
-      const newTime = { ...prev, period: newPeriod }
-      const date = target === "from" ? pendingRange?.from : pendingRange?.to
-      if (date) {
-        setPendingRange((r) =>
-          r ? { ...r, [target]: applyTime(date, newTime) } : r,
-        )
-      }
-      return newTime
+    const newPeriod: "AM" | "PM" =
+      (target === "from" ? fromTime : toTime).period === "AM" ? "PM" : "AM"
+    setter((prev) => ({ ...prev, period: newPeriod }))
+    setPendingRange((r) => {
+      if (!r) return r
+      const date = r[target]
+      if (!date) return r
+      const currentTime = target === "from" ? fromTime : toTime
+      const newTime = { ...currentTime, period: newPeriod }
+      return { ...r, [target]: applyTime(date, newTime) }
     })
   }
 
@@ -182,16 +181,15 @@ export function DateTimeRangePicker({
 
   function updatePeriod(target: "from" | "to", newPeriod: "AM" | "PM") {
     const setter = target === "from" ? setFromTime : setToTime
-    setter((prev) => {
-      if (prev.period === newPeriod) return prev
-      const newTime = { ...prev, period: newPeriod }
-      const date = target === "from" ? pendingRange?.from : pendingRange?.to
-      if (date) {
-        setPendingRange((r) =>
-          r ? { ...r, [target]: applyTime(date, newTime) } : r,
-        )
-      }
-      return newTime
+    const currentTime = target === "from" ? fromTime : toTime
+    if (currentTime.period === newPeriod) return
+    setter((prev) => ({ ...prev, period: newPeriod }))
+    setPendingRange((r) => {
+      if (!r) return r
+      const date = r[target]
+      if (!date) return r
+      const newTime = { ...currentTime, period: newPeriod }
+      return { ...r, [target]: applyTime(date, newTime) }
     })
   }
 
@@ -379,6 +377,9 @@ export function DateTimeRangePicker({
             type="button"
             size="sm"
             onClick={handleConfirm}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.preventDefault()
+            }}
             disabled={!canConfirm}
           >
             Done
