@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getManageHackathon } from "@/lib/services/manage-hackathon"
@@ -7,7 +8,8 @@ import { listJudgeInvitations } from "@/lib/services/judge-invitations"
 import { listPrizes, listPrizeAssignments } from "@/lib/services/prizes"
 import { getResults } from "@/lib/services/results"
 import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
-import type { HackathonStatus } from "@/lib/db/hackathon-types"
+import type { JudgingMode } from "@/lib/db/hackathon-types"
+import { VALID_TABS, VALID_JTABS, VALID_PTABS, getDefaultTab, resolveTab } from "@/lib/utils/manage-tabs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
@@ -26,14 +28,172 @@ type PageProps = {
   searchParams: Promise<{ tab?: string; jtab?: string; ptab?: string }>
 }
 
-const VALID_TABS = ["edit", "judges", "prizes"]
-const VALID_JTABS = ["criteria", "assignments", "progress"]
-const VALID_PTABS = ["prizes", "results"]
+type JudgesTabContentProps = {
+  hackathonId: string
+  activeJtab: string
+  criteria: Awaited<ReturnType<typeof listJudgingCriteria>>
+  submissions: Array<{ id: string; title: string }>
+  judgingMode: JudgingMode
+  anonymousJudging: boolean
+  judgingProgress: Awaited<ReturnType<typeof getJudgingProgress>>
+}
 
-function getDefaultTab(status: HackathonStatus): "edit" | "judges" | "prizes" {
-  if (status === "draft" || status === "published") return "edit"
-  if (status === "completed" || status === "archived") return "prizes"
-  return "judges"
+async function JudgesTabContent({
+  hackathonId,
+  activeJtab,
+  criteria,
+  submissions,
+  judgingMode,
+  anonymousJudging,
+  judgingProgress,
+}: JudgesTabContentProps) {
+  const [judges, assignments, pendingInvitations] = await Promise.all([
+    listJudges(hackathonId),
+    listJudgeAssignments(hackathonId),
+    listJudgeInvitations(hackathonId, "pending"),
+  ])
+
+  return (
+    <Tabs defaultValue={activeJtab} className="space-y-6">
+      <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
+        <TabsList>
+          <TabsTrigger value="criteria">Criteria</TabsTrigger>
+          <TabsTrigger value="assignments">Judges & Assignments</TabsTrigger>
+          <TabsTrigger value="progress">Progress</TabsTrigger>
+        </TabsList>
+      </div>
+
+      <TabsContent value="criteria" forceMount className="data-[state=inactive]:hidden">
+        <div className="space-y-6">
+          <JudgingModeToggle hackathonId={hackathonId} initialMode={judgingMode} />
+          <CriteriaConfig
+            hackathonId={hackathonId}
+            initialCriteria={criteria.map((c) => ({
+              id: c.id,
+              name: c.name,
+              description: c.description,
+              maxScore: c.max_score,
+              weight: Number(c.weight),
+              displayOrder: c.display_order,
+              createdAt: c.created_at,
+            }))}
+          />
+        </div>
+      </TabsContent>
+
+      <TabsContent value="assignments" forceMount className="data-[state=inactive]:hidden">
+        <JudgeAssignments
+          hackathonId={hackathonId}
+          initialJudges={judges}
+          initialAssignments={assignments.map((a) => ({
+            id: a.id,
+            judgeParticipantId: a.judge_participant_id,
+            judgeName: a.judgeName,
+            judgeEmail: a.judgeEmail,
+            submissionId: a.submission_id,
+            submissionTitle: a.submissionTitle,
+            isComplete: a.is_complete,
+            assignedAt: a.assigned_at,
+          }))}
+          initialInvitations={pendingInvitations.map((inv) => ({
+            id: inv.id,
+            email: inv.email,
+            status: inv.status,
+            expiresAt: inv.expires_at,
+            createdAt: inv.created_at,
+          }))}
+          submissions={submissions}
+          anonymousJudging={anonymousJudging}
+        />
+      </TabsContent>
+
+      <TabsContent value="progress" forceMount className="data-[state=inactive]:hidden">
+        <ScoringProgress progress={judgingProgress} />
+      </TabsContent>
+    </Tabs>
+  )
+}
+
+type PrizesTabContentProps = {
+  hackathonId: string
+  activePtab: string
+  prizes: Awaited<ReturnType<typeof listPrizes>>
+  submissions: Array<{ id: string; title: string }>
+  resultsPublishedAt: string | null
+  incompleteAssignments: number
+}
+
+async function PrizesTabContent({
+  hackathonId,
+  activePtab,
+  prizes,
+  submissions,
+  resultsPublishedAt,
+  incompleteAssignments,
+}: PrizesTabContentProps) {
+  const [prizeAssignments, results] = await Promise.all([
+    listPrizeAssignments(hackathonId),
+    getResults(hackathonId),
+  ])
+
+  return (
+    <Tabs defaultValue={activePtab} className="space-y-6">
+      <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
+        <TabsList>
+          <TabsTrigger value="prizes">Prizes</TabsTrigger>
+          <TabsTrigger value="results">Results</TabsTrigger>
+        </TabsList>
+      </div>
+
+      <TabsContent value="prizes" forceMount className="data-[state=inactive]:hidden">
+        <PrizesManager
+          hackathonId={hackathonId}
+          initialPrizes={prizes.map((p) => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            value: p.value,
+            displayOrder: p.display_order,
+            createdAt: p.created_at,
+          }))}
+          initialAssignments={prizeAssignments.map((a) => ({
+            id: a.id,
+            prizeId: a.prize_id,
+            prizeName: a.prizeName,
+            submissionId: a.submission_id,
+            submissionTitle: a.submissionTitle,
+            teamName: a.teamName,
+            assignedAt: a.assigned_at,
+          }))}
+          submissions={submissions}
+        />
+      </TabsContent>
+
+      <TabsContent value="results" forceMount className="data-[state=inactive]:hidden">
+        <ResultsDashboard
+          hackathonId={hackathonId}
+          initialResults={results.map((r) => ({
+            id: r.id,
+            rank: r.rank,
+            submissionId: r.submission_id,
+            submissionTitle: r.submissionTitle,
+            teamName: r.teamName,
+            totalScore: r.total_score,
+            weightedScore: r.weighted_score,
+            judgeCount: r.judge_count,
+            publishedAt: r.published_at,
+            prizes: r.prizes,
+          }))}
+          isPublished={resultsPublishedAt !== null}
+          incompleteAssignments={incompleteAssignments}
+        />
+      </TabsContent>
+    </Tabs>
+  )
+}
+
+function TabLoadingSkeleton() {
+  return <div className="h-64 rounded-lg bg-muted animate-pulse" />
 }
 
 export default async function ManagePage({ params, searchParams }: PageProps) {
@@ -52,34 +212,26 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     judgingProgress,
     judgingSetupStatus,
     prizes,
-    prizeAssignments,
     judgeDisplayCount,
     criteria,
-    judges,
-    assignments,
-    pendingInvitations,
-    results,
   ] = await Promise.all([
     getHackathonSubmissions(hackathon.id),
     getJudgingProgress(hackathon.id),
     getJudgingSetupStatus(hackathon.id),
     listPrizes(hackathon.id),
-    listPrizeAssignments(hackathon.id),
     countJudgeDisplayProfiles(hackathon.id),
     listJudgingCriteria(hackathon.id),
-    listJudges(hackathon.id),
-    listJudgeAssignments(hackathon.id),
-    listJudgeInvitations(hackathon.id, "pending"),
-    getResults(hackathon.id),
   ])
 
   const submissionCount = submissions.length
   const incompleteAssignments = judgingProgress.totalAssignments - judgingProgress.completedAssignments
   const isDev = process.env.NODE_ENV === "development"
 
-  const activeTab = tab && VALID_TABS.includes(tab) ? tab : getDefaultTab(hackathon.status)
-  const activeJtab = jtab && VALID_JTABS.includes(jtab) ? jtab : "criteria"
-  const activePtab = ptab && VALID_PTABS.includes(ptab) ? ptab : "prizes"
+  const activeTab = resolveTab(tab, VALID_TABS, getDefaultTab(hackathon.status))
+  const activeJtab = resolveTab(jtab, VALID_JTABS, "criteria")
+  const activePtab = resolveTab(ptab, VALID_PTABS, "prizes")
+
+  const submissionsForSelect = submissions.map((s) => ({ id: s.id, title: s.title }))
 
   return (
     <div className="space-y-6">
@@ -155,121 +307,30 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
         </TabsContent>
 
         <TabsContent value="judges" forceMount className="data-[state=inactive]:hidden">
-          <Tabs defaultValue={activeJtab} className="space-y-6">
-            <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
-              <TabsList>
-                <TabsTrigger value="criteria">Criteria</TabsTrigger>
-                <TabsTrigger value="assignments">Judges & Assignments</TabsTrigger>
-                <TabsTrigger value="progress">Progress</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="criteria" forceMount className="data-[state=inactive]:hidden">
-              <div className="space-y-6">
-                <JudgingModeToggle
-                  hackathonId={hackathon.id}
-                  initialMode={hackathon.judging_mode}
-                />
-                <CriteriaConfig
-                  hackathonId={hackathon.id}
-                  initialCriteria={criteria.map((c) => ({
-                    id: c.id,
-                    name: c.name,
-                    description: c.description,
-                    maxScore: c.max_score,
-                    weight: Number(c.weight),
-                    displayOrder: c.display_order,
-                    createdAt: c.created_at,
-                  }))}
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="assignments" forceMount className="data-[state=inactive]:hidden">
-              <JudgeAssignments
-                hackathonId={hackathon.id}
-                initialJudges={judges}
-                initialAssignments={assignments.map((a) => ({
-                  id: a.id,
-                  judgeParticipantId: a.judge_participant_id,
-                  judgeName: a.judgeName,
-                  judgeEmail: a.judgeEmail,
-                  submissionId: a.submission_id,
-                  submissionTitle: a.submissionTitle,
-                  isComplete: a.is_complete,
-                  assignedAt: a.assigned_at,
-                }))}
-                initialInvitations={pendingInvitations.map((inv) => ({
-                  id: inv.id,
-                  email: inv.email,
-                  status: inv.status,
-                  expiresAt: inv.expires_at,
-                  createdAt: inv.created_at,
-                }))}
-                submissions={submissions.map((s) => ({ id: s.id, title: s.title }))}
-                anonymousJudging={hackathon.anonymous_judging}
-              />
-            </TabsContent>
-
-            <TabsContent value="progress" forceMount className="data-[state=inactive]:hidden">
-              <ScoringProgress progress={judgingProgress} />
-            </TabsContent>
-          </Tabs>
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <JudgesTabContent
+              hackathonId={hackathon.id}
+              activeJtab={activeJtab}
+              criteria={criteria}
+              submissions={submissionsForSelect}
+              judgingMode={hackathon.judging_mode}
+              anonymousJudging={hackathon.anonymous_judging}
+              judgingProgress={judgingProgress}
+            />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="prizes" forceMount className="data-[state=inactive]:hidden">
-          <Tabs defaultValue={activePtab} className="space-y-6">
-            <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
-              <TabsList>
-                <TabsTrigger value="prizes">Prizes</TabsTrigger>
-                <TabsTrigger value="results">Results</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="prizes" forceMount className="data-[state=inactive]:hidden">
-              <PrizesManager
-                hackathonId={hackathon.id}
-                initialPrizes={prizes.map((p) => ({
-                  id: p.id,
-                  name: p.name,
-                  description: p.description,
-                  value: p.value,
-                  displayOrder: p.display_order,
-                  createdAt: p.created_at,
-                }))}
-                initialAssignments={prizeAssignments.map((a) => ({
-                  id: a.id,
-                  prizeId: a.prize_id,
-                  prizeName: a.prizeName,
-                  submissionId: a.submission_id,
-                  submissionTitle: a.submissionTitle,
-                  teamName: a.teamName,
-                  assignedAt: a.assigned_at,
-                }))}
-                submissions={submissions.map((s) => ({ id: s.id, title: s.title }))}
-              />
-            </TabsContent>
-
-            <TabsContent value="results" forceMount className="data-[state=inactive]:hidden">
-              <ResultsDashboard
-                hackathonId={hackathon.id}
-                initialResults={results.map((r) => ({
-                  id: r.id,
-                  rank: r.rank,
-                  submissionId: r.submission_id,
-                  submissionTitle: r.submissionTitle,
-                  teamName: r.teamName,
-                  totalScore: r.total_score,
-                  weightedScore: r.weighted_score,
-                  judgeCount: r.judge_count,
-                  publishedAt: r.published_at,
-                  prizes: r.prizes,
-                }))}
-                isPublished={hackathon.results_published_at !== null}
-                incompleteAssignments={incompleteAssignments}
-              />
-            </TabsContent>
-          </Tabs>
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <PrizesTabContent
+              hackathonId={hackathon.id}
+              activePtab={activePtab}
+              prizes={prizes}
+              submissions={submissionsForSelect}
+              resultsPublishedAt={hackathon.results_published_at}
+              incompleteAssignments={incompleteAssignments}
+            />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

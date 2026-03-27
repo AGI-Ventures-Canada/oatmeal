@@ -34,7 +34,6 @@ export function HackathonPageActions({
               </Badge>
             </Link>
           </Button>
-
         </>
       ) : null}
     </>

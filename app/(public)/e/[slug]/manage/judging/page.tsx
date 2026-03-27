@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import { getJudgingRedirectUrl } from "@/lib/utils/manage-tabs"
 
 type PageProps = {
   params: Promise<{ slug: string }>
@@ -8,15 +9,5 @@ type PageProps = {
 export default async function JudgingPage({ params, searchParams }: PageProps) {
   const { slug } = await params
   const { tab } = await searchParams
-
-  if (tab === "prizes") {
-    redirect(`/e/${slug}/manage?tab=prizes`)
-  }
-
-  const judgeSubTabs = ["criteria", "assignments", "progress"]
-  if (tab && judgeSubTabs.includes(tab)) {
-    redirect(`/e/${slug}/manage?tab=judges&jtab=${tab}`)
-  }
-
-  redirect(`/e/${slug}/manage?tab=judges`)
+  redirect(getJudgingRedirectUrl(slug, tab))
 }
