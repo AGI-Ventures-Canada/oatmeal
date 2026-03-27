@@ -278,7 +278,12 @@ export function HackathonDraftEditor({
         onAuthRequired={!isSignedIn ? () => setShowSignInDialog(true) : undefined}
       />
       <div className="fixed inset-x-0 bottom-4 z-50 px-4 sm:bottom-6">
-        <div className={`mx-auto flex w-full flex-col items-center gap-3 rounded-2xl border bg-background shadow-xl ${(sourceDisplayUrl && !isSignedIn) || (isLoaded && isOrgLoaded && isSignedIn && !organization) ? "max-w-md px-3 py-2" : "max-w-3xl px-3 py-3 sm:px-4"}`}>
+        <div className={cn(
+          "mx-auto flex w-full flex-col items-center gap-3 rounded-2xl border bg-background/95 shadow-xl backdrop-blur",
+          (sourceDisplayUrl && !isSignedIn) || (isLoaded && isOrgLoaded && isSignedIn && !organization)
+            ? "max-w-md px-3 py-2"
+            : "max-w-3xl px-3 py-3 sm:px-4"
+        )}>
           {sourceDisplayUrl && !(isLoaded && isOrgLoaded && isSignedIn && !organization) && (
             <div className="flex w-full items-center gap-2 rounded-full border bg-muted/50 px-3 py-2">
               <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground" title={sourceUrl}>
@@ -307,7 +312,7 @@ export function HackathonDraftEditor({
               </p>
               <Button
                 size="lg"
-                className="rounded-full px-8 text-base hover:bg-primary/80"
+                className="rounded-full px-8 text-base"
                 onClick={handleSubmit}
                 disabled={isSubmitting || !state.name.trim()}
               >
@@ -321,7 +326,7 @@ export function HackathonDraftEditor({
           ) : (
             <Button
               size="lg"
-              className={cn("rounded-full px-8 text-base", sourceDisplayUrl && "hover:bg-primary/80")}
+              className="rounded-full px-8 text-base"
               onClick={handleSubmit}
               disabled={isSubmitting || !state.name.trim()}
             >
