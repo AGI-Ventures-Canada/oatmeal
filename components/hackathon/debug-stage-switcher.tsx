@@ -241,20 +241,20 @@ export function DebugStageSwitcher({
               const isActive = status === currentStatus
               const isLoading = pending === status
               return (
-                <Button
+                <div
                   key={status}
-                  size="sm"
-                  variant={isActive ? "default" : "outline"}
-                  disabled={!!pending}
-                  className={cn(
-                    "transition-all duration-150",
-                    !isActive && !pending && "hover:scale-105 hover:shadow-md",
-                  )}
-                  onClick={() => switchTo(status)}
+                  className={cn(!isActive && !pending && "hover:scale-105 transition-transform duration-150")}
                 >
-                  {isLoading && <Loader2 className="size-3 animate-spin mr-1" />}
-                  {label}
-                </Button>
+                  <Button
+                    size="sm"
+                    variant={isActive ? "default" : "outline"}
+                    disabled={!!pending}
+                    onClick={() => switchTo(status)}
+                  >
+                    {isLoading && <Loader2 className="size-3 animate-spin mr-1" />}
+                    {label}
+                  </Button>
+                </div>
               )
             })}
             <Button
