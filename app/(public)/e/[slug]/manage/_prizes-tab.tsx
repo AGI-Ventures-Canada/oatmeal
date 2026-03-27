@@ -1,6 +1,7 @@
 import { listPrizes, listPrizeAssignments } from "@/lib/services/prizes"
 import { getResults } from "@/lib/services/results"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsUrlSync } from "./_tabs-url-sync"
 import { PrizesManager } from "@/components/hackathon/prizes/prizes-manager"
 import { ResultsDashboard } from "@/components/hackathon/results/results-dashboard"
 
@@ -27,7 +28,7 @@ export async function PrizesTabContent({
   ])
 
   return (
-    <Tabs defaultValue={activePtab} className="space-y-6">
+    <TabsUrlSync paramKey="ptab" defaultValue={activePtab} className="space-y-6">
       <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
         <TabsList>
           <TabsTrigger value="prizes">Prizes</TabsTrigger>
@@ -78,6 +79,6 @@ export async function PrizesTabContent({
           incompleteAssignments={incompleteAssignments}
         />
       </TabsContent>
-    </Tabs>
+    </TabsUrlSync>
   )
 }

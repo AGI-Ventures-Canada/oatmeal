@@ -83,6 +83,9 @@ export function DebugStageSwitcher({
     setPosition({ x: window.innerWidth - BUTTON_W - EDGE_MARGIN, y: window.innerHeight - BUTTON_H - EDGE_MARGIN })
     setMounted(true)
   }, [])
+  const positionRef = useRef(position)
+  positionRef.current = position
+
   const isDragging = useRef(false)
   const dragStart = useRef({ x: 0, y: 0, posX: 0, posY: 0 })
   const hasMoved = useRef(false)
@@ -165,13 +168,13 @@ export function DebugStageSwitcher({
 
   useEffect(() => {
     function handleResize() {
-      const snapped = snapToEdge(position.x + BUTTON_W / 2, position.y + BUTTON_H / 2)
+      const snapped = snapToEdge(positionRef.current.x + BUTTON_W / 2, positionRef.current.y + BUTTON_H / 2)
       setPosition({ x: snapped.x, y: snapped.y })
       setEdge(snapped.edge)
     }
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
-  }, [position])
+  }, [])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

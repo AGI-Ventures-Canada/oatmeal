@@ -11,7 +11,8 @@ import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
 import { DebugStageSwitcher } from "@/components/hackathon/debug-stage-switcher"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsUrlSync } from "./_tabs-url-sync"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { JudgesTabContent } from "./_judges-tab"
 import { PrizesTabContent } from "./_prizes-tab"
@@ -96,7 +97,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
         criteriaCount={criteria.length}
       />
 
-      <Tabs defaultValue={activeTab} className="space-y-6">
+      <TabsUrlSync paramKey="tab" defaultValue={activeTab} className="space-y-6">
         <div className="flex items-center justify-between gap-4">
           <Breadcrumb className="shrink-0">
             <BreadcrumbList>
@@ -161,7 +162,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
             />
           </Suspense>
         </TabsContent>
-      </Tabs>
+      </TabsUrlSync>
     </div>
   )
 }

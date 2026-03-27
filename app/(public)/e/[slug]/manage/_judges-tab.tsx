@@ -1,7 +1,8 @@
 import { listJudges, listJudgeAssignments, getJudgingProgress, listJudgingCriteria } from "@/lib/services/judging"
 import { listJudgeInvitations } from "@/lib/services/judge-invitations"
 import type { JudgingMode } from "@/lib/db/hackathon-types"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsUrlSync } from "./_tabs-url-sync"
 import { CriteriaConfig } from "@/components/hackathon/judging/criteria-config"
 import { JudgingModeToggle } from "@/components/hackathon/judging/judging-mode-toggle"
 import { JudgeAssignments } from "@/components/hackathon/judging/judge-assignments"
@@ -33,7 +34,7 @@ export async function JudgesTabContent({
   ])
 
   return (
-    <Tabs defaultValue={activeJtab} className="space-y-6">
+    <TabsUrlSync paramKey="jtab" defaultValue={activeJtab} className="space-y-6">
       <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
         <TabsList>
           <TabsTrigger value="criteria">Criteria</TabsTrigger>
@@ -89,6 +90,6 @@ export async function JudgesTabContent({
       <TabsContent value="progress" forceMount className="data-[state=inactive]:hidden">
         <ScoringProgress progress={judgingProgress} />
       </TabsContent>
-    </Tabs>
+    </TabsUrlSync>
   )
 }
