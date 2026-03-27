@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { auth } from "@clerk/nextjs/server"
 import { TriangleAlert } from "lucide-react"
@@ -11,7 +11,6 @@ import { getOrCreateTenant } from "@/lib/services/tenants"
 import { logAudit } from "@/lib/services/audit"
 import { scopesForRole } from "@/lib/auth/types"
 import { isLumaUrl } from "@/lib/services/external-import"
-import { ImportComplete } from "@/components/hackathon/import-complete"
 import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
 
@@ -125,7 +124,7 @@ export default async function EventImportPage({ searchParams }: PageProps) {
         data: { hackathonId: hackathon.id, source, sourceUrl: normalizedUrl },
       }).catch(console.error)
 
-      return <ImportComplete slug={hackathon.slug} />
+      redirect(`/e/${hackathon.slug}/manage`)
     }
   }
 

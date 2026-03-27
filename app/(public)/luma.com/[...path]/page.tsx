@@ -6,4 +6,5 @@ type PageProps = {
 
 export default async function LumaImportPage({ params }: PageProps) {
   const { path } = await params
-  redirect(`/import?url=${encodeURIComponent(`https://luma.com/${path.join("/")}`)}`)}
+  redirect(`/import?url=${encodeURIComponent(`https://luma.com/${path.join("/")}`)}`)
+}
