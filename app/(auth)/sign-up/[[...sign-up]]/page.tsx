@@ -1,5 +1,5 @@
-import { SignUp } from "@clerk/nextjs"
+import { CustomSignUp } from "./custom-sign-up"
 
 export default function SignUpPage() {
-  return <SignUp fallbackRedirectUrl="/onboarding" />
+  return <CustomSignUp />
 }

@@ -1,4 +1,4 @@
-import { SignIn } from "@clerk/nextjs"
+import { CustomSignIn } from "./custom-sign-in"
 
 export default async function SignInPage({
   searchParams,
@@ -6,5 +6,5 @@ export default async function SignInPage({
   searchParams: Promise<{ redirect_url?: string }>
 }) {
   const { redirect_url } = await searchParams
-  return <SignIn fallbackRedirectUrl={redirect_url || "/home"} />
+  return <CustomSignIn redirectUrl={redirect_url} />
 }
