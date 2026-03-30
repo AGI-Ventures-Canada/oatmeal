@@ -3,7 +3,10 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { DateTimePicker } from "@/components/ui/date-time-picker"
+import {
+  DateTimeRangePicker,
+  type DateTimeRange,
+} from "@/components/ui/date-time-range-picker"
 import {
   Field,
   FieldLabel,
@@ -47,28 +50,34 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [registrationOpensAt, setRegistrationOpensAt] = useState<Date | null>(parseDate(initialData.registrationOpensAt))
-  const [registrationClosesAt, setRegistrationClosesAt] = useState<Date | null>(parseDate(initialData.registrationClosesAt))
-  const [startsAt, setStartsAt] = useState<Date | null>(parseDate(initialData.startsAt))
-  const [endsAt, setEndsAt] = useState<Date | null>(parseDate(initialData.endsAt))
+  const [registrationRange, setRegistrationRange] = useState<DateTimeRange>({
+    from: parseDate(initialData.registrationOpensAt),
+    to: parseDate(initialData.registrationClosesAt),
+  })
+  const [hackathonRange, setHackathonRange] = useState<DateTimeRange>({
+    from: parseDate(initialData.startsAt),
+    to: parseDate(initialData.endsAt),
+  })
 
-  function datesEqual(a: Date | null, b: string | null): boolean {
-    if (!a && !b) return true
-    if (!a || !b) return false
-    return a.getTime() === new Date(b).getTime()
+  function rangeChanged(range: DateTimeRange, fromInitial: string | null, toInitial: string | null): boolean {
+    const fromEqual = !range.from && !fromInitial ? true : range.from && fromInitial ? range.from.getTime() === new Date(fromInitial).getTime() : false
+    const toEqual = !range.to && !toInitial ? true : range.to && toInitial ? range.to.getTime() === new Date(toInitial).getTime() : false
+    return !fromEqual || !toEqual
   }
 
   const isDirty =
-    (showRegistrationDates && !datesEqual(registrationOpensAt, initialData.registrationOpensAt)) ||
-    (showRegistrationDates && !datesEqual(registrationClosesAt, initialData.registrationClosesAt)) ||
-    (showHackathonDates && !datesEqual(startsAt, initialData.startsAt)) ||
-    (showHackathonDates && !datesEqual(endsAt, initialData.endsAt))
+    (showRegistrationDates && rangeChanged(registrationRange, initialData.registrationOpensAt, initialData.registrationClosesAt)) ||
+    (showHackathonDates && rangeChanged(hackathonRange, initialData.startsAt, initialData.endsAt))
 
   function handleReset() {
-    setRegistrationOpensAt(parseDate(initialData.registrationOpensAt))
-    setRegistrationClosesAt(parseDate(initialData.registrationClosesAt))
-    setStartsAt(parseDate(initialData.startsAt))
-    setEndsAt(parseDate(initialData.endsAt))
+    setRegistrationRange({
+      from: parseDate(initialData.registrationOpensAt),
+      to: parseDate(initialData.registrationClosesAt),
+    })
+    setHackathonRange({
+      from: parseDate(initialData.startsAt),
+      to: parseDate(initialData.endsAt),
+    })
     setError(null)
   }
 
@@ -77,10 +86,10 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
     setError(null)
 
     const dateError = validateTimelineDates({
-      registrationOpensAt: registrationOpensAt,
-      registrationClosesAt: registrationClosesAt,
-      startsAt: startsAt,
-      endsAt: endsAt,
+      registrationOpensAt: registrationRange.from,
+      registrationClosesAt: registrationRange.to,
+      startsAt: hackathonRange.from,
+      endsAt: hackathonRange.to,
     })
     if (dateError) {
       setError(dateError)
@@ -91,10 +100,10 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
     try {
       if (onSave) {
         return await onSave({
-          startsAt: startsAt || null,
-          endsAt: endsAt || null,
-          registrationOpensAt: registrationOpensAt || null,
-          registrationClosesAt: registrationClosesAt || null,
+          startsAt: hackathonRange.from || null,
+          endsAt: hackathonRange.to || null,
+          registrationOpensAt: registrationRange.from || null,
+          registrationClosesAt: registrationRange.to || null,
         })
       }
 
@@ -102,10 +111,10 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          registrationOpensAt: registrationOpensAt || null,
-          registrationClosesAt: registrationClosesAt || null,
-          startsAt: startsAt || null,
-          endsAt: endsAt || null,
+          registrationOpensAt: registrationRange.from || null,
+          registrationClosesAt: registrationRange.to || null,
+          startsAt: hackathonRange.from || null,
+          endsAt: hackathonRange.to || null,
         }),
       })
 
@@ -152,48 +161,30 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
     <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6" autoComplete="off">
       <FieldGroup>
         {showRegistrationDates && (
-          <>
-            <Field>
-              <FieldLabel htmlFor="timeline-reg-opens">Registration Opens</FieldLabel>
-              <DateTimePicker
-                id="timeline-reg-opens"
-                value={registrationOpensAt}
-                onChange={setRegistrationOpensAt}
-                placeholder="Select date and time"
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="timeline-reg-closes">Registration Closes</FieldLabel>
-              <DateTimePicker
-                id="timeline-reg-closes"
-                value={registrationClosesAt}
-                onChange={setRegistrationClosesAt}
-                placeholder="Select date and time"
-              />
-            </Field>
-          </>
+          <Field>
+            <FieldLabel htmlFor="timeline-registration">Registration Period</FieldLabel>
+            <DateTimeRangePicker
+              id="timeline-registration"
+              value={registrationRange}
+              onChange={setRegistrationRange}
+              placeholder="Select registration dates"
+              fromLabel="Opens"
+              toLabel="Closes"
+            />
+          </Field>
         )}
         {showHackathonDates && (
-          <>
-            <Field>
-              <FieldLabel htmlFor="timeline-starts">Hackathon Starts</FieldLabel>
-              <DateTimePicker
-                id="timeline-starts"
-                value={startsAt}
-                onChange={setStartsAt}
-                placeholder="Select date and time"
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="timeline-ends">Hackathon Ends</FieldLabel>
-              <DateTimePicker
-                id="timeline-ends"
-                value={endsAt}
-                onChange={setEndsAt}
-                placeholder="Select date and time"
-              />
-            </Field>
-          </>
+          <Field>
+            <FieldLabel htmlFor="timeline-hackathon">Hackathon Period</FieldLabel>
+            <DateTimeRangePicker
+              id="timeline-hackathon"
+              value={hackathonRange}
+              onChange={setHackathonRange}
+              placeholder="Select hackathon dates"
+              fromLabel="Start"
+              toLabel="End"
+            />
+          </Field>
         )}
 
         <FieldDescription>

@@ -924,7 +924,7 @@ export function JudgeAssignments({
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Select judge" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" align="start">
                 {judges.map((j) => (
                   <SelectItem key={j.participantId} value={j.participantId}>
                     {j.displayName}
@@ -942,7 +942,7 @@ export function JudgeAssignments({
               <SelectTrigger className="w-full sm:w-56">
                 <SelectValue placeholder="Select submission" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" align="start">
                 {submissions.map((s) => {
                   const isUnassigned = !assignedSubmissionIds.has(s.id)
                   return (
