@@ -55,6 +55,7 @@ export const clerkMock = {
   }),
   useOrganization: () => ({
     organization: clerkState.organization,
+    isLoaded: clerkState.isLoaded,
   }),
   useOrganizationList: () => ({
     userMemberships: { data: clerkState.memberships },
