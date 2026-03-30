@@ -1,3 +1,9 @@
+export function safeRedirectUrl(url: string | undefined, fallback = "/home"): string {
+  if (!url) return fallback
+  if (url.startsWith("/") && !url.startsWith("//")) return url
+  return fallback
+}
+
 export const urlInputProps = {
   type: "text",
   inputMode: "url",
