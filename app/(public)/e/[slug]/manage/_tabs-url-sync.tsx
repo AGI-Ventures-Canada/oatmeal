@@ -1,12 +1,11 @@
 "use client"
 
-import { useCallback } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useCallback, useState } from "react"
 import { Tabs } from "@/components/ui/tabs"
 
 export function TabsUrlSync({
   paramKey,
-  value,
+  value: initialValue,
   className,
   children,
 }: {
@@ -15,16 +14,16 @@ export function TabsUrlSync({
   className?: string
   children: React.ReactNode
 }) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const [value, setValue] = useState(initialValue)
 
   const handleChange = useCallback(
     (next: string) => {
-      const params = new URLSearchParams(searchParams.toString())
+      setValue(next)
+      const params = new URLSearchParams(window.location.search)
       params.set(paramKey, next)
-      router.replace(`?${params.toString()}`, { scroll: false })
+      window.history.replaceState(null, "", `?${params.toString()}`)
     },
-    [router, searchParams, paramKey],
+    [paramKey],
   )
 
   return (
