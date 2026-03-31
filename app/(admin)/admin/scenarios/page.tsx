@@ -1,7 +1,7 @@
-import { listScenarios } from "@/lib/services/admin-scenarios"
+import { listScenarios, getActiveScenarios } from "@/lib/services/admin-scenarios"
 import { ScenarioRunner } from "./runner"
 
-export default function AdminScenariosPage() {
+export default async function AdminScenariosPage() {
   const isDeployedEnv = process.env.NODE_ENV === "production" || !!process.env.VERCEL_ENV
 
   if (isDeployedEnv) {
@@ -17,7 +17,14 @@ export default function AdminScenariosPage() {
     )
   }
 
-  const scenarios = listScenarios()
+  const [scenarios, activeScenarios] = await Promise.all([
+    Promise.resolve(listScenarios()),
+    getActiveScenarios(),
+  ])
+
+  const activeByName = Object.fromEntries(
+    activeScenarios.map((s) => [s.scenarioName, s])
+  )
 
   return (
     <div className="space-y-6">
@@ -30,7 +37,11 @@ export default function AdminScenariosPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {scenarios.map((scenario) => (
-          <ScenarioRunner key={scenario.name} scenario={scenario} disabled={false} />
+          <ScenarioRunner
+            key={scenario.name}
+            scenario={scenario}
+            existingRun={activeByName[scenario.name] ?? null}
+          />
         ))}
       </div>
     </div>

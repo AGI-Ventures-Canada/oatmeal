@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia"
 import { HackathonStatusEnum } from "@/lib/api/validators"
+import { getPersonaUserId } from "@/lib/dev/test-personas"
 
 function devGuard(set: { status?: number | string }) {
   if (process.env.NODE_ENV !== "development") {
@@ -64,6 +65,36 @@ const SUBMISSION_DATA = [
 const ROOM_NAMES = ["Room A", "Room B", "Room C", "Room D", "Room E"]
 
 export const devRoutes = new Elysia({ prefix: "/dev" })
+  .post(
+    "/scenario-switch",
+    async ({ body, set }) => {
+      const guard = devGuard(set)
+      if (guard) return guard
+
+      const targetUserId = getPersonaUserId(body.persona as Parameters<typeof getPersonaUserId>[0])
+      if (!targetUserId) {
+        set.status = 400
+        return { error: `Unknown persona or TEST_USER_${body.persona.toUpperCase()}_ID not set` }
+      }
+
+      const { clerkClient } = await import("@clerk/nextjs/server")
+      const clerk = await clerkClient()
+      const token = await clerk.signInTokens.createSignInToken({
+        userId: targetUserId,
+        expiresInSeconds: 300,
+      })
+
+      return {
+        loginUrl: `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(body.redirect ?? "/")}`,
+      }
+    },
+    {
+      body: t.Object({
+        persona: t.String(),
+        redirect: t.Optional(t.String()),
+      }),
+    }
+  )
   .patch(
     "/hackathons/:id/status",
     async ({ params, body, set }) => {

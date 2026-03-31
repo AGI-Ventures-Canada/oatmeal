@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ThemedClerkProvider } from "@/components/clerk-provider"
 import { PostHogProvider } from "@/components/posthog-provider"
 import { SearchCommand } from "@/components/search-command"
+import { DevToolbar } from "@/components/dev-toolbar"
 import "./globals.css"
 
 const jetbrainsMono = JetBrains_Mono({
@@ -40,6 +41,7 @@ export default function RootLayout({
           <ThemedClerkProvider>
             <PostHogProvider>{children}</PostHogProvider>
             <SearchCommand />
+            <DevToolbar />
           </ThemedClerkProvider>
         </ThemeProvider>
       </body>

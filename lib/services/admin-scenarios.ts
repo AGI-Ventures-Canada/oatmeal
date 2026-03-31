@@ -1,6 +1,7 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 import { getOrCreatePersonalTenant } from "@/lib/services/tenants"
+import { getSeedUserIds, findPersonaByUserId, getPersonaUserId } from "@/lib/dev/test-personas"
 
 const AVAILABLE_SCENARIOS = [
   { name: "pre-registration", description: "Hackathon not yet open for registration (opens tomorrow)" },
@@ -18,13 +19,17 @@ export function listScenarios() {
 
 const DEV_USER_ID = process.env.SCENARIO_DEV_USER_ID ?? "user_38vEFI8UesKwM07qIuFNqEzFavS"
 
-const SEED_USERS = [
-  "seed_user_alice_001",
-  "seed_user_bob_002",
-  "seed_user_carol_003",
-  "seed_user_dave_004",
-  "seed_user_eve_005",
-]
+function getSeedUsers(): string[] {
+  const real = getSeedUserIds()
+  if (real.length > 0) return real
+  return [
+    "seed_user_alice_001",
+    "seed_user_bob_002",
+    "seed_user_carol_003",
+    "seed_user_dave_004",
+    "seed_user_eve_005",
+  ]
+}
 
 async function resolveScenarioTenant(overrideTenantId?: string): Promise<string> {
   if (overrideTenantId) {
@@ -257,7 +262,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
       startsAt: new Date(now.getTime() - 2 * 86400000),
       endsAt: new Date(now.getTime() + 5 * 86400000),
     })
-    await createTeamWithMembers(hackathonId, DEV_USER_ID, [SEED_USERS[0], SEED_USERS[1]])
+    const seedUsers = getSeedUsers()
+    await createTeamWithMembers(hackathonId, DEV_USER_ID, [seedUsers[0], seedUsers[1]])
     return { hackathonId, slug, tenantId }
   },
 
@@ -273,7 +279,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
       startsAt: new Date(now.getTime() - 5 * 86400000),
       endsAt: new Date(now.getTime() + 2 * 86400000),
     })
-    const teamId = await createTeamWithMembers(hackathonId, DEV_USER_ID, [SEED_USERS[0]])
+    const seedUsers = getSeedUsers()
+    const teamId = await createTeamWithMembers(hackathonId, DEV_USER_ID, [seedUsers[0]])
     const pid = await registerParticipant(hackathonId, DEV_USER_ID)
     await createSubmission(hackathonId, teamId, pid, 0)
     return { hackathonId, slug, tenantId }
@@ -293,7 +300,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
       endsAt: new Date(now.getTime() - 1 * 86400000),
     })
 
-    const allUsers = [DEV_USER_ID, ...SEED_USERS]
+    const seedUsers = getSeedUsers()
+    const allUsers = [DEV_USER_ID, ...seedUsers]
     const submissions: string[] = []
 
     for (let i = 0; i < 5; i++) {
@@ -303,7 +311,7 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
       submissions.push(subId)
     }
 
-    const judgeUsers = [DEV_USER_ID, SEED_USERS[0], SEED_USERS[1]]
+    const judgeUsers = [DEV_USER_ID, seedUsers[0], seedUsers[1]]
     const judgeParticipantIds: string[] = []
     const judgeTeamIds: Record<string, string> = {}
 
@@ -428,14 +436,140 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
   },
 }
 
+export type ActiveScenario = {
+  scenarioName: string
+  hackathonId: string
+  slug: string
+  createdAt: string
+}
+
+export async function getActiveScenarios(): Promise<ActiveScenario[]> {
+  const db = getSupabase()
+  const results: ActiveScenario[] = []
+
+  for (const scenario of AVAILABLE_SCENARIOS) {
+    const prefix = `test-${scenario.name}-`
+    const { data } = await db
+      .from("hackathons")
+      .select("id, slug, created_at")
+      .like("slug", `${prefix}%`)
+      .order("created_at", { ascending: false })
+      .limit(5)
+
+    if (!data) continue
+
+    const match = data.find((h) => {
+      const suffix = h.slug.slice(prefix.length)
+      return /^[0-9a-z]+$/.test(suffix)
+    })
+
+    if (match) {
+      results.push({
+        scenarioName: scenario.name,
+        hackathonId: match.id,
+        slug: match.slug,
+        createdAt: match.created_at,
+      })
+    }
+  }
+
+  return results
+}
+
+async function clearScenario(name: string): Promise<void> {
+  const db = getSupabase()
+  const prefix = `test-${name}-`
+  const { data } = await db
+    .from("hackathons")
+    .select("id")
+    .like("slug", `${prefix}%`)
+
+  if (!data?.length) return
+
+  for (const { id } of data) {
+    await db.from("hackathons").delete().eq("id", id)
+  }
+}
+
 export async function runScenario(name: string, tenantId?: string): Promise<{ hackathonId: string; slug: string; tenantId: string }> {
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV) {
-    throw new Error("Test scenarios can only be run in local development")
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
+    throw new Error("Test scenarios can only be run in local development or staging")
   }
 
   const runner = scenarioRunners[name]
   if (!runner) {
     throw new Error(`Unknown scenario: ${name}. Available: ${AVAILABLE_SCENARIOS.map(s => s.name).join(", ")}`)
   }
+
+  await clearScenario(name)
   return runner(tenantId)
+}
+
+export type RoleCard = {
+  personaKey: string
+  name: string
+  role: string
+  loginUrl: string
+  directUrl: string
+}
+
+export async function generateRoleTokens(hackathonId: string, slug: string): Promise<RoleCard[]> {
+  const db = getSupabase()
+
+  const { data: participants } = await db
+    .from("hackathon_participants")
+    .select("clerk_user_id, role, team_id")
+    .eq("hackathon_id", hackathonId)
+
+  if (!participants?.length) return []
+
+  const organizerUserId = getPersonaUserId("organizer")
+  const { clerkClient } = await import("@clerk/nextjs/server")
+  const clerk = await clerkClient()
+
+  const cards: RoleCard[] = []
+
+  for (const p of participants) {
+    const persona = findPersonaByUserId(p.clerk_user_id)
+    if (!persona) continue
+
+    const token = await clerk.signInTokens.createSignInToken({
+      userId: p.clerk_user_id,
+      expiresInSeconds: 3600,
+    })
+
+    const directUrl = p.role === "judge" ? `/e/${slug}/judge` : `/e/${slug}`
+    const loginUrl = `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(directUrl)}`
+
+    cards.push({
+      personaKey: persona.key,
+      name: persona.name,
+      role: p.role,
+      loginUrl,
+      directUrl,
+    })
+  }
+
+  if (organizerUserId) {
+    const organizerIsParticipant = participants.some(p => p.clerk_user_id === organizerUserId)
+    if (!organizerIsParticipant) {
+      const persona = findPersonaByUserId(organizerUserId)
+      if (persona) {
+        const token = await clerk.signInTokens.createSignInToken({
+          userId: organizerUserId,
+          expiresInSeconds: 3600,
+        })
+        const directUrl = `/hackathons/${hackathonId}`
+        cards.push({
+          personaKey: persona.key,
+          name: persona.name,
+          role: "organizer",
+          loginUrl: `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(directUrl)}`,
+          directUrl,
+        })
+      }
+    }
+  }
+
+  return cards
 }
