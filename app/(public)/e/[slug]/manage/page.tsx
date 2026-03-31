@@ -1,25 +1,26 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
-import Link from "next/link"
 import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { getHackathonSubmissions } from "@/lib/services/submissions"
 import { getJudgingProgress, getJudgingSetupStatus, listJudgingCriteria } from "@/lib/services/judging"
 import { listPrizes } from "@/lib/services/prizes"
 import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
-import { VALID_TABS, VALID_JTABS, VALID_PTABS, getDefaultTab, resolveTab } from "@/lib/utils/manage-tabs"
+import { VALID_TABS, VALID_JTABS, VALID_PTABS, VALID_ETABS, getDefaultTab, resolveTab } from "@/lib/utils/manage-tabs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
 import { DebugStageSwitcher } from "@/components/hackathon/debug-stage-switcher"
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TabsUrlSync } from "./_tabs-url-sync"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { JudgesTabContent } from "./_judges-tab"
 import { PrizesTabContent } from "./_prizes-tab"
+import { EventTabContent } from "./_event-tab"
+import { RoomsTab } from "./_rooms-tab"
+import { TeamsTab } from "./_teams-tab"
 
 type PageProps = {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ tab?: string; jtab?: string; ptab?: string }>
+  searchParams: Promise<{ tab?: string; jtab?: string; ptab?: string; etab?: string }>
 }
 
 function TabLoadingSkeleton() {
@@ -28,7 +29,7 @@ function TabLoadingSkeleton() {
 
 export default async function ManagePage({ params, searchParams }: PageProps) {
   const { slug } = await params
-  const { tab, jtab, ptab } = await searchParams
+  const { tab, jtab, ptab, etab } = await searchParams
   const result = await getManageHackathon(slug)
 
   if (!result.ok) {
@@ -60,6 +61,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
   const activeTab = resolveTab(tab, VALID_TABS, getDefaultTab(hackathon.status))
   const activeJtab = resolveTab(jtab, VALID_JTABS, "criteria")
   const activePtab = resolveTab(ptab, VALID_PTABS, "prizes")
+  const activeEtab = resolveTab(etab, VALID_ETABS, "challenge")
 
   const submissionsForSelect = submissions.map((s) => ({ id: s.id, title: s.title }))
 
@@ -95,23 +97,11 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
         prizeCount={prizes.length}
         judgeDisplayCount={judgeDisplayCount}
         criteriaCount={criteria.length}
+        phase={hackathon.phase}
       />
 
       <TabsUrlSync paramKey="tab" value={activeTab} className="space-y-6">
-        <div className="flex items-center justify-between gap-4">
-          <Breadcrumb className="shrink-0">
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link href="/home">Dashboard</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{hackathon.name}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+        <div className="flex items-center justify-end gap-4">
           <div className="flex items-center gap-4 shrink-0">
             <div className="flex items-center gap-2">
               <HackathonPageActions
@@ -123,8 +113,11 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
             <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
               <TabsList variant="line">
                 <TabsTrigger value="edit">Edit</TabsTrigger>
+                <TabsTrigger value="teams">Teams</TabsTrigger>
+                <TabsTrigger value="rooms">Rooms</TabsTrigger>
                 <TabsTrigger value="judges">Judges</TabsTrigger>
                 <TabsTrigger value="prizes">Prizes</TabsTrigger>
+                <TabsTrigger value="event">Event</TabsTrigger>
               </TabsList>
             </div>
           </div>
@@ -161,6 +154,18 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               incompleteAssignments={incompleteAssignments}
             />
           </Suspense>
+        </TabsContent>
+
+        <TabsContent value="teams" forceMount className="data-[state=inactive]:hidden">
+          <TeamsTab hackathonId={hackathon.id} />
+        </TabsContent>
+
+        <TabsContent value="rooms" forceMount className="data-[state=inactive]:hidden">
+          <RoomsTab hackathonId={hackathon.id} />
+        </TabsContent>
+
+        <TabsContent value="event" forceMount className="data-[state=inactive]:hidden">
+          <EventTabContent hackathonId={hackathon.id} activeEtab={activeEtab} />
         </TabsContent>
       </TabsUrlSync>
     </div>

@@ -19,6 +19,7 @@ export interface Hackathon {
   slug: string
   description?: string
   status?: string
+  phase?: string
   registrationOpensAt?: string
   registrationClosesAt?: string
   startsAt?: string

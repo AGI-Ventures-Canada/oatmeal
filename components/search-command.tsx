@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 import { useAuth, useOrganization } from "@clerk/nextjs"
 import {
   Home,
@@ -29,7 +30,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "@/components/ui/command"
 import { CreateHackathonDialog } from "@/components/hackathon/create-hackathon-dialog"
 import { OrgGateDialog } from "@/components/org-gate-dialog"
@@ -144,19 +144,23 @@ export function SearchCommand() {
 
   useEffect(() => {
     if (!open) return
-    const container = containerRef.current
-    if (!container) return
     const check = () => {
       const el = getListEl()
       if (!el) return
       setCanScrollMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4)
     }
-    const timer = setTimeout(check, 0)
+    const frame = requestAnimationFrame(() => requestAnimationFrame(check))
+    const el = getListEl()
     const ro = new ResizeObserver(check)
-    ro.observe(container)
+    const mo = new MutationObserver(check)
+    if (el) {
+      ro.observe(el)
+      mo.observe(el, { childList: true, subtree: true })
+    }
     return () => {
-      clearTimeout(timer)
+      cancelAnimationFrame(frame)
       ro.disconnect()
+      mo.disconnect()
     }
   }, [open, query])
 
@@ -211,7 +215,7 @@ export function SearchCommand() {
         onOpenChange={handleOpenChange}
         title="Search"
         description="Navigate to any page or action"
-        className="md:max-w-2xl"
+        className="md:max-w-3xl"
         contentStyle={{ top: `calc(50vh - ${DIALOG_VERTICAL_OFFSET}px)`, translate: "-50% 0" }}
       >
         <Command shouldFilter={false}>
@@ -221,53 +225,47 @@ export function SearchCommand() {
             onValueChange={setQuery}
           />
           <div className="relative" ref={containerRef}>
-            <CommandList className="max-h-[60vh] md:max-h-[420px]" onScroll={checkScroll}>
+            <CommandList className="!max-h-[min(60vh,420px)] !overflow-y-auto scrollbar-thin" onScroll={checkScroll}>
               {q ? (
                 <>
                   {!hasSearchResults && (
                     <div className="py-6 text-center text-sm text-muted-foreground">No results found.</div>
                   )}
                   {(debouncePending || eventsLoading || eventsError || matchedEvents.length > 0) && (
-                    <>
-                      <CommandGroup heading="Events">
-                        {debouncePending || eventsLoading ? (
-                          <div className="px-2 py-1.5 text-sm text-muted-foreground">Searching events...</div>
-                        ) : eventsError ? (
-                          <div className="px-2 py-1.5 text-sm text-muted-foreground">Search failed. Try again.</div>
-                        ) : (
-                          matchedEvents.map((event) => {
-                            const href = event.isOrganized ? `/e/${event.slug}/manage` : `/e/${event.slug}`
-                            return (
-                            <CommandItem
-                              key={event.id}
-                              value={event.id}
-                              onSelect={() => navigate(href)}
-                            >
-                              <Calendar />
-                              {event.name}
-                            </CommandItem>
-                          )})
-                        )}
-                      </CommandGroup>
-                      {(matchedFunctionality.length > 0 || matchedDocs.length > 0) && <CommandSeparator />}
-                    </>
+                    <CommandGroup heading="Events">
+                      {debouncePending || eventsLoading ? (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">Searching events...</div>
+                      ) : eventsError ? (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">Search failed. Try again.</div>
+                      ) : (
+                        matchedEvents.map((event) => {
+                          const href = event.isOrganized ? `/e/${event.slug}/manage` : `/e/${event.slug}`
+                          return (
+                          <CommandItem
+                            key={event.id}
+                            value={event.id}
+                            onSelect={() => navigate(href)}
+                          >
+                            <Calendar />
+                            {event.name}
+                          </CommandItem>
+                        )})
+                      )}
+                    </CommandGroup>
                   )}
                   {matchedFunctionality.length > 0 && (
-                    <>
-                      <CommandGroup heading="Pages">
-                        {matchedFunctionality.map((item) => (
-                          <CommandItem
-                            key={item.href}
-                            value={item.href}
-                            onSelect={() => navigate(item.href)}
-                          >
-                            <item.icon />
-                            {item.title}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                      {matchedDocs.length > 0 && <CommandSeparator />}
-                    </>
+                    <CommandGroup heading="Pages">
+                      {matchedFunctionality.map((item) => (
+                        <CommandItem
+                          key={item.href}
+                          value={item.href}
+                          onSelect={() => navigate(item.href)}
+                        >
+                          <item.icon />
+                          {item.title}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
                   )}
                   {matchedDocs.length > 0 && (
                     <CommandGroup heading="Docs">
@@ -303,8 +301,6 @@ export function SearchCommand() {
 
                   {isSignedIn && (
                     <>
-                      <CommandSeparator />
-
                       <CommandGroup heading="Hackathons">
                         <CommandItem value="create-hackathon" onSelect={handleCreateHackathon}>
                           <Plus />
@@ -322,8 +318,6 @@ export function SearchCommand() {
                         ))}
                       </CommandGroup>
 
-                      <CommandSeparator />
-
                       <CommandGroup heading="Settings">
                         {settingsItems.map((item) => (
                           <CommandItem
@@ -338,8 +332,6 @@ export function SearchCommand() {
                       </CommandGroup>
                     </>
                   )}
-
-                  <CommandSeparator />
 
                   <CommandGroup heading="Docs">
                     {DOC_PAGES.filter((p) => PINNED_DOC_URLS.includes(p.url)).map((doc) => (
@@ -356,9 +348,10 @@ export function SearchCommand() {
                 </>
               )}
             </CommandList>
-            {canScrollMore && (
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-popover to-transparent" />
-            )}
+            <div className={cn(
+              "pointer-events-none absolute bottom-0 left-0 right-0 h-16 transition-opacity duration-200",
+              canScrollMore ? "opacity-100" : "opacity-0"
+            )} style={{ background: "linear-gradient(to top, var(--popover) 0%, var(--popover) 10%, transparent 100%)" }} />
           </div>
         </Command>
       </CommandDialog>

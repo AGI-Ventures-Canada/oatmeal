@@ -30,6 +30,13 @@ export type InvitationStatus =
 
 export type JudgeInvitationStatus = "pending" | "accepted" | "cancelled"
 
+export type HackathonPhase =
+  | "build"
+  | "submission_open"
+  | "preliminaries"
+  | "finals"
+  | "results_pending"
+
 export type WebhookEvent =
   | "hackathon.created"
   | "hackathon.updated"
@@ -84,6 +91,10 @@ export interface Hackathon {
   judging_mode: JudgingMode
   results_published_at: string | null
   winner_emails_sent_at: string | null
+  phase: HackathonPhase | null
+  challenge_title: string | null
+  challenge_body: string | null
+  challenge_released_at: string | null
   metadata: Json
   created_at: string
   updated_at: string

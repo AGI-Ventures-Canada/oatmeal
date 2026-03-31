@@ -316,6 +316,7 @@ export type Database = {
           judge_count: number
           published_at: string | null
           rank: number
+          round_id: string | null
           submission_id: string
           total_score: number | null
           weighted_score: number | null
@@ -327,6 +328,7 @@ export type Database = {
           judge_count?: number
           published_at?: string | null
           rank: number
+          round_id?: string | null
           submission_id: string
           total_score?: number | null
           weighted_score?: number | null
@@ -338,6 +340,7 @@ export type Database = {
           judge_count?: number
           published_at?: string | null
           rank?: number
+          round_id?: string | null
           submission_id?: string
           total_score?: number | null
           weighted_score?: number | null
@@ -348,6 +351,13 @@ export type Database = {
             columns: ["hackathon_id"]
             isOneToOne: false
             referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathon_results_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "judging_rounds"
             referencedColumns: ["id"]
           },
           {
@@ -431,6 +441,9 @@ export type Database = {
           allow_solo: boolean | null
           anonymous_judging: boolean
           banner_url: string | null
+          challenge_body: string | null
+          challenge_released_at: string | null
+          challenge_title: string | null
           created_at: string
           description: string | null
           ends_at: string | null
@@ -446,6 +459,7 @@ export type Database = {
           metadata: Json | null
           min_team_size: number | null
           name: string
+          phase: Database["public"]["Enums"]["hackathon_phase"] | null
           registration_closes_at: string | null
           registration_opens_at: string | null
           require_location_verification: boolean
@@ -462,6 +476,9 @@ export type Database = {
           allow_solo?: boolean | null
           anonymous_judging?: boolean
           banner_url?: string | null
+          challenge_body?: string | null
+          challenge_released_at?: string | null
+          challenge_title?: string | null
           created_at?: string
           description?: string | null
           ends_at?: string | null
@@ -477,6 +494,7 @@ export type Database = {
           metadata?: Json | null
           min_team_size?: number | null
           name: string
+          phase?: Database["public"]["Enums"]["hackathon_phase"] | null
           registration_closes_at?: string | null
           registration_opens_at?: string | null
           require_location_verification?: boolean
@@ -493,6 +511,9 @@ export type Database = {
           allow_solo?: boolean | null
           anonymous_judging?: boolean
           banner_url?: string | null
+          challenge_body?: string | null
+          challenge_released_at?: string | null
+          challenge_title?: string | null
           created_at?: string
           description?: string | null
           ends_at?: string | null
@@ -508,6 +529,7 @@ export type Database = {
           metadata?: Json | null
           min_team_size?: number | null
           name?: string
+          phase?: Database["public"]["Enums"]["hackathon_phase"] | null
           registration_closes_at?: string | null
           registration_opens_at?: string | null
           require_location_verification?: boolean
@@ -602,6 +624,8 @@ export type Database = {
           is_complete: boolean
           judge_participant_id: string
           notes: string
+          room_id: string | null
+          round_id: string | null
           submission_id: string
           viewed_at: string | null
         }
@@ -613,6 +637,8 @@ export type Database = {
           is_complete?: boolean
           judge_participant_id: string
           notes?: string
+          room_id?: string | null
+          round_id?: string | null
           submission_id: string
           viewed_at?: string | null
         }
@@ -624,6 +650,8 @@ export type Database = {
           is_complete?: boolean
           judge_participant_id?: string
           notes?: string
+          room_id?: string | null
+          round_id?: string | null
           submission_id?: string
           viewed_at?: string | null
         }
@@ -640,6 +668,20 @@ export type Database = {
             columns: ["judge_participant_id"]
             isOneToOne: false
             referencedRelation: "hackathon_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_assignments_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_assignments_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "judging_rounds"
             referencedColumns: ["id"]
           },
           {
@@ -768,6 +810,7 @@ export type Database = {
       }
       judging_criteria: {
         Row: {
+          category_id: string | null
           created_at: string
           description: string | null
           display_order: number
@@ -775,10 +818,12 @@ export type Database = {
           id: string
           max_score: number
           name: string
+          round_id: string | null
           updated_at: string
           weight: number
         }
         Insert: {
+          category_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
@@ -786,10 +831,12 @@ export type Database = {
           id?: string
           max_score?: number
           name: string
+          round_id?: string | null
           updated_at?: string
           weight?: number
         }
         Update: {
+          category_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
@@ -797,15 +844,139 @@ export type Database = {
           id?: string
           max_score?: number
           name?: string
+          round_id?: string | null
           updated_at?: string
           weight?: number
         }
         Relationships: [
           {
+            foreignKeyName: "judging_criteria_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "submission_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "judging_criteria_hackathon_id_fkey"
             columns: ["hackathon_id"]
             isOneToOne: false
             referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judging_criteria_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "judging_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      judging_rounds: {
+        Row: {
+          created_at: string
+          display_order: number
+          hackathon_id: string
+          id: string
+          is_active: boolean
+          name: string
+          round_type: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          hackathon_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          round_type: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          hackathon_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          round_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "judging_rounds_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentor_requests: {
+        Row: {
+          category: string | null
+          claimed_at: string | null
+          claimed_by_participant_id: string | null
+          created_at: string
+          description: string | null
+          hackathon_id: string
+          id: string
+          requester_participant_id: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["mentor_request_status"]
+          team_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          claimed_at?: string | null
+          claimed_by_participant_id?: string | null
+          created_at?: string
+          description?: string | null
+          hackathon_id: string
+          id?: string
+          requester_participant_id: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["mentor_request_status"]
+          team_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          claimed_at?: string | null
+          claimed_by_participant_id?: string | null
+          created_at?: string
+          description?: string | null
+          hackathon_id?: string
+          id?: string
+          requester_participant_id?: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["mentor_request_status"]
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_requests_claimed_by_participant_id_fkey"
+            columns: ["claimed_by_participant_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentor_requests_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentor_requests_requester_participant_id_fkey"
+            columns: ["requester_participant_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentor_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -1036,6 +1207,86 @@ export type Database = {
         }
         Relationships: []
       }
+      room_teams: {
+        Row: {
+          has_presented: boolean
+          id: string
+          present_order: number | null
+          room_id: string
+          team_id: string
+        }
+        Insert: {
+          has_presented?: boolean
+          id?: string
+          present_order?: number | null
+          room_id: string
+          team_id: string
+        }
+        Update: {
+          has_presented?: boolean
+          id?: string
+          present_order?: number | null
+          room_id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_teams_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_teams_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          created_at: string
+          display_order: number
+          hackathon_id: string
+          id: string
+          name: string
+          timer_ends_at: string | null
+          timer_label: string | null
+          timer_remaining_ms: number | null
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          hackathon_id: string
+          id?: string
+          name: string
+          timer_ends_at?: string | null
+          timer_label?: string | null
+          timer_remaining_ms?: number | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          hackathon_id?: string
+          id?: string
+          name?: string
+          timer_ends_at?: string | null
+          timer_label?: string | null
+          timer_remaining_ms?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedules: {
         Row: {
           agent_id: string | null
@@ -1139,6 +1390,151 @@ export type Database = {
             columns: ["judge_assignment_id"]
             isOneToOne: false
             referencedRelation: "judge_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_media_submissions: {
+        Row: {
+          created_at: string
+          hackathon_id: string
+          id: string
+          og_description: string | null
+          og_image_url: string | null
+          og_title: string | null
+          participant_id: string
+          platform: string | null
+          reviewed_at: string | null
+          status: string
+          team_id: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          hackathon_id: string
+          id?: string
+          og_description?: string | null
+          og_image_url?: string | null
+          og_title?: string | null
+          participant_id: string
+          platform?: string | null
+          reviewed_at?: string | null
+          status?: string
+          team_id?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          hackathon_id?: string
+          id?: string
+          og_description?: string | null
+          og_image_url?: string | null
+          og_title?: string | null
+          participant_id?: string
+          platform?: string | null
+          reviewed_at?: string | null
+          status?: string
+          team_id?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_media_submissions_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_media_submissions_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_media_submissions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submission_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          hackathon_id: string
+          id: string
+          name: string
+          prize_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          hackathon_id: string
+          id?: string
+          name: string
+          prize_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          hackathon_id?: string
+          id?: string
+          name?: string
+          prize_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_categories_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submission_categories_prize_id_fkey"
+            columns: ["prize_id"]
+            isOneToOne: false
+            referencedRelation: "prizes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submission_category_entries: {
+        Row: {
+          category_id: string
+          id: string
+          submission_id: string
+        }
+        Insert: {
+          category_id: string
+          id?: string
+          submission_id: string
+        }
+        Update: {
+          category_id?: string
+          id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_category_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "submission_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submission_category_entries_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
             referencedColumns: ["id"]
           },
         ]
@@ -1527,8 +1923,26 @@ export type Database = {
               team_id: string
             }[]
           }
+      bulk_assign_teams: {
+        Args: { p_assignments: Json; p_hackathon_id: string }
+        Returns: {
+          assigned_count: number
+          error_code: string
+          error_message: string
+          success: boolean
+        }[]
+      }
       calculate_results: {
         Args: { p_hackathon_id: string }
+        Returns: {
+          error_code: string
+          error_message: string
+          results_count: number
+          success: boolean
+        }[]
+      }
+      calculate_round_results: {
+        Args: { p_hackathon_id: string; p_round_id: string }
         Returns: {
           error_code: string
           error_message: string
@@ -1591,6 +2005,12 @@ export type Database = {
     }
     Enums: {
       actor_type: "user" | "api_key"
+      hackathon_phase:
+        | "build"
+        | "submission_open"
+        | "preliminaries"
+        | "finals"
+        | "results_pending"
       hackathon_status:
         | "draft"
         | "published"
@@ -1609,6 +2029,7 @@ export type Database = {
       job_status: "queued" | "running" | "succeeded" | "failed" | "canceled"
       judging_mode: "points" | "subjective"
       location_type: "in_person" | "virtual"
+      mentor_request_status: "open" | "claimed" | "resolved" | "cancelled"
       participant_role: "participant" | "judge" | "mentor" | "organizer"
       prize_type: "score" | "favorite" | "crowd" | "criteria"
       schedule_frequency:
@@ -1766,6 +2187,13 @@ export const Constants = {
   public: {
     Enums: {
       actor_type: ["user", "api_key"],
+      hackathon_phase: [
+        "build",
+        "submission_open",
+        "preliminaries",
+        "finals",
+        "results_pending",
+      ],
       hackathon_status: [
         "draft",
         "published",
@@ -1786,6 +2214,7 @@ export const Constants = {
       job_status: ["queued", "running", "succeeded", "failed", "canceled"],
       judging_mode: ["points", "subjective"],
       location_type: ["in_person", "virtual"],
+      mentor_request_status: ["open", "claimed", "resolved", "cancelled"],
       participant_role: ["participant", "judge", "mentor", "organizer"],
       prize_type: ["score", "favorite", "crowd", "criteria"],
       schedule_frequency: [

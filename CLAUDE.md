@@ -316,6 +316,16 @@ Exceptions (don't auto-focus):
 - Multi-step wizards where the user needs to read instructions first
 - Dialogs with destructive actions where accidental input is risky
 
+### Human-Friendly Inputs
+
+**Never expose internal IDs, raw timestamps, or technical formats to organizers or participants.** Every input must be designed for someone in a hurry who doesn't know (or care about) the system internals.
+
+- **Identifiers**: Never ask for Clerk user IDs, database UUIDs, or internal codes. Use email addresses, names, or searchable dropdowns instead. Resolve to internal IDs server-side.
+- **Time inputs**: Never use `datetime-local` for setting countdowns or durations relative to "now". Use quick-select duration presets (e.g., "5 min", "10 min", "15 min" buttons) with an optional custom input. Reserve `datetime-local` only for scheduling future dates (e.g., event start/end).
+- **Status values**: Show human-readable labels ("In Progress", "Waiting for Review"), not raw enum values or database states.
+
+If a form field requires the user to look something up in a different system, the UX is wrong — do the lookup for them.
+
 ### Mobile-First Responsive Design
 
 **All UI must work on mobile (375px+).** Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`) with mobile-first defaults:
