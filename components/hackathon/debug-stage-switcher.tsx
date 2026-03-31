@@ -1,11 +1,14 @@
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { FlaskConical, Loader2, X } from "lucide-react"
+import {
+  FlaskConical, Loader2, X, Users, FileText, DoorOpen, Gavel,
+  Trophy, MessageCircle, Zap, Clock, Trash2, ChevronDown, ChevronUp,
+  Award, Tags, Share2, Calculator, Send,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import type { HackathonStatus } from "@/lib/db/hackathon-types"
+import type { HackathonStatus, HackathonPhase } from "@/lib/db/hackathon-types"
 import { getTimelineState } from "@/lib/utils/timeline"
 import { cn } from "@/lib/utils"
 
@@ -19,6 +22,22 @@ const ALL_STAGES: { status: HackathonStatus; label: string }[] = [
   { status: "archived", label: "Archived" },
 ]
 
+const ALL_PHASES: { phase: HackathonPhase | null; label: string }[] = [
+  { phase: null, label: "None" },
+  { phase: "build", label: "Build" },
+  { phase: "submission_open", label: "Submit" },
+  { phase: "preliminaries", label: "Prelims" },
+  { phase: "finals", label: "Finals" },
+  { phase: "results_pending", label: "Results" },
+]
+
+const TIMELINE_PRESETS = [
+  { label: "Started 2h ago, ends in 6h", startsAt: -2, endsAt: 6 },
+  { label: "Started 1h ago, ends in 30m", startsAt: -1, endsAt: 0.5 },
+  { label: "Starts in 1h, ends in 24h", startsAt: 1, endsAt: 24 },
+  { label: "Ended 1h ago", startsAt: -8, endsAt: -1 },
+]
+
 const EDGE_MARGIN = 12
 const SNAP_TRANSITION = "all 200ms cubic-bezier(0.25, 1, 0.5, 1)"
 const DRAG_THRESHOLD = 5
@@ -29,7 +48,6 @@ type Edge = `${EdgeY}-${EdgeX}`
 
 const BUTTON_W = 140
 const BUTTON_H = 48
-
 const SIDEBAR_WIDTH = 256
 
 function snapToEdge(x: number, y: number): { x: number; y: number; edge: Edge } {
@@ -70,17 +88,28 @@ export function DebugStageSwitcher({
   startsAt,
   endsAt,
 }: DebugStageSwitcherProps) {
-  const router = useRouter()
-  const [pending, setPending] = useState<HackathonStatus | null>(null)
+  const [pending, setPending] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(false)
+  const [showMore, setShowMore] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [edge, setEdge] = useState<Edge>("bottom-right")
   const [isSnapping, setIsSnapping] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
-    setPosition({ x: window.innerWidth - BUTTON_W - EDGE_MARGIN, y: window.innerHeight - BUTTON_H - EDGE_MARGIN })
+    const saved = sessionStorage.getItem("devtools-state")
+    if (saved) {
+      sessionStorage.removeItem("devtools-state")
+      const s = JSON.parse(saved)
+      setPosition(s.position)
+      setEdge(s.edge)
+      setExpanded(true)
+      setShowMore(s.showMore)
+    } else {
+      setPosition({ x: window.innerWidth - BUTTON_W - EDGE_MARGIN, y: window.innerHeight - BUTTON_H - EDGE_MARGIN })
+    }
     setMounted(true)
   }, [])
   const positionRef = useRef(position)
@@ -98,27 +127,61 @@ export function DebugStageSwitcher({
     ends_at: endsAt,
   })
 
-  async function switchTo(status: HackathonStatus) {
-    if (status === currentStatus || pending) return
-    setPending(status)
+  function showToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2000)
+  }
+
+  async function devAction(path: string, method = "POST", body?: unknown) {
+    const key = path + method
+    if (pending) return
+    setPending(key)
     try {
-      const res = await fetch(`/api/dev/hackathons/${hackathonId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+      const res = await fetch(`/api/dev/hackathons/${hackathonId}${path}`, {
+        method,
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
       })
       if (!res.ok) throw new Error("Failed")
-      router.refresh()
-    } catch (err) {
-      console.error("[DebugStageSwitcher] failed to update status:", err)
+      const data = await res.json()
+      sessionStorage.setItem("devtools-state", JSON.stringify({
+        position: positionRef.current,
+        edge,
+        showMore,
+      }))
+      window.location.reload()
+      return data
+    } catch {
+      showToast("Action failed")
     } finally {
       setPending(null)
     }
   }
 
+  async function switchStatus(status: HackathonStatus) {
+    await devAction("/status", "PATCH", { status })
+    showToast(`Status → ${status}`)
+  }
+
+  async function switchPhase(phase: HackathonPhase | null) {
+    await devAction("/phase", "PATCH", { phase })
+    showToast(`Phase → ${phase ?? "none"}`)
+  }
+
+  async function setTimeline(preset: typeof TIMELINE_PRESETS[number]) {
+    const now = Date.now()
+    await devAction("/timeline", "PATCH", {
+      startsAt: new Date(now + preset.startsAt * 3600000).toISOString(),
+      endsAt: new Date(now + preset.endsAt * 3600000).toISOString(),
+      registrationOpensAt: new Date(now - 7 * 86400000).toISOString(),
+      registrationClosesAt: new Date(now + preset.startsAt * 3600000).toISOString(),
+    })
+    showToast("Timeline updated")
+  }
+
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if ((e.target as HTMLElement).closest("button")) return
+      if ((e.target as HTMLElement).closest("button, [role=button]")) return
       isDragging.current = true
       hasMoved.current = false
       dragStart.current = { x: e.clientX, y: e.clientY, posX: position.x, posY: position.y }
@@ -203,6 +266,8 @@ export function DebugStageSwitcher({
 
   if (!mounted) return null
 
+  const isLoading = !!pending
+
   return (
     <div
       className={cn(
@@ -222,7 +287,7 @@ export function DebugStageSwitcher({
         <div
           ref={panelRef}
           className={cn(
-            "rounded-lg border border-dashed bg-card shadow-xl p-3 animate-in fade-in zoom-in-95 duration-150",
+            "rounded-lg border border-dashed bg-card shadow-xl animate-in fade-in zoom-in-95 duration-150 w-[480px] max-h-[80vh] overflow-y-auto",
             panelOrigin,
           )}
           style={{
@@ -232,42 +297,120 @@ export function DebugStageSwitcher({
             ].filter(Boolean).join(" ") || undefined,
           }}
         >
-          <div className="flex items-center gap-2 whitespace-nowrap">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mr-1 cursor-grab active:cursor-grabbing">
-              <FlaskConical className="size-3.5" />
-              <span className="font-medium">Dev</span>
+          <div className="p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FlaskConical className="size-4 text-muted-foreground" />
+                <span className="font-semibold text-sm">Dev Tools</span>
+                <Badge variant={timelineState.variant} className="text-xs">
+                  {timelineState.label}
+                </Badge>
+              </div>
+              <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setExpanded(false)}>
+                <X className="size-3.5" />
+              </Button>
             </div>
-            <Badge variant={timelineState.variant} className="text-xs">
-              {timelineState.label}
-            </Badge>
-            {ALL_STAGES.map(({ status, label }) => {
-              const isActive = status === currentStatus
-              const isLoading = pending === status
-              return (
-                <div
-                  key={status}
-                  className={cn(!isActive && !pending && "hover:scale-105 transition-transform duration-150")}
-                >
+
+            {toast && (
+              <div className="rounded-md bg-primary/10 px-3 py-1.5 text-xs text-primary font-medium animate-in fade-in slide-in-from-top-1 duration-200">
+                {toast}
+              </div>
+            )}
+
+            <Section label="Status">
+              <div className="flex flex-wrap gap-1.5">
+                {ALL_STAGES.map(({ status, label }) => (
                   <Button
+                    key={status}
                     size="sm"
-                    variant={isActive ? "default" : "outline"}
-                    disabled={!!pending}
-                    onClick={() => switchTo(status)}
+                    variant={status === currentStatus ? "default" : "outline"}
+                    disabled={isLoading}
+                    onClick={() => switchStatus(status)}
+                    className="h-7 text-xs"
                   >
-                    {isLoading && <Loader2 className="size-3 animate-spin mr-1" />}
+                    {pending === `/status PATCH` && status === currentStatus && <Loader2 className="size-3 animate-spin mr-1" />}
                     {label}
                   </Button>
-                </div>
-              )
-            })}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="size-7 p-0 ml-1"
-              onClick={() => setExpanded(false)}
+                ))}
+              </div>
+            </Section>
+
+            <Section label="Phase">
+              <div className="flex flex-wrap gap-1.5">
+                {ALL_PHASES.map(({ phase, label }) => (
+                  <Button
+                    key={label}
+                    size="sm"
+                    variant="outline"
+                    disabled={isLoading}
+                    onClick={() => switchPhase(phase)}
+                    className="h-7 text-xs"
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </Section>
+
+            <Section label="Timeline">
+              <div className="flex flex-wrap gap-1.5">
+                {TIMELINE_PRESETS.map((preset) => (
+                  <Button
+                    key={preset.label}
+                    size="sm"
+                    variant="outline"
+                    disabled={isLoading}
+                    onClick={() => setTimeline(preset)}
+                    className="h-7 text-xs"
+                  >
+                    <Clock className="size-3 mr-1" />
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+            </Section>
+
+            <Section label="Seed Data">
+              <div className="grid grid-cols-2 gap-1.5">
+                <SeedButton icon={<Zap className="size-3" />} label="Seed Everything" loading={isLoading} onClick={async () => { await devAction("/seed-all"); showToast("Full seed done!") }} />
+                <SeedButton icon={<Users className="size-3" />} label="5 Teams" loading={isLoading} onClick={async () => { await devAction("/seed-teams", "POST", { count: 5 }); showToast("Teams seeded") }} />
+                <SeedButton icon={<FileText className="size-3" />} label="Submissions" loading={isLoading} onClick={async () => { await devAction("/seed-submissions"); showToast("Submissions seeded") }} />
+                <SeedButton icon={<DoorOpen className="size-3" />} label="3 Rooms + Assign" loading={isLoading} onClick={async () => { await devAction("/seed-rooms", "POST", { count: 3, assignTeams: true }); showToast("Rooms seeded") }} />
+                <SeedButton icon={<Gavel className="size-3" />} label="Judging Setup" loading={isLoading} onClick={async () => { await devAction("/seed-judging"); showToast("Judging seeded") }} />
+                <SeedButton icon={<Trophy className="size-3" />} label="Score 60%" loading={isLoading} onClick={async () => { await devAction("/seed-scores", "POST", { percentage: 60 }); showToast("Scores added") }} />
+                <SeedButton icon={<MessageCircle className="size-3" />} label="Mentor Requests" loading={isLoading} onClick={async () => { await devAction("/seed-mentors"); showToast("Mentors seeded") }} />
+                <SeedButton icon={<FileText className="size-3" />} label="Release Challenge" loading={isLoading} onClick={async () => { await devAction("/seed-challenge"); showToast("Challenge released") }} />
+                <SeedButton icon={<Award className="size-3" />} label="3 Prizes" loading={isLoading} onClick={async () => { await devAction("/seed-prizes"); showToast("Prizes seeded") }} />
+                <SeedButton icon={<Tags className="size-3" />} label="3 Categories" loading={isLoading} onClick={async () => { await devAction("/seed-categories"); showToast("Categories seeded") }} />
+                <SeedButton icon={<Share2 className="size-3" />} label="Social Posts" loading={isLoading} onClick={async () => { await devAction("/seed-social"); showToast("Social posts seeded") }} />
+                <SeedButton icon={<Trophy className="size-3" />} label="Score 100%" loading={isLoading} onClick={async () => { await devAction("/seed-scores", "POST", { percentage: 100 }); showToast("All scored") }} />
+                <SeedButton icon={<Calculator className="size-3" />} label="Calc Results" loading={isLoading} onClick={async () => { await devAction("/calculate-results"); showToast("Results calculated") }} />
+                <SeedButton icon={<Send className="size-3" />} label="Publish Results" loading={isLoading} onClick={async () => { await devAction("/publish-results"); showToast("Results published") }} />
+              </div>
+            </Section>
+
+            <button
+              className="w-full flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground py-1 transition-colors"
+              onClick={() => setShowMore(!showMore)}
             >
-              <X className="size-3.5" />
-            </Button>
+              {showMore ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+              {showMore ? "Less" : "More"}
+            </button>
+
+            {showMore && (
+              <Section label="Danger Zone">
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={isLoading}
+                  onClick={async () => { await devAction("/seed-data", "DELETE"); showToast("Seed data cleared") }}
+                  className="h-7 text-xs"
+                >
+                  <Trash2 className="size-3 mr-1" />
+                  Clear All Seed Data
+                </Button>
+              </Section>
+            )}
           </div>
         </div>
       ) : (
@@ -290,5 +433,33 @@ export function DebugStageSwitcher({
         </div>
       )}
     </div>
+  )
+}
+
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</div>
+      {children}
+    </div>
+  )
+}
+
+function SeedButton({
+  icon,
+  label,
+  loading,
+  onClick,
+}: {
+  icon: React.ReactNode
+  label: string
+  loading: boolean
+  onClick: () => void
+}) {
+  return (
+    <Button size="sm" variant="outline" disabled={loading} onClick={onClick} className="h-8 text-xs justify-start">
+      {icon}
+      <span className="ml-1.5">{label}</span>
+    </Button>
   )
 }

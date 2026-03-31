@@ -3,17 +3,21 @@ import {
   VALID_TABS,
   VALID_JTABS,
   VALID_PTABS,
+  VALID_ETABS,
   getDefaultTab,
   resolveTab,
   getJudgingRedirectUrl,
 } from "@/lib/utils/manage-tabs"
 
 describe("VALID_TABS", () => {
-  it("contains edit, judges, prizes", () => {
+  it("contains all manage tabs", () => {
     expect(VALID_TABS).toContain("edit")
+    expect(VALID_TABS).toContain("teams")
+    expect(VALID_TABS).toContain("rooms")
     expect(VALID_TABS).toContain("judges")
     expect(VALID_TABS).toContain("prizes")
-    expect(VALID_TABS).toHaveLength(3)
+    expect(VALID_TABS).toContain("event")
+    expect(VALID_TABS).toHaveLength(6)
   })
 })
 
@@ -34,6 +38,16 @@ describe("VALID_PTABS", () => {
   })
 })
 
+describe("VALID_ETABS", () => {
+  it("contains challenge, mentors, social, email", () => {
+    expect(VALID_ETABS).toContain("challenge")
+    expect(VALID_ETABS).toContain("mentors")
+    expect(VALID_ETABS).toContain("social")
+    expect(VALID_ETABS).toContain("email")
+    expect(VALID_ETABS).toHaveLength(4)
+  })
+})
+
 describe("getDefaultTab", () => {
   it("returns edit for draft", () => {
     expect(getDefaultTab("draft")).toBe("edit")
@@ -43,16 +57,20 @@ describe("getDefaultTab", () => {
     expect(getDefaultTab("published")).toBe("edit")
   })
 
+  it("returns teams for registration_open", () => {
+    expect(getDefaultTab("registration_open")).toBe("teams")
+  })
+
+  it("returns event for active", () => {
+    expect(getDefaultTab("active")).toBe("event")
+  })
+
   it("returns prizes for completed", () => {
     expect(getDefaultTab("completed")).toBe("prizes")
   })
 
   it("returns prizes for archived", () => {
     expect(getDefaultTab("archived")).toBe("prizes")
-  })
-
-  it("returns judges for active", () => {
-    expect(getDefaultTab("active")).toBe("judges")
   })
 
   it("returns judges for judging", () => {

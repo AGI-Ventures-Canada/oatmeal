@@ -1,0 +1,106 @@
+import { supabase as getSupabase } from "@/lib/db/client"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { HackathonPhase, HackathonStatus } from "@/lib/db/hackathon-types"
+
+export interface PollResponse {
+  ts: number
+  phase: HackathonPhase | null
+  status: HackathonStatus
+  timers: {
+    global?: { endsAt: string; label: string }
+    rooms: { id: string; name: string; endsAt: string | null; label: string | null }[]
+  }
+  challenge: {
+    released: boolean
+    releasedAt: string | null
+    title: string | null
+  } | null
+  stats: {
+    submissionCount: number
+    teamCount: number
+    judgingComplete: number
+    judgingTotal: number
+    mentorQueueOpen: number
+  }
+}
+
+export async function buildPollPayload(hackathonId: string): Promise<PollResponse | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: hackathon, error: hErr } = await client
+    .from("hackathons")
+    .select("status, phase, starts_at, ends_at, challenge_title, challenge_released_at")
+    .eq("id", hackathonId)
+    .single()
+
+  if (hErr || !hackathon) return null
+
+  const { count: submissionCount } = await client
+    .from("submissions")
+    .select("id", { count: "exact", head: true })
+    .eq("hackathon_id", hackathonId)
+    .eq("status", "submitted")
+
+  const { count: teamCount } = await client
+    .from("teams")
+    .select("id", { count: "exact", head: true })
+    .eq("hackathon_id", hackathonId)
+    .neq("status", "disbanded")
+
+  const { count: judgingTotal } = await client
+    .from("judge_assignments")
+    .select("id", { count: "exact", head: true })
+    .eq("hackathon_id", hackathonId)
+
+  const { count: judgingComplete } = await client
+    .from("judge_assignments")
+    .select("id", { count: "exact", head: true })
+    .eq("hackathon_id", hackathonId)
+    .eq("is_complete", true)
+
+  let mentorQueueOpen = 0
+  const { count: mentorCount } = await client
+    .from("mentor_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("hackathon_id", hackathonId)
+    .eq("status", "open")
+  if (mentorCount !== null) mentorQueueOpen = mentorCount
+
+  const { data: rooms } = await client
+    .from("rooms")
+    .select("id, name, timer_ends_at, timer_label")
+    .eq("hackathon_id", hackathonId)
+    .order("display_order")
+
+  let globalTimer: { endsAt: string; label: string } | undefined
+  if (hackathon.ends_at && hackathon.status === "active") {
+    globalTimer = { endsAt: hackathon.ends_at, label: "Build ends" }
+  }
+
+  return {
+    ts: Date.now(),
+    phase: hackathon.phase,
+    status: hackathon.status,
+    timers: {
+      global: globalTimer,
+      rooms: (rooms ?? []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        endsAt: r.timer_ends_at,
+        label: r.timer_label,
+      })),
+    },
+    challenge: {
+      released: !!hackathon.challenge_released_at,
+      releasedAt: hackathon.challenge_released_at,
+      title: hackathon.challenge_title,
+    },
+    stats: {
+      submissionCount: submissionCount ?? 0,
+      teamCount: teamCount ?? 0,
+      judgingComplete: judgingComplete ?? 0,
+      judgingTotal: judgingTotal ?? 0,
+      mentorQueueOpen,
+    },
+  }
+}

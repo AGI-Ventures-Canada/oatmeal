@@ -6,6 +6,8 @@ import { v1Routes } from "./routes/v1"
 import { importRoutes, dashboardImportRoutes } from "./routes/import"
 import { adminRoutes } from "./routes/admin"
 import { devRoutes } from "./routes/dev"
+import { publicEventRoutes } from "./routes/public-event"
+import { dashboardEventRoutes } from "./routes/dashboard-event"
 import { handleRouteError } from "./routes/errors"
 
 export const api = new Elysia({ prefix: "/api" })
@@ -51,9 +53,11 @@ Authorization: Bearer sk_live_your_api_key_here
     })
   )
   .use(publicRoutes)
+  .use(publicEventRoutes)
   .use(importRoutes)
   .use(dashboardImportRoutes)
   .use(dashboardRoutes)
+  .use(dashboardEventRoutes)
   .use(v1Routes)
   .use(adminRoutes)
   .use(process.env.NODE_ENV === "development" ? devRoutes : new Elysia())
