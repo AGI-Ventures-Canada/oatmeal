@@ -12,6 +12,7 @@ import {
 } from "@/lib/services/admin"
 import { listScenarios, runScenario, generateRoleTokens, getActiveScenarios } from "@/lib/services/admin-scenarios"
 import { getPersonaUserId, TEST_PERSONAS } from "@/lib/dev/test-personas"
+import { safeRedirectUrl } from "@/lib/utils/url"
 import { supabase } from "@/lib/db/client"
 import { HackathonStatusEnum } from "@/lib/api/validators"
 
@@ -297,7 +298,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       })
 
       return {
-        loginUrl: `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(body.redirect ?? "/")}`,
+        loginUrl: `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(safeRedirectUrl(body.redirect))}`,
       }
     },
     {

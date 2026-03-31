@@ -8,11 +8,10 @@ import { DevToolbarClient } from "./dev-toolbar-client"
 export async function DevToolbar() {
   if (!isAdminEnabled()) return null
 
-  const { userId } = await auth()
+  const { userId, sessionClaims } = await auth()
   if (!userId) return null
 
-  const session = await auth()
-  const metadata = (session.sessionClaims as Record<string, unknown>)?.metadata as
+  const metadata = (sessionClaims as Record<string, unknown>)?.metadata as
     | Record<string, unknown>
     | undefined
   if (metadata?.admin !== true) return null

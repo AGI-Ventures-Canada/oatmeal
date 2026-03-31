@@ -16,11 +16,18 @@ const mockListScenarios = mock(() => [
 const mockRunScenario = mock(() =>
   Promise.resolve({ hackathonId: "h-1", slug: "test-pre-registration", tenantId: "t-1" })
 )
+const mockGenerateRoleTokens = mock(() => Promise.resolve([]))
+const mockGetActiveScenarios = mock(() => Promise.resolve([]))
 
 const mockRpc = mock(() => Promise.resolve({ data: 42, error: null }))
+let mockFromResult: { data: unknown; error: null } = { data: null, error: null }
+const mockSingle = mock(() => Promise.resolve(mockFromResult))
+const mockEq = mock(() => ({ single: mockSingle }))
+const mockSelect = mock(() => ({ eq: mockEq }))
+const mockFrom = mock(() => ({ select: mockSelect }))
 
 mock.module("@/lib/db/client", () => ({
-  supabase: () => ({ rpc: mockRpc }),
+  supabase: () => ({ rpc: mockRpc, from: mockFrom }),
 }))
 
 mock.module("@/lib/services/admin", () => ({
@@ -34,6 +41,31 @@ mock.module("@/lib/services/admin", () => ({
 mock.module("@/lib/services/admin-scenarios", () => ({
   listScenarios: mockListScenarios,
   runScenario: mockRunScenario,
+  generateRoleTokens: mockGenerateRoleTokens,
+  getActiveScenarios: mockGetActiveScenarios,
+}))
+
+mock.module("@/lib/dev/test-personas", () => ({
+  TEST_PERSONAS: [
+    { key: "organizer", name: "Organizer", env: "SCENARIO_DEV_USER_ID", fallback: null },
+    { key: "alice", name: "Alice", env: "TEST_USER_ALICE_ID", fallback: null },
+  ],
+  getPersonaUserId: (key: string) => {
+    if (key === "organizer") return process.env.SCENARIO_DEV_USER_ID ?? null
+    if (key === "alice") return process.env.TEST_USER_ALICE_ID ?? null
+    return null
+  },
+  findPersonaByUserId: () => undefined,
+  getSeedUserIds: () => [],
+}))
+
+mock.module("@clerk/nextjs/server", () => ({
+  clerkClient: () =>
+    Promise.resolve({
+      signInTokens: {
+        createSignInToken: mock(() => Promise.resolve({ token: "tok_test" })),
+      },
+    }),
 }))
 
 mock.module("@/lib/services/audit", () => ({
@@ -141,8 +173,17 @@ describe("Admin API Routes", () => {
     mockLogAudit.mockReset()
     mockListScenarios.mockReset()
     mockRunScenario.mockReset()
+    mockGenerateRoleTokens.mockReset()
+    mockGetActiveScenarios.mockReset()
     mockRpc.mockReset()
+    mockFrom.mockReset()
     mockRpc.mockResolvedValue({ data: 42, error: null })
+    mockFrom.mockReturnValue({ select: mockSelect })
+    mockSelect.mockReturnValue({ eq: mockEq })
+    mockEq.mockReturnValue({ single: mockSingle })
+    mockFromResult = { data: null, error: null }
+    mockGenerateRoleTokens.mockResolvedValue([])
+    mockGetActiveScenarios.mockResolvedValue([])
 
     mockGetPlatformStats.mockResolvedValue({
       tenants: 5,
@@ -151,9 +192,8 @@ describe("Admin API Routes", () => {
       submissions: 20,
     })
     mockListAllHackathons.mockResolvedValue({ hackathons: [], total: 0 })
-    mockListScenarios.mockReturnValue([
-      { name: "pre-registration", description: "Test scenario" },
-    ])
+    mockListScenarios.mockReturnValue([{ name: "pre-registration", description: "Test scenario" }])
+    mockRunScenario.mockResolvedValue({ hackathonId: "h-1", slug: "test-pre-registration", tenantId: "t-1" })
   })
 
   describe("Auth enforcement", () => {
@@ -418,17 +458,20 @@ describe("Admin API Routes", () => {
     })
   })
 
-  describe("POST /admin/scenarios/:name", () => {
-    it("runs scenario and logs audit", async () => {
+  describe("POST /admin/scenario-run/:name", () => {
+    it("runs scenario, returns roles, and logs audit", async () => {
       mockResolvePrincipal.mockResolvedValue(adminPrincipal)
       mockRunScenario.mockResolvedValue({
         hackathonId: "h-new",
         slug: "test-pre-registration",
         tenantId: "t-new",
       })
+      mockGenerateRoleTokens.mockResolvedValue([
+        { personaKey: "organizer", name: "Organizer", role: "organizer", loginUrl: "/dev-switch?token=tok", directUrl: "/hackathons/h-new" },
+      ])
 
       const res = await app.handle(
-        new Request("http://localhost/api/admin/scenarios/pre-registration", {
+        new Request("http://localhost/api/admin/scenario-run/pre-registration", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
@@ -439,12 +482,194 @@ describe("Admin API Routes", () => {
       expect(res.status).toBe(200)
       expect(data.hackathonId).toBe("h-new")
       expect(data.slug).toBe("test-pre-registration")
+      expect(data.roles).toHaveLength(1)
       expect(mockLogAudit).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "admin.scenario.created",
           metadata: { scenario: "pre-registration" },
         })
       )
+    })
+
+    it("returns 400 when runScenario throws", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      mockRunScenario.mockRejectedValue(new Error("Unknown scenario: bad-name"))
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenario-run/bad-name", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        })
+      )
+
+      expect(res.status).toBe(400)
+      expect(mockLogAudit).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("GET /admin/scenario-active", () => {
+    it("returns active scenarios for admin", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      mockGetActiveScenarios.mockResolvedValue([
+        { scenarioName: "pre-registration", hackathonId: "h-1", slug: "test-pre-registration-abc", createdAt: "2026-01-01" },
+      ])
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenario-active")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.active).toHaveLength(1)
+      expect(data.active[0].scenarioName).toBe("pre-registration")
+    })
+
+    it("returns empty list when no scenarios have been run", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenario-active")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.active).toHaveLength(0)
+    })
+  })
+
+  describe("GET /admin/scenario-personas", () => {
+    it("returns persona list with configured flag", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenario-personas")
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(Array.isArray(data.personas)).toBe(true)
+      expect(data.personas[0]).toMatchObject({ key: expect.any(String), name: expect.any(String), configured: expect.any(Boolean) })
+    })
+  })
+
+  describe("POST /admin/scenario-tokens", () => {
+    it("returns role cards for a valid hackathon", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      mockFromResult = { data: { slug: "test-pre-registration-abc" }, error: null }
+      mockGenerateRoleTokens.mockResolvedValue([
+        { personaKey: "organizer", name: "Organizer", role: "organizer", loginUrl: "/dev-switch?token=tok", directUrl: "/hackathons/h-1" },
+      ])
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenario-tokens", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hackathon_id: "h-1" }),
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.roles).toHaveLength(1)
+      expect(mockGenerateRoleTokens).toHaveBeenCalledWith("h-1", "test-pre-registration-abc")
+    })
+
+    it("returns 404 when hackathon does not exist", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      mockFromResult = { data: null, error: null }
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenario-tokens", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hackathon_id: "h-missing" }),
+        })
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it("rejects read-only API key", async () => {
+      mockResolvePrincipal.mockResolvedValue(readOnlyApiKeyPrincipal)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenario-tokens", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hackathon_id: "h-1" }),
+        })
+      )
+
+      expect(res.status).toBe(403)
+    })
+  })
+
+  describe("POST /admin/scenario-switch", () => {
+    it("returns login URL for known persona when env var is set", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      process.env.SCENARIO_DEV_USER_ID = "user_organizer_test"
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenario-switch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ persona: "organizer", redirect: "/hackathons/h-1" }),
+        })
+      )
+      const data = await res.json()
+
+      delete process.env.SCENARIO_DEV_USER_ID
+      expect(res.status).toBe(200)
+      expect(data.loginUrl).toContain("/dev-switch?token=tok_test")
+      expect(data.loginUrl).toContain(encodeURIComponent("/hackathons/h-1"))
+    })
+
+    it("returns 400 for unknown persona", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenario-switch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ persona: "unknown-persona" }),
+        })
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it("uses safe redirect fallback for external URLs", async () => {
+      mockResolvePrincipal.mockResolvedValue(adminPrincipal)
+      process.env.SCENARIO_DEV_USER_ID = "user_organizer_test"
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenario-switch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ persona: "organizer", redirect: "https://evil.com" }),
+        })
+      )
+      const data = await res.json()
+
+      delete process.env.SCENARIO_DEV_USER_ID
+      expect(res.status).toBe(200)
+      expect(data.loginUrl).toContain(encodeURIComponent("/home"))
+      expect(data.loginUrl).not.toContain("evil.com")
+    })
+
+    it("rejects read-only API key", async () => {
+      mockResolvePrincipal.mockResolvedValue(readOnlyApiKeyPrincipal)
+
+      const res = await app.handle(
+        new Request("http://localhost/api/admin/scenario-switch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ persona: "organizer" }),
+        })
+      )
+
+      expect(res.status).toBe(403)
     })
   })
 
@@ -509,11 +734,11 @@ describe("Admin API Routes", () => {
       expect(mockDeleteHackathon).not.toHaveBeenCalled()
     })
 
-    it("rejects read-only API key on POST /admin/scenarios/:name", async () => {
+    it("rejects read-only API key on POST /admin/scenario-run/:name", async () => {
       mockResolvePrincipal.mockResolvedValue(readOnlyApiKeyPrincipal)
 
       const res = await app.handle(
-        new Request("http://localhost/api/admin/scenarios/pre-registration", {
+        new Request("http://localhost/api/admin/scenario-run/pre-registration", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),

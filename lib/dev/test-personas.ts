@@ -1,5 +1,5 @@
 export const TEST_PERSONAS = [
-  { key: "organizer", name: "Organizer", env: "SCENARIO_DEV_USER_ID", fallback: "user_38vEFI8UesKwM07qIuFNqEzFavS" },
+  { key: "organizer", name: "Organizer", env: "SCENARIO_DEV_USER_ID", fallback: null },
   { key: "alice", name: "Alice", env: "TEST_USER_ALICE_ID", fallback: null },
   { key: "bob", name: "Bob", env: "TEST_USER_BOB_ID", fallback: null },
   { key: "carol", name: "Carol", env: "TEST_USER_CAROL_ID", fallback: null },
