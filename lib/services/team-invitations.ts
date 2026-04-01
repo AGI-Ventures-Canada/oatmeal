@@ -1,6 +1,7 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { TeamInvitation } from "@/lib/db/hackathon-types"
 import { randomBytes } from "crypto"
+import { checkRoleConflict } from "@/lib/services/role-conflict"
 
 const INVITATION_EXPIRY_DAYS = 7
 const INVITATION_EXPIRY_MS = INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000
@@ -93,6 +94,21 @@ export async function createTeamInvitation(
 
   if (existing) {
     return { success: false, error: "Invitation already sent to this email", code: "already_invited" }
+  }
+
+  try {
+    const { clerkClient } = await import("@clerk/nextjs/server")
+    const clerk = await clerkClient()
+    const users = await clerk.users.getUserList({ emailAddress: [input.email.toLowerCase()] })
+    if (users.data.length > 0) {
+      const roleCheck = await checkRoleConflict(input.hackathonId, users.data[0].id, "participant")
+      if (roleCheck.conflict) {
+        return { success: false, error: roleCheck.error, code: roleCheck.code }
+      }
+    }
+  } catch {
+    // non-blocking — if Clerk lookup fails, allow invitation to proceed
+    // the conflict will be caught at acceptance time
   }
 
   const token = randomBytes(32).toString("base64url")
