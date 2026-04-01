@@ -290,7 +290,7 @@ export async function sendPendingJudgeAddedNotifications(
 
   const { data: pending, error: fetchError } = await client
     .from("judge_pending_notifications")
-    .select("*")
+    .select("id, hackathon_id, participant_id, email, added_by_name, sent_at, created_at")
     .eq("hackathon_id", hackathonId)
     .is("sent_at", null)
 
@@ -312,10 +312,13 @@ export async function sendPendingJudgeAddedNotifications(
         addedByName: notification.added_by_name,
       })
       if (result.success) {
-        await client
+        const { error: updateError } = await client
           .from("judge_pending_notifications")
           .update({ sent_at: new Date().toISOString() })
           .eq("id", notification.id)
+        if (updateError) {
+          console.error("Failed to mark judge notification as sent:", updateError)
+        }
       }
       return result
     })
