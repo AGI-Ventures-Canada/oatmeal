@@ -198,6 +198,72 @@ describe("LifecycleStepper", () => {
     })
   })
 
+  describe("action content (forward transitions via mobile Popover)", () => {
+    beforeEach(() => {
+      mockIsMobile = true
+    })
+
+    function openNode(label: string) {
+      const node = findPhaseNode(label)
+      if (node) fireEvent.click(node)
+    }
+
+    it("draft → Published: Publish action", () => {
+      render(<LifecycleStepper {...baseProps} />)
+      openNode("Published")
+      expect(screen.getByText("Make the event visible on the browse page")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Publish" })).toBeDefined()
+    })
+
+    it("published → Registration Open: Open for Registration action", () => {
+      render(<LifecycleStepper {...baseProps} status="published" />)
+      openNode("Registration Open")
+      expect(screen.getByText("Allow participants to register for the hackathon")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Open Registration" })).toBeDefined()
+    })
+
+    it("registration_open → Live: Start Hackathon action", () => {
+      render(<LifecycleStepper {...baseProps} status="registration_open" />)
+      openNode("Live")
+      expect(screen.getByText("Start the hackathon and let participants begin building")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Start Hackathon" })).toBeDefined()
+    })
+
+    it("active → Judging: Start Judging action when no unassigned submissions", () => {
+      render(<LifecycleStepper {...baseProps} status="active" />)
+      openNode("Judging")
+      expect(screen.getByText("Close submissions and begin judging")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Start Judging" })).toBeDefined()
+    })
+
+    it("active → Judging: Assign Submissions action when there are unassigned submissions", () => {
+      render(
+        <LifecycleStepper
+          {...baseProps}
+          status="active"
+          judgingSetupStatus={{ judgeCount: 3, hasUnassignedSubmissions: true }}
+        />
+      )
+      openNode("Judging")
+      expect(screen.getByText("Some submissions don't have judges assigned yet")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Assign Submissions" })).toBeDefined()
+    })
+
+    it("judging → Completed: End Event action", () => {
+      render(<LifecycleStepper {...baseProps} status="judging" />)
+      openNode("Completed")
+      expect(screen.getByText("End the event and publish results")).toBeDefined()
+      expect(screen.getByRole("button", { name: "End Event" })).toBeDefined()
+    })
+
+    it("published → Draft: Revert to Draft action", () => {
+      render(<LifecycleStepper {...baseProps} status="published" />)
+      openNode("Draft")
+      expect(screen.getByText("Take the hackathon offline and hide it from the browse page")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Revert to Draft" })).toBeDefined()
+    })
+  })
+
   describe("connector lines", () => {
     it("uses muted-foreground for past connector lines", () => {
       const { container } = render(<LifecycleStepper {...baseProps} status="judging" />)
