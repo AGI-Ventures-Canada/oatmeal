@@ -431,7 +431,8 @@ export function JudgesEditForm({
             )
             if (!judgeRes.ok) {
               const judgeData = await judgeRes.json()
-              throw new Error(judgeData.error || `Failed to assign judge role for ${change.judge.name}`)
+              const identifier = change.judge.name || change.email || "Unknown"
+              throw new Error(`${identifier}: ${judgeData.error || "Failed to assign judge role"}`)
             }
           }
         } else if (change.type === "delete") {
