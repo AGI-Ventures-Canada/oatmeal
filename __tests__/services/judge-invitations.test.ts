@@ -399,6 +399,30 @@ describe("Judge Invitations Service", () => {
       expect(mockSendJudgeAddedNotification).not.toHaveBeenCalled()
     })
 
+    it("marks sent_at on successful send", async () => {
+      const pending = [{ ...mockNotification, id: "notif1", email: "judge1@example.com" }]
+      const chain = createChainableMock({ data: pending, error: null })
+      setMockFromImplementation(() => chain)
+
+      await sendPendingJudgeAddedNotifications("h1", "Test Hackathon", "test-hackathon")
+
+      expect(chain.update).toHaveBeenCalledWith(
+        expect.objectContaining({ sent_at: expect.any(String) })
+      )
+    })
+
+    it("does not mark sent_at when email send fails", async () => {
+      const pending = [{ ...mockNotification, id: "notif1", email: "judge1@example.com" }]
+      const chain = createChainableMock({ data: pending, error: null })
+      setMockFromImplementation(() => chain)
+
+      mockSendJudgeAddedNotification.mockResolvedValueOnce({ success: false })
+
+      await sendPendingJudgeAddedNotifications("h1", "Test Hackathon", "test-hackathon")
+
+      expect(chain.update).not.toHaveBeenCalled()
+    })
+
     it("counts only successfully sent notifications", async () => {
       const pending = [
         { ...mockNotification, id: "notif1", email: "judge1@example.com" },
