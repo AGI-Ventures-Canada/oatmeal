@@ -281,7 +281,6 @@ export async function createJudgePendingNotification(
   }
 }
 
-
 export async function listJudgeInvitations(
   hackathonId: string,
   status?: string

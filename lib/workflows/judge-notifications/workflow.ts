@@ -15,16 +15,19 @@ export async function sendJudgeNotificationsWorkflow(
 
   if (notifications.length === 0) return { sent: 0 }
 
-  const results = await Promise.allSettled(
-    notifications.map((notification) =>
-      sendJudgeNotification({
+  let sent = 0
+  for (const notification of notifications) {
+    try {
+      await sendJudgeNotification({
         notification,
         hackathonName: input.hackathonName,
         hackathonSlug: input.hackathonSlug,
       })
-    )
-  )
+      sent++
+    } catch {
+      // step failed after retries — continue to next notification
+    }
+  }
 
-  const sent = results.filter((r) => r.status === "fulfilled").length
   return { sent }
 }
