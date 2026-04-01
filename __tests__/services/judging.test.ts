@@ -221,10 +221,10 @@ describe("Judging Service", () => {
 
   describe("addJudge", () => {
     it("creates new judge participant when user is not registered", async () => {
-      let checkedExisting = false
+      let callCount = 0
       setMockFromImplementation(() => {
-        if (!checkedExisting) {
-          checkedExisting = true
+        callCount++
+        if (callCount <= 2) {
           return createChainableMock({ data: null, error: null })
         }
         return createChainableMock({
@@ -257,10 +257,16 @@ describe("Judging Service", () => {
     })
 
     it("upgrades existing participant role to judge", async () => {
-      let checkedExisting = false
+      let callCount = 0
       setMockFromImplementation(() => {
-        if (!checkedExisting) {
-          checkedExisting = true
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({
+            data: { id: "p1", role: "participant", team_id: null },
+            error: null,
+          })
+        }
+        if (callCount === 2) {
           return createChainableMock({
             data: { id: "p1", role: "participant" },
             error: null,
@@ -281,10 +287,16 @@ describe("Judging Service", () => {
     })
 
     it("returns update_failed error when role update fails", async () => {
-      let checkedExisting = false
+      let callCount = 0
       setMockFromImplementation(() => {
-        if (!checkedExisting) {
-          checkedExisting = true
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({
+            data: { id: "p1", role: "participant", team_id: null },
+            error: null,
+          })
+        }
+        if (callCount === 2) {
           return createChainableMock({
             data: { id: "p1", role: "participant" },
             error: null,
@@ -305,10 +317,10 @@ describe("Judging Service", () => {
     })
 
     it("returns insert_failed error when creating new judge fails", async () => {
-      let checkedExisting = false
+      let callCount = 0
       setMockFromImplementation(() => {
-        if (!checkedExisting) {
-          checkedExisting = true
+        callCount++
+        if (callCount <= 2) {
           return createChainableMock({ data: null, error: null })
         }
         return createChainableMock({
@@ -322,6 +334,22 @@ describe("Judging Service", () => {
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.code).toBe("insert_failed")
+      }
+    })
+
+    it("returns role_conflict when user is on a team", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({
+          data: { id: "p1", role: "participant", team_id: "team_1" },
+          error: null,
+        })
+      )
+
+      const result = await addJudge("h1", "user_123")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("role_conflict")
       }
     })
   })

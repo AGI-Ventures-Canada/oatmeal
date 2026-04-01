@@ -1,6 +1,7 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { JudgingCriteria, JudgeAssignment } from "@/lib/db/hackathon-types"
+import { checkRoleConflict } from "@/lib/services/role-conflict"
 
 export type CreateCriteriaInput = {
   name: string
@@ -120,6 +121,11 @@ export async function addJudge(
   hackathonId: string,
   clerkUserId: string
 ): Promise<AddJudgeResult> {
+  const roleCheck = await checkRoleConflict(hackathonId, clerkUserId, "judge")
+  if (roleCheck.conflict) {
+    return { success: false, error: roleCheck.error, code: roleCheck.code }
+  }
+
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data: existing } = await client
