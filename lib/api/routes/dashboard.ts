@@ -1148,8 +1148,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       if (previousStatus === "draft" && body.status && body.status !== "draft") {
         const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
         const inviterName = await resolveAdderName(principal)
-        const { sendPendingJudgeInvitationEmails } = await import("@/lib/services/judge-invitations")
+        const { sendPendingJudgeInvitationEmails, sendPendingJudgeAddedNotifications } =
+          await import("@/lib/services/judge-invitations")
         sendPendingJudgeInvitationEmails(hackathon.id, hackathon.name, inviterName).catch(console.error)
+        sendPendingJudgeAddedNotifications(hackathon.id, hackathon.name, hackathon.slug).catch(console.error)
       }
 
       return {

@@ -397,6 +397,16 @@ export interface JudgeInvitation {
   updated_at: string
 }
 
+export interface JudgePendingNotification {
+  id: string
+  hackathon_id: string
+  participant_id: string
+  email: string
+  added_by_name: string
+  sent_at: string | null
+  created_at: string
+}
+
 export interface HackathonJudgeDisplay {
   id: string
   hackathon_id: string

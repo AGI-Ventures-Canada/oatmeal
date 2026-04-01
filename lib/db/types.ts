@@ -743,6 +743,51 @@ export type Database = {
           },
         ]
       }
+      judge_pending_notifications: {
+        Row: {
+          added_by_name: string
+          created_at: string
+          email: string
+          hackathon_id: string
+          id: string
+          participant_id: string
+          sent_at: string | null
+        }
+        Insert: {
+          added_by_name: string
+          created_at?: string
+          email: string
+          hackathon_id: string
+          id?: string
+          participant_id: string
+          sent_at?: string | null
+        }
+        Update: {
+          added_by_name?: string
+          created_at?: string
+          email?: string
+          hackathon_id?: string
+          id?: string
+          participant_id?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "judge_pending_notifications_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_pending_notifications_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       judge_picks: {
         Row: {
           created_at: string

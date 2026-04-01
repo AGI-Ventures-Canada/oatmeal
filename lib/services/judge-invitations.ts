@@ -1,5 +1,5 @@
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { JudgeInvitation } from "@/lib/db/hackathon-types"
+import type { JudgeInvitation, JudgePendingNotification } from "@/lib/db/hackathon-types"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { randomBytes } from "crypto"
 import { checkRoleConflict } from "@/lib/services/role-conflict"
@@ -245,6 +245,68 @@ export async function sendPendingJudgeInvitationEmails(
           .from("judge_invitations")
           .update({ emailed_at: new Date().toISOString() })
           .eq("id", invitation.id)
+      }
+      return result
+    })
+  )
+
+  const sent = results.filter(
+    (r) => r.status === "fulfilled" && r.value.success
+  ).length
+
+  return { sent }
+}
+
+export async function createJudgePendingNotification(
+  hackathonId: string,
+  participantId: string,
+  email: string,
+  addedByName: string
+): Promise<void> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error } = await client.from("judge_pending_notifications").insert({
+    hackathon_id: hackathonId,
+    participant_id: participantId,
+    email: email.toLowerCase(),
+    added_by_name: addedByName,
+  })
+
+  if (error) {
+    console.error("Failed to create judge pending notification:", error)
+  }
+}
+
+export async function sendPendingJudgeAddedNotifications(
+  hackathonId: string,
+  hackathonName: string,
+  hackathonSlug: string
+): Promise<{ sent: number }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: pending } = await client
+    .from("judge_pending_notifications")
+    .select("*")
+    .eq("hackathon_id", hackathonId)
+    .is("sent_at", null)
+
+  if (!pending || pending.length === 0) return { sent: 0 }
+
+  const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
+
+  const results = await Promise.allSettled(
+    (pending as JudgePendingNotification[]).map(async (notification) => {
+      const result = await sendJudgeAddedNotification({
+        to: notification.email,
+        hackathonName,
+        hackathonSlug,
+        addedByName: notification.added_by_name,
+      })
+      if (result.success) {
+        await client
+          .from("judge_pending_notifications")
+          .update({ sent_at: new Date().toISOString() })
+          .eq("id", notification.id)
       }
       return result
     })
