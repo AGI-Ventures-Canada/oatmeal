@@ -35,14 +35,9 @@ function isValidSlugFormat(slug: string): boolean {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
 }
 
-export function SignUpForm({
-  redirectUrl,
-}: {
-  redirectUrl?: string;
-}) {
+export function SignUpForm({ redirectUrl }: { redirectUrl?: string }) {
   const { signUp, isLoaded, setActive } = useSignUp();
-  const { createOrganization, setActive: setOrgActive } =
-    useOrganizationList();
+  const { createOrganization, setActive: setOrgActive } = useOrganizationList();
   const router = useRouter();
 
   const [firstName, setFirstName] = useState("");
@@ -267,7 +262,7 @@ export function SignUpForm({
         >
           <CardContent className="space-y-4">
             {error && <p className="text-xs text-destructive">{error}</p>}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Label htmlFor="org-name">Organization name</Label>
               <Input
                 id="org-name"
@@ -322,11 +317,7 @@ export function SignUpForm({
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-3">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={!canSubmitOrg}
-            >
+            <Button type="submit" className="w-full" disabled={!canSubmitOrg}>
               {isSubmitting && <Loader2 className="animate-spin" />}
               Create organization
             </Button>
@@ -391,7 +382,7 @@ export function SignUpForm({
       <CardHeader>
         <CardTitle className="text-center">Sign up for an account</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 mb-0">
         <OAuthButtons onOAuth={handleOAuth} />
         <div className="flex items-center gap-3">
           <Separator className="flex-1" />
@@ -450,7 +441,7 @@ export function SignUpForm({
           <div id="clerk-captcha" />
         </form>
       </CardContent>
-      <CardFooter className="flex-col gap-3">
+      <CardFooter className="flex-col gap-3 border-none pt-0">
         <Button
           type="submit"
           form="sign-up-form"

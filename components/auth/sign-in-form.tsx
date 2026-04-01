@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSignIn } from "@clerk/nextjs";
+import { useSignIn, useClerk } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import {
   Card,
@@ -33,7 +34,10 @@ export function SignInForm({
   redirectUrl?: string;
 }) {
   const { signIn, isLoaded, setActive } = useSignIn();
+  const { client, setActive: resumeSession } = useClerk();
   const router = useRouter();
+
+  const lastSession = client?.sessions?.[0] ?? null;
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -190,6 +194,17 @@ export function SignInForm({
     }
   }
 
+  async function handleResumeSession() {
+    if (!lastSession) return;
+    setIsSubmitting(true);
+    try {
+      await resumeSession({ session: lastSession.id });
+      router.push(redirectUrl);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleOAuth(
     provider: "oauth_google" | "oauth_github" | "oauth_linkedin_oidc",
   ) {
@@ -278,10 +293,7 @@ export function SignInForm({
             Enter your email to receive a reset code
           </CardDescription>
         </CardHeader>
-        <form
-          onSubmit={handleResetRequest}
-          onKeyDown={handleKeyDown}
-        >
+        <form onSubmit={handleResetRequest} onKeyDown={handleKeyDown}>
           <CardContent className="space-y-4">
             {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="space-y-2">
@@ -404,6 +416,47 @@ export function SignInForm({
         <CardTitle className="text-center">Sign in to your account</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {lastSession && (
+          <>
+            <button
+              type="button"
+              onClick={handleResumeSession}
+              disabled={isSubmitting}
+              className="w-full flex items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2.5 text-left hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <Avatar className="size-8 shrink-0">
+                <AvatarImage src={lastSession.user?.imageUrl} />
+                <AvatarFallback>
+                  {lastSession.user?.firstName?.[0]}
+                  {lastSession.user?.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {lastSession.user?.fullName ||
+                    lastSession.user?.primaryEmailAddress?.emailAddress}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {lastSession.user?.primaryEmailAddress?.emailAddress}
+                </p>
+              </div>
+              {isSubmitting ? (
+                <Loader2 className="size-4 animate-spin text-muted-foreground shrink-0" />
+              ) : (
+                <span className="text-xs text-muted-foreground shrink-0">
+                  Continue
+                </span>
+              )}
+            </button>
+            <div className="flex items-center gap-3">
+              <Separator className="flex-1" />
+              <span className="text-xs text-muted-foreground">
+                or use another account
+              </span>
+              <Separator className="flex-1" />
+            </div>
+          </>
+        )}
         <OAuthButtons onOAuth={handleOAuth} />
         <div className="flex items-center gap-3">
           <Separator className="flex-1" />
@@ -453,7 +506,7 @@ export function SignInForm({
           </div>
         </form>
       </CardContent>
-      <CardFooter className="flex-col gap-3">
+      <CardFooter className="flex-col gap-3 border-none">
         <Button
           type="submit"
           form="sign-in-form"
