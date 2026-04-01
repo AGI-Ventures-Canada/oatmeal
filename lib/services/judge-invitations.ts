@@ -265,12 +265,16 @@ export async function createJudgePendingNotification(
 ): Promise<void> {
   const client = getSupabase() as unknown as SupabaseClient
 
-  const { error } = await client.from("judge_pending_notifications").insert({
-    hackathon_id: hackathonId,
-    participant_id: participantId,
-    email: email.toLowerCase(),
-    added_by_name: addedByName,
-  })
+  const { error } = await client.from("judge_pending_notifications").upsert(
+    {
+      hackathon_id: hackathonId,
+      participant_id: participantId,
+      email: email.toLowerCase(),
+      added_by_name: addedByName,
+      sent_at: null,
+    },
+    { onConflict: "hackathon_id,participant_id" }
+  )
 
   if (error) {
     console.error("Failed to create judge pending notification:", error)

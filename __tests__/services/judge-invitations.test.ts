@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test"
+import { describe, it, expect, beforeEach, mock, spyOn } from "bun:test"
 import type { JudgeInvitation, JudgePendingNotification } from "@/lib/db/hackathon-types"
 import {
   createChainableMock,
@@ -323,19 +323,21 @@ describe("Judge Invitations Service", () => {
   })
 
   describe("createJudgePendingNotification", () => {
-    it("inserts a pending notification record", async () => {
+    it("upserts a pending notification record", async () => {
       const chain = createChainableMock({ data: null, error: null })
       setMockFromImplementation(() => chain)
 
       await createJudgePendingNotification("h1", "participant1", "judge@example.com", "Organizer Name")
 
-      expect(chain.insert).toHaveBeenCalledWith(
+      expect(chain.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           hackathon_id: "h1",
           participant_id: "participant1",
           email: "judge@example.com",
           added_by_name: "Organizer Name",
-        })
+          sent_at: null,
+        }),
+        expect.objectContaining({ onConflict: "hackathon_id,participant_id" })
       )
     })
 
@@ -345,9 +347,26 @@ describe("Judge Invitations Service", () => {
 
       await createJudgePendingNotification("h1", "participant1", "JUDGE@EXAMPLE.COM", "Organizer")
 
-      expect(chain.insert).toHaveBeenCalledWith(
-        expect.objectContaining({ email: "judge@example.com" })
+      expect(chain.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ email: "judge@example.com" }),
+        expect.anything()
       )
+    })
+
+    it("logs error but does not throw when upsert fails", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "unique constraint violation", code: "23505" },
+      })
+      setMockFromImplementation(() => chain)
+
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {})
+      await createJudgePendingNotification("h1", "participant1", "judge@example.com", "Organizer")
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to create judge pending notification:",
+        expect.objectContaining({ message: "unique constraint violation" })
+      )
+      consoleSpy.mockRestore()
     })
   })
 
