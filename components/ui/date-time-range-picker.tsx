@@ -277,10 +277,11 @@ export function DateTimeRangePicker({
     time: TimeState,
   ) {
     return (
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground w-14 shrink-0">
-          {label}:
+      <div className="flex flex-col gap-2">
+        <span className="text-sm text-muted-foreground">
+          {label}
         </span>
+        <div className="flex items-center gap-2">
         <Input
           type="text"
           inputMode="numeric"
@@ -327,6 +328,7 @@ export function DateTimeRangePicker({
         >
           {time.period}
         </Button>
+        </div>
       </div>
     )
   }
@@ -351,6 +353,7 @@ export function DateTimeRangePicker({
       <PopoverContent
         className="w-auto p-0"
         align="start"
+        side="bottom"
         onKeyDown={handlePopoverKeyDown}
       >
         <Calendar
@@ -368,9 +371,9 @@ export function DateTimeRangePicker({
           }}
           initialFocus
         />
-        <div className="border-t p-3 space-y-3">
-          {renderTimeRow("from", fromLabel, fromTime)}
-          {renderTimeRow("to", toLabel, toTime)}
+        <div className="border-t p-3 flex gap-4">
+          <div className="flex-1">{renderTimeRow("from", fromLabel, fromTime)}</div>
+          <div className="flex-1">{renderTimeRow("to", toLabel, toTime)}</div>
         </div>
         <div className="border-t p-3 flex items-center justify-between">
           <Button

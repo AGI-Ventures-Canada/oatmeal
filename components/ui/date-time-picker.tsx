@@ -252,6 +252,7 @@ export function DateTimePicker({
       <PopoverContent
         className="w-auto p-0"
         align="start"
+        side="bottom"
         onKeyDown={handlePopoverKeyDown}
       >
         <Calendar
