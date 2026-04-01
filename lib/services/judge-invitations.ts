@@ -284,11 +284,16 @@ export async function sendPendingJudgeAddedNotifications(
 ): Promise<{ sent: number }> {
   const client = getSupabase() as unknown as SupabaseClient
 
-  const { data: pending } = await client
+  const { data: pending, error: fetchError } = await client
     .from("judge_pending_notifications")
     .select("*")
     .eq("hackathon_id", hackathonId)
     .is("sent_at", null)
+
+  if (fetchError) {
+    console.error("Failed to fetch pending judge notifications:", fetchError)
+    return { sent: 0 }
+  }
 
   if (!pending || pending.length === 0) return { sent: 0 }
 

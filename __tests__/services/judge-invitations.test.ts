@@ -399,6 +399,16 @@ describe("Judge Invitations Service", () => {
       expect(mockSendJudgeAddedNotification).not.toHaveBeenCalled()
     })
 
+    it("returns sent: 0 and logs error when DB fetch fails", async () => {
+      const chain = createChainableMock({ data: null, error: { message: "DB error" } })
+      setMockFromImplementation(() => chain)
+
+      const result = await sendPendingJudgeAddedNotifications("h1", "Test Hackathon", "test-hackathon")
+
+      expect(result.sent).toBe(0)
+      expect(mockSendJudgeAddedNotification).not.toHaveBeenCalled()
+    })
+
     it("marks sent_at on successful send", async () => {
       const pending = [{ ...mockNotification, id: "notif1", email: "judge1@example.com" }]
       const chain = createChainableMock({ data: pending, error: null })
