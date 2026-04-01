@@ -2031,18 +2031,21 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       const teamInfo = await getTeamWithHackathon(params.teamId)
 
       if (teamInfo) {
+        const emailInput = {
+          to: body.email,
+          teamName: teamInfo.name,
+          hackathonName: teamInfo.hackathon.name,
+          inviterName: body.inviterName || "A team captain",
+          inviteToken: result.invitation.token,
+          expiresAt: result.invitation.expires_at,
+        }
         const { start } = await import("workflow/api")
         const { sendTeamInvitationWorkflow } = await import("@/lib/workflows/team-invitations")
-        start(sendTeamInvitationWorkflow, [
-          {
-            to: body.email,
-            teamName: teamInfo.name,
-            hackathonName: teamInfo.hackathon.name,
-            inviterName: body.inviterName || "A team captain",
-            inviteToken: result.invitation.token,
-            expiresAt: result.invitation.expires_at,
-          },
-        ]).catch(console.error)
+        start(sendTeamInvitationWorkflow, [emailInput]).catch(async (err) => {
+          console.error("Failed to start team invitation workflow, falling back to direct send:", err)
+          const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
+          sendTeamInvitationEmail(emailInput).catch(console.error)
+        })
       }
 
       await logAudit({

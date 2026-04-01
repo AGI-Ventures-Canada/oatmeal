@@ -281,55 +281,6 @@ export async function createJudgePendingNotification(
   }
 }
 
-export async function sendPendingJudgeAddedNotifications(
-  hackathonId: string,
-  hackathonName: string,
-  hackathonSlug: string
-): Promise<{ sent: number }> {
-  const client = getSupabase() as unknown as SupabaseClient
-
-  const { data: pending, error: fetchError } = await client
-    .from("judge_pending_notifications")
-    .select("id, hackathon_id, participant_id, email, added_by_name, sent_at, created_at")
-    .eq("hackathon_id", hackathonId)
-    .is("sent_at", null)
-
-  if (fetchError) {
-    console.error("Failed to fetch pending judge notifications:", fetchError)
-    return { sent: 0 }
-  }
-
-  if (!pending || pending.length === 0) return { sent: 0 }
-
-  const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
-
-  const results = await Promise.allSettled(
-    (pending as JudgePendingNotification[]).map(async (notification) => {
-      const result = await sendJudgeAddedNotification({
-        to: notification.email,
-        hackathonName,
-        hackathonSlug,
-        addedByName: notification.added_by_name,
-      })
-      if (result.success) {
-        const { error: updateError } = await client
-          .from("judge_pending_notifications")
-          .update({ sent_at: new Date().toISOString() })
-          .eq("id", notification.id)
-        if (updateError) {
-          console.error("Failed to mark judge notification as sent:", updateError)
-        }
-      }
-      return result
-    })
-  )
-
-  const sent = results.filter(
-    (r) => r.status === "fulfilled" && r.value.success
-  ).length
-
-  return { sent }
-}
 
 export async function listJudgeInvitations(
   hackathonId: string,

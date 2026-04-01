@@ -22,7 +22,6 @@ const {
   listJudgeInvitations,
   sendPendingJudgeInvitationEmails,
   createJudgePendingNotification,
-  sendPendingJudgeAddedNotifications,
 } = await import("@/lib/services/judge-invitations")
 
 const mockInvitation: JudgeInvitation = {
@@ -367,106 +366,6 @@ describe("Judge Invitations Service", () => {
         expect.objectContaining({ message: "unique constraint violation" })
       )
       consoleSpy.mockRestore()
-    })
-  })
-
-  describe("sendPendingJudgeAddedNotifications", () => {
-    const mockNotification: JudgePendingNotification = {
-      id: "notif1",
-      hackathon_id: "h1",
-      participant_id: "participant1",
-      email: "judge@example.com",
-      added_by_name: "Organizer Name",
-      sent_at: null,
-      created_at: "2026-01-01T00:00:00Z",
-    }
-
-    beforeEach(() => {
-      mockSendJudgeAddedNotification.mockClear()
-      mockSendJudgeAddedNotification.mockResolvedValue({ success: true })
-    })
-
-    it("sends notifications for all unsent pending records", async () => {
-      const pending = [
-        { ...mockNotification, id: "notif1", email: "judge1@example.com" },
-        { ...mockNotification, id: "notif2", email: "judge2@example.com" },
-      ]
-      const chain = createChainableMock({ data: pending, error: null })
-      setMockFromImplementation(() => chain)
-
-      const result = await sendPendingJudgeAddedNotifications("h1", "Test Hackathon", "test-hackathon")
-
-      expect(result.sent).toBe(2)
-      expect(mockSendJudgeAddedNotification).toHaveBeenCalledTimes(2)
-      expect(mockSendJudgeAddedNotification).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: "judge1@example.com",
-          hackathonName: "Test Hackathon",
-          hackathonSlug: "test-hackathon",
-          addedByName: "Organizer Name",
-        })
-      )
-    })
-
-    it("returns sent: 0 when no unsent notifications exist", async () => {
-      const chain = createChainableMock({ data: [], error: null })
-      setMockFromImplementation(() => chain)
-
-      const result = await sendPendingJudgeAddedNotifications("h1", "Test Hackathon", "test-hackathon")
-
-      expect(result.sent).toBe(0)
-      expect(mockSendJudgeAddedNotification).not.toHaveBeenCalled()
-    })
-
-    it("returns sent: 0 and logs error when DB fetch fails", async () => {
-      const chain = createChainableMock({ data: null, error: { message: "DB error" } })
-      setMockFromImplementation(() => chain)
-
-      const result = await sendPendingJudgeAddedNotifications("h1", "Test Hackathon", "test-hackathon")
-
-      expect(result.sent).toBe(0)
-      expect(mockSendJudgeAddedNotification).not.toHaveBeenCalled()
-    })
-
-    it("marks sent_at on successful send", async () => {
-      const pending = [{ ...mockNotification, id: "notif1", email: "judge1@example.com" }]
-      const chain = createChainableMock({ data: pending, error: null })
-      setMockFromImplementation(() => chain)
-
-      await sendPendingJudgeAddedNotifications("h1", "Test Hackathon", "test-hackathon")
-
-      expect(chain.update).toHaveBeenCalledWith(
-        expect.objectContaining({ sent_at: expect.any(String) })
-      )
-    })
-
-    it("does not mark sent_at when email send fails", async () => {
-      const pending = [{ ...mockNotification, id: "notif1", email: "judge1@example.com" }]
-      const chain = createChainableMock({ data: pending, error: null })
-      setMockFromImplementation(() => chain)
-
-      mockSendJudgeAddedNotification.mockResolvedValueOnce({ success: false })
-
-      await sendPendingJudgeAddedNotifications("h1", "Test Hackathon", "test-hackathon")
-
-      expect(chain.update).not.toHaveBeenCalled()
-    })
-
-    it("counts only successfully sent notifications", async () => {
-      const pending = [
-        { ...mockNotification, id: "notif1", email: "judge1@example.com" },
-        { ...mockNotification, id: "notif2", email: "judge2@example.com" },
-      ]
-      const chain = createChainableMock({ data: pending, error: null })
-      setMockFromImplementation(() => chain)
-
-      mockSendJudgeAddedNotification
-        .mockResolvedValueOnce({ success: true })
-        .mockResolvedValueOnce({ success: false })
-
-      const result = await sendPendingJudgeAddedNotifications("h1", "Test Hackathon", "test-hackathon")
-
-      expect(result.sent).toBe(1)
     })
   })
 
