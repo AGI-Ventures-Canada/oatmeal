@@ -2,6 +2,7 @@ import { supabase as getSupabase } from "@/lib/db/client"
 import type { JudgeInvitation } from "@/lib/db/hackathon-types"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { randomBytes } from "crypto"
+import { checkRoleConflict } from "@/lib/services/role-conflict"
 
 const INVITATION_EXPIRY_DAYS = 7
 const INVITATION_EXPIRY_MS = INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000
@@ -31,6 +32,21 @@ export async function createJudgeInvitation(
 
   if (existing) {
     return { success: false, error: "Invitation already sent to this email", code: "already_invited" }
+  }
+
+  try {
+    const { clerkClient } = await import("@clerk/nextjs/server")
+    const clerk = await clerkClient()
+    const users = await clerk.users.getUserList({ emailAddress: [input.email.toLowerCase()] })
+    if (users.data.length > 0) {
+      const roleCheck = await checkRoleConflict(input.hackathonId, users.data[0].id, "judge")
+      if (roleCheck.conflict) {
+        return { success: false, error: roleCheck.error, code: roleCheck.code }
+      }
+    }
+  } catch {
+    // non-blocking — if Clerk lookup fails, allow invitation to proceed
+    // the conflict will be caught at acceptance time
   }
 
   const token = randomBytes(32).toString("base64url")
@@ -122,6 +138,11 @@ export async function acceptJudgeInvitation(
 
   if (!matchesInvitation) {
     return { success: false, error: "Your email does not match the invitation", code: "email_mismatch" }
+  }
+
+  const roleCheck = await checkRoleConflict(invitation.hackathon_id, clerkUserId, "judge")
+  if (roleCheck.conflict) {
+    return { success: false, error: roleCheck.error, code: roleCheck.code }
   }
 
   const { addJudge } = await import("@/lib/services/judging")
