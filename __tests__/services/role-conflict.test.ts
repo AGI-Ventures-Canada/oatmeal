@@ -76,4 +76,19 @@ describe("checkRoleConflict", () => {
     const result = await checkRoleConflict("h1", "user_123", "participant")
     expect(result.conflict).toBe(false)
   })
+
+  it("returns conflict on database error to fail safe", async () => {
+    setMockFromImplementation(() =>
+      createChainableMock({
+        data: null,
+        error: { message: "Connection refused" },
+      })
+    )
+
+    const result = await checkRoleConflict("h1", "user_123", "judge")
+    expect(result.conflict).toBe(true)
+    if (result.conflict) {
+      expect(result.code).toBe("check_failed")
+    }
+  })
 })

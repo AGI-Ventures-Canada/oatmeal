@@ -12,12 +12,22 @@ export async function checkRoleConflict(
 ): Promise<RoleConflictCheck> {
   const client = getSupabase() as unknown as SupabaseClient
 
-  const { data: existing } = await client
+  const { data: existing, error } = await client
     .from("hackathon_participants")
     .select("id, role, team_id")
     .eq("hackathon_id", hackathonId)
     .eq("clerk_user_id", clerkUserId)
     .maybeSingle()
+
+  if (error) {
+    console.error("Failed to check role conflict:", error)
+    return {
+      conflict: true,
+      error: "Unable to verify role eligibility. Please try again.",
+      code: "check_failed",
+      existingRole: "unknown",
+    }
+  }
 
   if (!existing) {
     return { conflict: false }
