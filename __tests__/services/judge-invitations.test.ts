@@ -409,7 +409,7 @@ describe("Judge Invitations Service", () => {
         users: {
           getUserList: mock(() => Promise.resolve({ data: [{ id: "user_on_team" }] })),
         },
-      } as any)
+      } as unknown)
 
       let checkedExisting = false
       setMockFromImplementation((table) => {

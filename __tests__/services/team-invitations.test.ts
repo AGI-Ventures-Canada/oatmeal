@@ -355,7 +355,7 @@ describe("Team Invitations Service", () => {
         users: {
           getUserList: mock(() => Promise.resolve({ data: [{ id: "user_judge" }] })),
         },
-      } as any)
+      } as unknown)
 
       let participantQueryCount = 0
       setMockFromImplementation((table) => {
