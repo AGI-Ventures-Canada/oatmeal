@@ -33,10 +33,10 @@ export async function checkRoleConflict(
     return { conflict: false }
   }
 
-  if (targetRole === "judge" && existing.role === "participant" && existing.team_id) {
+  if (targetRole === "judge" && existing.role === "participant") {
     return {
       conflict: true,
-      error: "This user is on a team in this event. They must leave their team before being added as a judge.",
+      error: "This user is a participant in this event. They must be removed as a participant before being added as a judge.",
       code: "role_conflict",
       existingRole: "participant",
     }

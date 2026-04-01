@@ -256,19 +256,19 @@ describe("Judging Service", () => {
       }
     })
 
-    it("upgrades existing participant role to judge", async () => {
+    it("upgrades existing mentor role to judge", async () => {
       let callCount = 0
       setMockFromImplementation(() => {
         callCount++
         if (callCount === 1) {
           return createChainableMock({
-            data: { id: "p1", role: "participant", team_id: null },
+            data: { id: "p1", role: "mentor", team_id: null },
             error: null,
           })
         }
         if (callCount === 2) {
           return createChainableMock({
-            data: { id: "p1", role: "participant" },
+            data: { id: "p1", role: "mentor" },
             error: null,
           })
         }
@@ -292,13 +292,13 @@ describe("Judging Service", () => {
         callCount++
         if (callCount === 1) {
           return createChainableMock({
-            data: { id: "p1", role: "participant", team_id: null },
+            data: { id: "p1", role: "mentor", team_id: null },
             error: null,
           })
         }
         if (callCount === 2) {
           return createChainableMock({
-            data: { id: "p1", role: "participant" },
+            data: { id: "p1", role: "mentor" },
             error: null,
           })
         }
