@@ -25,7 +25,6 @@ export async function sendJudgeNotificationsWorkflow(
       })
       sent++
     } catch {
-      // step failed after retries — continue to next notification
     }
   }
 
