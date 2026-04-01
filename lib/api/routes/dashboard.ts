@@ -1148,10 +1148,19 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       if (previousStatus === "draft" && body.status && body.status !== "draft") {
         const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
         const inviterName = await resolveAdderName(principal)
-        const { sendPendingJudgeInvitationEmails, sendPendingJudgeAddedNotifications } =
-          await import("@/lib/services/judge-invitations")
+        const { sendPendingJudgeInvitationEmails } = await import("@/lib/services/judge-invitations")
         sendPendingJudgeInvitationEmails(hackathon.id, hackathon.name, inviterName).catch(console.error)
-        sendPendingJudgeAddedNotifications(hackathon.id, hackathon.name, hackathon.slug).catch(console.error)
+        const { start } = await import("workflow/api")
+        const { sendJudgeNotificationsWorkflow } = await import(
+          "@/lib/workflows/judge-notifications"
+        )
+        start(sendJudgeNotificationsWorkflow, [
+          {
+            hackathonId: hackathon.id,
+            hackathonName: hackathon.name,
+            hackathonSlug: hackathon.slug,
+          },
+        ]).catch(console.error)
       }
 
       return {
@@ -2004,7 +2013,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       const { createTeamInvitation, getTeamWithHackathon } = await import(
         "@/lib/services/team-invitations"
       )
-      const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
 
       const result = await createTeamInvitation({
         teamId: params.teamId,
@@ -2020,19 +2028,21 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         })
       }
 
-      let emailSent = false
       const teamInfo = await getTeamWithHackathon(params.teamId)
 
       if (teamInfo) {
-        const emailResult = await sendTeamInvitationEmail({
-          to: body.email,
-          teamName: teamInfo.name,
-          hackathonName: teamInfo.hackathon.name,
-          inviterName: body.inviterName || "A team captain",
-          inviteToken: result.invitation.token,
-          expiresAt: result.invitation.expires_at,
-        })
-        emailSent = emailResult.success
+        const { start } = await import("workflow/api")
+        const { sendTeamInvitationWorkflow } = await import("@/lib/workflows/team-invitations")
+        start(sendTeamInvitationWorkflow, [
+          {
+            to: body.email,
+            teamName: teamInfo.name,
+            hackathonName: teamInfo.hackathon.name,
+            inviterName: body.inviterName || "A team captain",
+            inviteToken: result.invitation.token,
+            expiresAt: result.invitation.expires_at,
+          },
+        ]).catch(console.error)
       }
 
       await logAudit({
@@ -2047,7 +2057,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         id: result.invitation.id,
         email: result.invitation.email,
         expiresAt: result.invitation.expires_at,
-        emailSent,
       }
     },
     {

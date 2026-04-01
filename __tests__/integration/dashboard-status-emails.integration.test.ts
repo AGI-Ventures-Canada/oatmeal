@@ -61,6 +61,12 @@ mock.module("@/lib/services/webhooks", () => ({
   triggerWebhooks: mockTriggerWebhooks,
 }))
 
+const mockWorkflowStart = mock(() => Promise.resolve({ runId: "run_1" }))
+mock.module("workflow/api", () => ({ start: mockWorkflowStart }))
+mock.module("@/lib/workflows/judge-notifications", () => ({
+  sendJudgeNotificationsWorkflow: mock(() => Promise.resolve()),
+}))
+
 const mockGetUser = mock(() =>
   Promise.resolve({ firstName: "Jane", lastName: "Doe" })
 )
