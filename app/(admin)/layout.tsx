@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 import Link from "next/link"
 import { isAdminEnabled } from "@/lib/auth/principal"
 import { AdminNav } from "./admin-nav"
@@ -15,7 +16,9 @@ export default async function AdminLayout({
 
   const session = await auth()
   if (!session.userId) {
-    redirect("/sign-in")
+    const headersList = await headers()
+    const pathname = headersList.get("x-pathname") ?? "/admin"
+    redirect(`/sign-in?redirect_url=${encodeURIComponent(pathname)}`)
   }
 
   const metadata = (session.sessionClaims as Record<string, unknown>)?.metadata as

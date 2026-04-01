@@ -196,10 +196,13 @@ export function SignInForm({
 
   async function handleResumeSession() {
     if (!lastSession) return;
+    setError("");
     setIsSubmitting(true);
     try {
       await resumeSession({ session: lastSession.id });
       router.push(redirectUrl);
+    } catch {
+      setError("Session expired. Please sign in again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -418,11 +421,12 @@ export function SignInForm({
       <CardContent className="space-y-4">
         {lastSession && (
           <>
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={handleResumeSession}
               disabled={isSubmitting}
-              className="w-full flex items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2.5 text-left hover:bg-muted transition-colors disabled:opacity-50"
+              className="w-full h-auto justify-start gap-3 px-3 py-2.5"
             >
               <Avatar className="size-8 shrink-0">
                 <AvatarImage src={lastSession.user?.imageUrl} />
@@ -447,7 +451,7 @@ export function SignInForm({
                   Continue
                 </span>
               )}
-            </button>
+            </Button>
             <div className="flex items-center gap-3">
               <Separator className="flex-1" />
               <span className="text-xs text-muted-foreground">

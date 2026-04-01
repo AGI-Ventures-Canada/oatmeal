@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 type OAuthProvider = "oauth_google" | "oauth_github" | "oauth_linkedin_oidc";
 
 const STORAGE_KEY = "last_used_oauth_provider";
+const VALID_PROVIDERS: OAuthProvider[] = [
+  "oauth_google",
+  "oauth_github",
+  "oauth_linkedin_oidc",
+];
 
 export function OAuthButtons({
   onOAuth,
@@ -15,8 +20,10 @@ export function OAuthButtons({
   const [lastUsed, setLastUsed] = useState<OAuthProvider | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as OAuthProvider | null;
-    if (stored) setLastUsed(stored);
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && VALID_PROVIDERS.includes(stored as OAuthProvider)) {
+      setLastUsed(stored as OAuthProvider);
+    }
   }, []);
 
   function handleOAuth(provider: OAuthProvider) {
