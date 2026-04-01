@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach, mock } from "bun:test"
 import {
   createChainableMock,
   resetSupabaseMocks,
@@ -344,6 +344,54 @@ describe("Team Invitations Service", () => {
 
       expect(capturedEmail).not.toBeNull()
       expect(capturedEmail).toBe("test@example.com")
+    })
+
+    it("returns role_conflict when invitee is a judge", async () => {
+      const { mockClerkClient } = await import("../lib/supabase-mock")
+      mockClerkClient.mockResolvedValueOnce({
+        organizations: {
+          getOrganization: mock(() => Promise.resolve({ name: "Test Org" })),
+        },
+        users: {
+          getUserList: mock(() => Promise.resolve({ data: [{ id: "user_judge" }] })),
+        },
+      } as any)
+
+      let participantQueryCount = 0
+      setMockFromImplementation((table) => {
+        if (table === "teams") {
+          return createChainableMock({ data: mockTeam, error: null })
+        }
+        if (table === "hackathons") {
+          return createChainableMock({ data: mockHackathon, error: null })
+        }
+        if (table === "hackathon_participants") {
+          participantQueryCount++
+          if (participantQueryCount === 1) {
+            return createChainableMock({ data: null, error: null, count: 1 })
+          }
+          return createChainableMock({
+            data: { id: "j1", role: "judge", team_id: null },
+            error: null,
+          })
+        }
+        if (table === "team_invitations") {
+          return createChainableMock({ data: null, error: null, count: 0 })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      const result = await createTeamInvitation({
+        teamId: "team_1",
+        hackathonId: "h1",
+        email: "judge@example.com",
+        invitedByClerkUserId: "user_captain",
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("role_conflict")
+      }
     })
   })
 
