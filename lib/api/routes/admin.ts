@@ -259,6 +259,9 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     const db = supabase()
 
     if (query.hackathonId) {
+      if (!isValidUuid(query.hackathonId)) {
+        throw new AuthError("Invalid hackathon ID", 400)
+      }
       const { data: participants } = await db
         .from("hackathon_participants")
         .select("clerk_user_id, role")

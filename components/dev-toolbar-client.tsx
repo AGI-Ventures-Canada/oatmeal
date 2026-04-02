@@ -69,7 +69,7 @@ export function DevToolbarClient({
 
   return (
     <div
-      className={`fixed bottom-4 right-4 flex flex-col-reverse items-end gap-1.5 ${open ? "z-9999" : "z-9998"}`}
+      className="fixed bottom-4 right-4 z-9999 flex flex-col-reverse items-end gap-1.5"
     >
       <Button
         variant="outline"
