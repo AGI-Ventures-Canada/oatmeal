@@ -64,70 +64,74 @@ export function OrganizerOverview({ slug, stats, actionItems, announcements, sch
   const urgentCount = actionItems.filter((i) => i.severity === "urgent").length
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <StatCard icon={Users} value={String(stats.participantCount)} label="Registered" />
-          <StatCard icon={UsersRound} value={String(stats.teamCount)} label="Teams" />
-          <StatCard icon={FolderOpen} value={String(stats.submissionCount)} label="Submissions" />
-          <StatCard icon={Scale} value={judgingValue} label="Judged" />
-        </div>
-        {stats.mentorQueue.open > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-            <MessageCircle className="size-4 text-primary" />
-            <span className="text-sm font-medium">
-              {stats.mentorQueue.open} mentor request{stats.mentorQueue.open !== 1 ? "s" : ""} pending
-            </span>
-          </div>
-        )}
-        <OverviewAnnouncements slug={slug} announcements={announcements} />
-        <OverviewSchedule slug={slug} scheduleItems={scheduleItems} />
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard icon={Users} value={String(stats.participantCount)} label="Registered" />
+        <StatCard icon={UsersRound} value={String(stats.teamCount)} label="Teams" />
+        <StatCard icon={FolderOpen} value={String(stats.submissionCount)} label="Submissions" />
+        <StatCard icon={Scale} value={judgingValue} label="Judged" />
       </div>
 
-      <div className="space-y-4">
-        {actionItems.length > 0 ? (
-          <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold">Action Items</h3>
-              {urgentCount > 0 && (
-                <span className="text-xs font-medium text-destructive">{urgentCount} urgent</span>
-              )}
-            </div>
-            <div className="space-y-1">
-              {actionItems.map((item) => {
-                const severity = severityLabel[item.severity]
-                const href = buildActionHref(slug, item)
-                const row = (
-                  <span className="flex items-center gap-3 py-2">
-                    <span className="flex-1 text-sm">{item.label}</span>
-                    <span className={cn("text-xs font-medium shrink-0", severity.className)}>
-                      {severity.text}
+      {stats.mentorQueue.open > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+          <MessageCircle className="size-4 text-primary" />
+          <span className="text-sm font-medium">
+            {stats.mentorQueue.open} mentor request{stats.mentorQueue.open !== 1 ? "s" : ""} pending
+          </span>
+        </div>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
+        <div className="space-y-4">
+          <OverviewSchedule slug={slug} scheduleItems={scheduleItems} />
+        </div>
+
+        <div className="space-y-4">
+          {actionItems.length > 0 ? (
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold">Action Items</h3>
+                {urgentCount > 0 && (
+                  <span className="text-xs font-medium text-destructive">{urgentCount} urgent</span>
+                )}
+              </div>
+              <div className="space-y-1">
+                {actionItems.map((item) => {
+                  const severity = severityLabel[item.severity]
+                  const href = buildActionHref(slug, item)
+                  const row = (
+                    <span className="flex items-center gap-3 py-2">
+                      <span className="flex-1 text-sm">{item.label}</span>
+                      <span className={cn("text-xs font-medium shrink-0", severity.className)}>
+                        {severity.text}
+                      </span>
+                      {href && <ArrowRight className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
                     </span>
-                    {href && <ArrowRight className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
-                  </span>
-                )
-                return href ? (
-                  <Link
-                    key={item.id}
-                    href={href}
-                    className="group block rounded-md -mx-2 px-2 hover:bg-muted transition-colors"
-                  >
-                    {row}
-                  </Link>
-                ) : (
-                  <div key={item.id} className="-mx-2 px-2">
-                    {row}
-                  </div>
-                )
-              })}
+                  )
+                  return href ? (
+                    <Link
+                      key={item.id}
+                      href={href}
+                      className="group block rounded-md -mx-2 px-2 hover:bg-muted transition-colors"
+                    >
+                      {row}
+                    </Link>
+                  ) : (
+                    <div key={item.id} className="-mx-2 px-2">
+                      {row}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="rounded-lg border p-4 flex flex-col items-center justify-center text-center py-8">
-            <CircleCheck className="size-8 text-muted-foreground/50 mb-2" />
-            <p className="text-sm text-muted-foreground">All caught up</p>
-          </div>
-        )}
+          ) : (
+            <div className="rounded-lg border p-4 flex flex-col items-center justify-center text-center py-8">
+              <CircleCheck className="size-8 text-muted-foreground/50 mb-2" />
+              <p className="text-sm text-muted-foreground">All caught up</p>
+            </div>
+          )}
+          <OverviewAnnouncements slug={slug} announcements={announcements} />
+        </div>
       </div>
     </div>
   )
