@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock, spyOn } from "bun:test"
+import { describe, it, expect, beforeEach, mock } from "bun:test"
 import type { JudgeInvitation, JudgePendingNotification } from "@/lib/db/hackathon-types"
 import {
   createChainableMock,

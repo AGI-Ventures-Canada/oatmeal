@@ -47,11 +47,13 @@ const mockCreateJudgeInvitation = mock(() =>
   })
 )
 
+const mockHasPendingJudgeInvitation = mock(() => Promise.resolve(false))
+
 mock.module("@/lib/services/judge-invitations", () => ({
   createJudgeInvitation: mockCreateJudgeInvitation,
   listJudgeInvitations: mock(() => Promise.resolve([])),
   cancelJudgeInvitation: mock(() => Promise.resolve({ success: true })),
-  hasPendingJudgeInvitation: mock(() => Promise.resolve(false)),
+  hasPendingJudgeInvitation: mockHasPendingJudgeInvitation,
   createJudgePendingNotification: mock(() => Promise.resolve()),
 }))
 
@@ -166,8 +168,10 @@ describe("POST /hackathons/:id/judging/judges - email notifications", () => {
     mockGetUser.mockClear()
     mockGetUserList.mockClear()
     mockLogAudit.mockClear()
+    mockHasPendingJudgeInvitation.mockClear()
 
     mockResolvePrincipal.mockResolvedValue(mockUserPrincipal)
+    mockHasPendingJudgeInvitation.mockResolvedValue(false)
     mockAddJudge.mockResolvedValue({ success: true, participant: { id: "j1", clerkUserId: "judge_123" } })
     mockGetUserList.mockResolvedValue({ data: [] })
     mockGetUser.mockResolvedValue({
@@ -303,6 +307,31 @@ describe("POST /hackathons/:id/judging/judges - email notifications", () => {
 
       expect(data.invited).toBe(true)
       expect(mockSendJudgeInvitationEmail).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("already_invited guard", () => {
+    it("returns 400 already_invited when clerkUserId path finds a pending invitation", async () => {
+      mockHasPendingJudgeInvitation.mockResolvedValue(true)
+
+      const res = await postAddJudge({ clerkUserId: "judge_123" })
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.code).toBe("already_invited")
+      expect(mockAddJudge).not.toHaveBeenCalled()
+    })
+
+    it("returns 400 already_invited when email path finds a pending invitation for existing user", async () => {
+      mockGetUserList.mockResolvedValue({ data: [{ id: "found_user_123" }] })
+      mockHasPendingJudgeInvitation.mockResolvedValue(true)
+
+      const res = await postAddJudge({ email: "existing@example.com" })
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.code).toBe("already_invited")
+      expect(mockAddJudge).not.toHaveBeenCalled()
     })
   })
 })

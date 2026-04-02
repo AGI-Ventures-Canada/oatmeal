@@ -333,7 +333,10 @@ export const dashboardJudgingRoutes = new Elysia()
           const judgeUser = await client.users.getUser(typedBody.clerkUserId)
           judgeEmail = judgeUser.primaryEmailAddress?.emailAddress
         } catch {
-          // proceed without email — invitation check and notification are best-effort
+          return new Response(JSON.stringify({ error: "Failed to look up judge info", code: "lookup_failed" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          })
         }
 
         if (judgeEmail) {
