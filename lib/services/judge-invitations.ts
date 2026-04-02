@@ -280,14 +280,8 @@ export async function hasPendingJudgeInvitation(hackathonId: string, email: stri
 export async function hasPendingJudgeEntry(hackathonId: string, email: string): Promise<boolean> {
   const client = getSupabase() as unknown as SupabaseClient
 
-  const [invitation, notification] = await Promise.all([
-    client
-      .from("judge_invitations")
-      .select("id")
-      .eq("hackathon_id", hackathonId)
-      .eq("email", email.toLowerCase())
-      .eq("status", "pending")
-      .maybeSingle(),
+  const [hasInvitation, notification] = await Promise.all([
+    hasPendingJudgeInvitation(hackathonId, email),
     client
       .from("judge_pending_notifications")
       .select("id")
@@ -297,10 +291,9 @@ export async function hasPendingJudgeEntry(hackathonId: string, email: string): 
       .maybeSingle(),
   ])
 
-  if (invitation.error) throw new Error(`Failed to check pending invitation: ${invitation.error.message}`)
   if (notification.error) throw new Error(`Failed to check pending notification: ${notification.error.message}`)
 
-  return invitation.data !== null || notification.data !== null
+  return hasInvitation || notification.data !== null
 }
 
 export async function createJudgePendingNotification(

@@ -1177,18 +1177,18 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
             "@/lib/workflows/judge-notifications/steps"
           )
           const notifications = await fetchPendingNotifications(hackathon.id).catch(() => [])
-          const results = await Promise.allSettled(
-            notifications.map((n) =>
-              sendJudgeNotification({
+          const failedIds: string[] = []
+          for (const n of notifications) {
+            try {
+              await sendJudgeNotification({
                 notification: n,
                 hackathonName: hackathon.name,
                 hackathonSlug: hackathon.slug,
               })
-            )
-          )
-          const failedIds = notifications
-            .filter((_, i) => results[i].status === "rejected")
-            .map((n) => n.id)
+            } catch {
+              failedIds.push(n.id)
+            }
+          }
           if (failedIds.length > 0) {
             console.error(
               `Judge notification fallback: ${failedIds.length} notification(s) failed to send and remain stuck (ids: ${failedIds.join(", ")}). These will not be automatically retried.`
