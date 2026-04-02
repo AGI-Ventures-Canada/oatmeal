@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { LayoutDashboard } from "lucide-react"
 import { notFound } from "next/navigation"
+import { auth } from "@clerk/nextjs/server"
 import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { getHackathonSubmissions } from "@/lib/services/submissions"
 import { getJudgingProgress, getJudgingSetupStatus, listJudgingCriteria } from "@/lib/services/judging"
@@ -40,7 +41,7 @@ function TabLoadingSkeleton() {
 export default async function ManagePage({ params, searchParams }: PageProps) {
   const { slug } = await params
   const { tab, jtab, ptab, etab } = await searchParams
-  const result = await getManageHackathon(slug)
+  const [{ userId }, result] = await Promise.all([auth(), getManageHackathon(slug)])
 
   if (!result.ok) {
     notFound()
@@ -203,7 +204,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
 
         <TabsContent value="edit" forceMount className="data-[state=inactive]:hidden">
           <div className="rounded-lg border overflow-hidden">
-            <HackathonPreviewClient hackathon={hackathon} isEditable={true} />
+            <HackathonPreviewClient hackathon={hackathon} isEditable={true} currentUserId={userId} />
           </div>
         </TabsContent>
 

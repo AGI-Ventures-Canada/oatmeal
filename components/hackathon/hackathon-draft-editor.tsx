@@ -55,6 +55,7 @@ const PLACEHOLDER_ORGANIZER: PublicHackathon["organizer"] = {
   logo_url: null,
   logo_url_dark: null,
   clerk_org_id: "",
+  clerk_user_id: null,
 }
 
 function stateToHackathon(state: DraftState): PublicHackathon {

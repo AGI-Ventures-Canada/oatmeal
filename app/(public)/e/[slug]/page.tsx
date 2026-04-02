@@ -152,6 +152,7 @@ export default async function EventPage({ params }: PageProps) {
         publicResults={publicResults}
         scheduleItems={scheduleItems}
         announcements={publishedAnnouncements}
+        currentUserId={userId}
       />
     </div>
   )

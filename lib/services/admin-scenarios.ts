@@ -1,6 +1,6 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
-import { getOrCreatePersonalTenant } from "@/lib/services/tenants"
+import { getOrCreateTenant } from "@/lib/services/tenants"
 import { getSeedUserIds, findPersonaByUserId, getPersonaUserId } from "@/lib/dev/test-personas"
 
 const AVAILABLE_SCENARIOS = [
@@ -18,6 +18,7 @@ export function listScenarios() {
 }
 
 const DEV_USER_ID = process.env.SCENARIO_DEV_USER_ID ?? "user_38vEFI8UesKwM07qIuFNqEzFavS"
+const SCENARIO_ORG_ID = process.env.SCENARIO_ORG_ID ?? "org_3BmTkDvAf77I5VKsUJ2dOYZXHz5"
 
 function getSeedUsers(): string[] {
   const real = getSeedUserIds()
@@ -46,7 +47,7 @@ async function resolveScenarioTenant(overrideTenantId?: string): Promise<string>
     return overrideTenantId
   }
 
-  const tenant = await getOrCreatePersonalTenant(DEV_USER_ID, "Test Organizer")
+  const tenant = await getOrCreateTenant(SCENARIO_ORG_ID, "Test Organizer")
   if (!tenant) {
     throw new Error("Failed to create scenario tenant")
   }
@@ -530,6 +531,8 @@ export async function generateRoleTokens(hackathonId: string, slug: string): Pro
   const cards: RoleCard[] = []
 
   for (const p of participants) {
+    if (p.clerk_user_id === organizerUserId) continue
+
     const persona = findPersonaByUserId(p.clerk_user_id)
     if (!persona) continue
 
@@ -551,23 +554,20 @@ export async function generateRoleTokens(hackathonId: string, slug: string): Pro
   }
 
   if (organizerUserId) {
-    const organizerIsParticipant = participants.some(p => p.clerk_user_id === organizerUserId)
-    if (!organizerIsParticipant) {
-      const persona = findPersonaByUserId(organizerUserId)
-      if (persona) {
-        const token = await clerk.signInTokens.createSignInToken({
-          userId: organizerUserId,
-          expiresInSeconds: 3600,
-        })
-        const directUrl = `/hackathons/${hackathonId}`
-        cards.push({
-          personaKey: persona.key,
-          name: persona.name,
-          role: "organizer",
-          loginUrl: `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(directUrl)}`,
-          directUrl,
-        })
-      }
+    const persona = findPersonaByUserId(organizerUserId)
+    if (persona) {
+      const token = await clerk.signInTokens.createSignInToken({
+        userId: organizerUserId,
+        expiresInSeconds: 3600,
+      })
+      const directUrl = `/e/${slug}/manage`
+      cards.push({
+        personaKey: persona.key,
+        name: persona.name,
+        role: "organizer",
+        loginUrl: `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(directUrl)}`,
+        directUrl,
+      })
     }
   }
 
