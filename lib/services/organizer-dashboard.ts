@@ -11,41 +11,32 @@ export type HackathonMiniStats = {
   openMentorRequests: number
 }
 
-// Fetches minimal rows and groups in JS rather than running N * 5 individual
-// count queries. For the typical organizer dashboard (< 20 hackathons) this
-// is 5 queries total vs 50–100 count queries.
 export async function getBatchHackathonStats(hackathonIds: string[]): Promise<Map<string, HackathonMiniStats>> {
   if (hackathonIds.length === 0) return new Map()
 
   const client = getSupabase() as unknown as SupabaseClient
-
-  const [participants, teams, submissions, assignments, mentorRequests] = await Promise.all([
-    client.from("hackathon_participants").select("hackathon_id").in("hackathon_id", hackathonIds),
-    client.from("teams").select("hackathon_id").in("hackathon_id", hackathonIds).neq("status", "disbanded"),
-    client.from("submissions").select("hackathon_id").in("hackathon_id", hackathonIds).eq("status", "submitted"),
-    client.from("judge_assignments").select("hackathon_id, is_complete").in("hackathon_id", hackathonIds),
-    client.from("mentor_requests").select("hackathon_id").in("hackathon_id", hackathonIds).eq("status", "open"),
-  ])
-
   const result = new Map<string, HackathonMiniStats>()
 
-  for (const id of hackathonIds) {
-    const assignmentRows = (assignments.data ?? []).filter((r: { hackathon_id: string }) => r.hackathon_id === id)
+  await Promise.all(hackathonIds.map(async (id) => {
+    const [participants, teams, submissions, assignmentsTotal, assignmentsComplete, mentorRequests] = await Promise.all([
+      client.from("hackathon_participants").select("id", { count: "exact", head: true }).eq("hackathon_id", id),
+      client.from("teams").select("id", { count: "exact", head: true }).eq("hackathon_id", id).neq("status", "disbanded"),
+      client.from("submissions").select("id", { count: "exact", head: true }).eq("hackathon_id", id).eq("status", "submitted"),
+      client.from("judge_assignments").select("id", { count: "exact", head: true }).eq("hackathon_id", id),
+      client.from("judge_assignments").select("id", { count: "exact", head: true }).eq("hackathon_id", id).eq("is_complete", true),
+      client.from("mentor_requests").select("id", { count: "exact", head: true }).eq("hackathon_id", id).eq("status", "open"),
+    ])
+
     result.set(id, {
       hackathonId: id,
-      participantCount: countByField(participants.data, id),
-      teamCount: countByField(teams.data, id),
-      submissionCount: countByField(submissions.data, id),
-      judgingComplete: assignmentRows.filter((r: { is_complete: boolean }) => r.is_complete).length,
-      judgingTotal: assignmentRows.length,
-      openMentorRequests: countByField(mentorRequests.data, id),
+      participantCount: participants.count ?? 0,
+      teamCount: teams.count ?? 0,
+      submissionCount: submissions.count ?? 0,
+      judgingTotal: assignmentsTotal.count ?? 0,
+      judgingComplete: assignmentsComplete.count ?? 0,
+      openMentorRequests: mentorRequests.count ?? 0,
     })
-  }
+  }))
 
   return result
-}
-
-function countByField(rows: { hackathon_id: string }[] | null, hackathonId: string): number {
-  if (!rows) return 0
-  return rows.filter((r) => r.hackathon_id === hackathonId).length
 }

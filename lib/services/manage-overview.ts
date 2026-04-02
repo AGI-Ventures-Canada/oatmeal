@@ -8,9 +8,6 @@ export type ManageOverviewStats = {
   challengeReleased: boolean
 }
 
-// Overlaps with getBatchHackathonStats but optimized for the single-hackathon
-// case: uses head-only count queries (no rows transferred) and fetches
-// challengeReleased which the batch service doesn't need.
 export async function getManageOverviewStats(hackathonId: string): Promise<ManageOverviewStats> {
   const client = getSupabase() as unknown as SupabaseClient
 
