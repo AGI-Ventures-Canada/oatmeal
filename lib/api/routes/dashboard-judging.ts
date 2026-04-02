@@ -356,7 +356,7 @@ export const dashboardJudgingRoutes = new Elysia()
           })
         }
 
-        let notificationScheduled = true
+        let notificationFailed = false
         if (judgeEmail) {
           try {
             const addedByName = await resolveAdderName(principal, client)
@@ -373,11 +373,11 @@ export const dashboardJudgingRoutes = new Elysia()
               try {
                 await createJudgePendingNotification(hackathon.id, addResult.participant.id, judgeEmail, addedByName)
               } catch {
-                notificationScheduled = false
+                notificationFailed = true
               }
             }
           } catch {
-            notificationScheduled = false
+            notificationFailed = true
           }
         }
 
@@ -392,7 +392,7 @@ export const dashboardJudgingRoutes = new Elysia()
         return {
           participantId: addResult.participant.id,
           clerkUserId: addResult.participant.clerkUserId,
-          ...(notificationScheduled === false && { notificationSchedulingFailed: true }),
+          ...(notificationFailed && { notificationFailed: true }),
         }
       }
 
@@ -421,7 +421,7 @@ export const dashboardJudgingRoutes = new Elysia()
             }
 
             const hackathon = result.hackathon
-            let notificationScheduled = true
+            let notificationFailed = false
             try {
               const addedByName = await resolveAdderName(principal, client)
               if (hackathon.status !== "draft") {
@@ -437,11 +437,11 @@ export const dashboardJudgingRoutes = new Elysia()
                 try {
                   await createJudgePendingNotification(hackathon.id, addResult.participant.id, email, addedByName)
                 } catch {
-                  notificationScheduled = false
+                  notificationFailed = true
                 }
               }
             } catch {
-              notificationScheduled = false
+              notificationFailed = true
             }
 
             await logAudit({
@@ -455,7 +455,7 @@ export const dashboardJudgingRoutes = new Elysia()
             return {
               participantId: addResult.participant.id,
               clerkUserId: addResult.participant.clerkUserId,
-              ...(notificationScheduled === false && { notificationSchedulingFailed: true }),
+              ...(notificationFailed && { notificationFailed: true }),
             }
           }
         } catch {

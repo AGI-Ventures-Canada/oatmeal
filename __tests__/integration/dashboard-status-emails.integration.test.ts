@@ -320,6 +320,7 @@ describe("PATCH /api/dashboard/hackathons/:id/settings - status change emails", 
     const res = await patchSettings({ status: "published" })
     expect(res.status).toBe(200)
 
+    // Fallback dispatches fire-and-forget sends — wait for the microtask queue to settle
     await new Promise((r) => setTimeout(r, 10))
 
     expect(mockFetchPendingNotifications).toHaveBeenCalledWith("h1")

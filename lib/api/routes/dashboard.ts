@@ -1167,6 +1167,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
           )
           const notifications = await fetchPendingNotifications(hackathon.id).catch(() => [])
           for (const n of notifications) {
+            // Fire-and-forget per notification — unsent rows remain and will be retried
+            // on the next successful workflow run (fetchPendingNotifications filters sent_at IS NULL)
             sendJudgeNotification({
               notification: n,
               hackathonName: hackathon.name,
