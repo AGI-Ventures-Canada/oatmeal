@@ -341,7 +341,16 @@ export const dashboardJudgingRoutes = new Elysia()
 
         if (judgeEmail) {
           const { hasPendingJudgeInvitation } = await import("@/lib/services/judge-invitations")
-          if (await hasPendingJudgeInvitation(params.id, judgeEmail).catch(() => false)) {
+          let isPending: boolean
+          try {
+            isPending = await hasPendingJudgeInvitation(params.id, judgeEmail)
+          } catch {
+            return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            })
+          }
+          if (isPending) {
             return new Response(JSON.stringify({ error: "Invitation already sent to this email", code: "already_invited" }), {
               status: 400,
               headers: { "Content-Type": "application/json" },
@@ -406,7 +415,16 @@ export const dashboardJudgingRoutes = new Elysia()
           const users = await client.users.getUserList({ emailAddress: [email] })
           if (users.data.length > 0) {
             const { hasPendingJudgeInvitation } = await import("@/lib/services/judge-invitations")
-            if (await hasPendingJudgeInvitation(params.id, email).catch(() => false)) {
+            let isPending: boolean
+            try {
+              isPending = await hasPendingJudgeInvitation(params.id, email)
+            } catch {
+              return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), {
+                status: 500,
+                headers: { "Content-Type": "application/json" },
+              })
+            }
+            if (isPending) {
               return new Response(JSON.stringify({ error: "Invitation already sent to this email", code: "already_invited" }), {
                 status: 400,
                 headers: { "Content-Type": "application/json" },
