@@ -24,7 +24,8 @@ export async function sendJudgeNotificationsWorkflow(
         hackathonSlug: input.hackathonSlug,
       })
       sent++
-    } catch {
+    } catch (err) {
+      console.error(`Failed to send judge notification ${notification.id} to ${notification.email}:`, err)
     }
   }
 

@@ -5,7 +5,8 @@ CREATE TABLE judge_pending_notifications (
   email text NOT NULL,
   added_by_name text NOT NULL,
   sent_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT judge_pending_notifications_hackathon_participant_unique UNIQUE (hackathon_id, participant_id)
 );
 
 CREATE INDEX judge_pending_notifications_hackathon_unsent_idx
