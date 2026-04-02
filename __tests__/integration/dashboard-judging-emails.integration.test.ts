@@ -51,6 +51,8 @@ mock.module("@/lib/services/judge-invitations", () => ({
   createJudgeInvitation: mockCreateJudgeInvitation,
   listJudgeInvitations: mock(() => Promise.resolve([])),
   cancelJudgeInvitation: mock(() => Promise.resolve({ success: true })),
+  hasPendingJudgeInvitation: mock(() => Promise.resolve(false)),
+  createJudgePendingNotification: mock(() => Promise.resolve()),
 }))
 
 const mockSendJudgeAddedNotification = mock(() => Promise.resolve({ success: true }))

@@ -326,6 +326,26 @@ export const dashboardJudgingRoutes = new Elysia()
       const client = await clerkClient()
 
       if (typedBody.clerkUserId) {
+        const hackathon = result.hackathon
+
+        let judgeEmail: string | undefined
+        try {
+          const judgeUser = await client.users.getUser(typedBody.clerkUserId)
+          judgeEmail = judgeUser.primaryEmailAddress?.emailAddress
+        } catch {
+          // proceed without email — invitation check and notification are best-effort
+        }
+
+        if (judgeEmail) {
+          const { hasPendingJudgeInvitation } = await import("@/lib/services/judge-invitations")
+          if (await hasPendingJudgeInvitation(params.id, judgeEmail).catch(() => false)) {
+            return new Response(JSON.stringify({ error: "Invitation already sent to this email", code: "already_invited" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            })
+          }
+        }
+
         const { addJudge } = await import("@/lib/services/judging")
         const addResult = await addJudge(params.id, typedBody.clerkUserId)
 
@@ -336,11 +356,9 @@ export const dashboardJudgingRoutes = new Elysia()
           })
         }
 
-        const hackathon = result.hackathon
-        try {
-          const judgeUser = await client.users.getUser(typedBody.clerkUserId)
-          const judgeEmail = judgeUser.primaryEmailAddress?.emailAddress
-          if (judgeEmail) {
+        let notificationScheduled = true
+        if (judgeEmail) {
+          try {
             const addedByName = await resolveAdderName(principal, client)
             if (hackathon.status !== "draft") {
               const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
@@ -352,16 +370,15 @@ export const dashboardJudgingRoutes = new Elysia()
               }).catch(console.error)
             } else {
               const { createJudgePendingNotification } = await import("@/lib/services/judge-invitations")
-              createJudgePendingNotification(
-                hackathon.id,
-                addResult.participant.id,
-                judgeEmail,
-                addedByName
-              ).catch(console.error)
+              try {
+                await createJudgePendingNotification(hackathon.id, addResult.participant.id, judgeEmail, addedByName)
+              } catch {
+                notificationScheduled = false
+              }
             }
+          } catch {
+            notificationScheduled = false
           }
-        } catch {
-          // non-blocking — judge was still added
         }
 
         await logAudit({
@@ -375,6 +392,7 @@ export const dashboardJudgingRoutes = new Elysia()
         return {
           participantId: addResult.participant.id,
           clerkUserId: addResult.participant.clerkUserId,
+          ...(notificationScheduled === false && { notificationSchedulingFailed: true }),
         }
       }
 
@@ -384,6 +402,14 @@ export const dashboardJudgingRoutes = new Elysia()
         try {
           const users = await client.users.getUserList({ emailAddress: [email] })
           if (users.data.length > 0) {
+            const { hasPendingJudgeInvitation } = await import("@/lib/services/judge-invitations")
+            if (await hasPendingJudgeInvitation(params.id, email).catch(() => false)) {
+              return new Response(JSON.stringify({ error: "Invitation already sent to this email", code: "already_invited" }), {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+              })
+            }
+
             const { addJudge } = await import("@/lib/services/judging")
             const addResult = await addJudge(params.id, users.data[0].id)
 
@@ -395,6 +421,7 @@ export const dashboardJudgingRoutes = new Elysia()
             }
 
             const hackathon = result.hackathon
+            let notificationScheduled = true
             try {
               const addedByName = await resolveAdderName(principal, client)
               if (hackathon.status !== "draft") {
@@ -407,15 +434,14 @@ export const dashboardJudgingRoutes = new Elysia()
                 }).catch(console.error)
               } else {
                 const { createJudgePendingNotification } = await import("@/lib/services/judge-invitations")
-                createJudgePendingNotification(
-                  hackathon.id,
-                  addResult.participant.id,
-                  email,
-                  addedByName
-                ).catch(console.error)
+                try {
+                  await createJudgePendingNotification(hackathon.id, addResult.participant.id, email, addedByName)
+                } catch {
+                  notificationScheduled = false
+                }
               }
             } catch {
-              // non-blocking — judge was still added
+              notificationScheduled = false
             }
 
             await logAudit({
@@ -429,6 +455,7 @@ export const dashboardJudgingRoutes = new Elysia()
             return {
               participantId: addResult.participant.id,
               clerkUserId: addResult.participant.clerkUserId,
+              ...(notificationScheduled === false && { notificationSchedulingFailed: true }),
             }
           }
         } catch {

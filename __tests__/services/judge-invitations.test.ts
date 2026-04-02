@@ -22,6 +22,7 @@ const {
   listJudgeInvitations,
   sendPendingJudgeInvitationEmails,
   createJudgePendingNotification,
+  hasPendingJudgeInvitation,
 } = await import("@/lib/services/judge-invitations")
 
 const mockInvitation: JudgeInvitation = {
@@ -352,20 +353,57 @@ describe("Judge Invitations Service", () => {
       )
     })
 
-    it("logs error but does not throw when upsert fails", async () => {
+    it("throws when upsert fails", async () => {
       const chain = createChainableMock({
         data: null,
         error: { message: "unique constraint violation", code: "23505" },
       })
       setMockFromImplementation(() => chain)
 
-      const consoleSpy = spyOn(console, "error").mockImplementation(() => {})
-      await createJudgePendingNotification("h1", "participant1", "judge@example.com", "Organizer")
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to create judge pending notification:",
-        expect.objectContaining({ message: "unique constraint violation" })
+      await expect(
+        createJudgePendingNotification("h1", "participant1", "judge@example.com", "Organizer")
+      ).rejects.toThrow("Failed to create judge pending notification: unique constraint violation")
+    })
+  })
+
+  describe("hasPendingJudgeInvitation", () => {
+    it("returns true when a pending invitation exists", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: { id: "inv1" }, error: null })
       )
-      consoleSpy.mockRestore()
+
+      const result = await hasPendingJudgeInvitation("h1", "judge@example.com")
+
+      expect(result).toBe(true)
+    })
+
+    it("returns false when no pending invitation exists", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: null, error: null })
+      )
+
+      const result = await hasPendingJudgeInvitation("h1", "judge@example.com")
+
+      expect(result).toBe(false)
+    })
+
+    it("normalizes email to lowercase", async () => {
+      const chain = createChainableMock({ data: null, error: null })
+      setMockFromImplementation(() => chain)
+
+      await hasPendingJudgeInvitation("h1", "JUDGE@EXAMPLE.COM")
+
+      expect(chain.eq).toHaveBeenCalledWith("email", "judge@example.com")
+    })
+
+    it("throws on DB error", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: null, error: { message: "connection failed" } })
+      )
+
+      await expect(hasPendingJudgeInvitation("h1", "judge@example.com")).rejects.toThrow(
+        "Failed to check pending invitation: connection failed"
+      )
     })
   })
 

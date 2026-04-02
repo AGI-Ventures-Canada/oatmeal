@@ -257,6 +257,22 @@ export async function sendPendingJudgeInvitationEmails(
   return { sent }
 }
 
+export async function hasPendingJudgeInvitation(hackathonId: string, email: string): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data, error } = await client
+    .from("judge_invitations")
+    .select("id")
+    .eq("hackathon_id", hackathonId)
+    .eq("email", email.toLowerCase())
+    .eq("status", "pending")
+    .maybeSingle()
+
+  if (error) throw new Error(`Failed to check pending invitation: ${error.message}`)
+
+  return data !== null
+}
+
 export async function createJudgePendingNotification(
   hackathonId: string,
   participantId: string,
@@ -277,7 +293,7 @@ export async function createJudgePendingNotification(
   )
 
   if (error) {
-    console.error("Failed to create judge pending notification:", error)
+    throw new Error(`Failed to create judge pending notification: ${error.message}`)
   }
 }
 
