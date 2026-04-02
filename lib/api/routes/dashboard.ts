@@ -1160,7 +1160,20 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
             hackathonName: hackathon.name,
             hackathonSlug: hackathon.slug,
           },
-        ]).catch(console.error)
+        ]).catch(async (err) => {
+          console.error("Failed to start judge notifications workflow, falling back to direct send:", err)
+          const { fetchPendingNotifications, sendJudgeNotification } = await import(
+            "@/lib/workflows/judge-notifications/steps"
+          )
+          const notifications = await fetchPendingNotifications(hackathon.id).catch(() => [])
+          for (const n of notifications) {
+            sendJudgeNotification({
+              notification: n,
+              hackathonName: hackathon.name,
+              hackathonSlug: hackathon.slug,
+            }).catch(console.error)
+          }
+        })
       }
 
       return {
