@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Tabs } from "@/components/ui/tabs"
 
 export function TabsUrlSync({
@@ -15,6 +15,10 @@ export function TabsUrlSync({
   children: React.ReactNode
 }) {
   const [value, setValue] = useState(initialValue)
+
+  useEffect(() => {
+    setValue(initialValue)
+  }, [initialValue])
 
   const handleChange = useCallback(
     (next: string) => {
