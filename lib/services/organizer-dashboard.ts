@@ -11,6 +11,9 @@ export type HackathonMiniStats = {
   openMentorRequests: number
 }
 
+// Fetches minimal rows (hackathon_id only) and groups in JS rather than running
+// N * 6 individual count queries. For the typical organizer dashboard (< 20
+// hackathons) this is 6 queries total vs 60–120 count queries.
 export async function getBatchHackathonStats(hackathonIds: string[]): Promise<Map<string, HackathonMiniStats>> {
   if (hackathonIds.length === 0) return new Map()
 

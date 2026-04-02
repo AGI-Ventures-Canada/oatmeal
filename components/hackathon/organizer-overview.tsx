@@ -1,5 +1,3 @@
-"use client"
-
 import Link from "next/link"
 import {
   Users,
@@ -31,7 +29,7 @@ type Props = {
 
 const severityConfig: Record<ActionSeverity, { icon: typeof AlertTriangle; dot: string }> = {
   urgent: { icon: CircleAlert, dot: "bg-destructive" },
-  warning: { icon: AlertTriangle, dot: "bg-foreground" },
+  warning: { icon: AlertTriangle, dot: "bg-primary" },
   info: { icon: Info, dot: "bg-muted-foreground" },
 }
 

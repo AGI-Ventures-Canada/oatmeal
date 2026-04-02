@@ -21,17 +21,21 @@ export default async function DashboardPage() {
 
   const tenant = await resolvePageTenant()
 
-  const [myHackathons, organizedHackathons, sponsoredHackathons, judgingHackathons, submittedHackathonIds] = await Promise.all([
+  const organizedWithStats = listOrganizedHackathons(tenant.id).then(async (hackathons) => {
+    const stats = await getBatchHackathonStats(hackathons.map((h) => h.id))
+    return { hackathons, stats }
+  })
+
+  const [myHackathons, organized, sponsoredHackathons, judgingHackathons, submittedHackathonIds] = await Promise.all([
     listParticipatingHackathons(userId),
-    listOrganizedHackathons(tenant.id),
+    organizedWithStats,
     listSponsoredHackathons(tenant.id),
     listJudgingHackathons(userId),
     getSubmittedHackathonIds(userId),
   ])
 
-  const organizedStats = await getBatchHackathonStats(organizedHackathons.map((h) => h.id))
-
-  const serializedStats = Object.fromEntries(organizedStats)
+  const organizedHackathons = organized.hackathons
+  const serializedStats = Object.fromEntries(organized.stats)
 
   return (
     <div className="space-y-6">
