@@ -18,7 +18,6 @@ export function listScenarios() {
 }
 
 const DEV_USER_ID = process.env.SCENARIO_DEV_USER_ID ?? "user_38vEFI8UesKwM07qIuFNqEzFavS"
-const SCENARIO_ORG_ID = process.env.SCENARIO_ORG_ID ?? "org_3BmTkDvAf77I5VKsUJ2dOYZXHz5"
 
 function getSeedUsers(): string[] {
   const real = getSeedUserIds()
@@ -47,7 +46,12 @@ async function resolveScenarioTenant(overrideTenantId?: string): Promise<string>
     return overrideTenantId
   }
 
-  const tenant = await getOrCreateTenant(SCENARIO_ORG_ID, "Test Organizer")
+  const orgId = process.env.SCENARIO_ORG_ID
+  if (!orgId) {
+    throw new Error("SCENARIO_ORG_ID environment variable is required to run scenarios")
+  }
+
+  const tenant = await getOrCreateTenant(orgId, "Test Organizer")
   if (!tenant) {
     throw new Error("Failed to create scenario tenant")
   }
@@ -446,20 +450,21 @@ export type ActiveScenario = {
 
 export async function getActiveScenarios(): Promise<ActiveScenario[]> {
   const db = getSupabase()
+
+  const { data } = await db
+    .from("hackathons")
+    .select("id, slug, created_at")
+    .like("slug", "test-%")
+    .order("created_at", { ascending: false })
+
+  if (!data) return []
+
   const results: ActiveScenario[] = []
 
   for (const scenario of AVAILABLE_SCENARIOS) {
     const prefix = `test-${scenario.name}-`
-    const { data } = await db
-      .from("hackathons")
-      .select("id, slug, created_at")
-      .like("slug", `${prefix}%`)
-      .order("created_at", { ascending: false })
-      .limit(5)
-
-    if (!data) continue
-
     const match = data.find((h) => {
+      if (!h.slug.startsWith(prefix)) return false
       const suffix = h.slug.slice(prefix.length)
       return /^[0-9a-z]+$/.test(suffix)
     })
@@ -493,6 +498,8 @@ async function clearScenario(name: string): Promise<void> {
 }
 
 export async function runScenario(name: string, tenantId?: string): Promise<{ hackathonId: string; slug: string; tenantId: string }> {
+  // Intentionally allows VERCEL_ENV === "preview" (staging). Block only production.
+  // If SCENARIO_DEV_USER_ID / seed user env vars are set on a preview deployment, scenarios will work — that's by design.
   if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
     throw new Error("Test scenarios can only be run in local development or staging")
   }
@@ -542,6 +549,7 @@ export async function generateRoleTokens(hackathonId: string, slug: string): Pro
     })
 
     const directUrl = p.role === "judge" ? `/e/${slug}/judge` : `/e/${slug}`
+    // Token is in the URL (visible in logs/history). Acceptable for the 1h dev-only expiry — do not increase without reconsideration.
     const loginUrl = `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(directUrl)}`
 
     cards.push({
