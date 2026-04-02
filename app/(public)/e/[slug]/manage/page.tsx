@@ -12,6 +12,7 @@ import { getOrganizerActionItems } from "@/lib/utils/organizer-actions"
 import { VALID_TABS, VALID_JTABS, VALID_PTABS, VALID_ETABS, getDefaultTab, resolveTab } from "@/lib/utils/manage-tabs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
+import { SubmissionGallery } from "@/components/hackathon/submission-gallery"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
 import { OrganizerOverview } from "@/components/hackathon/organizer-overview"
 import { TimeRemainingBar } from "@/components/hackathon/time-remaining-bar"
@@ -100,6 +101,18 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
 
   const submissionsForSelect = submissions.map((s) => ({ id: s.id, title: s.title }))
 
+  const submissionsForGallery = submissions.map((s) => ({
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    githubUrl: s.github_url,
+    liveAppUrl: s.live_app_url,
+    demoVideoUrl: s.demo_video_url,
+    screenshotUrl: s.screenshot_url,
+    submitter: s.submitter_name,
+    createdAt: s.created_at,
+  }))
+
   return (
     <div className="space-y-6">
       {isDev && (
@@ -121,6 +134,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               <TabsTrigger value="edit">Event Page</TabsTrigger>
               <TabsTrigger value="teams">Teams</TabsTrigger>
               <TabsTrigger value="rooms">Rooms</TabsTrigger>
+              <TabsTrigger value="submissions">Submissions{submissionCount > 0 && <span className="ml-1.5 text-xs tabular-nums text-muted-foreground">{submissionCount}</span>}</TabsTrigger>
               <TabsTrigger value="judges">Judges</TabsTrigger>
               <TabsTrigger value="prizes">Prizes</TabsTrigger>
               <TabsTrigger value="event">Engage</TabsTrigger>
@@ -130,7 +144,6 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
             <HackathonPageActions
               slug={hackathon.slug}
               isOrganizer={true}
-              submissionCount={submissionCount}
             />
           </div>
         </div>
@@ -168,6 +181,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
             />
             <OrganizerOverview
               slug={hackathon.slug}
+              hackathonId={hackathon.id}
               stats={{
                 participantCount: overviewStats.participantCount,
                 teamCount: overviewStats.teamCount,
@@ -221,6 +235,10 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
 
         <TabsContent value="rooms" forceMount className="data-[state=inactive]:hidden">
           <RoomsTab hackathonId={hackathon.id} />
+        </TabsContent>
+
+        <TabsContent value="submissions" forceMount className="data-[state=inactive]:hidden">
+          <SubmissionGallery submissions={submissionsForGallery} />
         </TabsContent>
 
         <TabsContent value="event" forceMount className="data-[state=inactive]:hidden">

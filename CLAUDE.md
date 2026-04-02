@@ -431,6 +431,19 @@ For RPC calls, use `setMockRpcImplementation()` instead.
 
 ## Git Workflow
 
+### Starting New Work
+
+When the user wants to start working on something new, automatically run this checklist before creating a feature branch:
+
+1. **Check for pending changes**: Run `git status`. If there are uncommitted changes, investigate what they're for. Discard auto-generated files (lock files, build artifacts). For real work, either commit it to a branch or stash it — don't lose it silently.
+2. **Sync with remote**: Run `git fetch origin` and check if the current branch is behind. Rebase or pull as needed.
+3. **Branch from staging**: Create the new feature branch from the latest `origin/staging`:
+   ```bash
+   git checkout -b feature/<name> origin/staging
+   ```
+
+Do all of this without being asked — the user shouldn't need to spell out these steps each time.
+
 ### Always Commit All Changes
 
 **When committing, stage and include ALL changes in the working tree.** Do not cherry-pick only the files that seem related to the current task — treat every uncommitted change as part of the same work unit. Leaving behind orphaned changes clutters future diffs and risks losing work.

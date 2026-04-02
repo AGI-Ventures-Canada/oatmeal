@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   ExternalLink,
-  FolderOpen,
   Monitor,
   Timer,
   DoorOpen,
@@ -27,7 +25,6 @@ import {
 interface HackathonPageActionsProps {
   slug: string
   isOrganizer: boolean
-  submissionCount?: number
 }
 
 const DISPLAY_LINKS = [
@@ -47,7 +44,6 @@ const PAGE_LINKS = [
 export function HackathonPageActions({
   slug,
   isOrganizer,
-  submissionCount = 0,
 }: HackathonPageActionsProps) {
   return (
     <>
@@ -88,15 +84,6 @@ export function HackathonPageActions({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/e/${slug}/manage/submissions`}>
-              <FolderOpen className="sm:mr-2 size-4" />
-              <span className="hidden sm:inline">Submissions</span>
-              <Badge variant="secondary" className="hidden sm:inline-flex ml-2">
-                {submissionCount}
-              </Badge>
-            </Link>
-          </Button>
         </>
       ) : null}
     </>

@@ -1,11 +1,25 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Calendar, ArrowRight, MapPin } from "lucide-react"
+import { Calendar, ArrowRight, MapPin, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import type { ScheduleItem } from "@/lib/services/schedule-items"
 
 type Props = {
   slug: string
+  hackathonId: string
   scheduleItems: ScheduleItem[]
 }
 
@@ -21,10 +35,55 @@ function isCurrent(item: ScheduleItem, now: string): boolean {
   return item.starts_at <= now && item.ends_at > now
 }
 
-export function OverviewSchedule({ slug, scheduleItems }: Props) {
+export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
+  const router = useRouter()
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [startsAt, setStartsAt] = useState("")
+  const [endsAt, setEndsAt] = useState("")
+  const [location, setLocation] = useState("")
+  const [saving, setSaving] = useState(false)
+
   const now = new Date().toISOString()
   const upcoming = scheduleItems.filter((s) => s.starts_at > now || (s.ends_at && s.ends_at > now)).slice(0, 6)
   const display = upcoming.length > 0 ? upcoming : scheduleItems.slice(0, 6)
+
+  function resetForm() {
+    setTitle("")
+    setDescription("")
+    setStartsAt("")
+    setEndsAt("")
+    setLocation("")
+  }
+
+  async function handleAdd() {
+    if (!title.trim() || !startsAt) return
+    setSaving(true)
+    try {
+      const payload: Record<string, unknown> = {
+        title,
+        startsAt: new Date(startsAt).toISOString(),
+      }
+      if (description.trim()) payload.description = description
+      if (endsAt) payload.endsAt = new Date(endsAt).toISOString()
+      if (location.trim()) payload.location = location
+
+      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error("Failed to create")
+      setDialogOpen(false)
+      resetForm()
+      router.refresh()
+    } catch {
+      // stay in dialog on error
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="rounded-lg border p-4">
@@ -44,8 +103,9 @@ export function OverviewSchedule({ slug, scheduleItems }: Props) {
       {display.length === 0 ? (
         <div className="text-center py-6">
           <p className="text-sm text-muted-foreground mb-2">No schedule items</p>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/e/${slug}/manage?tab=event&etab=schedule`}>Add items</Link>
+          <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="size-4 mr-1" />
+            Add item
           </Button>
         </div>
       ) : (
@@ -83,6 +143,79 @@ export function OverviewSchedule({ slug, scheduleItems }: Props) {
           })}
         </div>
       )}
+
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm() }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Schedule Item</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Title</Label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Opening Ceremony"
+                autoFocus
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div>
+              <Label>Description (optional)</Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Brief description..."
+                rows={2}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Starts at</Label>
+                <Input
+                  type="datetime-local"
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
+                />
+              </div>
+              <div>
+                <Label>Ends at (optional)</Label>
+                <Input
+                  type="datetime-local"
+                  value={endsAt}
+                  onChange={(e) => setEndsAt(e.target.value)}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Location (optional)</Label>
+              <Input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g., Main Hall, Zoom link"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <Button onClick={handleAdd} disabled={!title.trim() || !startsAt || saving} className="w-full">
+              {saving ? "Adding..." : "Add"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -25,6 +25,7 @@ type QuickStats = {
 
 type Props = {
   slug: string
+  hackathonId: string
   stats: QuickStats
   actionItems: ActionItem[]
   announcements: Announcement[]
@@ -58,7 +59,7 @@ function StatCard({ icon: Icon, value, label, href }: { icon: typeof Users; valu
   return inner
 }
 
-export function OrganizerOverview({ slug, stats, actionItems, announcements, scheduleItems }: Props) {
+export function OrganizerOverview({ slug, hackathonId, stats, actionItems, announcements, scheduleItems }: Props) {
   const judgingValue = stats.judgingProgress.totalAssignments > 0
     ? `${Math.round((stats.judgingProgress.completedAssignments / stats.judgingProgress.totalAssignments) * 100)}%`
     : "—"
@@ -70,7 +71,7 @@ export function OrganizerOverview({ slug, stats, actionItems, announcements, sch
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard icon={Users} value={String(stats.participantCount)} label="Registered" href={`/e/${slug}/manage?tab=teams`} />
         <StatCard icon={UsersRound} value={String(stats.teamCount)} label="Teams" href={`/e/${slug}/manage?tab=teams`} />
-        <StatCard icon={FolderOpen} value={String(stats.submissionCount)} label="Submissions" href={`/e/${slug}/manage?tab=judges`} />
+        <StatCard icon={FolderOpen} value={String(stats.submissionCount)} label="Submissions" href={`/e/${slug}/manage?tab=submissions`} />
         <StatCard icon={Scale} value={judgingValue} label="Judged" href={`/e/${slug}/manage?tab=judges&jtab=progress`} />
       </div>
 
@@ -85,7 +86,7 @@ export function OrganizerOverview({ slug, stats, actionItems, announcements, sch
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <div className="space-y-4">
-          <OverviewSchedule slug={slug} scheduleItems={scheduleItems} />
+          <OverviewSchedule slug={slug} hackathonId={hackathonId} scheduleItems={scheduleItems} />
         </div>
 
         <div className="space-y-4">
@@ -132,7 +133,7 @@ export function OrganizerOverview({ slug, stats, actionItems, announcements, sch
               <p className="text-sm text-muted-foreground">All caught up</p>
             </div>
           )}
-          <OverviewAnnouncements slug={slug} announcements={announcements} />
+          <OverviewAnnouncements slug={slug} hackathonId={hackathonId} announcements={announcements} />
         </div>
       </div>
     </div>
