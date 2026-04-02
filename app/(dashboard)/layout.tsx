@@ -1,18 +1,18 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
-import { AppSidebarSimple } from "@/components/app-sidebar-simple";
-import { MobileHeader } from "@/components/mobile-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { auth } from "@clerk/nextjs/server"
+import { redirect } from "next/navigation"
+import { AppSidebarSimple } from "@/components/app-sidebar-simple"
+import { MobileHeader } from "@/components/mobile-header"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
-  const { userId } = await auth();
+  const { userId } = await auth()
 
   if (!userId) {
-    redirect("/sign-in");
+    redirect("/sign-in")
   }
 
   return (
@@ -25,5 +25,5 @@ export default async function DashboardLayout({
         </div>
       </SidebarInset>
     </SidebarProvider>
-  );
+  )
 }

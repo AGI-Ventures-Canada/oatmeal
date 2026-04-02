@@ -61,7 +61,7 @@ export function SignUpForm({
   const [isCheckingSlug, setIsCheckingSlug] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const finalRedirect = redirectUrl || "/home";
+  const finalRedirect = redirectUrl || "/onboarding";
 
   useEffect(() => {
     if (!orgSlugEdited) {

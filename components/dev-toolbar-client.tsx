@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { ChevronDown, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 type PersonaInfo = {
   key: string
@@ -51,9 +52,10 @@ export function DevToolbarClient({
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col-reverse items-end gap-1.5">
-      <button
+      <Button
+        variant="outline"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 text-sm font-medium shadow-md hover:bg-muted"
+        className="rounded-full shadow-md"
       >
         {switching ? (
           <Loader2 className="size-3 animate-spin" />
@@ -70,7 +72,7 @@ export function DevToolbarClient({
               : "Test user"}
         </span>
         <ChevronDown className="size-3 text-muted-foreground" />
-      </button>
+      </Button>
 
       {open && others.length > 0 && (
         <div className="min-w-[200px] rounded-md border bg-background py-1 shadow-lg">
@@ -78,19 +80,20 @@ export function DevToolbarClient({
             Switch to
           </p>
           {others.map((p) => (
-            <button
+            <Button
               key={p.key}
+              variant="ghost"
               onClick={() => switchTo(p)}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-muted"
+              className="h-auto w-full justify-start gap-2 px-3 py-1.5 text-xs"
             >
               <span className="flex size-4 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
                 {p.name[0]}
               </span>
-              <span className="flex-1">{p.name}</span>
+              <span className="flex-1 text-left">{p.name}</span>
               {p.role && (
                 <span className="text-[10px] text-muted-foreground capitalize">{p.role}</span>
               )}
-            </button>
+            </Button>
           ))}
         </div>
       )}
