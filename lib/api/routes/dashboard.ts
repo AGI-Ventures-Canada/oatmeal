@@ -1176,7 +1176,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
           const { fetchPendingNotifications, sendJudgeNotification } = await import(
             "@/lib/workflows/judge-notifications/steps"
           )
-          const notifications = await fetchPendingNotifications(hackathon.id).catch(() => [])
+          const notifications = await fetchPendingNotifications(hackathon.id).catch((fetchErr) => {
+            console.error(`Judge notification fallback: failed to fetch pending notifications for hackathon ${hackathon.id}:`, fetchErr)
+            return [] as Awaited<ReturnType<typeof fetchPendingNotifications>>
+          })
           const failedIds: string[] = []
           for (const n of notifications) {
             try {

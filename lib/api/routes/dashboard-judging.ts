@@ -342,6 +342,9 @@ export const dashboardJudgingRoutes = new Elysia()
         if (judgeEmail) {
           const { hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
           let isPending: boolean
+          // Guard requires email to query both judge_invitations and judge_pending_notifications.
+          // Users without a primary email in Clerk skip this check — addJudge still prevents
+          // duplicate participants, and the notification path is also skipped (no email to send to).
           try {
             isPending = await hasPendingJudgeEntry(params.id, judgeEmail)
           } catch {

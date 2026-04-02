@@ -29,6 +29,8 @@ export async function sendJudgeNotificationsWorkflow(
     }
   }
 
+  // Throw on partial success so the workflow runtime retries. Already-sent notifications
+  // are filtered out by sent_at IS NULL in fetchPendingNotifications, making retries idempotent.
   if (sent < notifications.length) {
     throw new Error(`Only sent ${sent}/${notifications.length} judge notifications — workflow will retry unsent rows`)
   }
