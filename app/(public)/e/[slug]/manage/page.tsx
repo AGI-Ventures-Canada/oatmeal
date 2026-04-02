@@ -224,7 +224,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
         </TabsContent>
 
         <TabsContent value="event" forceMount className="data-[state=inactive]:hidden">
-          <EventTabContent hackathonId={hackathon.id} activeEtab={activeEtab} />
+          <EventTabContent hackathonId={hackathon.id} activeEtab={activeEtab} hackathonStatus={hackathon.status} hackathonPhase={hackathon.phase} />
         </TabsContent>
       </TabsUrlSync>
     </div>

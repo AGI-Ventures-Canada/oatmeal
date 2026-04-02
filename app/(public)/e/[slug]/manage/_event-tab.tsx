@@ -40,7 +40,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Calendar, MapPin, Clock } from "lucide-react"
+import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Calendar, MapPin, Clock, Zap } from "lucide-react"
+import type { HackathonStatus, HackathonPhase } from "@/lib/db/hackathon-types"
 import { VALID_ETABS } from "@/lib/utils/manage-tabs"
 
 type ChallengeData = {
@@ -76,6 +77,8 @@ type EmailResult = {
 interface EventTabContentProps {
   hackathonId: string
   activeEtab: string
+  hackathonStatus: HackathonStatus
+  hackathonPhase: HackathonPhase | null
 }
 
 function formatDate(dateStr: string): string {
@@ -618,7 +621,42 @@ type AnnouncementData = {
   created_at: string
 }
 
-function AnnouncementsSubTab({ hackathonId }: { hackathonId: string }) {
+type SuggestedAnnouncement = {
+  title: string
+  body: string
+  priority: "normal" | "urgent"
+}
+
+function getSuggestedAnnouncements(status: HackathonStatus, phase: HackathonPhase | null): SuggestedAnnouncement[] {
+  const suggestions: SuggestedAnnouncement[] = []
+  if (status === "registration_open") {
+    suggestions.push({ title: "Registration is open!", body: "Sign up now to secure your spot. We can't wait to see what you build!", priority: "normal" })
+    suggestions.push({ title: "Last chance to register", body: "Registration closes soon. Don't miss out — sign up before it's too late!", priority: "urgent" })
+  }
+  if (status === "active") {
+    if (phase === "build") {
+      suggestions.push({ title: "Hacking has begun!", body: "The clock is ticking. Start building your project and don't forget to ask mentors for help!", priority: "normal" })
+      suggestions.push({ title: "Halfway through!", body: "You're halfway there. Make sure your project is on track and start thinking about your presentation.", priority: "normal" })
+    }
+    if (phase === "submission_open") {
+      suggestions.push({ title: "Submissions are open", body: "You can now submit your project. Make sure to include a demo link and description.", priority: "normal" })
+      suggestions.push({ title: "Submission deadline approaching", body: "Time is running out! Submit your project before the deadline.", priority: "urgent" })
+    }
+  }
+  if (status === "judging") {
+    suggestions.push({ title: "Judging has started", body: "Our judges are reviewing all submissions. Results will be announced soon!", priority: "normal" })
+    if (phase === "finals") {
+      suggestions.push({ title: "Finals round underway", body: "The finalists have been selected and are presenting to our judges. Stay tuned for results!", priority: "normal" })
+    }
+  }
+  if (status === "completed") {
+    suggestions.push({ title: "Results are in!", body: "Thank you to everyone who participated. Check the results page to see the winners!", priority: "normal" })
+    suggestions.push({ title: "Thank you!", body: "What an incredible event. Thank you to all participants, judges, mentors, and sponsors for making this possible.", priority: "normal" })
+  }
+  return suggestions
+}
+
+function AnnouncementsSubTab({ hackathonId, hackathonStatus, hackathonPhase }: { hackathonId: string; hackathonStatus: HackathonStatus; hackathonPhase: HackathonPhase | null }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<AnnouncementData[]>([])
@@ -629,6 +667,10 @@ function AnnouncementsSubTab({ hackathonId }: { hackathonId: string }) {
   const [priority, setPriority] = useState<"normal" | "urgent">("normal")
   const [saving, setSaving] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+
+  const suggestions = getSuggestedAnnouncements(hackathonStatus, hackathonPhase)
+  const published = items.filter((i) => i.published_at)
+  const drafts = items.filter((i) => !i.published_at)
 
   useEffect(() => {
     let cancelled = false
@@ -657,6 +699,15 @@ function AnnouncementsSubTab({ hackathonId }: { hackathonId: string }) {
     setDialogOpen(true)
   }
 
+  function openFromSuggestion(suggestion: SuggestedAnnouncement) {
+    setEditing(null)
+    setTitle(suggestion.title)
+    setBody(suggestion.body)
+    setPriority(suggestion.priority)
+    setError(null)
+    setDialogOpen(true)
+  }
+
   function openEdit(item: AnnouncementData) {
     setEditing(item)
     setTitle(item.title)
@@ -666,29 +717,41 @@ function AnnouncementsSubTab({ hackathonId }: { hackathonId: string }) {
     setDialogOpen(true)
   }
 
-  async function handleSave() {
+  async function handleSave(publish: boolean) {
     if (!title.trim() || !body.trim()) return
     setSaving(true)
     setError(null)
     try {
-      const url = editing
-        ? `/api/dashboard/hackathons/${hackathonId}/announcements/${editing.id}`
-        : `/api/dashboard/hackathons/${hackathonId}/announcements`
-      const res = await fetch(url, {
-        method: editing ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body, priority }),
-      })
-      if (!res.ok) throw new Error("Failed to save")
-      const saved = await res.json()
       if (editing) {
+        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements/${editing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, body, priority }),
+        })
+        if (!res.ok) throw new Error("Failed to save")
+        const saved = await res.json()
         setItems((prev) => prev.map((i) => (i.id === saved.id ? saved : i)))
       } else {
-        setItems((prev) => [saved, ...prev])
+        const createRes = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, body, priority }),
+        })
+        if (!createRes.ok) throw new Error("Failed to create")
+        const created = await createRes.json()
+
+        if (publish) {
+          const pubRes = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements/${created.id}/publish`, { method: "POST" })
+          if (!pubRes.ok) throw new Error("Created but failed to publish")
+          const published = await pubRes.json()
+          setItems((prev) => [published, ...prev])
+        } else {
+          setItems((prev) => [created, ...prev])
+        }
       }
       setDialogOpen(false)
-    } catch {
-      setError("Failed to save announcement")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save announcement")
     } finally {
       setSaving(false)
     }
@@ -722,12 +785,76 @@ function AnnouncementsSubTab({ hackathonId }: { hackathonId: string }) {
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
       e.preventDefault()
-      handleSave()
+      handleSave(true)
     }
   }
 
   if (loading) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" /></div>
+  }
+
+  function renderAnnouncementCard(item: AnnouncementData) {
+    const isDraft = !item.published_at
+    return (
+      <div key={item.id} className={isDraft ? "rounded-lg border border-dashed p-4" : "rounded-lg border p-4"}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="text-sm font-medium truncate">{item.title}</h4>
+              {item.priority === "urgent" && <Badge variant="destructive">urgent</Badge>}
+            </div>
+            <p className="text-xs text-muted-foreground line-clamp-2">{item.body}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {isDraft ? `Created ${formatDate(item.created_at)}` : `Sent ${formatDate(item.published_at!)}`}
+            </p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {isDraft && (
+              <Button
+                size="sm"
+                variant="default"
+                disabled={togglingId === item.id}
+                onClick={() => handleTogglePublish(item)}
+              >
+                {togglingId === item.id ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                <span className="hidden sm:inline">Publish</span>
+              </Button>
+            )}
+            {!isDraft && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={togglingId === item.id}
+                onClick={() => handleTogglePublish(item)}
+              >
+                {togglingId === item.id ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
+                <span className="hidden sm:inline">Unpublish</span>
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => openEdit(item)}>
+              <Pencil className="size-4" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="ghost">
+                  <Trash2 className="size-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete announcement?</AlertDialogTitle>
+                  <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleDelete(item.id)}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -743,63 +870,49 @@ function AnnouncementsSubTab({ hackathonId }: { hackathonId: string }) {
         </Button>
       </div>
 
+      {suggestions.length > 0 && (
+        <div className="rounded-lg border bg-muted/30 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="size-4 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">Suggested for this stage</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((s, idx) => (
+              <Button key={idx} size="sm" variant="outline" onClick={() => openFromSuggestion(s)}>
+                {s.priority === "urgent" && <span className="text-destructive">!</span>}
+                {s.title}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {error && <p className="text-destructive text-xs">{error}</p>}
 
       {items.length === 0 ? (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">
           <Megaphone className="size-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">No announcements yet</p>
+          <p className="text-xs mt-1">Create one or pick from a suggestion above</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <div key={item.id} className="rounded-lg border p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="text-sm font-medium truncate">{item.title}</h4>
-                    {item.priority === "urgent" && <Badge variant="destructive">urgent</Badge>}
-                    <Badge variant={item.published_at ? "secondary" : "outline"}>
-                      {item.published_at ? "published" : "draft"}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{item.body}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{formatDate(item.created_at)}</p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={togglingId === item.id}
-                    onClick={() => handleTogglePublish(item)}
-                  >
-                    {togglingId === item.id ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
-                    <span className="hidden sm:inline">{item.published_at ? "Unpublish" : "Publish"}</span>
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(item)}>
-                    <Pencil className="size-4" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="sm" variant="ghost">
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete announcement?</AlertDialogTitle>
-                        <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(item.id)}>Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
+        <div className="space-y-4">
+          {drafts.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Drafts</h4>
+              <div className="space-y-3">
+                {drafts.map(renderAnnouncementCard)}
               </div>
             </div>
-          ))}
+          )}
+          {published.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Published</h4>
+              <div className="space-y-3">
+                {published.map(renderAnnouncementCard)}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -809,7 +922,7 @@ function AnnouncementsSubTab({ hackathonId }: { hackathonId: string }) {
             <DialogTitle>{editing ? "Edit Announcement" : "New Announcement"}</DialogTitle>
           </DialogHeader>
           <form
-            onSubmit={(e) => { e.preventDefault(); handleSave() }}
+            onSubmit={(e) => { e.preventDefault(); handleSave(true) }}
             onKeyDown={handleKeyDown}
             autoComplete="off"
             className="space-y-4"
@@ -851,10 +964,23 @@ function AnnouncementsSubTab({ hackathonId }: { hackathonId: string }) {
                 <Button type="button" size="sm" variant={priority === "urgent" ? "destructive" : "outline"} onClick={() => setPriority("urgent")}>Urgent</Button>
               </div>
             </div>
-            <Button type="submit" disabled={saving || !title.trim() || !body.trim()} className="w-full">
-              {saving && <Loader2 className="animate-spin" />}
-              {editing ? "Update" : "Create"}
-            </Button>
+            {editing ? (
+              <Button type="submit" disabled={saving || !title.trim() || !body.trim()} className="w-full">
+                {saving && <Loader2 className="animate-spin" />}
+                Update
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button type="submit" disabled={saving || !title.trim() || !body.trim()} className="flex-1">
+                  {saving && <Loader2 className="animate-spin" />}
+                  <Send className="size-4" />
+                  Publish Now
+                </Button>
+                <Button type="button" variant="outline" disabled={saving || !title.trim() || !body.trim()} onClick={() => handleSave(false)}>
+                  Save Draft
+                </Button>
+              </div>
+            )}
           </form>
         </DialogContent>
       </Dialog>
@@ -1151,7 +1277,7 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
   )
 }
 
-export function EventTabContent({ hackathonId, activeEtab }: EventTabContentProps) {
+export function EventTabContent({ hackathonId, activeEtab, hackathonStatus, hackathonPhase }: EventTabContentProps) {
   const [currentTab, setCurrentTab] = useState(activeEtab)
 
   return (
@@ -1171,7 +1297,7 @@ export function EventTabContent({ hackathonId, activeEtab }: EventTabContentProp
       </TabsContent>
 
       <TabsContent value="announcements" forceMount className="data-[state=inactive]:hidden">
-        <AnnouncementsSubTab hackathonId={hackathonId} />
+        <AnnouncementsSubTab hackathonId={hackathonId} hackathonStatus={hackathonStatus} hackathonPhase={hackathonPhase} />
       </TabsContent>
 
       <TabsContent value="schedule" forceMount className="data-[state=inactive]:hidden">
