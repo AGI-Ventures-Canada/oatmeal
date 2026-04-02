@@ -48,11 +48,11 @@ mock.module("@/lib/services/admin-scenarios", () => ({
 mock.module("@/lib/dev/test-personas", () => ({
   TEST_PERSONAS: [
     { key: "organizer", name: "Organizer", env: "SCENARIO_DEV_USER_ID", fallback: null },
-    { key: "alice", name: "Alice", env: "TEST_USER_ALICE_ID", fallback: null },
+    { key: "user1", name: "Test User 1", env: "TEST_USER_1_ID", fallback: null },
   ],
   getPersonaUserId: (key: string) => {
     if (key === "organizer") return process.env.SCENARIO_DEV_USER_ID ?? null
-    if (key === "alice") return process.env.TEST_USER_ALICE_ID ?? null
+    if (key === "user1") return process.env.TEST_USER_1_ID ?? null
     return null
   },
   findPersonaByUserId: () => undefined,
@@ -565,14 +565,14 @@ describe("Admin API Routes", () => {
         new Request("http://localhost/api/admin/scenario-tokens", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ hackathon_id: "h-1" }),
+          body: JSON.stringify({ hackathon_id: "11111111-1111-1111-1111-111111111111" }),
         })
       )
       const data = await res.json()
 
       expect(res.status).toBe(200)
       expect(data.roles).toHaveLength(1)
-      expect(mockGenerateRoleTokens).toHaveBeenCalledWith("h-1", "test-pre-registration-abc")
+      expect(mockGenerateRoleTokens).toHaveBeenCalledWith("11111111-1111-1111-1111-111111111111", "test-pre-registration-abc")
     })
 
     it("returns 404 when hackathon does not exist", async () => {
@@ -583,7 +583,7 @@ describe("Admin API Routes", () => {
         new Request("http://localhost/api/admin/scenario-tokens", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ hackathon_id: "h-missing" }),
+          body: JSON.stringify({ hackathon_id: "99999999-9999-9999-9999-999999999999" }),
         })
       )
 
@@ -597,7 +597,7 @@ describe("Admin API Routes", () => {
         new Request("http://localhost/api/admin/scenario-tokens", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ hackathon_id: "h-1" }),
+          body: JSON.stringify({ hackathon_id: "11111111-1111-1111-1111-111111111111" }),
         })
       )
 

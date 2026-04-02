@@ -1,10 +1,10 @@
 export const TEST_PERSONAS = [
   { key: "organizer", name: "Organizer", env: "SCENARIO_DEV_USER_ID", fallback: null },
-  { key: "alice", name: "Alice", env: "TEST_USER_ALICE_ID", fallback: null },
-  { key: "bob", name: "Bob", env: "TEST_USER_BOB_ID", fallback: null },
-  { key: "carol", name: "Carol", env: "TEST_USER_CAROL_ID", fallback: null },
-  { key: "dave", name: "Dave", env: "TEST_USER_DAVE_ID", fallback: null },
-  { key: "eve", name: "Eve", env: "TEST_USER_EVE_ID", fallback: null },
+  { key: "user1", name: "Test User 1", env: "TEST_USER_1_ID", fallback: null },
+  { key: "user2", name: "Test User 2", env: "TEST_USER_2_ID", fallback: null },
+  { key: "user3", name: "Test User 3", env: "TEST_USER_3_ID", fallback: null },
+  { key: "user4", name: "Test User 4", env: "TEST_USER_4_ID", fallback: null },
+  { key: "user5", name: "Test User 5", env: "TEST_USER_5_ID", fallback: null },
 ] as const
 
 export type PersonaKey = (typeof TEST_PERSONAS)[number]["key"]

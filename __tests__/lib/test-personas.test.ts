@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test"
 
 const envVars: Record<string, string> = {
   SCENARIO_DEV_USER_ID: "user_organizer",
-  TEST_USER_ALICE_ID: "user_alice",
-  TEST_USER_BOB_ID: "user_bob",
-  TEST_USER_CAROL_ID: "user_carol",
-  TEST_USER_DAVE_ID: "user_dave",
-  TEST_USER_EVE_ID: "user_eve",
+  TEST_USER_1_ID: "user_1",
+  TEST_USER_2_ID: "user_2",
+  TEST_USER_3_ID: "user_3",
+  TEST_USER_4_ID: "user_4",
+  TEST_USER_5_ID: "user_5",
 }
 
 const envKeys = Object.keys(envVars)
@@ -27,13 +27,13 @@ describe("getPersonaUserId", () => {
   it("returns the env var value for a known persona", async () => {
     const { getPersonaUserId } = await import("@/lib/dev/test-personas")
     expect(getPersonaUserId("organizer")).toBe("user_organizer")
-    expect(getPersonaUserId("alice")).toBe("user_alice")
+    expect(getPersonaUserId("user1")).toBe("user_1")
   })
 
   it("returns null when the env var is not set", async () => {
-    delete process.env.TEST_USER_ALICE_ID
+    delete process.env.TEST_USER_1_ID
     const { getPersonaUserId } = await import("@/lib/dev/test-personas")
-    expect(getPersonaUserId("alice")).toBeNull()
+    expect(getPersonaUserId("user1")).toBeNull()
   })
 })
 
@@ -41,22 +41,22 @@ describe("getSeedUserIds", () => {
   it("returns IDs for all non-organizer personas that have env vars set", async () => {
     const { getSeedUserIds } = await import("@/lib/dev/test-personas")
     const ids = getSeedUserIds()
-    expect(ids).toContain("user_alice")
-    expect(ids).toContain("user_bob")
-    expect(ids).toContain("user_carol")
-    expect(ids).toContain("user_dave")
-    expect(ids).toContain("user_eve")
+    expect(ids).toContain("user_1")
+    expect(ids).toContain("user_2")
+    expect(ids).toContain("user_3")
+    expect(ids).toContain("user_4")
+    expect(ids).toContain("user_5")
     expect(ids).not.toContain("user_organizer")
   })
 
   it("omits personas whose env var is not set", async () => {
-    delete process.env.TEST_USER_BOB_ID
-    delete process.env.TEST_USER_EVE_ID
+    delete process.env.TEST_USER_2_ID
+    delete process.env.TEST_USER_5_ID
     const { getSeedUserIds } = await import("@/lib/dev/test-personas")
     const ids = getSeedUserIds()
-    expect(ids).not.toContain("user_bob")
-    expect(ids).not.toContain("user_eve")
-    expect(ids).toContain("user_alice")
+    expect(ids).not.toContain("user_2")
+    expect(ids).not.toContain("user_5")
+    expect(ids).toContain("user_1")
   })
 
   it("returns empty array when no seed env vars are set", async () => {
@@ -71,9 +71,9 @@ describe("getSeedUserIds", () => {
 describe("findPersonaByUserId", () => {
   it("returns the matching persona for a known user ID", async () => {
     const { findPersonaByUserId } = await import("@/lib/dev/test-personas")
-    const persona = findPersonaByUserId("user_alice")
-    expect(persona?.key).toBe("alice")
-    expect(persona?.name).toBe("Alice")
+    const persona = findPersonaByUserId("user_1")
+    expect(persona?.key).toBe("user1")
+    expect(persona?.name).toBe("Test User 1")
   })
 
   it("returns the organizer persona", async () => {
@@ -92,6 +92,6 @@ describe("findPersonaByUserId", () => {
       delete process.env[k]
     }
     const { findPersonaByUserId } = await import("@/lib/dev/test-personas")
-    expect(findPersonaByUserId("user_alice")).toBeUndefined()
+    expect(findPersonaByUserId("user_1")).toBeUndefined()
   })
 })

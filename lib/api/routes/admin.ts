@@ -253,28 +253,44 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       description: "Returns persona keys, display names, and whether each is configured via env vars.",
     },
   })
-  .get("/persona-roles", async ({ principal }) => {
+  .get("/persona-roles", async ({ principal, query }) => {
     requireAdminScopes(principal, ["admin:scenarios"])
-    const activeScenarios = await getActiveScenarios()
     const personaRoles: Record<string, string> = {}
-    if (activeScenarios.length > 0) {
-      const db = supabase()
+    const db = supabase()
+
+    if (query.hackathonId) {
       const { data: participants } = await db
         .from("hackathon_participants")
         .select("clerk_user_id, role")
-        .in("hackathon_id", activeScenarios.map((s) => s.hackathonId))
+        .eq("hackathon_id", query.hackathonId)
       for (const p of participants ?? []) {
         const persona = findPersonaByUserId(p.clerk_user_id)
-        if (persona && !personaRoles[persona.key]) {
-          personaRoles[persona.key] = p.role
+        if (persona) personaRoles[persona.key] = p.role
+      }
+    } else {
+      const activeScenarios = await getActiveScenarios()
+      if (activeScenarios.length > 0) {
+        const { data: participants } = await db
+          .from("hackathon_participants")
+          .select("clerk_user_id, role")
+          .in("hackathon_id", activeScenarios.map((s) => s.hackathonId))
+        for (const p of participants ?? []) {
+          const persona = findPersonaByUserId(p.clerk_user_id)
+          if (persona && !personaRoles[persona.key]) {
+            personaRoles[persona.key] = p.role
+          }
         }
       }
     }
+
     return { roles: personaRoles }
   }, {
+    query: t.Object({
+      hackathonId: t.Optional(t.String()),
+    }),
     detail: {
       summary: "Get persona roles",
-      description: "Returns the current hackathon role for each configured test persona.",
+      description: "Returns the current hackathon role for each configured test persona. Pass hackathonId to scope to a specific event.",
     },
   })
   .post(
@@ -337,7 +353,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     },
     {
       body: t.Object({
-        persona: t.Union([t.Literal("organizer"), t.Literal("alice"), t.Literal("bob"), t.Literal("carol"), t.Literal("dave"), t.Literal("eve")], { description: "Persona key" }),
+        persona: t.Union([t.Literal("organizer"), t.Literal("user1"), t.Literal("user2"), t.Literal("user3"), t.Literal("user4"), t.Literal("user5")], { description: "Persona key" }),
         redirect: t.Optional(t.String({ description: "Path to redirect to after sign-in" })),
       }),
       detail: {

@@ -3,7 +3,7 @@ import { isAdminEnabled } from "@/lib/auth/principal"
 import { TEST_PERSONAS, findPersonaByUserId } from "@/lib/dev/test-personas"
 import { DevToolbarClient } from "./dev-toolbar-client"
 
-export async function DevToolbar() {
+export async function DevToolbar({ hackathonId }: { hackathonId: string }) {
   if (!isAdminEnabled()) return null
 
   const { userId, sessionClaims } = await auth()
@@ -27,6 +27,7 @@ export async function DevToolbar() {
     <DevToolbarClient
       currentPersonaKey={currentPersona?.key ?? null}
       allPersonas={allPersonas}
+      hackathonId={hackathonId}
     />
   )
 }

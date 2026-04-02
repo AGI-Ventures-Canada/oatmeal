@@ -17,8 +17,6 @@ export function listScenarios() {
   return AVAILABLE_SCENARIOS
 }
 
-const DEV_USER_ID = process.env.SCENARIO_DEV_USER_ID ?? "user_38vEFI8UesKwM07qIuFNqEzFavS"
-
 function getSeedUsers(): string[] {
   const real = getSeedUserIds()
   if (real.length > 0) return real
@@ -251,7 +249,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
       startsAt: new Date(now.getTime() - 1 * 86400000),
       endsAt: new Date(now.getTime() + 7 * 86400000),
     })
-    await registerParticipant(hackathonId, DEV_USER_ID)
+    const seedUsers = getSeedUsers()
+    await registerParticipant(hackathonId, seedUsers[0])
     return { hackathonId, slug, tenantId }
   },
 
@@ -268,7 +267,7 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
       endsAt: new Date(now.getTime() + 5 * 86400000),
     })
     const seedUsers = getSeedUsers()
-    await createTeamWithMembers(hackathonId, DEV_USER_ID, [seedUsers[0], seedUsers[1]])
+    await createTeamWithMembers(hackathonId, seedUsers[0], [seedUsers[1], seedUsers[2]])
     return { hackathonId, slug, tenantId }
   },
 
@@ -285,8 +284,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
       endsAt: new Date(now.getTime() + 2 * 86400000),
     })
     const seedUsers = getSeedUsers()
-    const teamId = await createTeamWithMembers(hackathonId, DEV_USER_ID, [seedUsers[0]])
-    const pid = await registerParticipant(hackathonId, DEV_USER_ID)
+    const teamId = await createTeamWithMembers(hackathonId, seedUsers[0], [seedUsers[1]])
+    const pid = await registerParticipant(hackathonId, seedUsers[0])
     await createSubmission(hackathonId, teamId, pid, 0)
     return { hackathonId, slug, tenantId }
   },
@@ -306,17 +305,16 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
     })
 
     const seedUsers = getSeedUsers()
-    const allUsers = [DEV_USER_ID, ...seedUsers]
     const submissions: string[] = []
 
     for (let i = 0; i < 5; i++) {
-      const teamId = await createTeamWithMembers(hackathonId, allUsers[i], [])
-      const pid = await registerParticipant(hackathonId, allUsers[i])
+      const teamId = await createTeamWithMembers(hackathonId, seedUsers[i], [])
+      const pid = await registerParticipant(hackathonId, seedUsers[i])
       const subId = await createSubmission(hackathonId, teamId, pid, i)
       submissions.push(subId)
     }
 
-    const judgeUsers = [DEV_USER_ID, seedUsers[0], seedUsers[1]]
+    const judgeUsers = [seedUsers[0], seedUsers[1], seedUsers[2]]
     const judgeParticipantIds: string[] = []
     const judgeTeamIds: Record<string, string> = {}
 
