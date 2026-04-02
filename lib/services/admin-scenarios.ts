@@ -535,31 +535,25 @@ export async function generateRoleTokens(hackathonId: string, slug: string): Pro
   const { clerkClient } = await import("@clerk/nextjs/server")
   const clerk = await clerkClient()
 
-  const cards: RoleCard[] = []
-
-  for (const p of participants) {
-    if (p.clerk_user_id === organizerUserId) continue
-
+  const eligible = participants.flatMap((p) => {
+    if (p.clerk_user_id === organizerUserId) return []
     const persona = findPersonaByUserId(p.clerk_user_id)
-    if (!persona) continue
+    if (!persona) return []
+    return [{ p, persona }]
+  })
 
-    const token = await clerk.signInTokens.createSignInToken({
-      userId: p.clerk_user_id,
-      expiresInSeconds: 3600,
+  const cards: RoleCard[] = await Promise.all(
+    eligible.map(async ({ p, persona }) => {
+      const token = await clerk.signInTokens.createSignInToken({
+        userId: p.clerk_user_id,
+        expiresInSeconds: 3600,
+      })
+      const directUrl = p.role === "judge" ? `/e/${slug}/judge` : `/e/${slug}`
+      // Token is in the URL (visible in logs/history). Acceptable for the 1h dev-only expiry — do not increase without reconsideration.
+      const loginUrl = `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(directUrl)}`
+      return { personaKey: persona.key, name: persona.name, role: p.role, loginUrl, directUrl }
     })
-
-    const directUrl = p.role === "judge" ? `/e/${slug}/judge` : `/e/${slug}`
-    // Token is in the URL (visible in logs/history). Acceptable for the 1h dev-only expiry — do not increase without reconsideration.
-    const loginUrl = `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(directUrl)}`
-
-    cards.push({
-      personaKey: persona.key,
-      name: persona.name,
-      role: p.role,
-      loginUrl,
-      directUrl,
-    })
-  }
+  )
 
   if (organizerUserId) {
     const persona = findPersonaByUserId(organizerUserId)
