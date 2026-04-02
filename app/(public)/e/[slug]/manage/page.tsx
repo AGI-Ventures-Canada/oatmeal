@@ -7,7 +7,7 @@ import { listPrizes } from "@/lib/services/prizes"
 import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
 import { getManageOverviewStats } from "@/lib/services/manage-overview"
 import { getOrganizerActionItems } from "@/lib/utils/organizer-actions"
-import { VALID_TABS, VALID_JTABS, VALID_PTABS, VALID_ETABS, getDefaultTab, resolveTab } from "@/lib/utils/manage-tabs"
+import { VALID_TABS, VALID_JTABS, VALID_PTABS, VALID_ETABS, resolveTab } from "@/lib/utils/manage-tabs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
@@ -86,7 +86,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     registrationClosesAt: hackathon.registration_closes_at,
   })
 
-  const activeTab = resolveTab(tab, VALID_TABS, getDefaultTab(hackathon.status))
+  const activeTab = resolveTab(tab, VALID_TABS, "overview")
   const activeJtab = resolveTab(jtab, VALID_JTABS, "criteria")
   const activePtab = resolveTab(ptab, VALID_PTABS, "prizes")
   const activeEtab = resolveTab(etab, VALID_ETABS, "challenge")
@@ -105,42 +105,6 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
           endsAt={hackathon.ends_at}
         />
       )}
-      <div className="space-y-3">
-        <LifecycleStepper
-          hackathonId={hackathon.id}
-          hackathonSlug={hackathon.slug}
-          status={hackathon.status}
-          submissionCount={submissionCount}
-          judgingProgress={judgingProgress}
-          judgingSetupStatus={judgingSetupStatus}
-          startsAt={hackathon.starts_at}
-          endsAt={hackathon.ends_at}
-          registrationOpensAt={hackathon.registration_opens_at}
-          registrationClosesAt={hackathon.registration_closes_at}
-          description={hackathon.description}
-          bannerUrl={hackathon.banner_url}
-          locationType={hackathon.location_type}
-          locationName={hackathon.location_name}
-          locationUrl={hackathon.location_url}
-          sponsorCount={hackathon.sponsors.length}
-          prizeCount={prizes.length}
-          judgeDisplayCount={judgeDisplayCount}
-          criteriaCount={criteria.length}
-          phase={hackathon.phase}
-        />
-
-        <OrganizerOverview
-          slug={hackathon.slug}
-          stats={{
-            participantCount: overviewStats.participantCount,
-            teamCount: overviewStats.teamCount,
-            submissionCount,
-            judgingProgress,
-            mentorQueue: overviewStats.mentorQueue,
-          }}
-          actionItems={actionItems}
-        />
-      </div>
 
       <TabsUrlSync paramKey="tab" value={activeTab} className="space-y-6">
         <div className="flex items-center justify-end gap-4">
@@ -154,6 +118,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
             </div>
             <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
               <TabsList variant="line">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="edit">Edit</TabsTrigger>
                 <TabsTrigger value="teams">Teams</TabsTrigger>
                 <TabsTrigger value="rooms">Rooms</TabsTrigger>
@@ -164,6 +129,44 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
             </div>
           </div>
         </div>
+
+        <TabsContent value="overview" forceMount className="data-[state=inactive]:hidden">
+          <div className="space-y-4">
+            <LifecycleStepper
+              hackathonId={hackathon.id}
+              hackathonSlug={hackathon.slug}
+              status={hackathon.status}
+              submissionCount={submissionCount}
+              judgingProgress={judgingProgress}
+              judgingSetupStatus={judgingSetupStatus}
+              startsAt={hackathon.starts_at}
+              endsAt={hackathon.ends_at}
+              registrationOpensAt={hackathon.registration_opens_at}
+              registrationClosesAt={hackathon.registration_closes_at}
+              description={hackathon.description}
+              bannerUrl={hackathon.banner_url}
+              locationType={hackathon.location_type}
+              locationName={hackathon.location_name}
+              locationUrl={hackathon.location_url}
+              sponsorCount={hackathon.sponsors.length}
+              prizeCount={prizes.length}
+              judgeDisplayCount={judgeDisplayCount}
+              criteriaCount={criteria.length}
+              phase={hackathon.phase}
+            />
+            <OrganizerOverview
+              slug={hackathon.slug}
+              stats={{
+                participantCount: overviewStats.participantCount,
+                teamCount: overviewStats.teamCount,
+                submissionCount,
+                judgingProgress,
+                mentorQueue: overviewStats.mentorQueue,
+              }}
+              actionItems={actionItems}
+            />
+          </div>
+        </TabsContent>
 
         <TabsContent value="edit" forceMount className="data-[state=inactive]:hidden">
           <div className="rounded-lg border overflow-hidden">
