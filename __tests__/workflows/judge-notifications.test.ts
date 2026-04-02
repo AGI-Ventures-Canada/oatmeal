@@ -171,7 +171,7 @@ describe("sendJudgeNotificationsWorkflow", () => {
     expect(mockSendJudgeAddedNotification).toHaveBeenCalledTimes(3)
   })
 
-  it("continues sending after a failure and reports correct count", async () => {
+  it("sends remaining notifications after a failure, then throws for workflow retry", async () => {
     const notifications = [
       { ...baseNotification, id: "n1" },
       { ...baseNotification, id: "n2" },
@@ -183,13 +183,13 @@ describe("sendJudgeNotificationsWorkflow", () => {
       .mockResolvedValueOnce({ success: false })
       .mockResolvedValueOnce({ success: true })
 
-    const result = await sendJudgeNotificationsWorkflow({
-      hackathonId: "h1",
-      hackathonName: "Test",
-      hackathonSlug: "test",
-    })
-
-    expect(result.sent).toBe(2)
+    await expect(
+      sendJudgeNotificationsWorkflow({
+        hackathonId: "h1",
+        hackathonName: "Test",
+        hackathonSlug: "test",
+      })
+    ).rejects.toThrow("Only sent 2/3 judge notifications")
     expect(mockSendJudgeAddedNotification).toHaveBeenCalledTimes(3)
   })
 

@@ -29,5 +29,9 @@ export async function sendJudgeNotificationsWorkflow(
     }
   }
 
+  if (sent < notifications.length) {
+    throw new Error(`Only sent ${sent}/${notifications.length} judge notifications — workflow will retry unsent rows`)
+  }
+
   return { sent }
 }
