@@ -44,9 +44,9 @@ function buildActionHref(slug: string, item: ActionItem): string | null {
   return `/e/${slug}/manage?${params.toString()}`
 }
 
-function StatCard({ icon: Icon, value, label }: { icon: typeof Users; value: string; label: string }) {
-  return (
-    <div className="rounded-lg border p-4">
+function StatCard({ icon: Icon, value, label, href }: { icon: typeof Users; value: string; label: string; href?: string }) {
+  const inner = (
+    <div className={cn("rounded-lg border p-4", href && "transition-colors hover:bg-muted/50")}>
       <div className="flex items-center gap-2 text-muted-foreground mb-1">
         <Icon className="size-4" />
         <span className="text-sm">{label}</span>
@@ -54,6 +54,8 @@ function StatCard({ icon: Icon, value, label }: { icon: typeof Users; value: str
       <p className="text-3xl font-semibold tabular-nums tracking-tight">{value}</p>
     </div>
   )
+  if (href) return <Link href={href}>{inner}</Link>
+  return inner
 }
 
 export function OrganizerOverview({ slug, stats, actionItems, announcements, scheduleItems }: Props) {
@@ -66,10 +68,10 @@ export function OrganizerOverview({ slug, stats, actionItems, announcements, sch
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard icon={Users} value={String(stats.participantCount)} label="Registered" />
-        <StatCard icon={UsersRound} value={String(stats.teamCount)} label="Teams" />
-        <StatCard icon={FolderOpen} value={String(stats.submissionCount)} label="Submissions" />
-        <StatCard icon={Scale} value={judgingValue} label="Judged" />
+        <StatCard icon={Users} value={String(stats.participantCount)} label="Registered" href={`/e/${slug}/manage?tab=teams`} />
+        <StatCard icon={UsersRound} value={String(stats.teamCount)} label="Teams" href={`/e/${slug}/manage?tab=teams`} />
+        <StatCard icon={FolderOpen} value={String(stats.submissionCount)} label="Submissions" href={`/e/${slug}/manage?tab=judges`} />
+        <StatCard icon={Scale} value={judgingValue} label="Judged" href={`/e/${slug}/manage?tab=judges&jtab=progress`} />
       </div>
 
       {stats.mentorQueue.open > 0 && (

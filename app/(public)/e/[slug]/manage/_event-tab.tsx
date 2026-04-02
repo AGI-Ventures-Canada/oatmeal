@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsUrlSync } from "./_tabs-url-sync"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -40,9 +41,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Calendar, MapPin, Clock, Zap } from "lucide-react"
+import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Calendar, MapPin, Clock, Zap, FileText, MessageCircle, Share2, Mail } from "lucide-react"
 import type { HackathonStatus, HackathonPhase } from "@/lib/db/hackathon-types"
-import { VALID_ETABS } from "@/lib/utils/manage-tabs"
 
 type ChallengeData = {
   title: string | null
@@ -296,7 +296,8 @@ function MentorsSubTab({ hackathonId }: { hackathonId: string }) {
   if (requests.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center text-muted-foreground">
-        No mentor requests yet
+        <MessageCircle className="size-8 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">No mentor requests yet</p>
       </div>
     )
   }
@@ -396,7 +397,8 @@ function SocialSubTab({ hackathonId }: { hackathonId: string }) {
   if (submissions.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center text-muted-foreground">
-        No social submissions yet
+        <Share2 className="size-8 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">No social submissions yet</p>
       </div>
     )
   }
@@ -486,6 +488,7 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
     mentor: false,
   })
   const [sending, setSending] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<EmailResult | null>(null)
 
@@ -493,12 +496,16 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
     .filter(([, checked]) => checked)
     .map(([role]) => role)
 
-  async function handleSend(e?: React.FormEvent) {
-    if (e) e.preventDefault()
+  const recipientLabel = selectedRoles.length > 0
+    ? selectedRoles.map((r) => `${r}s`).join(", ")
+    : "all participants"
+
+  async function handleSend() {
     if (!subject.trim() || !html.trim()) return
     setSending(true)
     setError(null)
     setResult(null)
+    setConfirmOpen(false)
     try {
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/email-blast`, {
         method: "POST",
@@ -515,6 +522,9 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
       }
       const data: EmailResult = await res.json()
       setResult(data)
+      setSubject("")
+      setHtml("")
+      setRoles({ participant: false, judge: false, mentor: false })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send emails")
     } finally {
@@ -523,9 +533,9 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !sending) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !sending && subject.trim() && html.trim()) {
       e.preventDefault()
-      handleSend()
+      setConfirmOpen(true)
     }
   }
 
@@ -541,7 +551,7 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
       </CardHeader>
       <CardContent>
         <form
-          onSubmit={handleSend}
+          onSubmit={(e) => { e.preventDefault(); setConfirmOpen(true) }}
           onKeyDown={handleKeyDown}
           autoComplete="off"
           className="space-y-4"
@@ -577,7 +587,7 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
             />
           </div>
           <div className="space-y-2">
-            <Label>Filter by role (optional)</Label>
+            <Label>Send to</Label>
             <div className="flex flex-wrap gap-4">
               {(["participant", "judge", "mentor"] as const).map((role) => (
                 <div key={role} className="flex items-center gap-2">
@@ -592,6 +602,9 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
                 </div>
               ))}
             </div>
+            {selectedRoles.length === 0 && (
+              <p className="text-xs text-muted-foreground">No filter selected — sends to everyone</p>
+            )}
           </div>
           {error && <p className="text-destructive text-xs">{error}</p>}
           {result && (
@@ -607,6 +620,21 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
             Send
           </Button>
         </form>
+
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Send email to {recipientLabel}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Subject: &quot;{subject}&quot;. This will send immediately and cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleSend}>Send Now</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   )
@@ -1240,6 +1268,10 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
                   type="datetime-local"
                   value={startsAt}
                   onChange={(e) => setStartsAt(e.target.value)}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
                 />
               </div>
               <div className="space-y-2">
@@ -1249,6 +1281,10 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
                   type="datetime-local"
                   value={endsAt}
                   onChange={(e) => setEndsAt(e.target.value)}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
                 />
               </div>
             </div>
@@ -1278,17 +1314,16 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
 }
 
 export function EventTabContent({ hackathonId, activeEtab, hackathonStatus, hackathonPhase }: EventTabContentProps) {
-  const [currentTab, setCurrentTab] = useState(activeEtab)
-
   return (
-    <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
+    <TabsUrlSync paramKey="etab" value={activeEtab} className="space-y-6">
       <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
         <TabsList>
-          {VALID_ETABS.map((tab) => (
-            <TabsTrigger key={tab} value={tab} className="capitalize">
-              {tab}
-            </TabsTrigger>
-          ))}
+          <TabsTrigger value="challenge"><FileText className="size-4" /><span className="hidden sm:inline">Challenge</span></TabsTrigger>
+          <TabsTrigger value="announcements"><Megaphone className="size-4" /><span className="hidden sm:inline">Announcements</span></TabsTrigger>
+          <TabsTrigger value="schedule"><Calendar className="size-4" /><span className="hidden sm:inline">Schedule</span></TabsTrigger>
+          <TabsTrigger value="mentors"><MessageCircle className="size-4" /><span className="hidden sm:inline">Mentors</span></TabsTrigger>
+          <TabsTrigger value="social"><Share2 className="size-4" /><span className="hidden sm:inline">Social</span></TabsTrigger>
+          <TabsTrigger value="email"><Mail className="size-4" /><span className="hidden sm:inline">Email</span></TabsTrigger>
         </TabsList>
       </div>
 
@@ -1315,6 +1350,6 @@ export function EventTabContent({ hackathonId, activeEtab, hackathonStatus, hack
       <TabsContent value="email" forceMount className="data-[state=inactive]:hidden">
         <EmailSubTab hackathonId={hackathonId} />
       </TabsContent>
-    </Tabs>
+    </TabsUrlSync>
   )
 }

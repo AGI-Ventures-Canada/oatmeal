@@ -118,12 +118,12 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
           <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
             <TabsList variant="line">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="edit">Edit</TabsTrigger>
+              <TabsTrigger value="edit">Event Page</TabsTrigger>
               <TabsTrigger value="teams">Teams</TabsTrigger>
               <TabsTrigger value="rooms">Rooms</TabsTrigger>
               <TabsTrigger value="judges">Judges</TabsTrigger>
               <TabsTrigger value="prizes">Prizes</TabsTrigger>
-              <TabsTrigger value="event">Event</TabsTrigger>
+              <TabsTrigger value="event">Engage</TabsTrigger>
             </TabsList>
           </div>
           <div className="flex items-center gap-2 shrink-0">
