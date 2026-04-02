@@ -206,7 +206,7 @@ describe("admin commands", () => {
   })
 
   describe("scenarios run", () => {
-    it("POSTs to /api/admin/scenarios/:name", async () => {
+    it("POSTs to /api/admin/scenario-run/:name", async () => {
       const result = { hackathonId: "h1", tenantId: "t1", scenario: "judging" }
       mockFetch.mockResolvedValueOnce(jsonResponse(result))
 
@@ -215,7 +215,7 @@ describe("admin commands", () => {
       await runAdminScenariosRun(client, "judging", [], { json: false })
 
       const url = mockFetch.mock.calls[0][0] as string
-      expect(url).toContain("/api/admin/scenarios/judging")
+      expect(url).toContain("/api/admin/scenario-run/judging")
       const init = mockFetch.mock.calls[0][1] as RequestInit
       expect(init.method).toBe("POST")
     })

@@ -27,7 +27,7 @@ export async function runAdminScenariosRun(
   }
 
   const body = tenantId ? { tenant_id: tenantId } : {}
-  const result = await client.post<ScenarioResult>(`/api/admin/scenarios/${name}`, body)
+  const result = await client.post<ScenarioResult>(`/api/admin/scenario-run/${name}`, body)
 
   if (options.json) {
     console.log(formatJson(result))
