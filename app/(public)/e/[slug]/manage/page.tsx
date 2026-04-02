@@ -7,7 +7,7 @@ import { listPrizes } from "@/lib/services/prizes"
 import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
 import { getManageOverviewStats } from "@/lib/services/manage-overview"
 import { getOrganizerActionItems } from "@/lib/utils/organizer-actions"
-import { VALID_TABS, VALID_JTABS, VALID_PTABS, VALID_ETABS, resolveTab } from "@/lib/utils/manage-tabs"
+import { VALID_TABS, VALID_JTABS, VALID_PTABS, VALID_ETABS, getDefaultTab, resolveTab } from "@/lib/utils/manage-tabs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
@@ -86,7 +86,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     registrationClosesAt: hackathon.registration_closes_at,
   })
 
-  const activeTab = resolveTab(tab, VALID_TABS, "overview")
+  const activeTab = resolveTab(tab, VALID_TABS, getDefaultTab(hackathon.status))
   const activeJtab = resolveTab(jtab, VALID_JTABS, "criteria")
   const activePtab = resolveTab(ptab, VALID_PTABS, "prizes")
   const activeEtab = resolveTab(etab, VALID_ETABS, "challenge")
