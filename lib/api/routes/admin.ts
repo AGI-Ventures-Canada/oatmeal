@@ -327,7 +327,6 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         expiresInSeconds: 300,
       })
 
-      // Token is in the URL (visible in logs/history). Acceptable for the 300s dev-only expiry — do not increase without reconsideration.
       return {
         loginUrl: `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(safeRedirectUrl(body.redirect))}`,
       }

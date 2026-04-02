@@ -546,10 +546,9 @@ export async function generateRoleTokens(hackathonId: string, slug: string): Pro
     eligible.map(async ({ p, persona }) => {
       const token = await clerk.signInTokens.createSignInToken({
         userId: p.clerk_user_id,
-        expiresInSeconds: 3600,
+        expiresInSeconds: 300,
       })
       const directUrl = p.role === "judge" ? `/e/${slug}/judge` : `/e/${slug}`
-      // Token is in the URL (visible in logs/history). Acceptable for the 1h dev-only expiry — do not increase without reconsideration.
       const loginUrl = `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(directUrl)}`
       return { personaKey: persona.key, name: persona.name, role: p.role, loginUrl, directUrl }
     })
@@ -560,7 +559,7 @@ export async function generateRoleTokens(hackathonId: string, slug: string): Pro
     if (persona) {
       const token = await clerk.signInTokens.createSignInToken({
         userId: organizerUserId,
-        expiresInSeconds: 3600,
+        expiresInSeconds: 300,
       })
       const directUrl = `/e/${slug}/manage`
       cards.push({
