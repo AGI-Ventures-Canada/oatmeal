@@ -5,7 +5,7 @@ import { isValidUuid } from "@/lib/utils/uuid"
 import { setPhase } from "@/lib/services/phases"
 import { listRooms, createRoom, updateRoom, deleteRoom, addTeamToRoom, removeTeamFromRoom, togglePresented, setRoomTimer, clearRoomTimer, pauseRoomTimer, resumeRoomTimer } from "@/lib/services/rooms"
 import { listCategories, createCategory, updateCategory, deleteCategory } from "@/lib/services/categories"
-import { listAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement, publishAnnouncement, unpublishAnnouncement } from "@/lib/services/announcements"
+import { listAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement, publishAnnouncement, unpublishAnnouncement, scheduleAnnouncement, type CreateAnnouncementInput, type UpdateAnnouncementInput } from "@/lib/services/announcements"
 import { listScheduleItems, createScheduleItem, updateScheduleItem, deleteScheduleItem } from "@/lib/services/schedule-items"
 import { listTeamsWithMembers, createTeamWithMembers, modifyTeamMembers, bulkAssignTeams } from "@/lib/services/hackathons"
 import { listRounds, createRound, updateRound, deleteRound, activateRound } from "@/lib/services/judging-rounds"
@@ -393,11 +393,16 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
-    const announcement = await createAnnouncement(params.id, body as { title: string; body: string; priority?: "normal" | "urgent" })
+    const announcement = await createAnnouncement(params.id, body as CreateAnnouncementInput)
     if (!announcement) { set.status = 400; return { error: "Failed to create announcement" } }
     return announcement
   }, {
-    body: t.Object({ title: t.String(), body: t.String(), priority: t.Optional(t.Union([t.Literal("normal"), t.Literal("urgent")])) }),
+    body: t.Object({
+      title: t.String(),
+      body: t.String(),
+      priority: t.Optional(t.Union([t.Literal("normal"), t.Literal("urgent")])),
+      audience: t.Optional(t.Union([t.Literal("everyone"), t.Literal("organizers"), t.Literal("judges"), t.Literal("mentors"), t.Literal("attendees"), t.Literal("submitted"), t.Literal("not_submitted")])),
+    }),
     detail: { summary: "Create announcement" },
   })
   .patch("/hackathons/:id/announcements/:announcementId", async ({ params, body, principal, set }) => {
@@ -405,11 +410,16 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     if (!isValidUuid(params.announcementId)) { set.status = 400; return { error: "Invalid announcement ID" } }
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
-    const announcement = await updateAnnouncement(params.announcementId, params.id, body as { title?: string; body?: string; priority?: "normal" | "urgent" })
+    const announcement = await updateAnnouncement(params.announcementId, params.id, body as UpdateAnnouncementInput)
     if (!announcement) { set.status = 400; return { error: "Failed to update announcement" } }
     return announcement
   }, {
-    body: t.Object({ title: t.Optional(t.String()), body: t.Optional(t.String()), priority: t.Optional(t.Union([t.Literal("normal"), t.Literal("urgent")])) }),
+    body: t.Object({
+      title: t.Optional(t.String()),
+      body: t.Optional(t.String()),
+      priority: t.Optional(t.Union([t.Literal("normal"), t.Literal("urgent")])),
+      audience: t.Optional(t.Union([t.Literal("everyone"), t.Literal("organizers"), t.Literal("judges"), t.Literal("mentors"), t.Literal("attendees"), t.Literal("submitted"), t.Literal("not_submitted")])),
+    }),
     detail: { summary: "Update announcement" },
   })
   .delete("/hackathons/:id/announcements/:announcementId", async ({ params, principal, set }) => {
@@ -430,6 +440,19 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     if (!announcement) { set.status = 400; return { error: "Failed to publish announcement" } }
     return announcement
   }, { detail: { summary: "Publish announcement" } })
+  .post("/hackathons/:id/announcements/:announcementId/schedule", async ({ params, body, principal, set }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    if (!isValidUuid(params.announcementId)) { set.status = 400; return { error: "Invalid announcement ID" } }
+    const authErr = await checkOrganizer(params.id, principal.tenantId, set)
+    if (authErr) return authErr
+    const { scheduledAt } = body as { scheduledAt: string }
+    const announcement = await scheduleAnnouncement(params.announcementId, params.id, scheduledAt)
+    if (!announcement) { set.status = 400; return { error: "Failed to schedule announcement" } }
+    return announcement
+  }, {
+    body: t.Object({ scheduledAt: t.String() }),
+    detail: { summary: "Schedule announcement for future publishing" },
+  })
   .post("/hackathons/:id/announcements/:announcementId/unpublish", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
     if (!isValidUuid(params.announcementId)) { set.status = 400; return { error: "Invalid announcement ID" } }

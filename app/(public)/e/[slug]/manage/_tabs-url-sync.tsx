@@ -1,11 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useTransition } from "react"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Tabs } from "@/components/ui/tabs"
 
 export function TabsUrlSync({
   paramKey,
-  value: initialValue,
+  value: serverValue,
   className,
   children,
 }: {
@@ -14,24 +15,31 @@ export function TabsUrlSync({
   className?: string
   children: React.ReactNode
 }) {
-  const [value, setValue] = useState(initialValue)
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [optimistic, setOptimistic] = useState(serverValue)
+  const [, startTransition] = useTransition()
 
+  const urlValue = searchParams.get(paramKey) ?? serverValue
   useEffect(() => {
-    setValue(initialValue)
-  }, [initialValue])
+    setOptimistic(urlValue)
+  }, [urlValue])
 
   const handleChange = useCallback(
     (next: string) => {
-      setValue(next)
-      const params = new URLSearchParams(window.location.search)
-      params.set(paramKey, next)
-      window.history.replaceState(null, "", `?${params.toString()}`)
+      setOptimistic(next)
+      startTransition(() => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set(paramKey, next)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      })
     },
-    [paramKey],
+    [paramKey, searchParams, router, pathname, startTransition],
   )
 
   return (
-    <Tabs value={value} onValueChange={handleChange} className={className}>
+    <Tabs value={optimistic} onValueChange={handleChange} className={className}>
       {children}
     </Tabs>
   )

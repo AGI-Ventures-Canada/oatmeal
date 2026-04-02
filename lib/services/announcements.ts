@@ -1,12 +1,16 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
+export const ANNOUNCEMENT_AUDIENCES = ["everyone", "organizers", "judges", "mentors", "attendees", "submitted", "not_submitted"] as const
+export type AnnouncementAudience = (typeof ANNOUNCEMENT_AUDIENCES)[number]
+
 export type Announcement = {
   id: string
   hackathon_id: string
   title: string
   body: string
   priority: "normal" | "urgent"
+  audience: AnnouncementAudience
   published_at: string | null
   created_at: string
   updated_at: string
@@ -16,12 +20,14 @@ export type CreateAnnouncementInput = {
   title: string
   body: string
   priority?: "normal" | "urgent"
+  audience?: AnnouncementAudience
 }
 
 export type UpdateAnnouncementInput = {
   title?: string
   body?: string
   priority?: "normal" | "urgent"
+  audience?: AnnouncementAudience
 }
 
 export async function listAnnouncements(hackathonId: string): Promise<Announcement[]> {
@@ -64,6 +70,7 @@ export async function createAnnouncement(hackathonId: string, input: CreateAnnou
       title: input.title,
       body: input.body,
       priority: input.priority ?? "normal",
+      audience: input.audience ?? "everyone",
     })
     .select()
     .single()
@@ -82,6 +89,7 @@ export async function updateAnnouncement(announcementId: string, hackathonId: st
   if (input.title !== undefined) updates.title = input.title
   if (input.body !== undefined) updates.body = input.body
   if (input.priority !== undefined) updates.priority = input.priority
+  if (input.audience !== undefined) updates.audience = input.audience
 
   const { data, error } = await client
     .from("hackathon_announcements")
@@ -125,6 +133,23 @@ export async function publishAnnouncement(announcementId: string, hackathonId: s
 
   if (error) {
     console.error("Failed to publish announcement:", error)
+    return null
+  }
+  return data as Announcement
+}
+
+export async function scheduleAnnouncement(announcementId: string, hackathonId: string, scheduledAt: string): Promise<Announcement | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("hackathon_announcements")
+    .update({ published_at: scheduledAt, updated_at: new Date().toISOString() })
+    .eq("id", announcementId)
+    .eq("hackathon_id", hackathonId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error("Failed to schedule announcement:", error)
     return null
   }
   return data as Announcement

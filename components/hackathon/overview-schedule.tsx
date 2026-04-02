@@ -35,6 +35,44 @@ function isCurrent(item: ScheduleItem, now: string): boolean {
   return item.starts_at <= now && item.ends_at > now
 }
 
+function roundUpTo15Min(date: Date): Date {
+  const d = new Date(date)
+  const remainder = d.getMinutes() % 15
+  if (remainder > 0) d.setMinutes(d.getMinutes() + (15 - remainder))
+  d.setSeconds(0, 0)
+  return d
+}
+
+function toLocalDatetime(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  const h = String(date.getHours()).padStart(2, "0")
+  const min = String(date.getMinutes()).padStart(2, "0")
+  return `${y}-${m}-${d}T${h}:${min}`
+}
+
+function computeDefaults(items: ScheduleItem[]): { startsAt: string; endsAt: string } {
+  let start: Date
+  if (items.length > 0) {
+    const sorted = [...items].sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+    const last = sorted[sorted.length - 1]
+    start = last.ends_at ? new Date(last.ends_at) : new Date(new Date(last.starts_at).getTime() + 30 * 60_000)
+    if (start < new Date()) start = roundUpTo15Min(new Date())
+  } else {
+    start = roundUpTo15Min(new Date())
+  }
+  const end = new Date(start.getTime() + 30 * 60_000)
+  return { startsAt: toLocalDatetime(start), endsAt: toLocalDatetime(end) }
+}
+
+const DURATION_PRESETS = [
+  { label: "15m", minutes: 15 },
+  { label: "30m", minutes: 30 },
+  { label: "1h", minutes: 60 },
+  { label: "2h", minutes: 120 },
+] as const
+
 export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
   const router = useRouter()
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -43,11 +81,19 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
   const [startsAt, setStartsAt] = useState("")
   const [endsAt, setEndsAt] = useState("")
   const [location, setLocation] = useState("")
+  const [activeDuration, setActiveDuration] = useState<number | null>(30)
   const [saving, setSaving] = useState(false)
 
   const now = new Date().toISOString()
   const upcoming = scheduleItems.filter((s) => s.starts_at > now || (s.ends_at && s.ends_at > now)).slice(0, 6)
   const display = upcoming.length > 0 ? upcoming : scheduleItems.slice(0, 6)
+
+  function prefillDefaults() {
+    const defaults = computeDefaults(scheduleItems)
+    setStartsAt(defaults.startsAt)
+    setEndsAt(defaults.endsAt)
+    setActiveDuration(30)
+  }
 
   function resetForm() {
     setTitle("")
@@ -55,6 +101,14 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
     setStartsAt("")
     setEndsAt("")
     setLocation("")
+    setActiveDuration(30)
+  }
+
+  function applyDuration(minutes: number) {
+    if (!startsAt) return
+    const end = new Date(new Date(startsAt).getTime() + minutes * 60_000)
+    setEndsAt(toLocalDatetime(end))
+    setActiveDuration(minutes)
   }
 
   async function handleAdd() {
@@ -103,7 +157,7 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
       {display.length === 0 ? (
         <div className="text-center py-6">
           <p className="text-sm text-muted-foreground mb-2">No schedule items</p>
-          <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+          <Button variant="outline" size="sm" onClick={() => { prefillDefaults(); setDialogOpen(true) }}>
             <Plus className="size-4 mr-1" />
             Add item
           </Button>
@@ -141,6 +195,15 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
               </div>
             )
           })}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full mt-1 text-muted-foreground"
+            onClick={() => { prefillDefaults(); setDialogOpen(true) }}
+          >
+            <Plus className="size-3 mr-1" />
+            Add item
+          </Button>
         </div>
       )}
 
@@ -172,31 +235,65 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
                 rows={2}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Starts at</Label>
-                <Input
-                  type="datetime-local"
-                  value={startsAt}
-                  onChange={(e) => setStartsAt(e.target.value)}
-                  autoComplete="off"
-                  data-1p-ignore
-                  data-lpignore="true"
-                  data-form-type="other"
-                />
+            <div>
+              <Label>Starts at</Label>
+              <Input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => {
+                  setStartsAt(e.target.value)
+                  if (activeDuration && e.target.value) {
+                    const end = new Date(new Date(e.target.value).getTime() + activeDuration * 60_000)
+                    setEndsAt(toLocalDatetime(end))
+                  }
+                }}
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div>
+              <Label>Duration</Label>
+              <div className="flex gap-1">
+                {DURATION_PRESETS.map((p) => (
+                  <Button
+                    key={p.minutes}
+                    type="button"
+                    variant={activeDuration === p.minutes ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => applyDuration(p.minutes)}
+                    disabled={!startsAt}
+                  >
+                    {p.label}
+                  </Button>
+                ))}
+                <Button
+                  type="button"
+                  variant={activeDuration === null ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setActiveDuration(null)}
+                >
+                  Custom
+                </Button>
               </div>
-              <div>
-                <Label>Ends at (optional)</Label>
+              {activeDuration === null && (
                 <Input
                   type="datetime-local"
                   value={endsAt}
                   onChange={(e) => setEndsAt(e.target.value)}
+                  className="mt-2"
                   autoComplete="off"
                   data-1p-ignore
                   data-lpignore="true"
                   data-form-type="other"
                 />
-              </div>
+              )}
+              {activeDuration !== null && endsAt && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ends at {new Date(endsAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                </p>
+              )}
             </div>
             <div>
               <Label>Location (optional)</Label>

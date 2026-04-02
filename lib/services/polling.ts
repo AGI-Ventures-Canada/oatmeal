@@ -7,6 +7,7 @@ export interface PollAnnouncement {
   title: string
   body: string
   priority: "normal" | "urgent"
+  audience: string
   published_at: string
 }
 
@@ -93,9 +94,10 @@ export async function buildPollPayload(hackathonId: string): Promise<PollRespons
       .order("display_order"),
     client
       .from("hackathon_announcements")
-      .select("id, title, body, priority, published_at")
+      .select("id, title, body, priority, audience, published_at")
       .eq("hackathon_id", hackathonId)
       .not("published_at", "is", null)
+      .lte("published_at", new Date().toISOString())
       .order("published_at", { ascending: false })
       .limit(10),
     client
