@@ -43,7 +43,7 @@ mock.module("@/lib/services/public-hackathons", () => ({
   deleteHackathon: mockDeleteHackathon,
 }))
 
-const mockSendPendingJudgeInvitationEmails = mock(() => Promise.resolve({ sent: 2 }))
+const mockSendPendingJudgeInvitationEmails = mock(() => Promise.resolve({ sent: 2, total: 2, failedEmails: [] }))
 
 mock.module("@/lib/services/judge-invitations", () => ({
   sendPendingJudgeInvitationEmails: mockSendPendingJudgeInvitationEmails,
@@ -317,11 +317,17 @@ describe("PATCH /api/dashboard/hackathons/:id/settings - status change emails", 
     }
     mockFetchPendingNotifications.mockResolvedValue([pendingNotification])
 
+    const notificationSent = new Promise<void>((resolve) => {
+      mockSendJudgeNotification.mockImplementation(() => {
+        resolve()
+        return Promise.resolve()
+      })
+    })
+
     const res = await patchSettings({ status: "published" })
     expect(res.status).toBe(200)
 
-    // Fallback dispatches fire-and-forget sends — wait for the microtask queue to settle
-    await new Promise((r) => setTimeout(r, 10))
+    await notificationSent
 
     expect(mockFetchPendingNotifications).toHaveBeenCalledWith("h1")
     expect(mockSendJudgeNotification).toHaveBeenCalledWith({

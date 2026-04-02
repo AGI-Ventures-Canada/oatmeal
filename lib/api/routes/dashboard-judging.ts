@@ -340,10 +340,10 @@ export const dashboardJudgingRoutes = new Elysia()
         }
 
         if (judgeEmail) {
-          const { hasPendingJudgeInvitation } = await import("@/lib/services/judge-invitations")
+          const { hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
           let isPending: boolean
           try {
-            isPending = await hasPendingJudgeInvitation(params.id, judgeEmail)
+            isPending = await hasPendingJudgeEntry(params.id, judgeEmail)
           } catch {
             return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), {
               status: 500,
@@ -351,7 +351,7 @@ export const dashboardJudgingRoutes = new Elysia()
             })
           }
           if (isPending) {
-            return new Response(JSON.stringify({ error: "Invitation already sent to this email", code: "already_invited" }), {
+            return new Response(JSON.stringify({ error: "This judge already has a pending invitation or notification", code: "already_pending" }), {
               status: 400,
               headers: { "Content-Type": "application/json" },
             })
@@ -414,10 +414,10 @@ export const dashboardJudgingRoutes = new Elysia()
         try {
           const users = await client.users.getUserList({ emailAddress: [email] })
           if (users.data.length > 0) {
-            const { hasPendingJudgeInvitation } = await import("@/lib/services/judge-invitations")
+            const { hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
             let isPending: boolean
             try {
-              isPending = await hasPendingJudgeInvitation(params.id, email)
+              isPending = await hasPendingJudgeEntry(params.id, email)
             } catch {
               return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), {
                 status: 500,
@@ -425,7 +425,7 @@ export const dashboardJudgingRoutes = new Elysia()
               })
             }
             if (isPending) {
-              return new Response(JSON.stringify({ error: "Invitation already sent to this email", code: "already_invited" }), {
+              return new Response(JSON.stringify({ error: "This judge already has a pending invitation or notification", code: "already_pending" }), {
                 status: 400,
                 headers: { "Content-Type": "application/json" },
               })

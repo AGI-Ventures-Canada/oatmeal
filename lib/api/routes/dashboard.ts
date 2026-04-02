@@ -1149,7 +1149,18 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
         const inviterName = await resolveAdderName(principal)
         const { sendPendingJudgeInvitationEmails } = await import("@/lib/services/judge-invitations")
-        sendPendingJudgeInvitationEmails(hackathon.id, hackathon.name, inviterName).catch(console.error)
+        sendPendingJudgeInvitationEmails(hackathon.id, hackathon.name, inviterName)
+          .then(({ sent, total, failedEmails }) => {
+            if (total === 0) return
+            if (failedEmails.length > 0) {
+              console.error(
+                `Judge invitation emails: ${sent}/${total} sent for hackathon ${hackathon.id}. Failed: ${failedEmails.join(", ")}. These invitations remain with emailed_at IS NULL and will not be automatically retried.`
+              )
+            }
+          })
+          .catch((err) => {
+            console.error(`Failed to send pending judge invitation emails for hackathon ${hackathon.id}:`, err)
+          })
         const { start } = await import("workflow/api")
         const { sendJudgeNotificationsWorkflow } = await import(
           "@/lib/workflows/judge-notifications"

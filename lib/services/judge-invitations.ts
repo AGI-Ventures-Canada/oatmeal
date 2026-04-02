@@ -217,7 +217,7 @@ export async function sendPendingJudgeInvitationEmails(
   hackathonId: string,
   hackathonName: string,
   inviterName: string
-): Promise<{ sent: number }> {
+): Promise<{ sent: number; total: number; failedEmails: string[] }> {
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data: pending } = await client
@@ -227,7 +227,7 @@ export async function sendPendingJudgeInvitationEmails(
     .eq("status", "pending")
     .is("emailed_at", null)
 
-  if (!pending || pending.length === 0) return { sent: 0 }
+  if (!pending || pending.length === 0) return { sent: 0, total: 0, failedEmails: [] }
 
   const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
 
@@ -254,7 +254,11 @@ export async function sendPendingJudgeInvitationEmails(
     (r) => r.status === "fulfilled" && r.value.success
   ).length
 
-  return { sent }
+  const failedEmails = (pending as JudgeInvitation[])
+    .filter((_, i) => results[i].status === "rejected" || (results[i].status === "fulfilled" && !(results[i] as PromiseFulfilledResult<{ success: boolean }>).value.success))
+    .map((inv) => inv.email)
+
+  return { sent, total: pending.length, failedEmails }
 }
 
 export async function hasPendingJudgeInvitation(hackathonId: string, email: string): Promise<boolean> {
@@ -271,6 +275,32 @@ export async function hasPendingJudgeInvitation(hackathonId: string, email: stri
   if (error) throw new Error(`Failed to check pending invitation: ${error.message}`)
 
   return data !== null
+}
+
+export async function hasPendingJudgeEntry(hackathonId: string, email: string): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const [invitation, notification] = await Promise.all([
+    client
+      .from("judge_invitations")
+      .select("id")
+      .eq("hackathon_id", hackathonId)
+      .eq("email", email.toLowerCase())
+      .eq("status", "pending")
+      .maybeSingle(),
+    client
+      .from("judge_pending_notifications")
+      .select("id")
+      .eq("hackathon_id", hackathonId)
+      .eq("email", email.toLowerCase())
+      .is("sent_at", null)
+      .maybeSingle(),
+  ])
+
+  if (invitation.error) throw new Error(`Failed to check pending invitation: ${invitation.error.message}`)
+  if (notification.error) throw new Error(`Failed to check pending notification: ${notification.error.message}`)
+
+  return invitation.data !== null || notification.data !== null
 }
 
 export async function createJudgePendingNotification(
