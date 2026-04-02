@@ -342,9 +342,6 @@ export const dashboardJudgingRoutes = new Elysia()
         if (judgeEmail) {
           const { hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
           let isPending: boolean
-          // Guard requires email to query both judge_invitations and judge_pending_notifications.
-          // Users without a primary email in Clerk skip this check — addJudge still prevents
-          // duplicate participants, and the notification path is also skipped (no email to send to).
           try {
             isPending = await hasPendingJudgeEntry(params.id, judgeEmail)
           } catch {
@@ -374,8 +371,8 @@ export const dashboardJudgingRoutes = new Elysia()
         let notificationFailed = false
         if (judgeEmail) {
           try {
-            const addedByName = await resolveAdderName(principal, client)
             if (hackathon.status !== "draft") {
+              const addedByName = await resolveAdderName(principal, client)
               const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
               sendJudgeAddedNotification({
                 to: judgeEmail,
@@ -384,14 +381,12 @@ export const dashboardJudgingRoutes = new Elysia()
                 addedByName,
               }).catch(console.error)
             } else {
+              const addedByName = await resolveAdderName(principal, client)
               const { createJudgePendingNotification } = await import("@/lib/services/judge-invitations")
-              try {
-                await createJudgePendingNotification(hackathon.id, addResult.participant.id, judgeEmail, addedByName)
-              } catch {
-                notificationFailed = true
-              }
+              await createJudgePendingNotification(hackathon.id, addResult.participant.id, judgeEmail, addedByName)
             }
-          } catch {
+          } catch (err) {
+            console.error(`Failed to handle judge notification for ${judgeEmail}:`, err)
             notificationFailed = true
           }
         }
