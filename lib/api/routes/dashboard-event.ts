@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requirePrincipal } from "@/lib/auth/principal"
 import { checkRateLimit, RateLimitError } from "@/lib/services/rate-limit"
+import { isValidUuid } from "@/lib/utils/uuid"
 import { setPhase } from "@/lib/services/phases"
 import { listRooms, createRoom, updateRoom, deleteRoom, addTeamToRoom, removeTeamFromRoom, togglePresented, setRoomTimer, clearRoomTimer, pauseRoomTimer, resumeRoomTimer } from "@/lib/services/rooms"
 import { listCategories, createCategory, updateCategory, deleteCategory } from "@/lib/services/categories"
@@ -401,6 +402,7 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
   })
   .patch("/hackathons/:id/announcements/:announcementId", async ({ params, body, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    if (!isValidUuid(params.announcementId)) { set.status = 400; return { error: "Invalid announcement ID" } }
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
     const announcement = await updateAnnouncement(params.announcementId, params.id, body as { title?: string; body?: string; priority?: "normal" | "urgent" })
@@ -412,6 +414,7 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
   })
   .delete("/hackathons/:id/announcements/:announcementId", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    if (!isValidUuid(params.announcementId)) { set.status = 400; return { error: "Invalid announcement ID" } }
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
     const ok = await deleteAnnouncement(params.announcementId, params.id)
@@ -420,6 +423,7 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
   }, { detail: { summary: "Delete announcement" } })
   .post("/hackathons/:id/announcements/:announcementId/publish", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    if (!isValidUuid(params.announcementId)) { set.status = 400; return { error: "Invalid announcement ID" } }
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
     const announcement = await publishAnnouncement(params.announcementId, params.id)
@@ -428,6 +432,7 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
   }, { detail: { summary: "Publish announcement" } })
   .post("/hackathons/:id/announcements/:announcementId/unpublish", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    if (!isValidUuid(params.announcementId)) { set.status = 400; return { error: "Invalid announcement ID" } }
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
     const announcement = await unpublishAnnouncement(params.announcementId, params.id)
@@ -454,6 +459,7 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
   })
   .patch("/hackathons/:id/schedule/:itemId", async ({ params, body, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    if (!isValidUuid(params.itemId)) { set.status = 400; return { error: "Invalid schedule item ID" } }
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
     const item = await updateScheduleItem(params.itemId, params.id, body as { title?: string; startsAt?: string; description?: string | null; endsAt?: string | null; location?: string | null; sortOrder?: number })
@@ -465,6 +471,7 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
   })
   .delete("/hackathons/:id/schedule/:itemId", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    if (!isValidUuid(params.itemId)) { set.status = 400; return { error: "Invalid schedule item ID" } }
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
     const ok = await deleteScheduleItem(params.itemId, params.id)
