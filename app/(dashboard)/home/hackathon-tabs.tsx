@@ -331,7 +331,7 @@ export function HackathonTabs({
                   key={h.id}
                   hackathon={h}
                   href={`/e/${h.slug}/manage`}
-                  extras={statsMap.get(h.id) && <MiniStatsRow stats={statsMap.get(h.id)!} />}
+                  extras={statsMap.has(h.id) ? <MiniStatsRow stats={statsMap.get(h.id)!} /> : undefined}
                 />
               ))}
             </div>
@@ -349,7 +349,7 @@ export function HackathonTabs({
                           key={h.id}
                           hackathon={h}
                           href={`/e/${h.slug}/manage`}
-                          extras={statsMap.get(h.id) && <MiniStatsRow stats={statsMap.get(h.id)!} />}
+                          extras={statsMap.has(h.id) ? <MiniStatsRow stats={statsMap.get(h.id)!} /> : undefined}
                         />
                       ))}
                     </div>

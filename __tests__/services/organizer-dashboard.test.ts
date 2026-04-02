@@ -17,44 +17,73 @@ describe("getBatchHackathonStats", () => {
     expect(result.size).toBe(0)
   })
 
-  it("returns count-based stats for each hackathon", async () => {
+  it("returns stats keyed by hackathon ID", async () => {
     setMockFromImplementation((table) => {
-      if (table === "hackathon_participants") return createChainableMock({ data: null, error: null, count: 5 })
-      if (table === "teams") return createChainableMock({ data: null, error: null, count: 2 })
-      if (table === "submissions") return createChainableMock({ data: null, error: null, count: 3 })
-      if (table === "judge_assignments") return createChainableMock({ data: null, error: null, count: 4 })
-      if (table === "mentor_requests") return createChainableMock({ data: null, error: null, count: 1 })
-      return createChainableMock({ data: null, error: null, count: 0 })
+      if (table === "hackathon_participants") {
+        return createChainableMock({
+          data: [
+            { hackathon_id: "h1" },
+            { hackathon_id: "h1" },
+            { hackathon_id: "h2" },
+          ],
+          error: null,
+        })
+      }
+      if (table === "teams") {
+        return createChainableMock({
+          data: [{ hackathon_id: "h1" }],
+          error: null,
+        })
+      }
+      if (table === "submissions") {
+        return createChainableMock({
+          data: [{ hackathon_id: "h1" }, { hackathon_id: "h2" }],
+          error: null,
+        })
+      }
+      if (table === "judge_assignments") {
+        return createChainableMock({
+          data: [
+            { hackathon_id: "h1", is_complete: true },
+            { hackathon_id: "h1", is_complete: false },
+            { hackathon_id: "h2", is_complete: true },
+          ],
+          error: null,
+        })
+      }
+      if (table === "mentor_requests") {
+        return createChainableMock({
+          data: [{ hackathon_id: "h1" }],
+          error: null,
+        })
+      }
+      return createChainableMock({ data: null, error: null })
     })
 
-    const result = await getBatchHackathonStats(["h1"])
+    const result = await getBatchHackathonStats(["h1", "h2"])
 
-    expect(result.size).toBe(1)
+    expect(result.size).toBe(2)
+
     const h1 = result.get("h1")!
-    expect(h1.hackathonId).toBe("h1")
-    expect(h1.participantCount).toBe(5)
-    expect(h1.teamCount).toBe(2)
-    expect(h1.submissionCount).toBe(3)
-    expect(h1.judgingTotal).toBe(4)
-    expect(h1.judgingComplete).toBe(4)
+    expect(h1.participantCount).toBe(2)
+    expect(h1.teamCount).toBe(1)
+    expect(h1.submissionCount).toBe(1)
+    expect(h1.judgingTotal).toBe(2)
+    expect(h1.judgingComplete).toBe(1)
     expect(h1.openMentorRequests).toBe(1)
+
+    const h2 = result.get("h2")!
+    expect(h2.participantCount).toBe(1)
+    expect(h2.teamCount).toBe(0)
+    expect(h2.submissionCount).toBe(1)
+    expect(h2.judgingTotal).toBe(1)
+    expect(h2.judgingComplete).toBe(1)
+    expect(h2.openMentorRequests).toBe(0)
   })
 
-  it("creates entries for multiple hackathon IDs", async () => {
+  it("handles null data from queries", async () => {
     setMockFromImplementation(() =>
-      createChainableMock({ data: null, error: null, count: 0 })
-    )
-
-    const result = await getBatchHackathonStats(["h1", "h2", "h3"])
-    expect(result.size).toBe(3)
-    expect(result.has("h1")).toBe(true)
-    expect(result.has("h2")).toBe(true)
-    expect(result.has("h3")).toBe(true)
-  })
-
-  it("handles null counts from queries", async () => {
-    setMockFromImplementation(() =>
-      createChainableMock({ data: null, error: { message: "error" }, count: null })
+      createChainableMock({ data: null, error: { message: "error" } })
     )
 
     const result = await getBatchHackathonStats(["h1"])
