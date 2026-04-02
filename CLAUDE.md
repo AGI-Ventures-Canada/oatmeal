@@ -657,8 +657,12 @@ Beyond the standard Clerk/Supabase keys, these secrets must be in `.env.local` f
 | `API_KEY_SECRET` | Hashes API keys before storing in the database | `openssl rand -hex 32` |
 | `ENCRYPTION_KEY` | Encrypts API keys in CLI auth sessions (must be exactly 64 hex chars / 32 bytes) | `openssl rand -hex 32` |
 | `NEXT_PUBLIC_POSTHOG_KEY` | PostHog project API key for analytics (Vercel production only) | PostHog dashboard |
+| `SCENARIO_ORG_ID` | Clerk org ID used as the tenant when running admin test scenarios. **Required** to use `/admin/scenarios`. | Clerk Dashboard → Organizations → copy org ID |
+| `SCENARIO_DEV_USER_ID` | Clerk user ID of the "organizer" persona in test scenarios. **Required** to use `/admin/scenarios` and the dev toolbar. | `bun run scripts/provision-test-users.ts` writes this to `.env.local` |
 
 Without `ENCRYPTION_KEY`, CLI login (`hackathon login`) will fail with "Internal server error" because `completeCliAuthSession` calls `encryptToken()` which requires it.
+
+Without `SCENARIO_ORG_ID`, running any scenario via the admin UI or API will throw `"SCENARIO_ORG_ID environment variable is required to run scenarios"`. The value must be a valid Clerk org ID that exists in your Clerk instance — the fallback ID in older code referred to the original dev environment's org and will not exist in a freshly provisioned Clerk app.
 
 PostHog analytics is **production only** — do NOT set `NEXT_PUBLIC_POSTHOG_KEY` in `.env.local`. Set it in Vercel for Production only. CLI usage is tracked server-side via the `User-Agent: hackathon-cli/<version>` header — no PostHog key needed on the client.
 

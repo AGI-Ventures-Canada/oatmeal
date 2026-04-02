@@ -2,15 +2,13 @@ import { listScenarios, getActiveScenarios } from "@/lib/services/admin-scenario
 import { ScenarioRunner } from "./runner"
 
 export default async function AdminScenariosPage() {
-  const isDeployedEnv = process.env.NODE_ENV === "production" || !!process.env.VERCEL_ENV
-
-  if (isDeployedEnv) {
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Test Scenarios</h1>
           <p className="text-sm text-muted-foreground">
-            Scenarios are only available in local development.
+            Scenarios are only available in local development and staging.
           </p>
         </div>
       </div>
@@ -18,7 +16,7 @@ export default async function AdminScenariosPage() {
   }
 
   const [scenarios, activeScenarios] = await Promise.all([
-    Promise.resolve(listScenarios()),
+    listScenarios(),
     getActiveScenarios(),
   ])
 

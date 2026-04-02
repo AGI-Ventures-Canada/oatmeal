@@ -111,6 +111,17 @@ async function run() {
 run().catch(console.error)
 ```
 
+## Required Environment Variables
+
+The admin scenario runner (UI at `/admin/scenarios`, API at `/api/admin/scenario-run/:name`) requires:
+
+| Variable | How to set |
+|----------|-----------|
+| `SCENARIO_ORG_ID` | Clerk Dashboard → Organizations → copy the org ID of your dev/staging org |
+| `SCENARIO_DEV_USER_ID` | Run `bun run scripts/provision-test-users.ts` — it writes this and the seed user IDs to `.env.local` automatically |
+
+These are separate from the legacy CLI scripts in this directory, which resolve the dev user tenant via Supabase directly.
+
 ## Notes
 
 - Each scenario prompts for an optional organizer tenant_id (press Enter for default dev user tenant)

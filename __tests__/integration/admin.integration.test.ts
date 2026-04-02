@@ -636,7 +636,7 @@ describe("Admin API Routes", () => {
         })
       )
 
-      expect(res.status).toBe(400)
+      expect(res.status).toBe(422)
     })
 
     it("uses safe redirect fallback for external URLs", async () => {

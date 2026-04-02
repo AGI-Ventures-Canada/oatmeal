@@ -285,7 +285,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     async ({ body, principal }) => {
       requireAdminScopes(principal, ["admin:scenarios"])
 
-      const targetUserId = getPersonaUserId(body.persona as Parameters<typeof getPersonaUserId>[0])
+      const targetUserId = getPersonaUserId(body.persona)
       if (!targetUserId) {
         throw new AuthError(`Unknown persona or TEST_USER_${body.persona.toUpperCase()}_ID not set`, 400)
       }
@@ -304,7 +304,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     },
     {
       body: t.Object({
-        persona: t.String({ description: "Persona key: organizer, alice, bob, carol, dave, or eve" }),
+        persona: t.Union([t.Literal("organizer"), t.Literal("alice"), t.Literal("bob"), t.Literal("carol"), t.Literal("dave"), t.Literal("eve")], { description: "Persona key" }),
         redirect: t.Optional(t.String({ description: "Path to redirect to after sign-in" })),
       }),
       detail: {
