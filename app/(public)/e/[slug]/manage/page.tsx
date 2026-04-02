@@ -105,40 +105,42 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
           endsAt={hackathon.ends_at}
         />
       )}
-      <LifecycleStepper
-        hackathonId={hackathon.id}
-        hackathonSlug={hackathon.slug}
-        status={hackathon.status}
-        submissionCount={submissionCount}
-        judgingProgress={judgingProgress}
-        judgingSetupStatus={judgingSetupStatus}
-        startsAt={hackathon.starts_at}
-        endsAt={hackathon.ends_at}
-        registrationOpensAt={hackathon.registration_opens_at}
-        registrationClosesAt={hackathon.registration_closes_at}
-        description={hackathon.description}
-        bannerUrl={hackathon.banner_url}
-        locationType={hackathon.location_type}
-        locationName={hackathon.location_name}
-        locationUrl={hackathon.location_url}
-        sponsorCount={hackathon.sponsors.length}
-        prizeCount={prizes.length}
-        judgeDisplayCount={judgeDisplayCount}
-        criteriaCount={criteria.length}
-        phase={hackathon.phase}
-      />
+      <div className="space-y-3">
+        <LifecycleStepper
+          hackathonId={hackathon.id}
+          hackathonSlug={hackathon.slug}
+          status={hackathon.status}
+          submissionCount={submissionCount}
+          judgingProgress={judgingProgress}
+          judgingSetupStatus={judgingSetupStatus}
+          startsAt={hackathon.starts_at}
+          endsAt={hackathon.ends_at}
+          registrationOpensAt={hackathon.registration_opens_at}
+          registrationClosesAt={hackathon.registration_closes_at}
+          description={hackathon.description}
+          bannerUrl={hackathon.banner_url}
+          locationType={hackathon.location_type}
+          locationName={hackathon.location_name}
+          locationUrl={hackathon.location_url}
+          sponsorCount={hackathon.sponsors.length}
+          prizeCount={prizes.length}
+          judgeDisplayCount={judgeDisplayCount}
+          criteriaCount={criteria.length}
+          phase={hackathon.phase}
+        />
 
-      <OrganizerOverview
-        slug={hackathon.slug}
-        stats={{
-          participantCount: overviewStats.participantCount,
-          teamCount: overviewStats.teamCount,
-          submissionCount,
-          judgingProgress,
-          mentorQueue: overviewStats.mentorQueue,
-        }}
-        actionItems={actionItems}
-      />
+        <OrganizerOverview
+          slug={hackathon.slug}
+          stats={{
+            participantCount: overviewStats.participantCount,
+            teamCount: overviewStats.teamCount,
+            submissionCount,
+            judgingProgress,
+            mentorQueue: overviewStats.mentorQueue,
+          }}
+          actionItems={actionItems}
+        />
+      </div>
 
       <TabsUrlSync paramKey="tab" value={activeTab} className="space-y-6">
         <div className="flex items-center justify-end gap-4">

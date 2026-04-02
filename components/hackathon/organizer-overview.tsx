@@ -7,8 +7,8 @@ import {
   FolderOpen,
   Scale,
   MessageCircle,
-  AlertTriangle,
   CircleAlert,
+  AlertTriangle,
   Info,
   ArrowRight,
 } from "lucide-react"
@@ -29,36 +29,10 @@ type Props = {
   actionItems: ActionItem[]
 }
 
-const statConfig = [
-  { key: "participants" as const, label: "Registrations", icon: Users },
-  { key: "teams" as const, label: "Teams", icon: UsersRound },
-  { key: "submissions" as const, label: "Submissions", icon: FolderOpen },
-  { key: "judging" as const, label: "Judging", icon: Scale },
-  { key: "mentors" as const, label: "Mentor Queue", icon: MessageCircle },
-] as const
-
-function getStatValue(key: (typeof statConfig)[number]["key"], stats: QuickStats): string {
-  switch (key) {
-    case "participants":
-      return String(stats.participantCount)
-    case "teams":
-      return String(stats.teamCount)
-    case "submissions":
-      return String(stats.submissionCount)
-    case "judging": {
-      const { totalAssignments, completedAssignments } = stats.judgingProgress
-      if (totalAssignments === 0) return "--"
-      return `${Math.round((completedAssignments / totalAssignments) * 100)}%`
-    }
-    case "mentors":
-      return String(stats.mentorQueue.open)
-  }
-}
-
-const severityConfig: Record<ActionSeverity, { icon: typeof AlertTriangle; className: string }> = {
-  urgent: { icon: CircleAlert, className: "text-destructive" },
-  warning: { icon: AlertTriangle, className: "text-foreground" },
-  info: { icon: Info, className: "text-muted-foreground" },
+const severityConfig: Record<ActionSeverity, { icon: typeof AlertTriangle; dot: string }> = {
+  urgent: { icon: CircleAlert, dot: "bg-destructive" },
+  warning: { icon: AlertTriangle, dot: "bg-foreground" },
+  info: { icon: Info, dot: "bg-muted-foreground" },
 }
 
 function buildActionHref(slug: string, item: ActionItem): string | null {
@@ -68,58 +42,61 @@ function buildActionHref(slug: string, item: ActionItem): string | null {
   return `/e/${slug}/manage?${params.toString()}`
 }
 
+function StatPill({ icon: Icon, value, label }: { icon: typeof Users; value: string; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+      <Icon className="size-3.5" />
+      <span className="font-medium tabular-nums text-foreground">{value}</span>
+      <span className="hidden sm:inline">{label}</span>
+    </div>
+  )
+}
+
 export function OrganizerOverview({ slug, stats, actionItems }: Props) {
-  if (actionItems.length === 0) return null
+  const judgingValue = stats.judgingProgress.totalAssignments > 0
+    ? `${Math.round((stats.judgingProgress.completedAssignments / stats.judgingProgress.totalAssignments) * 100)}%`
+    : "--"
 
   return (
-    <div className="rounded-lg border bg-card">
-      <div className="flex flex-col gap-4 px-3 py-3 sm:px-5 sm:py-4">
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 sm:gap-4">
-          {statConfig.map(({ key, label, icon: Icon }) => {
-            const value = getStatValue(key, stats)
-            return (
-              <div key={key} className="flex items-center gap-2 min-w-0">
-                <Icon className="size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0">
-                  <p className="text-lg font-semibold leading-tight tabular-nums">{value}</p>
-                  <p className="text-xs text-muted-foreground truncate">{label}</p>
-                </div>
-              </div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <StatPill icon={Users} value={String(stats.participantCount)} label="registered" />
+        <StatPill icon={UsersRound} value={String(stats.teamCount)} label="teams" />
+        <StatPill icon={FolderOpen} value={String(stats.submissionCount)} label="submitted" />
+        <StatPill icon={Scale} value={judgingValue} label="judged" />
+        {stats.mentorQueue.open > 0 && (
+          <StatPill icon={MessageCircle} value={String(stats.mentorQueue.open)} label="mentor requests" />
+        )}
+      </div>
+
+      {actionItems.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {actionItems.map((item) => {
+            const { dot } = severityConfig[item.severity]
+            const href = buildActionHref(slug, item)
+            const content = (
+              <span className="inline-flex items-center gap-1.5 text-xs">
+                <span className={cn("size-1.5 rounded-full shrink-0", dot)} />
+                <span>{item.label}</span>
+                {href && <ArrowRight className="size-2.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />}
+              </span>
+            )
+            return href ? (
+              <Link
+                key={item.id}
+                href={href}
+                className="group rounded-md border px-2.5 py-1.5 hover:bg-muted transition-colors"
+              >
+                {content}
+              </Link>
+            ) : (
+              <span key={item.id} className="rounded-md border px-2.5 py-1.5">
+                {content}
+              </span>
             )
           })}
         </div>
-
-        <div className="border-t pt-3">
-          <p className="text-xs font-medium text-muted-foreground mb-2">Action items</p>
-          <ul className="space-y-1.5">
-            {actionItems.map((item) => {
-              const { icon: SeverityIcon, className } = severityConfig[item.severity]
-              const href = buildActionHref(slug, item)
-              const content = (
-                <span className={cn("flex items-center gap-2 text-sm", className)}>
-                  <SeverityIcon className="size-3.5 shrink-0" />
-                  <span className="flex-1">{item.label}</span>
-                  {href && <ArrowRight className="size-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />}
-                </span>
-              )
-              return (
-                <li key={item.id}>
-                  {href ? (
-                    <Link
-                      href={href}
-                      className="group flex rounded-md px-2 py-1.5 -mx-2 hover:bg-muted transition-colors"
-                    >
-                      {content}
-                    </Link>
-                  ) : (
-                    <div className="px-2 py-1.5 -mx-2">{content}</div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
