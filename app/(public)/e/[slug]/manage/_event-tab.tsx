@@ -23,7 +23,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Calendar, MapPin, Clock } from "lucide-react"
 import { VALID_ETABS } from "@/lib/utils/manage-tabs"
 
 type ChallengeData = {
@@ -592,6 +609,548 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
   )
 }
 
+type AnnouncementData = {
+  id: string
+  title: string
+  body: string
+  priority: "normal" | "urgent"
+  published_at: string | null
+  created_at: string
+}
+
+function AnnouncementsSubTab({ hackathonId }: { hackathonId: string }) {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [items, setItems] = useState<AnnouncementData[]>([])
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<AnnouncementData | null>(null)
+  const [title, setTitle] = useState("")
+  const [body, setBody] = useState("")
+  const [priority, setPriority] = useState<"normal" | "urgent">("normal")
+  const [saving, setSaving] = useState(false)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements`)
+        if (!res.ok) throw new Error("Failed to load")
+        const data = await res.json()
+        if (!cancelled) setItems(data.announcements)
+      } catch {
+        if (!cancelled) setError("Failed to load announcements")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [hackathonId])
+
+  function openCreate() {
+    setEditing(null)
+    setTitle("")
+    setBody("")
+    setPriority("normal")
+    setError(null)
+    setDialogOpen(true)
+  }
+
+  function openEdit(item: AnnouncementData) {
+    setEditing(item)
+    setTitle(item.title)
+    setBody(item.body)
+    setPriority(item.priority)
+    setError(null)
+    setDialogOpen(true)
+  }
+
+  async function handleSave() {
+    if (!title.trim() || !body.trim()) return
+    setSaving(true)
+    setError(null)
+    try {
+      const url = editing
+        ? `/api/dashboard/hackathons/${hackathonId}/announcements/${editing.id}`
+        : `/api/dashboard/hackathons/${hackathonId}/announcements`
+      const res = await fetch(url, {
+        method: editing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, body, priority }),
+      })
+      if (!res.ok) throw new Error("Failed to save")
+      const saved = await res.json()
+      if (editing) {
+        setItems((prev) => prev.map((i) => (i.id === saved.id ? saved : i)))
+      } else {
+        setItems((prev) => [saved, ...prev])
+      }
+      setDialogOpen(false)
+    } catch {
+      setError("Failed to save announcement")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete")
+      setItems((prev) => prev.filter((i) => i.id !== id))
+    } catch {
+      setError("Failed to delete announcement")
+    }
+  }
+
+  async function handleTogglePublish(item: AnnouncementData) {
+    setTogglingId(item.id)
+    try {
+      const action = item.published_at ? "unpublish" : "publish"
+      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements/${item.id}/${action}`, { method: "POST" })
+      if (!res.ok) throw new Error("Failed to toggle")
+      const updated = await res.json()
+      setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
+    } catch {
+      setError("Failed to update publish status")
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
+      e.preventDefault()
+      handleSave()
+    }
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" /></div>
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-medium">Announcements</h3>
+          <p className="text-xs text-muted-foreground">Broadcast messages to participants</p>
+        </div>
+        <Button size="sm" onClick={openCreate}>
+          <Plus className="size-4" />
+          <span className="hidden sm:inline">New Announcement</span>
+        </Button>
+      </div>
+
+      {error && <p className="text-destructive text-xs">{error}</p>}
+
+      {items.length === 0 ? (
+        <div className="rounded-lg border p-8 text-center text-muted-foreground">
+          <Megaphone className="size-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">No announcements yet</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.map((item) => (
+            <div key={item.id} className="rounded-lg border p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="text-sm font-medium truncate">{item.title}</h4>
+                    {item.priority === "urgent" && <Badge variant="destructive">urgent</Badge>}
+                    <Badge variant={item.published_at ? "secondary" : "outline"}>
+                      {item.published_at ? "published" : "draft"}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{item.body}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{formatDate(item.created_at)}</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={togglingId === item.id}
+                    onClick={() => handleTogglePublish(item)}
+                  >
+                    {togglingId === item.id ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
+                    <span className="hidden sm:inline">{item.published_at ? "Unpublish" : "Publish"}</span>
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => openEdit(item)}>
+                    <Pencil className="size-4" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="ghost">
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete announcement?</AlertDialogTitle>
+                        <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(item.id)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Announcement" : "New Announcement"}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSave() }}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="ann-title">Title</Label>
+              <Input
+                id="ann-title"
+                name="ann-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Announcement title"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ann-body">Message</Label>
+              <Textarea
+                id="ann-body"
+                name="ann-body"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write your announcement..."
+                rows={4}
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div className="flex items-center gap-4">
+              <Label>Priority</Label>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" variant={priority === "normal" ? "default" : "outline"} onClick={() => setPriority("normal")}>Normal</Button>
+                <Button type="button" size="sm" variant={priority === "urgent" ? "destructive" : "outline"} onClick={() => setPriority("urgent")}>Urgent</Button>
+              </div>
+            </div>
+            <Button type="submit" disabled={saving || !title.trim() || !body.trim()} className="w-full">
+              {saving && <Loader2 className="animate-spin" />}
+              {editing ? "Update" : "Create"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+type ScheduleItemData = {
+  id: string
+  title: string
+  description: string | null
+  starts_at: string
+  ends_at: string | null
+  location: string | null
+  sort_order: number
+}
+
+function toLocalDatetime(iso: string): string {
+  const d = new Date(iso)
+  const offset = d.getTimezoneOffset()
+  const local = new Date(d.getTime() - offset * 60 * 1000)
+  return local.toISOString().slice(0, 16)
+}
+
+function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [items, setItems] = useState<ScheduleItemData[]>([])
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<ScheduleItemData | null>(null)
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [startsAt, setStartsAt] = useState("")
+  const [endsAt, setEndsAt] = useState("")
+  const [location, setLocation] = useState("")
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule`)
+        if (!res.ok) throw new Error("Failed to load")
+        const data = await res.json()
+        if (!cancelled) setItems(data.scheduleItems)
+      } catch {
+        if (!cancelled) setError("Failed to load schedule")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [hackathonId])
+
+  function openCreate() {
+    setEditing(null)
+    setTitle("")
+    setDescription("")
+    setStartsAt("")
+    setEndsAt("")
+    setLocation("")
+    setError(null)
+    setDialogOpen(true)
+  }
+
+  function openEdit(item: ScheduleItemData) {
+    setEditing(item)
+    setTitle(item.title)
+    setDescription(item.description ?? "")
+    setStartsAt(toLocalDatetime(item.starts_at))
+    setEndsAt(item.ends_at ? toLocalDatetime(item.ends_at) : "")
+    setLocation(item.location ?? "")
+    setError(null)
+    setDialogOpen(true)
+  }
+
+  async function handleSave() {
+    if (!title.trim() || !startsAt) return
+    setSaving(true)
+    setError(null)
+    try {
+      const payload: Record<string, unknown> = {
+        title,
+        startsAt: new Date(startsAt).toISOString(),
+      }
+      if (description.trim()) payload.description = description
+      if (endsAt) payload.endsAt = new Date(endsAt).toISOString()
+      if (location.trim()) payload.location = location
+
+      const url = editing
+        ? `/api/dashboard/hackathons/${hackathonId}/schedule/${editing.id}`
+        : `/api/dashboard/hackathons/${hackathonId}/schedule`
+      const res = await fetch(url, {
+        method: editing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error("Failed to save")
+      const saved = await res.json()
+      if (editing) {
+        setItems((prev) => prev.map((i) => (i.id === saved.id ? saved : i)).sort((a, b) => a.starts_at.localeCompare(b.starts_at)))
+      } else {
+        setItems((prev) => [...prev, saved].sort((a, b) => a.starts_at.localeCompare(b.starts_at)))
+      }
+      setDialogOpen(false)
+    } catch {
+      setError("Failed to save schedule item")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete")
+      setItems((prev) => prev.filter((i) => i.id !== id))
+    } catch {
+      setError("Failed to delete schedule item")
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
+      e.preventDefault()
+      handleSave()
+    }
+  }
+
+  function formatTime(iso: string): string {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    })
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" /></div>
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-medium">Schedule</h3>
+          <p className="text-xs text-muted-foreground">Manage the event agenda</p>
+        </div>
+        <Button size="sm" onClick={openCreate}>
+          <Plus className="size-4" />
+          <span className="hidden sm:inline">Add Item</span>
+        </Button>
+      </div>
+
+      {error && <p className="text-destructive text-xs">{error}</p>}
+
+      {items.length === 0 ? (
+        <div className="rounded-lg border p-8 text-center text-muted-foreground">
+          <Calendar className="size-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">No schedule items yet</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map((item) => (
+            <div key={item.id} className="flex items-start gap-3 rounded-lg border p-3">
+              <div className="shrink-0 pt-0.5 text-muted-foreground">
+                <Clock className="size-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{item.title}</p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-0.5">
+                  <span>{formatTime(item.starts_at)}{item.ends_at ? ` – ${formatTime(item.ends_at)}` : ""}</span>
+                  {item.location && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="size-3" />
+                      {item.location}
+                    </span>
+                  )}
+                </div>
+                {item.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{item.description}</p>}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button size="sm" variant="ghost" onClick={() => openEdit(item)}>
+                  <Pencil className="size-4" />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="ghost">
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete schedule item?</AlertDialogTitle>
+                      <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(item.id)}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Schedule Item" : "Add Schedule Item"}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSave() }}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="sched-title">Title</Label>
+              <Input
+                id="sched-title"
+                name="sched-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Opening Ceremony"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sched-desc">Description (optional)</Label>
+              <Textarea
+                id="sched-desc"
+                name="sched-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Brief description..."
+                rows={2}
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="sched-start">Starts at</Label>
+                <Input
+                  id="sched-start"
+                  type="datetime-local"
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sched-end">Ends at (optional)</Label>
+                <Input
+                  id="sched-end"
+                  type="datetime-local"
+                  value={endsAt}
+                  onChange={(e) => setEndsAt(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sched-location">Location (optional)</Label>
+              <Input
+                id="sched-location"
+                name="sched-location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g., Main Hall, Zoom link"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <Button type="submit" disabled={saving || !title.trim() || !startsAt} className="w-full">
+              {saving && <Loader2 className="animate-spin" />}
+              {editing ? "Update" : "Add"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
 export function EventTabContent({ hackathonId, activeEtab }: EventTabContentProps) {
   const [currentTab, setCurrentTab] = useState(activeEtab)
 
@@ -609,6 +1168,14 @@ export function EventTabContent({ hackathonId, activeEtab }: EventTabContentProp
 
       <TabsContent value="challenge" forceMount className="data-[state=inactive]:hidden">
         <ChallengeSubTab hackathonId={hackathonId} />
+      </TabsContent>
+
+      <TabsContent value="announcements" forceMount className="data-[state=inactive]:hidden">
+        <AnnouncementsSubTab hackathonId={hackathonId} />
+      </TabsContent>
+
+      <TabsContent value="schedule" forceMount className="data-[state=inactive]:hidden">
+        <ScheduleSubTab hackathonId={hackathonId} />
       </TabsContent>
 
       <TabsContent value="mentors" forceMount className="data-[state=inactive]:hidden">

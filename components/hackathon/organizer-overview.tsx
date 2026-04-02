@@ -9,7 +9,11 @@ import {
   CircleCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { OverviewAnnouncements } from "@/components/hackathon/overview-announcements"
+import { OverviewSchedule } from "@/components/hackathon/overview-schedule"
 import type { ActionItem, ActionSeverity } from "@/lib/utils/organizer-actions"
+import type { Announcement } from "@/lib/services/announcements"
+import type { ScheduleItem } from "@/lib/services/schedule-items"
 
 type QuickStats = {
   participantCount: number
@@ -23,6 +27,8 @@ type Props = {
   slug: string
   stats: QuickStats
   actionItems: ActionItem[]
+  announcements: Announcement[]
+  scheduleItems: ScheduleItem[]
 }
 
 const severityLabel: Record<ActionSeverity, { text: string; className: string }> = {
@@ -50,7 +56,7 @@ function StatCard({ icon: Icon, value, label }: { icon: typeof Users; value: str
   )
 }
 
-export function OrganizerOverview({ slug, stats, actionItems }: Props) {
+export function OrganizerOverview({ slug, stats, actionItems, announcements, scheduleItems }: Props) {
   const judgingValue = stats.judgingProgress.totalAssignments > 0
     ? `${Math.round((stats.judgingProgress.completedAssignments / stats.judgingProgress.totalAssignments) * 100)}%`
     : "—"
@@ -58,8 +64,8 @@ export function OrganizerOverview({ slug, stats, actionItems }: Props) {
   const urgentCount = actionItems.filter((i) => i.severity === "urgent").length
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-2 space-y-4">
+    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+      <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <StatCard icon={Users} value={String(stats.participantCount)} label="Registered" />
           <StatCard icon={UsersRound} value={String(stats.teamCount)} label="Teams" />
@@ -74,9 +80,11 @@ export function OrganizerOverview({ slug, stats, actionItems }: Props) {
             </span>
           </div>
         )}
+        <OverviewAnnouncements slug={slug} announcements={announcements} />
+        <OverviewSchedule slug={slug} scheduleItems={scheduleItems} />
       </div>
 
-      <div>
+      <div className="space-y-4">
         {actionItems.length > 0 ? (
           <div className="rounded-lg border p-4">
             <div className="flex items-center justify-between mb-4">

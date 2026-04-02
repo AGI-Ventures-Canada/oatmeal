@@ -4,6 +4,8 @@ import { checkRateLimit, RateLimitError } from "@/lib/services/rate-limit"
 import { setPhase } from "@/lib/services/phases"
 import { listRooms, createRoom, updateRoom, deleteRoom, addTeamToRoom, removeTeamFromRoom, togglePresented, setRoomTimer, clearRoomTimer, pauseRoomTimer, resumeRoomTimer } from "@/lib/services/rooms"
 import { listCategories, createCategory, updateCategory, deleteCategory } from "@/lib/services/categories"
+import { listAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement, publishAnnouncement, unpublishAnnouncement } from "@/lib/services/announcements"
+import { listScheduleItems, createScheduleItem, updateScheduleItem, deleteScheduleItem } from "@/lib/services/schedule-items"
 import { listTeamsWithMembers, createTeamWithMembers, modifyTeamMembers, bulkAssignTeams } from "@/lib/services/hackathons"
 import { listRounds, createRound, updateRound, deleteRound, activateRound } from "@/lib/services/judging-rounds"
 import { listSocialSubmissions, reviewSocialSubmission } from "@/lib/services/social-submissions"
@@ -379,3 +381,93 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     }),
     detail: { summary: "Send bulk email to participants" },
   })
+  // --- Announcements ---
+  .get("/hackathons/:id/announcements", async ({ params, principal, set }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
+    const authErr = await checkOrganizer(params.id, principal.tenantId, set)
+    if (authErr) return authErr
+    return { announcements: await listAnnouncements(params.id) }
+  }, { detail: { summary: "List announcements" } })
+  .post("/hackathons/:id/announcements", async ({ params, body, principal, set }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    const authErr = await checkOrganizer(params.id, principal.tenantId, set)
+    if (authErr) return authErr
+    const announcement = await createAnnouncement(params.id, body as { title: string; body: string; priority?: "normal" | "urgent" })
+    if (!announcement) { set.status = 400; return { error: "Failed to create announcement" } }
+    return announcement
+  }, {
+    body: t.Object({ title: t.String(), body: t.String(), priority: t.Optional(t.Union([t.Literal("normal"), t.Literal("urgent")])) }),
+    detail: { summary: "Create announcement" },
+  })
+  .patch("/hackathons/:id/announcements/:announcementId", async ({ params, body, principal, set }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    const authErr = await checkOrganizer(params.id, principal.tenantId, set)
+    if (authErr) return authErr
+    const announcement = await updateAnnouncement(params.announcementId, params.id, body as { title?: string; body?: string; priority?: "normal" | "urgent" })
+    if (!announcement) { set.status = 400; return { error: "Failed to update announcement" } }
+    return announcement
+  }, {
+    body: t.Object({ title: t.Optional(t.String()), body: t.Optional(t.String()), priority: t.Optional(t.Union([t.Literal("normal"), t.Literal("urgent")])) }),
+    detail: { summary: "Update announcement" },
+  })
+  .delete("/hackathons/:id/announcements/:announcementId", async ({ params, principal, set }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    const authErr = await checkOrganizer(params.id, principal.tenantId, set)
+    if (authErr) return authErr
+    const ok = await deleteAnnouncement(params.announcementId, params.id)
+    if (!ok) { set.status = 400; return { error: "Failed to delete announcement" } }
+    return { success: true }
+  }, { detail: { summary: "Delete announcement" } })
+  .post("/hackathons/:id/announcements/:announcementId/publish", async ({ params, principal, set }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    const authErr = await checkOrganizer(params.id, principal.tenantId, set)
+    if (authErr) return authErr
+    const announcement = await publishAnnouncement(params.announcementId, params.id)
+    if (!announcement) { set.status = 400; return { error: "Failed to publish announcement" } }
+    return announcement
+  }, { detail: { summary: "Publish announcement" } })
+  .post("/hackathons/:id/announcements/:announcementId/unpublish", async ({ params, principal, set }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    const authErr = await checkOrganizer(params.id, principal.tenantId, set)
+    if (authErr) return authErr
+    const announcement = await unpublishAnnouncement(params.announcementId, params.id)
+    if (!announcement) { set.status = 400; return { error: "Failed to unpublish announcement" } }
+    return announcement
+  }, { detail: { summary: "Unpublish announcement" } })
+  // --- Schedule Items ---
+  .get("/hackathons/:id/schedule", async ({ params, principal, set }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
+    const authErr = await checkOrganizer(params.id, principal.tenantId, set)
+    if (authErr) return authErr
+    return { scheduleItems: await listScheduleItems(params.id) }
+  }, { detail: { summary: "List schedule items" } })
+  .post("/hackathons/:id/schedule", async ({ params, body, principal, set }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    const authErr = await checkOrganizer(params.id, principal.tenantId, set)
+    if (authErr) return authErr
+    const item = await createScheduleItem(params.id, body as { title: string; startsAt: string; description?: string; endsAt?: string; location?: string; sortOrder?: number })
+    if (!item) { set.status = 400; return { error: "Failed to create schedule item" } }
+    return item
+  }, {
+    body: t.Object({ title: t.String(), startsAt: t.String(), description: t.Optional(t.String()), endsAt: t.Optional(t.String()), location: t.Optional(t.String()), sortOrder: t.Optional(t.Number()) }),
+    detail: { summary: "Create schedule item" },
+  })
+  .patch("/hackathons/:id/schedule/:itemId", async ({ params, body, principal, set }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    const authErr = await checkOrganizer(params.id, principal.tenantId, set)
+    if (authErr) return authErr
+    const item = await updateScheduleItem(params.itemId, params.id, body as { title?: string; startsAt?: string; description?: string | null; endsAt?: string | null; location?: string | null; sortOrder?: number })
+    if (!item) { set.status = 400; return { error: "Failed to update schedule item" } }
+    return item
+  }, {
+    body: t.Object({ title: t.Optional(t.String()), startsAt: t.Optional(t.String()), description: t.Optional(t.String()), endsAt: t.Optional(t.String()), location: t.Optional(t.String()), sortOrder: t.Optional(t.Number()) }),
+    detail: { summary: "Update schedule item" },
+  })
+  .delete("/hackathons/:id/schedule/:itemId", async ({ params, principal, set }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+    const authErr = await checkOrganizer(params.id, principal.tenantId, set)
+    if (authErr) return authErr
+    const ok = await deleteScheduleItem(params.itemId, params.id)
+    if (!ok) { set.status = 400; return { error: "Failed to delete schedule item" } }
+    return { success: true }
+  }, { detail: { summary: "Delete schedule item" } })

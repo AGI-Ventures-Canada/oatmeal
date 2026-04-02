@@ -3,7 +3,7 @@ import type { HackathonStatus } from "@/lib/db/hackathon-types"
 export const VALID_TABS = ["overview", "edit", "teams", "rooms", "judges", "prizes", "event"] as const
 export const VALID_JTABS = ["criteria", "assignments", "progress"] as const
 export const VALID_PTABS = ["prizes", "results"] as const
-export const VALID_ETABS = ["challenge", "mentors", "social", "email"] as const
+export const VALID_ETABS = ["challenge", "announcements", "schedule", "mentors", "social", "email"] as const
 
 export type ManageTab = (typeof VALID_TABS)[number]
 export type ManageJtab = (typeof VALID_JTABS)[number]

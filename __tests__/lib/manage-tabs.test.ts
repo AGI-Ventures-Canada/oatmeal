@@ -40,12 +40,14 @@ describe("VALID_PTABS", () => {
 })
 
 describe("VALID_ETABS", () => {
-  it("contains challenge, mentors, social, email", () => {
+  it("contains challenge, announcements, schedule, mentors, social, email", () => {
     expect(VALID_ETABS).toContain("challenge")
+    expect(VALID_ETABS).toContain("announcements")
+    expect(VALID_ETABS).toContain("schedule")
     expect(VALID_ETABS).toContain("mentors")
     expect(VALID_ETABS).toContain("social")
     expect(VALID_ETABS).toContain("email")
-    expect(VALID_ETABS).toHaveLength(4)
+    expect(VALID_ETABS).toHaveLength(6)
   })
 })
 

@@ -6,12 +6,15 @@ import { getJudgingProgress, getJudgingSetupStatus, listJudgingCriteria } from "
 import { listPrizes } from "@/lib/services/prizes"
 import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
 import { getManageOverviewStats } from "@/lib/services/manage-overview"
+import { listPublishedAnnouncements } from "@/lib/services/announcements"
+import { listScheduleItems } from "@/lib/services/schedule-items"
 import { getOrganizerActionItems } from "@/lib/utils/organizer-actions"
 import { VALID_TABS, VALID_JTABS, VALID_PTABS, VALID_ETABS, getDefaultTab, resolveTab } from "@/lib/utils/manage-tabs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
 import { OrganizerOverview } from "@/components/hackathon/organizer-overview"
+import { TimeRemainingBar } from "@/components/hackathon/time-remaining-bar"
 import { DebugStageSwitcher } from "@/components/hackathon/debug-stage-switcher"
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TabsUrlSync } from "./_tabs-url-sync"
@@ -49,6 +52,8 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     judgeDisplayCount,
     criteria,
     overviewStats,
+    announcements,
+    scheduleItems,
   ] = await Promise.all([
     getHackathonSubmissions(hackathon.id),
     getJudgingProgress(hackathon.id),
@@ -57,6 +62,8 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     countJudgeDisplayProfiles(hackathon.id),
     listJudgingCriteria(hackathon.id),
     getManageOverviewStats(hackathon.id),
+    listPublishedAnnouncements(hackathon.id),
+    listScheduleItems(hackathon.id),
   ])
 
   const submissionCount = submissions.length
@@ -107,26 +114,24 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
       )}
 
       <TabsUrlSync paramKey="tab" value={activeTab} className="space-y-6">
-        <div className="flex items-center justify-end gap-4">
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="flex items-center gap-2">
-              <HackathonPageActions
-                slug={hackathon.slug}
-                isOrganizer={true}
-                submissionCount={submissionCount}
-              />
-            </div>
-            <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
-              <TabsList variant="line">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="edit">Edit</TabsTrigger>
-                <TabsTrigger value="teams">Teams</TabsTrigger>
-                <TabsTrigger value="rooms">Rooms</TabsTrigger>
-                <TabsTrigger value="judges">Judges</TabsTrigger>
-                <TabsTrigger value="prizes">Prizes</TabsTrigger>
-                <TabsTrigger value="event">Event</TabsTrigger>
-              </TabsList>
-            </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
+            <TabsList variant="line">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="edit">Edit</TabsTrigger>
+              <TabsTrigger value="teams">Teams</TabsTrigger>
+              <TabsTrigger value="rooms">Rooms</TabsTrigger>
+              <TabsTrigger value="judges">Judges</TabsTrigger>
+              <TabsTrigger value="prizes">Prizes</TabsTrigger>
+              <TabsTrigger value="event">Event</TabsTrigger>
+            </TabsList>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <HackathonPageActions
+              slug={hackathon.slug}
+              isOrganizer={true}
+              submissionCount={submissionCount}
+            />
           </div>
         </div>
 
@@ -154,6 +159,13 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               criteriaCount={criteria.length}
               phase={hackathon.phase}
             />
+            <TimeRemainingBar
+              status={hackathon.status}
+              registrationOpensAt={hackathon.registration_opens_at}
+              registrationClosesAt={hackathon.registration_closes_at}
+              startsAt={hackathon.starts_at}
+              endsAt={hackathon.ends_at}
+            />
             <OrganizerOverview
               slug={hackathon.slug}
               stats={{
@@ -164,6 +176,8 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
                 mentorQueue: overviewStats.mentorQueue,
               }}
               actionItems={actionItems}
+              announcements={announcements}
+              scheduleItems={scheduleItems}
             />
           </div>
         </TabsContent>
