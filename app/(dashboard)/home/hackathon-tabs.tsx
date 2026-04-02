@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Trophy, Search, Star, Check, Loader2, Scale } from "lucide-react"
+import { Trophy, Search, Star, Check, Loader2, Scale, Users, UsersRound, FolderOpen } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HackathonCard } from "@/components/hackathon/hackathon-card"
 import { sortByStatusPriority } from "@/lib/utils/sort-hackathons"
+import { groupOrganizedHackathons, GROUP_LABELS, GROUP_ORDER } from "@/lib/utils/organize-groups"
+import type { HackathonMiniStats } from "@/lib/services/organizer-dashboard"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
 type Hackathon = {
@@ -38,6 +40,7 @@ type Props = {
   sponsoredHackathons: Hackathon[]
   judgingHackathons: Hackathon[]
   submittedHackathonIds: string[]
+  organizedStats?: Record<string, HackathonMiniStats>
 }
 
 type ApiHackathon = {
@@ -74,12 +77,39 @@ const API_PATHS: Record<string, string> = {
   judging: "/api/dashboard/hackathons/judging",
 }
 
+function MiniStatsRow({ stats }: { stats: HackathonMiniStats }) {
+  const judgingPct = stats.judgingTotal > 0 ? Math.round((stats.judgingComplete / stats.judgingTotal) * 100) : null
+  return (
+    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      <span className="flex items-center gap-1">
+        <Users className="size-3" />
+        {stats.participantCount}
+      </span>
+      <span className="flex items-center gap-1">
+        <UsersRound className="size-3" />
+        {stats.teamCount}
+      </span>
+      <span className="flex items-center gap-1">
+        <FolderOpen className="size-3" />
+        {stats.submissionCount}
+      </span>
+      {judgingPct !== null && (
+        <span className="flex items-center gap-1">
+          <Scale className="size-3" />
+          {judgingPct}%
+        </span>
+      )}
+    </div>
+  )
+}
+
 export function HackathonTabs({
   myHackathons,
   organizedHackathons,
   sponsoredHackathons,
   judgingHackathons,
   submittedHackathonIds,
+  organizedStats,
 }: Props) {
   const submittedSet = new Set(submittedHackathonIds)
   const searchParams = useSearchParams()
@@ -148,6 +178,8 @@ export function HackathonTabs({
     }
   }
 
+  const statsMap = useMemo(() => new Map(Object.entries(organizedStats ?? {})), [organizedStats])
+
   const isSearching = query.length >= 2
 
   const participatingList = isSearching
@@ -157,6 +189,11 @@ export function HackathonTabs({
   const organizedList = isSearching
     ? (searchResults.organized ?? [])
     : sortByStatusPriority(organizedHackathons)
+
+  const organizedGroups = useMemo(
+    () => isSearching ? null : groupOrganizedHackathons(organizedHackathons, statsMap),
+    [isSearching, organizedHackathons, statsMap],
+  )
 
   const sponsoredList = isSearching
     ? (searchResults.sponsored ?? [])
@@ -287,15 +324,38 @@ export function HackathonTabs({
                 </CardDescription>
               </CardContent>
             </Card>
-          ) : (
+          ) : isSearching ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {organizedList.map((h) => (
                 <HackathonCard
                   key={h.id}
                   hackathon={h}
                   href={`/e/${h.slug}/manage`}
+                  extras={statsMap.get(h.id) && <MiniStatsRow stats={statsMap.get(h.id)!} />}
                 />
               ))}
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {organizedGroups && GROUP_ORDER.map((group) => {
+                const items = organizedGroups[group]
+                if (items.length === 0) return null
+                return (
+                  <div key={group}>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3">{GROUP_LABELS[group]}</h3>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {items.map((h) => (
+                        <HackathonCard
+                          key={h.id}
+                          hackathon={h}
+                          href={`/e/${h.slug}/manage`}
+                          extras={statsMap.get(h.id) && <MiniStatsRow stats={statsMap.get(h.id)!} />}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </TabsContent>

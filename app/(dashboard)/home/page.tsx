@@ -8,6 +8,7 @@ import {
   listJudgingHackathons,
 } from "@/lib/services/hackathons"
 import { getSubmittedHackathonIds } from "@/lib/services/submissions"
+import { getBatchHackathonStats } from "@/lib/services/organizer-dashboard"
 import { HackathonTabs } from "./hackathon-tabs"
 import { PageHeader } from "@/components/page-header"
 
@@ -28,6 +29,10 @@ export default async function DashboardPage() {
     getSubmittedHackathonIds(userId),
   ])
 
+  const organizedStats = await getBatchHackathonStats(organizedHackathons.map((h) => h.id))
+
+  const serializedStats = Object.fromEntries(organizedStats)
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -41,6 +46,7 @@ export default async function DashboardPage() {
         sponsoredHackathons={sponsoredHackathons}
         judgingHackathons={judgingHackathons}
         submittedHackathonIds={Array.from(submittedHackathonIds)}
+        organizedStats={serializedStats}
       />
     </div>
   )

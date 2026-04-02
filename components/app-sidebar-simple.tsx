@@ -68,9 +68,9 @@ const mainItems = [
 ]
 
 const hackathonItems = [
+  { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
   { title: "Participating", href: "/home?tab=participating", icon: Users },
   { title: "Judging", href: "/home?tab=judging", icon: Scale },
-  { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
   { title: "Sponsoring", href: "/home?tab=sponsored", icon: Star },
 ]
 
