@@ -339,6 +339,7 @@ export const dashboardJudgingRoutes = new Elysia()
           })
         }
 
+        // No email → skip guard; addJudge still prevents duplicate participants
         if (judgeEmail) {
           const { hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
           let isPending: boolean
