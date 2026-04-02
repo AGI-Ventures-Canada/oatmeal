@@ -5,19 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RefreshCw } from "lucide-react"
-import type { ActiveScenario } from "@/lib/services/admin-scenarios"
+import type { ActiveScenario, RoleCard } from "@/lib/services/admin-scenarios"
 
 type Scenario = {
   name: string
   description: string
-}
-
-type RoleCard = {
-  personaKey: string
-  name: string
-  role: string
-  loginUrl: string
-  directUrl: string
 }
 
 type ScenarioResult = {
@@ -32,10 +24,10 @@ const ROLE_LABEL: Record<string, string> = {
   participant: "Participant",
 }
 
-const ROLE_COLORS: Record<string, { avatar: string; badge: string }> = {
-  organizer: { avatar: "bg-primary text-primary-foreground", badge: "bg-primary/10 text-primary border-primary/20" },
-  judge: { avatar: "bg-destructive text-destructive-foreground", badge: "bg-destructive/10 text-destructive border-destructive/20" },
-  participant: { avatar: "bg-muted text-muted-foreground", badge: "" },
+const ROLE_AVATAR: Record<string, string> = {
+  organizer: "bg-primary text-primary-foreground",
+  judge: "bg-destructive text-destructive-foreground",
+  participant: "bg-muted text-muted-foreground",
 }
 
 function RoleCards({
@@ -85,12 +77,12 @@ function RoleCards({
               className="flex flex-col gap-2.5 rounded-md border p-2.5"
             >
               <div className="flex min-w-0 items-center gap-2">
-                <div className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${ROLE_COLORS[role.role]?.avatar ?? "bg-muted text-muted-foreground"}`}>
+                <div className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${ROLE_AVATAR[role.role] ?? "bg-muted text-muted-foreground"}`}>
                   {role.name[0]}
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium leading-none">{role.name}</p>
-                  <Badge variant="outline" className={`mt-1 text-xs ${ROLE_COLORS[role.role]?.badge ?? ""}`}>
+                  <Badge variant="outline" className="mt-1 text-xs">
                     {ROLE_LABEL[role.role] ?? role.role}
                   </Badge>
                 </div>

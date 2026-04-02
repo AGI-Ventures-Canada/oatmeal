@@ -13,6 +13,7 @@ import {
 import { listScenarios, runScenario, generateRoleTokens, getActiveScenarios } from "@/lib/services/admin-scenarios"
 import { getPersonaUserId, findPersonaByUserId, TEST_PERSONAS } from "@/lib/dev/test-personas"
 import { safeRedirectUrl } from "@/lib/utils/url"
+import { isValidUuid } from "@/lib/utils/uuid"
 import { supabase } from "@/lib/db/client"
 import { HackathonStatusEnum } from "@/lib/api/validators"
 
@@ -282,6 +283,9 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       requireAdminScopes(principal, ["admin:scenarios"])
       if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
         throw new AuthError("Not available in production", 403)
+      }
+      if (!isValidUuid(body.hackathon_id)) {
+        throw new AuthError("Invalid hackathon ID", 400)
       }
       const db = supabase()
       const { data: hackathon } = await db

@@ -498,8 +498,6 @@ async function clearScenario(name: string): Promise<void> {
 }
 
 export async function runScenario(name: string, tenantId?: string): Promise<{ hackathonId: string; slug: string; tenantId: string }> {
-  // Intentionally allows VERCEL_ENV === "preview" (staging). Block only production.
-  // If SCENARIO_DEV_USER_ID / seed user env vars are set on a preview deployment, scenarios will work — that's by design.
   if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
     throw new Error("Test scenarios can only be run in local development or staging")
   }
