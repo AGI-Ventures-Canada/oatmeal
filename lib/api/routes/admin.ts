@@ -11,7 +11,7 @@ import {
   deleteHackathon,
 } from "@/lib/services/admin"
 import { listScenarios, runScenario, generateRoleTokens, getActiveScenarios } from "@/lib/services/admin-scenarios"
-import { getPersonaUserId, TEST_PERSONAS } from "@/lib/dev/test-personas"
+import { getPersonaUserId, findPersonaByUserId, TEST_PERSONAS } from "@/lib/dev/test-personas"
 import { safeRedirectUrl } from "@/lib/utils/url"
 import { supabase } from "@/lib/db/client"
 import { HackathonStatusEnum } from "@/lib/api/validators"
@@ -252,10 +252,37 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       description: "Returns persona keys, display names, and whether each is configured via env vars.",
     },
   })
+  .get("/persona-roles", async ({ principal }) => {
+    requireAdminScopes(principal, ["admin:scenarios"])
+    const activeScenarios = await getActiveScenarios()
+    const personaRoles: Record<string, string> = {}
+    if (activeScenarios.length > 0) {
+      const db = supabase()
+      const { data: participants } = await db
+        .from("hackathon_participants")
+        .select("clerk_user_id, role")
+        .in("hackathon_id", activeScenarios.map((s) => s.hackathonId))
+      for (const p of participants ?? []) {
+        const persona = findPersonaByUserId(p.clerk_user_id)
+        if (persona && !personaRoles[persona.key]) {
+          personaRoles[persona.key] = p.role
+        }
+      }
+    }
+    return { roles: personaRoles }
+  }, {
+    detail: {
+      summary: "Get persona roles",
+      description: "Returns the current hackathon role for each configured test persona.",
+    },
+  })
   .post(
     "/scenario-tokens",
     async ({ body, principal }) => {
       requireAdminScopes(principal, ["admin:scenarios"])
+      if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
+        throw new AuthError("Not available in production", 403)
+      }
       const db = supabase()
       const { data: hackathon } = await db
         .from("hackathons")
@@ -284,6 +311,9 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     "/scenario-switch",
     async ({ body, principal }) => {
       requireAdminScopes(principal, ["admin:scenarios"])
+      if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
+        throw new AuthError("Not available in production", 403)
+      }
 
       const targetUserId = getPersonaUserId(body.persona)
       if (!targetUserId) {

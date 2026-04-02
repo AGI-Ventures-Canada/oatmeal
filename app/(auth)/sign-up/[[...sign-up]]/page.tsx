@@ -10,10 +10,10 @@ export default async function SignUpPage({
 }) {
   const { userId } = await auth()
   const { redirect_url } = await searchParams
-  const safeRedirect = safeRedirectUrl(redirect_url)
+  const safeRedirect = redirect_url ? safeRedirectUrl(redirect_url) : undefined
 
   if (userId) {
-    redirect(safeRedirect)
+    redirect(safeRedirect ?? "/home")
   }
 
   return <CustomSignUp redirectUrl={safeRedirect} />

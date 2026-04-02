@@ -1,26 +1,35 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronDown, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 type PersonaInfo = {
   key: string
   name: string
-  role: string | null
 }
 
 export function DevToolbarClient({
-  currentPersona,
+  currentPersonaKey,
   allPersonas,
 }: {
-  currentPersona: PersonaInfo | null
+  currentPersonaKey: string | null
   allPersonas: PersonaInfo[]
 }) {
   const [open, setOpen] = useState(false)
   const [switching, setSwitching] = useState<string | null>(null)
+  const [personaRoles, setPersonaRoles] = useState<Record<string, string>>({})
 
-  const others = allPersonas.filter((p) => p.key !== currentPersona?.key)
+  const currentPersona = allPersonas.find((p) => p.key === currentPersonaKey) ?? null
+  const others = allPersonas.filter((p) => p.key !== currentPersonaKey)
+
+  useEffect(() => {
+    if (!open) return
+    fetch("/api/admin/persona-roles")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.roles) setPersonaRoles(data.roles) })
+      .catch(() => {})
+  }, [open])
 
   async function switchTo(persona: PersonaInfo) {
     setSwitching(persona.key)
@@ -90,8 +99,8 @@ export function DevToolbarClient({
                 {p.name[0]}
               </span>
               <span className="flex-1 text-left">{p.name}</span>
-              {p.role && (
-                <span className="text-[10px] text-muted-foreground capitalize">{p.role}</span>
+              {personaRoles[p.key] && (
+                <span className="text-[10px] text-muted-foreground capitalize">{personaRoles[p.key]}</span>
               )}
             </Button>
           ))}
