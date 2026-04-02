@@ -1,40 +1,30 @@
 /**
- * One-time setup script: creates the 5 test Clerk accounts used in scenario testing.
+ * Setup script: looks up the 5 test Clerk accounts and writes their IDs to .env.local.
  *
  * Run once per dev/staging environment:
- *   bun run scripts/provision-test-users.ts
+ *   bun scripts/provision-test-users.ts
  *
- * The script is idempotent — it skips accounts that already exist.
- * After running, copy the printed env vars into your .env.local:
+ * The script is idempotent — safe to re-run. Accounts must already exist in Clerk.
+ * After running, the following vars will be set in .env.local:
  *
  *   TEST_USER_ALICE_ID=user_xxx
  *   TEST_USER_BOB_ID=user_xxx
  *   TEST_USER_CAROL_ID=user_xxx
  *   TEST_USER_DAVE_ID=user_xxx
  *   TEST_USER_EVE_ID=user_xxx
- *
- * These accounts will be used as real Clerk users in scenario seeds, enabling
- * one-click sign-in as organizer, judge, or participant during manual testing.
- *
- * --- Why a script instead of auto-provisioning? ---
- * Clerk accounts are persistent across DB resets. Creating them on every scenario
- * run would accumulate duplicate users or fail with "already exists" errors.
- * Running once and storing the IDs in .env.local is explicit, predictable, and
- * survives `bun db:sync` without any cleanup needed. New teammates run this script
- * once and they're set up. Staging CI can run it in a setup job.
  */
 
 import { clerkClient } from "@clerk/nextjs/server"
+import { readFileSync, writeFileSync, existsSync } from "fs"
+import { resolve } from "path"
 
 const TEST_USERS = [
-  { key: "alice", firstName: "Alice", lastName: "Test", email: "alice@test.oatmeal.dev" },
-  { key: "bob",   firstName: "Bob",   lastName: "Test", email: "bob@test.oatmeal.dev" },
-  { key: "carol", firstName: "Carol", lastName: "Test", email: "carol@test.oatmeal.dev" },
-  { key: "dave",  firstName: "Dave",  lastName: "Test", email: "dave@test.oatmeal.dev" },
-  { key: "eve",   firstName: "Eve",   lastName: "Test", email: "eve@test.oatmeal.dev" },
+  { key: "alice", email: "alice@test.oatmeal.dev", envVar: "TEST_USER_ALICE_ID" },
+  { key: "bob",   email: "bob@test.oatmeal.dev",   envVar: "TEST_USER_BOB_ID" },
+  { key: "carol", email: "carol@test.oatmeal.dev", envVar: "TEST_USER_CAROL_ID" },
+  { key: "dave",  email: "dave@test.oatmeal.dev",  envVar: "TEST_USER_DAVE_ID" },
+  { key: "eve",   email: "eve@test.oatmeal.dev",   envVar: "TEST_USER_EVE_ID" },
 ]
-
-const PASSWORD = "OatmealTest1!"
 
 if (!process.env.CLERK_SECRET_KEY) {
   console.error("Missing CLERK_SECRET_KEY — make sure .env.local is loaded.")
@@ -42,31 +32,34 @@ if (!process.env.CLERK_SECRET_KEY) {
 }
 
 const clerk = await clerkClient()
-const results: { key: string; id: string; created: boolean }[] = []
+const results: { envVar: string; id: string }[] = []
 
 for (const u of TEST_USERS) {
-  const existing = await clerk.users.getUserList({ emailAddress: [u.email] })
+  const found = await clerk.users.getUserList({ emailAddress: [u.email] })
 
-  if (existing.data.length > 0) {
-    const id = existing.data[0].id
-    results.push({ key: u.key, id, created: false })
-    console.log(`  skip  ${u.firstName} (already exists: ${id})`)
-    continue
+  if (found.data.length === 0) {
+    console.error(`  missing  ${u.key} (${u.email}) — account not found in Clerk`)
+    process.exit(1)
   }
 
-  const user = await clerk.users.createUser({
-    firstName: u.firstName,
-    lastName: u.lastName,
-    emailAddress: [u.email],
-    password: PASSWORD,
-  })
-
-  results.push({ key: u.key, id: user.id, created: true })
-  console.log(`  created  ${u.firstName} → ${user.id}`)
+  const id = found.data[0].id
+  results.push({ envVar: u.envVar, id })
+  console.log(`  found    ${u.key} → ${id}`)
 }
 
-console.log("\nAdd to .env.local:\n")
-for (const r of results) {
-  console.log(`TEST_USER_${r.key.toUpperCase()}_ID=${r.id}`)
+const envPath = resolve(process.cwd(), ".env.local")
+const existing = existsSync(envPath) ? readFileSync(envPath, "utf8") : ""
+const lines = existing.split("\n")
+
+for (const { envVar, id } of results) {
+  const idx = lines.findIndex((l) => l.startsWith(`${envVar}=`))
+  const line = `${envVar}=${id}`
+  if (idx >= 0) {
+    lines[idx] = line
+  } else {
+    lines.push(line)
+  }
 }
-console.log()
+
+writeFileSync(envPath, lines.join("\n"))
+console.log(`\n✓ Wrote ${results.length} env vars to .env.local`)
