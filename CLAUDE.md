@@ -465,7 +465,7 @@ Before making changes:
 **All pull requests must target `staging`, never `main`.** The `main` branch is only updated via merges from `staging` after testing.
 
 ```bash
-gh pr create --base staging --draft --title "feat: your feature" --body "Description"
+gh pr create --base staging --title "feat: your feature" --body "Description"
 ```
 
 ### Merge Staging to Main via PR Only
@@ -541,12 +541,26 @@ gh pr view <branch-name> --json state,mergedAt
 
 If PR is `MERGED`, create a new feature branch for additional changes.
 
-### Create PRs as Drafts
+### Create PRs Ready for Review
+
+**Do not create draft PRs.** PRs should be ready for review when created. Ensure all CI checks pass before opening.
 
 ```bash
-gh pr create --base staging --draft --title "feat: your feature" --body "Description"
-gh pr ready  # When ready for review
+gh pr create --base staging --title "feat: your feature" --body "Description"
 ```
+
+### Resolve Merge Conflicts Before Opening PRs
+
+**Always rebase onto the latest base branch and resolve any merge conflicts before creating or updating a PR.** Never open a PR with conflicts — the reviewer should never have to deal with them.
+
+```bash
+git fetch origin
+git rebase origin/staging
+# Resolve any conflicts, then:
+git push --force-with-lease
+```
+
+If a PR develops conflicts after creation (e.g., another PR merged first), rebase and force-push immediately rather than leaving the PR in a conflicted state.
 
 ### Commit Message Style
 
