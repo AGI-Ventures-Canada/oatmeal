@@ -5,11 +5,14 @@ import { dashboardRoutes } from "./routes/dashboard"
 import { v1Routes } from "./routes/v1"
 import { importRoutes, dashboardImportRoutes } from "./routes/import"
 import { adminRoutes } from "./routes/admin"
+import { devRoutes } from "./routes/dev"
+import { publicEventRoutes } from "./routes/public-event"
+import { dashboardEventRoutes } from "./routes/dashboard-event"
+import { dashboardActivityRoutes } from "./routes/dashboard-activity"
+import { handleRouteError } from "./routes/errors"
 
 export const api = new Elysia({ prefix: "/api" })
-  .onError(({ error, path }) => {
-    console.error(`[api] Error on ${path}:`, error instanceof Error ? error.message : error, error instanceof Error ? error.stack : "")
-  })
+  .onError(({ error, set, path }) => handleRouteError(error, set, path))
   .use(
     swagger({
       path: "/swagger",
@@ -51,10 +54,14 @@ Authorization: Bearer sk_live_your_api_key_here
     })
   )
   .use(publicRoutes)
+  .use(publicEventRoutes)
   .use(importRoutes)
   .use(dashboardImportRoutes)
   .use(dashboardRoutes)
+  .use(dashboardEventRoutes)
+  .use(dashboardActivityRoutes)
   .use(v1Routes)
   .use(adminRoutes)
+  .use(process.env.NODE_ENV === "development" ? devRoutes : new Elysia())
 
 export type Api = typeof api

@@ -254,6 +254,7 @@ This ensures consistent theming and proper dark mode support.
 
 ### Supabase
 
+- **Never pass unvalidated strings to UUID column queries** — PostgreSQL throws `invalid input syntax for type uuid` which causes 500 errors. Use `isValidUuid()` from `lib/utils/uuid.ts` to validate route params before querying. The `HackathonDraftEditor` uses `id: "draft"` as a placeholder, so any component rendered during draft mode could trigger API calls with non-UUID IDs.
 - Use Service Key in API endpoints to bypass RLS policies
 - Handle auth and roles in the application layer, not RLS
 - Never apply migrations directly to production - use PR workflow
@@ -314,6 +315,46 @@ Exceptions (don't auto-focus):
 - Mobile viewports where focus would trigger the keyboard and obscure content
 - Multi-step wizards where the user needs to read instructions first
 - Dialogs with destructive actions where accidental input is risky
+
+### Easy Navigation and Exit
+
+Every flow must be easy to enter, navigate, and leave:
+
+- **Easy exit**: Always provide a visible close/X button or cancel action. Support `Escape` to dismiss overlays, modals, and full-screen flows
+- **Easy skip**: When only some steps are required, show a persistent skip action so users can jump straight to the result. Label it with the destination — "Skip to event page" not "Skip, create event"
+- **Keyboard navigation**: `Enter` advances/submits (suppressed inside textareas and contentEditable). `Cmd/Ctrl+Enter` triggers the primary skip/submit action
+- **Keyboard hints**: Show `Kbd` hints next to the action they trigger — e.g., `⌘+Enter` next to the skip button, `Enter` next to the continue button. Hide on mobile (`hidden sm:inline-flex`)
+- **Progress indicators**: For multi-step flows, show a step counter (`1 / N`) and a progress bar so users know where they are and how much is left
+- **Straightforward copy**: Action labels must tell the user exactly what will happen and where they'll end up. No ambiguous verbs
+- **localStorage persistence**: Save draft state in multi-step flows so refreshes or sign-in redirects don't lose work
+- **Late auth gates**: Don't require sign-in to fill out forms — gate only at submission time
+
+### Human-Friendly Inputs
+
+**Never expose internal IDs, raw timestamps, or technical formats to organizers or participants.** Every input must be designed for someone in a hurry who doesn't know (or care about) the system internals.
+
+- **Identifiers**: Never ask for Clerk user IDs, database UUIDs, or internal codes. Use email addresses, names, or searchable dropdowns instead. Resolve to internal IDs server-side.
+- **Time inputs**: Never use `datetime-local` for setting countdowns or durations relative to "now". Use quick-select duration presets (e.g., "5 min", "10 min", "15 min" buttons) with an optional custom input. Reserve `datetime-local` only for scheduling future dates (e.g., event start/end).
+- **Status values**: Show human-readable labels ("In Progress", "Waiting for Review"), not raw enum values or database states.
+
+If a form field requires the user to look something up in a different system, the UX is wrong — do the lookup for them.
+
+### Unknown User by Email
+
+When a feature references a user by email and the user doesn't exist in Clerk, send an invite instead of returning an error. The invite email must be personalized: who invited them, which organization, and what they're being invited to. Use the existing team invitation infrastructure (`team_invitations` table, `sendTeamInvitationEmail`, `/invite/[token]` acceptance page) as the pattern.
+
+### Date/Time Defaults
+
+**Every date/time input must have a sensible default value.** Users should never open a date picker and see a blank field when a reasonable starting point exists.
+
+- **Event start dates**: Default to 2 weeks from today at 8:30 AM
+- **Event end dates**: Default to the day after the start at 5:00 PM
+- **Registration dates**: Default registration open to now, close to the day before the event
+- **Schedule items**: Default to the next available slot after the last item (rounded up to the nearest 15 minutes), or now if no items exist. Default duration 30 minutes
+- **Scheduled announcements**: Default to 1 hour from now
+- **Recurring agent schedules**: Default to 9:00 AM
+- **Time picker fallback**: When no value is set, default "from" times to 8:30 AM and "to" times to 5:00 PM — never 12:00 PM midnight-adjacent
+- **Past date prevention**: Use `minDate` on `DateTimeRangePicker`/`DateTimePicker` (or `min` on native `datetime-local`) to prevent selecting dates in the past for forward-looking inputs (event start, registration open). Exception: admin editors where backdating may be intentional
 
 ### Mobile-First Responsive Design
 
@@ -420,6 +461,19 @@ For RPC calls, use `setMockRpcImplementation()` instead.
 
 ## Git Workflow
 
+### Starting New Work
+
+When the user wants to start working on something new, automatically run this checklist before creating a feature branch:
+
+1. **Check for pending changes**: Run `git status`. If there are uncommitted changes, investigate what they're for. Discard auto-generated files (lock files, build artifacts). For real work, either commit it to a branch or stash it — don't lose it silently.
+2. **Sync with remote**: Run `git fetch origin` and check if the current branch is behind. Rebase or pull as needed.
+3. **Branch from staging**: Create the new feature branch from the latest `origin/staging`:
+   ```bash
+   git checkout -b feature/<name> origin/staging
+   ```
+
+Do all of this without being asked — the user shouldn't need to spell out these steps each time.
+
 ### Always Commit All Changes
 
 **When committing, stage and include ALL changes in the working tree.** Do not cherry-pick only the files that seem related to the current task — treat every uncommitted change as part of the same work unit. Leaving behind orphaned changes clutters future diffs and risks losing work.
@@ -454,7 +508,7 @@ Before making changes:
 **All pull requests must target `staging`, never `main`.** The `main` branch is only updated via merges from `staging` after testing.
 
 ```bash
-gh pr create --base staging --draft --title "feat: your feature" --body "Description"
+gh pr create --base staging --title "feat: your feature" --body "Description"
 ```
 
 ### Merge Staging to Main via PR Only
@@ -530,12 +584,26 @@ gh pr view <branch-name> --json state,mergedAt
 
 If PR is `MERGED`, create a new feature branch for additional changes.
 
-### Create PRs as Drafts
+### Create PRs Ready for Review
+
+**Do not create draft PRs.** PRs should be ready for review when created. Ensure all CI checks pass before opening.
 
 ```bash
-gh pr create --base staging --draft --title "feat: your feature" --body "Description"
-gh pr ready  # When ready for review
+gh pr create --base staging --title "feat: your feature" --body "Description"
 ```
+
+### Resolve Merge Conflicts Before Opening PRs
+
+**Always rebase onto the latest base branch and resolve any merge conflicts before creating or updating a PR.** Never open a PR with conflicts — the reviewer should never have to deal with them.
+
+```bash
+git fetch origin
+git rebase origin/staging
+# Resolve any conflicts, then:
+git push --force-with-lease
+```
+
+If a PR develops conflicts after creation (e.g., another PR merged first), rebase and force-push immediately rather than leaving the PR in a conflicted state.
 
 ### Commit Message Style
 
@@ -567,6 +635,14 @@ refactor: extract payment logic into service
 ```
 
 This catches style violations, shadcn primitive misuse, dead code, and other issues before they land in a PR.
+
+### Address All PR Review Warnings
+
+**All warnings from PR reviewers (automated or human) must be resolved before merging.** Do not treat warnings as optional — they indicate real issues that will compound if left unaddressed.
+
+- **Warnings**: Must be fixed or refactored. If a warning is genuinely inapplicable, reply on the PR explaining why — don't silently ignore it.
+- **Suggestions**: Evaluate and apply if they improve the code. If skipping, have a concrete reason (not "it works fine as-is").
+- **Dead code, unused parameters, stale comments**: Fix immediately — these are easy wins that reviewers shouldn't have to flag twice.
 
 ### Browser Verification
 

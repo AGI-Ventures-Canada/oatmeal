@@ -1,23 +1,8 @@
 "use client"
 
 import { useCallback } from "react"
-import { HackathonDraftEditor, type DraftState } from "@/components/hackathon/hackathon-draft-editor"
-
-const EMPTY_STATE: DraftState = {
-  name: "",
-  description: null,
-  startsAt: null,
-  endsAt: null,
-  registrationOpensAt: null,
-  registrationClosesAt: null,
-  locationType: null,
-  locationName: null,
-  locationUrl: null,
-  imageUrl: null,
-  sponsors: [],
-  rules: null,
-  prizes: [],
-}
+import { CreateFlow } from "@/components/hackathon/create-flow/create-flow"
+import type { DraftState } from "@/components/hackathon/hackathon-draft-editor"
 
 export function CreateFromScratchEditor() {
   const handleSubmit = useCallback(async (state: DraftState) => {
@@ -38,12 +23,25 @@ export function CreateFromScratchEditor() {
     return res.json()
   }, [])
 
+  const handlePatchSettings = useCallback(
+    async (id: string, data: Record<string, unknown>) => {
+      const res = await fetch(`/api/dashboard/hackathons/${id}/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+
+      if (!res.ok) {
+        console.error("Failed to patch settings:", await res.text())
+      }
+    },
+    [],
+  )
+
   return (
-    <HackathonDraftEditor
-      initialState={EMPTY_STATE}
-      storageKey="oatmeal:create-from-scratch"
+    <CreateFlow
       onSubmit={handleSubmit}
-      signInDescription="Your draft has been saved. Sign in to create your hackathon."
+      onPatchSettings={handlePatchSettings}
     />
   )
 }

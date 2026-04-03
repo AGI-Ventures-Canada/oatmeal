@@ -57,9 +57,19 @@ No PostHog SDK or env vars are needed in the CLI package.
 
 ### No events showing in PostHog dashboard
 
-1. **Check the env var is set on Vercel Production:**
+1. **Check the env var is set on Vercel Production (no trailing newline!):**
    ```bash
    vercel env ls | grep POSTHOG
+   # Verify no trailing \n:
+   vercel env pull /tmp/check --environment production && grep POSTHOG /tmp/check && rm /tmp/check
+   ```
+   **CRITICAL: When setting env vars via `vercel env add`, always pipe with `printf` not `echo`.**
+   `echo` adds a trailing newline that gets baked into the JS bundle, making the API key invalid.
+   ```bash
+   # GOOD
+   printf "phc_abc123" | vercel env add NEXT_PUBLIC_POSTHOG_KEY production
+   # BAD — adds \n to the key
+   echo "phc_abc123" | vercel env add NEXT_PUBLIC_POSTHOG_KEY production
    ```
 
 2. **Check the key is baked into the client JS bundle:**

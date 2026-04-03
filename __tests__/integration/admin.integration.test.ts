@@ -100,12 +100,17 @@ mock.module("@/lib/services/rate-limit", () => ({
 
 const { Elysia } = await import("elysia")
 const { adminRoutes } = await import("@/lib/api/routes/admin")
+const { handleRouteError } = await import("@/lib/api/routes/errors")
 
-const app = new Elysia({ prefix: "/api" }).use(adminRoutes)
+const app = new Elysia({ prefix: "/api" })
+  .onError(({ error, set, path }) => handleRouteError(error, set, path))
+  .use(adminRoutes)
 
 const adminPrincipal = {
   kind: "admin" as const,
   userId: "admin-1",
+  tenantId: "tenant-1",
+  orgId: null,
   scopes: ["admin:read", "admin:write", "admin:scenarios"],
 }
 

@@ -23,7 +23,9 @@ import {
   ExternalLink,
   Plus,
   Download,
+  Compass,
 } from "lucide-react"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useSearchParams, useRouter } from "next/navigation"
@@ -58,17 +60,18 @@ import { ThemeSwitcher } from "@/components/theme-switcher"
 import { CreateHackathonMenu } from "@/components/hackathon/create-hackathon-menu"
 import { CreateOrganizationDialog } from "@/components/create-organization-dialog"
 import { InstallSkillButton } from "@/components/install-skill-button"
+import { OPEN_SEARCH_EVENT } from "@/components/search-command"
 
 const mainItems = [
   { title: "Dashboard", href: "/home", icon: Home },
-  { title: "Browse", href: "/browse", icon: Search },
+  { title: "Explore", href: "/browse", icon: Compass },
 ]
 
 const hackathonItems = [
-  { title: "Participating", href: "/home?tab=participating", icon: Users },
-  { title: "Judging", href: "/home?tab=judging", icon: Scale },
-  { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
-  { title: "Sponsoring", href: "/home?tab=sponsored", icon: Star },
+  { title: "Organizing", href: "/home/organizing", icon: Megaphone },
+  { title: "Participating", href: "/home/participating", icon: Users },
+  { title: "Judging", href: "/home/judging", icon: Scale },
+  { title: "Sponsoring", href: "/home/sponsoring", icon: Star },
 ]
 
 const manageItems = [
@@ -123,14 +126,10 @@ export function AppSidebarSimple() {
   }, [organization])
 
   const isSettingsView = pathname.startsWith("/settings")
-  const currentTab = searchParams.get("tab")
 
   function isActive(item: { href: string }) {
-    const url = new URL(item.href, "http://x")
-    const tab = url.searchParams.get("tab")
-    if (tab) return pathname === "/home" && currentTab === tab
-    if (pathname === "/home" && currentTab && !tab) return false
-    return pathname.startsWith(url.pathname)
+    if (item.href === "/home") return pathname === "/home"
+    return pathname.startsWith(item.href)
   }
 
   return (
@@ -234,6 +233,18 @@ export function AppSidebarSimple() {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              className="h-9 text-muted-foreground"
+              onClick={() => document.dispatchEvent(new CustomEvent(OPEN_SEARCH_EVENT))}
+            >
+              <Search className="size-4" />
+              <span className="text-sm flex-1">Search</span>
+              <KbdGroup><Kbd>⌘</Kbd>+<Kbd>K</Kbd></KbdGroup>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

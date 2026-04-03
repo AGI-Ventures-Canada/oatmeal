@@ -34,19 +34,14 @@ export async function resolvePrincipal(request: Request): Promise<Principal> {
   const session = await auth()
   const { userId, orgId, orgRole } = session
   if (!userId) {
+    if (process.env.DEBUG) console.warn("[auth] resolvePrincipal: Clerk auth() returned null userId")
     return { kind: "anon" }
   }
 
   const metadata = (session.sessionClaims as Record<string, unknown>)?.metadata as
     | Record<string, unknown>
     | undefined
-  if (isAdminEnabled() && metadata?.admin === true) {
-    return {
-      kind: "admin",
-      userId,
-      scopes: ADMIN_SCOPES,
-    }
-  }
+  const isAdmin = isAdminEnabled() && metadata?.admin === true
 
   let tenant
   if (orgId) {
@@ -56,7 +51,21 @@ export async function resolvePrincipal(request: Request): Promise<Principal> {
   }
 
   if (!tenant) {
+    if (process.env.DEBUG) console.warn("[auth] resolvePrincipal: tenant lookup returned null for userId:", userId)
+    if (isAdmin) {
+      return { kind: "admin", userId, tenantId: null, orgId: orgId ?? null, scopes: ADMIN_SCOPES }
+    }
     return { kind: "anon" }
+  }
+
+  if (isAdmin) {
+    return {
+      kind: "admin",
+      userId,
+      tenantId: tenant.id,
+      orgId: orgId ?? null,
+      scopes: ADMIN_SCOPES,
+    }
   }
 
   return {
@@ -114,6 +123,23 @@ export function requirePrincipal<K extends Exclude<Principal["kind"], "anon">>(
   allowedKinds: K[],
   requiredScopes: Scope[] = []
 ): asserts principal is PrincipalKindMap[K] {
+  // Admin principals carry all user scopes plus admin-specific ones, so they are a
+  // strict superset of user permissions. When a route allows "user", also admit admins
+  // rather than forcing every call site to list "admin" explicitly. The tenantId guard
+  // prevents an admin who has no org/personal-tenant context (tenantId === null) from
+  // reaching tenant-scoped routes where downstream code assumes tenantId is present.
+  if (principal.kind === "admin" && (allowedKinds as string[]).includes("user")) {
+    if (!principal.tenantId) {
+      throw new AuthError("Unauthorized", 401)
+    }
+    for (const scope of requiredScopes) {
+      if (!principal.scopes.includes(scope)) {
+        throw new AuthError(`Missing required scope: ${scope}`, 403)
+      }
+    }
+    return
+  }
+
   if (!allowedKinds.includes(principal.kind as K)) {
     throw new AuthError("Unauthorized", 401)
   }

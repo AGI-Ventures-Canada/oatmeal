@@ -185,6 +185,11 @@ export async function checkHackathonOrganizer(
   hackathonId: string,
   tenantId: string
 ): Promise<OrganizerCheckResult> {
+  const { isValidUuid } = await import("@/lib/utils/uuid")
+  if (!isValidUuid(hackathonId)) {
+    return { status: "not_found" }
+  }
+
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data, error } = await client

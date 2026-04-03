@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { CheckCircle2, Crown, Clock, X, Lock, Scale, Mail, CalendarClock } from "lucide-react"
+import { CheckCircle2, Crown, Clock, X, Lock, Scale, Mail, CalendarClock, MapPin } from "lucide-react"
 import { formatDateTimeDisplay } from "@/lib/utils/format"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
 import type { Submission } from "@/lib/db/hackathon-types"
@@ -35,6 +35,8 @@ import { SponsorsEditForm } from "@/components/hackathon/edit-drawer/sponsors-ed
 import { JudgesEditForm } from "@/components/hackathon/edit-drawer/judges-edit-form"
 import { PrizesEditForm } from "@/components/hackathon/edit-drawer/prizes-edit-form"
 import type { PublicResultWithDetails } from "@/lib/services/results"
+import type { ScheduleItem } from "@/lib/services/schedule-items"
+import type { Announcement } from "@/lib/services/announcements"
 
 interface HackathonPreviewClientProps {
   hackathon: PublicHackathon
@@ -48,6 +50,8 @@ interface HackathonPreviewClientProps {
   submissions?: GallerySubmission[]
   teamInfo?: ParticipantTeamInfo
   publicResults?: PublicResultWithDetails[]
+  scheduleItems?: ScheduleItem[]
+  announcements?: Announcement[]
   onFormSave?: (data: Record<string, unknown>) => Promise<boolean>
   onBannerChange?: (imageUrl: string | null) => void | Promise<void>
   onAuthRequired?: () => void
@@ -64,6 +68,8 @@ function HackathonPreviewContent({
   submissions = [],
   teamInfo = null,
   publicResults = [],
+  scheduleItems = [],
+  announcements = [],
   onFormSave,
   onBannerChange,
   onAuthRequired,
@@ -326,6 +332,7 @@ function HackathonPreviewContent({
               hackathonId={hackathon.id}
               initialPrizes={hackathon.prizes}
               onSaveAndNext={() => handleSaveAndNext("prizes")}
+              onSave={onFormSave ? (data) => onFormSave(data) : undefined}
             />
           </div>
         </div>
@@ -362,7 +369,7 @@ function HackathonPreviewContent({
                     registrationOpensAt: hackathon.registration_opens_at,
                     registrationClosesAt: hackathon.registration_closes_at,
                   }}
-                  showRegistrationDates={false}
+                  showRegistrationDates
                   showHackathonDates
                   onSaveAndNext={() => handleSaveAndNext("timeline")}
                   onSave={onFormSave ? (data) => onFormSave({
@@ -383,6 +390,18 @@ function HackathonPreviewContent({
                   <div>
                     <h2 className="text-xl font-bold mb-4">Timeline</h2>
                     <div className="space-y-2 text-sm">
+                      {hackathon.registration_opens_at && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Registration Opens</span>
+                          <span>{formatDateTimeDisplay(hackathon.registration_opens_at)}</span>
+                        </div>
+                      )}
+                      {hackathon.registration_closes_at && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Registration Closes</span>
+                          <span>{formatDateTimeDisplay(hackathon.registration_closes_at)}</span>
+                        </div>
+                      )}
                       {hackathon.starts_at && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Hackathon Starts</span>
@@ -399,6 +418,48 @@ function HackathonPreviewContent({
                   </div>
                 )}
               </EditableSection>
+            )}
+
+            {scheduleItems.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold mb-4">Schedule</h2>
+                <div className="space-y-3">
+                  {scheduleItems.map((item) => (
+                    <div key={item.id} className="flex items-start gap-3">
+                      <span className="text-xs tabular-nums text-muted-foreground shrink-0 w-16 pt-0.5 text-right">
+                        {new Date(item.starts_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{item.title}</p>
+                        {item.description && <p className="text-sm text-muted-foreground mt-0.5">{item.description}</p>}
+                        {item.location && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                            <MapPin className="size-3" />
+                            {item.location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {announcements.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold mb-4">Announcements</h2>
+                <div className="space-y-3">
+                  {announcements.map((a) => (
+                    <div key={a.id}>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">{a.title}</p>
+                        {a.priority === "urgent" && <Badge variant="destructive">urgent</Badge>}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-0.5">{a.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {isEditable && editMode && activeSection === "about" ? (
@@ -496,7 +557,7 @@ function HackathonPreviewContent({
             registrationClosesAt: hackathon.registration_closes_at,
           }}
           showRegistrationDates
-          showHackathonDates={false}
+          showHackathonDates
           onSaveAndNext={() => handleSaveAndNext("dates")}
           onSave={onFormSave ? (data) => onFormSave({
             startsAt: data.startsAt?.toISOString() ?? null,
@@ -569,6 +630,8 @@ export function HackathonPreviewClient({
   submissions,
   teamInfo,
   publicResults,
+  scheduleItems,
+  announcements,
   onFormSave,
   onBannerChange,
   onAuthRequired,
@@ -586,6 +649,8 @@ export function HackathonPreviewClient({
         submissions={submissions}
         teamInfo={teamInfo}
         publicResults={publicResults}
+        scheduleItems={scheduleItems}
+        announcements={announcements}
         onFormSave={onFormSave}
         onBannerChange={onBannerChange}
         onAuthRequired={onAuthRequired}

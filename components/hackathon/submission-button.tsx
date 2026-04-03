@@ -533,7 +533,7 @@ export function SubmissionButton({
             setError(null)
             setCurrentStep(index)
           }}
-          stepColumns={5}
+          stepsLayout="timeline"
           steps={submissionSteps.map((step) => ({
             key: step.key,
             label: step.label,

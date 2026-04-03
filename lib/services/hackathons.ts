@@ -456,3 +456,304 @@ export async function getParticipantTeamInfo(
     isCaptain: team.captain_clerk_user_id === clerkUserId,
   }
 }
+
+export type TeamWithMembers = {
+  id: string
+  name: string
+  status: string
+  captainClerkUserId: string | null
+  pendingCaptainEmail: string | null
+  members: { clerkUserId: string; displayName: string | null; email: string | null; role: string }[]
+  submission: { id: string; title: string; status: string } | null
+  room: { id: string; name: string } | null
+}
+
+export async function listTeamsWithMembers(hackathonId: string): Promise<TeamWithMembers[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: teams, error: teamsErr } = await client
+    .from("teams")
+    .select("id, name, status, captain_clerk_user_id, pending_captain_email")
+    .eq("hackathon_id", hackathonId)
+    .neq("status", "disbanded")
+    .order("name")
+
+  if (teamsErr || !teams || teams.length === 0) return []
+
+  const teamIds = teams.map((t: { id: string }) => t.id)
+
+  const [{ data: participants }, { data: submissions }, { data: roomTeams }] = await Promise.all([
+    client
+      .from("hackathon_participants")
+      .select("clerk_user_id, role, team_id")
+      .eq("hackathon_id", hackathonId)
+      .in("team_id", teamIds),
+    client
+      .from("submissions")
+      .select("id, title, status, team_id")
+      .eq("hackathon_id", hackathonId)
+      .in("team_id", teamIds),
+    client
+      .from("room_teams")
+      .select("team_id, room_id, rooms(id, name)")
+      .in("team_id", teamIds),
+  ])
+
+  const submissionByTeam: Record<string, { id: string; title: string; status: string }> = {}
+  for (const s of submissions ?? []) {
+    if (s.team_id) submissionByTeam[s.team_id] = { id: s.id, title: s.title, status: s.status }
+  }
+
+  const roomByTeam: Record<string, { id: string; name: string }> = {}
+  for (const rt of roomTeams ?? []) {
+    const room = rt.rooms as unknown as { id: string; name: string } | null
+    if (rt.team_id && room) roomByTeam[rt.team_id] = { id: room.id, name: room.name }
+  }
+
+  const allUserIds = [...new Set((participants ?? []).map((p: { clerk_user_id: string }) => p.clerk_user_id))]
+  const userDisplayNames: Record<string, string | null> = {}
+  const userEmails: Record<string, string | null> = {}
+
+  if (allUserIds.length > 0) {
+    const realUserIds = allUserIds.filter((id) => !id.startsWith("seed_user_"))
+    const seedUserIds = allUserIds.filter((id) => id.startsWith("seed_user_"))
+
+    for (const seedId of seedUserIds) {
+      const name = seedId.replace(/^seed_user_/, "").replace(/_\d+$/, "")
+      userDisplayNames[seedId] = name.charAt(0).toUpperCase() + name.slice(1)
+      userEmails[seedId] = `${name}@seed.local`
+    }
+
+    if (realUserIds.length > 0) {
+      try {
+        const clerk = await clerkClient()
+        for (let i = 0; i < realUserIds.length; i += 100) {
+          const batch = realUserIds.slice(i, i + 100)
+          const users = await clerk.users.getUserList({ userId: batch })
+          for (const user of users.data) {
+            userDisplayNames[user.id] = user.firstName
+              ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
+              : user.username || null
+            userEmails[user.id] = user.emailAddresses[0]?.emailAddress ?? null
+          }
+        }
+      } catch {
+        // Silently fail
+      }
+    }
+  }
+
+  return teams.map((team: { id: string; name: string; status: string; captain_clerk_user_id: string | null; pending_captain_email: string | null }) => ({
+    id: team.id,
+    name: team.name,
+    status: team.status,
+    captainClerkUserId: team.captain_clerk_user_id,
+    pendingCaptainEmail: team.pending_captain_email || null,
+    members: (participants ?? [])
+      .filter((p: { team_id: string }) => p.team_id === team.id)
+      .map((p: { clerk_user_id: string; role: string }) => ({
+        clerkUserId: p.clerk_user_id,
+        displayName: userDisplayNames[p.clerk_user_id] || null,
+        email: userEmails[p.clerk_user_id] || null,
+        role: p.role,
+      })),
+    submission: submissionByTeam[team.id] ?? null,
+    room: roomByTeam[team.id] ?? null,
+  }))
+}
+
+export type CreateTeamResult =
+  | { team: { id: string; name: string }; invited?: undefined }
+  | { team: { id: string; name: string }; invited: true }
+  | { error: string }
+
+export async function createTeamWithMembers(
+  hackathonId: string,
+  input: { name: string; captainEmail: string; organizerClerkUserId?: string }
+): Promise<CreateTeamResult> {
+  const { clerkClient: getClerk } = await import("@clerk/nextjs/server")
+  const clerk = await getClerk()
+  const users = await clerk.users.getUserList({ emailAddress: [input.captainEmail], limit: 1 })
+
+  const client = getSupabase() as unknown as SupabaseClient
+
+  if (users.data.length === 0) {
+    return createPendingTeamWithInvite(client, clerk, hackathonId, input)
+  }
+
+  const captainClerkUserId = users.data[0].id
+
+  const { data: participant } = await client
+    .from("hackathon_participants")
+    .select("id, team_id")
+    .eq("hackathon_id", hackathonId)
+    .eq("clerk_user_id", captainClerkUserId)
+    .single()
+
+  if (!participant) {
+    return { error: "That user is not registered for this hackathon" }
+  }
+  if (participant.team_id) {
+    return { error: "That user is already on a team" }
+  }
+
+  const { data: team, error } = await client
+    .from("teams")
+    .insert({
+      hackathon_id: hackathonId,
+      name: input.name,
+      captain_clerk_user_id: captainClerkUserId,
+      invite_code: crypto.randomUUID().slice(0, 8),
+      status: "forming",
+    })
+    .select("id, name")
+    .single()
+
+  if (error) {
+    console.error("Failed to create team:", error)
+    return { error: "Failed to create team" }
+  }
+
+  await client
+    .from("hackathon_participants")
+    .update({ team_id: team.id })
+    .eq("hackathon_id", hackathonId)
+    .eq("clerk_user_id", captainClerkUserId)
+
+  return { team }
+}
+
+async function createPendingTeamWithInvite(
+  client: SupabaseClient,
+  clerk: Awaited<ReturnType<typeof import("@clerk/nextjs/server").clerkClient>>,
+  hackathonId: string,
+  input: { name: string; captainEmail: string; organizerClerkUserId?: string }
+): Promise<CreateTeamResult> {
+  const { data: hackathon } = await client
+    .from("hackathons")
+    .select("name")
+    .eq("id", hackathonId)
+    .single()
+
+  if (!hackathon) {
+    return { error: "Hackathon not found" }
+  }
+
+  let inviterName = "The organizer"
+  if (input.organizerClerkUserId) {
+    try {
+      const organizer = await clerk.users.getUser(input.organizerClerkUserId)
+      if (organizer.firstName) {
+        inviterName = organizer.firstName + (organizer.lastName ? ` ${organizer.lastName}` : "")
+      }
+    } catch {
+      // fallback to default
+    }
+  }
+
+  const { data: team, error: teamError } = await client
+    .from("teams")
+    .insert({
+      hackathon_id: hackathonId,
+      name: input.name,
+      captain_clerk_user_id: null,
+      pending_captain_email: input.captainEmail.toLowerCase(),
+      invite_code: crypto.randomUUID().slice(0, 8),
+      status: "forming",
+    })
+    .select("id, name")
+    .single()
+
+  if (teamError) {
+    console.error("Failed to create pending team:", teamError)
+    return { error: "Failed to create team" }
+  }
+
+  const { randomBytes } = await import("crypto")
+  const token = randomBytes(32).toString("base64url")
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { error: inviteError } = await client
+    .from("team_invitations")
+    .insert({
+      team_id: team.id,
+      hackathon_id: hackathonId,
+      email: input.captainEmail.toLowerCase(),
+      token,
+      invited_by_clerk_user_id: input.organizerClerkUserId || "system",
+      status: "pending",
+      expires_at: expiresAt,
+      is_captain_invite: true,
+    })
+
+  if (inviteError) {
+    console.error("Failed to create captain invitation:", inviteError)
+    await client.from("teams").delete().eq("id", team.id)
+    return { error: "Failed to send invitation" }
+  }
+
+  const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
+  await sendTeamInvitationEmail({
+    to: input.captainEmail.toLowerCase(),
+    teamName: input.name,
+    hackathonName: hackathon.name,
+    inviterName,
+    inviteToken: token,
+    expiresAt,
+  })
+
+  return { team, invited: true }
+}
+
+export async function modifyTeamMembers(
+  teamId: string,
+  hackathonId: string,
+  changes: { add?: string[]; remove?: string[] }
+): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  if (changes.add && changes.add.length > 0) {
+    for (const clerkUserId of changes.add) {
+      await client
+        .from("hackathon_participants")
+        .update({ team_id: teamId })
+        .eq("hackathon_id", hackathonId)
+        .eq("clerk_user_id", clerkUserId)
+    }
+  }
+
+  if (changes.remove && changes.remove.length > 0) {
+    for (const clerkUserId of changes.remove) {
+      await client
+        .from("hackathon_participants")
+        .update({ team_id: null })
+        .eq("hackathon_id", hackathonId)
+        .eq("clerk_user_id", clerkUserId)
+    }
+  }
+
+  return true
+}
+
+export async function bulkAssignTeams(
+  hackathonId: string,
+  assignments: { teamId: string; roomId: string }[]
+): Promise<{ success: boolean; assignedCount: number }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data, error } = await client.rpc("bulk_assign_teams", {
+    p_hackathon_id: hackathonId,
+    p_assignments: assignments,
+  })
+
+  if (error) {
+    console.error("Failed to bulk assign teams:", error)
+    return { success: false, assignedCount: 0 }
+  }
+
+  const result = Array.isArray(data) ? data[0] : data
+  return {
+    success: result?.success ?? false,
+    assignedCount: result?.assigned_count ?? 0,
+  }
+}

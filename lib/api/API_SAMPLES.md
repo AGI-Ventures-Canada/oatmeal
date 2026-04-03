@@ -607,6 +607,97 @@ curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/results"
 
 ---
 
+### GET /api/public/hackathons/:slug/announcements
+
+Returns published announcements for a hackathon, ordered by most recent first. Excludes drafts and future-scheduled announcements.
+
+#### curl
+
+```bash
+curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/announcements"
+```
+
+#### TypeScript
+
+```typescript
+const res = await fetch(`https://your-domain.com/api/public/hackathons/${slug}/announcements`)
+const { announcements } = await res.json()
+```
+
+#### Python
+
+```python
+import requests
+
+response = requests.get(f"https://your-domain.com/api/public/hackathons/{slug}/announcements")
+announcements = response.json()["announcements"]
+```
+
+#### Response
+
+```json
+{
+  "announcements": [
+    {
+      "id": "uuid",
+      "title": "Submission deadline extended",
+      "body": "You have an extra hour to submit your projects!",
+      "priority": "urgent",
+      "audience": "everyone",
+      "published_at": "2026-04-28T14:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### GET /api/public/hackathons/:slug/schedule
+
+Returns all schedule items for a hackathon, ordered by start time.
+
+#### curl
+
+```bash
+curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/schedule"
+```
+
+#### TypeScript
+
+```typescript
+const res = await fetch(`https://your-domain.com/api/public/hackathons/${slug}/schedule`)
+const { scheduleItems } = await res.json()
+```
+
+#### Python
+
+```python
+import requests
+
+response = requests.get(f"https://your-domain.com/api/public/hackathons/{slug}/schedule")
+schedule_items = response.json()["scheduleItems"]
+```
+
+#### Response
+
+```json
+{
+  "scheduleItems": [
+    {
+      "id": "uuid",
+      "title": "Opening Ceremony",
+      "description": "Welcome and kickoff",
+      "starts_at": "2026-04-28T09:00:00Z",
+      "ends_at": "2026-04-28T09:30:00Z",
+      "location": "Main Hall",
+      "sort_order": 0
+    }
+  ]
+}
+```
+
+---
+
 ### POST /api/public/import/luma
 
 Extracts structured event data from a public Luma event page by parsing JSON-LD metadata.
@@ -1800,6 +1891,117 @@ curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/results/unpu
 
 ---
 
+#### GET /api/dashboard/hackathons/:id/announcements
+
+Lists all announcements for a hackathon (including drafts). Requires scope: `hackathons:read`
+
+```bash
+curl "https://your-domain.com/api/dashboard/hackathons/{id}/announcements" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### POST /api/dashboard/hackathons/:id/announcements
+
+Creates a draft announcement. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Submission deadline extended", "body": "You have an extra hour!", "priority": "urgent", "audience": "everyone"}'
+```
+
+#### PATCH /api/dashboard/hackathons/:id/announcements/:announcementId
+
+Updates an announcement. Requires scope: `hackathons:write`
+
+```bash
+curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Updated title", "audience": "judges"}'
+```
+
+#### DELETE /api/dashboard/hackathons/:id/announcements/:announcementId
+
+Deletes an announcement. Requires scope: `hackathons:write`
+
+```bash
+curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### POST /api/dashboard/hackathons/:id/announcements/:announcementId/publish
+
+Publishes an announcement immediately. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}/publish" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### POST /api/dashboard/hackathons/:id/announcements/:announcementId/schedule
+
+Schedules an announcement for future publishing. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}/schedule" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"scheduledAt": "2026-04-28T14:00:00Z"}'
+```
+
+#### POST /api/dashboard/hackathons/:id/announcements/:announcementId/unpublish
+
+Reverts a published announcement to draft. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}/unpublish" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### GET /api/dashboard/hackathons/:id/schedule
+
+Lists all schedule items for a hackathon. Requires scope: `hackathons:read`
+
+```bash
+curl "https://your-domain.com/api/dashboard/hackathons/{id}/schedule" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### POST /api/dashboard/hackathons/:id/schedule
+
+Creates a schedule item. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/schedule" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Opening Ceremony", "startsAt": "2026-04-28T09:00:00Z", "endsAt": "2026-04-28T09:30:00Z", "location": "Main Hall"}'
+```
+
+#### PATCH /api/dashboard/hackathons/:id/schedule/:itemId
+
+Updates a schedule item. Requires scope: `hackathons:write`
+
+```bash
+curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/schedule/{itemId}" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Updated title", "location": "Room B"}'
+```
+
+#### DELETE /api/dashboard/hackathons/:id/schedule/:itemId
+
+Deletes a schedule item. Requires scope: `hackathons:write`
+
+```bash
+curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/schedule/{itemId}" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+---
+
 ### Webhooks, Schedules, Jobs
 
 #### Webhooks (`webhooks:read` / `webhooks:write`)
@@ -1984,5 +2186,98 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3)
     return response
   }
   throw new Error("Max retries exceeded")
+}
+```
+
+---
+
+### GET /api/v1/hackathons/:id/activity
+
+Returns audit logs for a hackathon. Supports filtering, sorting, date ranges, and pagination.
+
+#### Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | number | 50 | Page size (1-100) |
+| `offset` | number | 0 | Pagination offset |
+| `action` | string | — | Substring filter on action (e.g. `hackathon.created`) |
+| `resource_type` | string | — | Exact match on resource type (e.g. `hackathon`, `team`) |
+| `since` | string | — | ISO 8601 timestamp, only logs after this time |
+| `until` | string | — | ISO 8601 timestamp, only logs before this time |
+| `sort` | string | `desc` | Sort by created_at: `asc` or `desc` |
+
+#### curl
+
+```bash
+# Basic: latest 50 logs
+curl -H "Authorization: Bearer $API_KEY" \
+  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity"
+
+# Filter by action
+curl -H "Authorization: Bearer $API_KEY" \
+  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity?action=judge"
+
+# Date range + resource type
+curl -H "Authorization: Bearer $API_KEY" \
+  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity?since=2026-04-01T00:00:00Z&until=2026-04-03T23:59:59Z&resource_type=team"
+
+# Oldest first, page 2
+curl -H "Authorization: Bearer $API_KEY" \
+  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity?sort=asc&limit=20&offset=20"
+```
+
+#### TypeScript
+
+```typescript
+type ActivityLog = {
+  id: string
+  action: string
+  resourceType: string
+  resourceId: string | null
+  actorType: "user" | "api_key"
+  metadata: Record<string, unknown> | null
+  createdAt: string
+}
+
+async function listActivity(hackathonId: string, params?: {
+  action?: string
+  resource_type?: string
+  since?: string
+  until?: string
+  sort?: "asc" | "desc"
+  limit?: number
+  offset?: number
+}) {
+  const qs = new URLSearchParams()
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v))
+    }
+  }
+  const url = `https://your-domain.com/api/v1/hackathons/${hackathonId}/activity?${qs}`
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${API_KEY}` },
+  })
+  return res.json() as Promise<{ logs: ActivityLog[]; total: number }>
+}
+```
+
+#### Response
+
+```json
+{
+  "logs": [
+    {
+      "id": "a1b2c3d4-...",
+      "action": "judge.added",
+      "resourceType": "hackathon_participant",
+      "resourceId": "p1-uuid",
+      "actorType": "api_key",
+      "metadata": { "hackathonId": "h1-uuid", "email": "judge@example.com" },
+      "createdAt": "2026-04-03T14:30:00.000Z"
+    }
+  ],
+  "total": 142
 }
 ```

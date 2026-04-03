@@ -1,7 +1,8 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requireAdmin, requireAdminScopes, AuthError } from "@/lib/auth/principal"
+import { isValidUuid } from "@/lib/utils/uuid"
 import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
-import { logAudit } from "@/lib/services/audit"
+import { logAudit, listAllAuditLogs } from "@/lib/services/audit"
 import {
   getPlatformStats,
   listAllHackathons,
@@ -11,16 +12,7 @@ import {
 } from "@/lib/services/admin"
 import { listScenarios, runScenario } from "@/lib/services/admin-scenarios"
 import { supabase } from "@/lib/db/client"
-
-const HackathonStatusEnum = t.Union([
-  t.Literal("draft"),
-  t.Literal("published"),
-  t.Literal("registration_open"),
-  t.Literal("active"),
-  t.Literal("judging"),
-  t.Literal("completed"),
-  t.Literal("archived"),
-])
+import { HackathonStatusEnum } from "@/lib/api/validators"
 
 const LocationTypeEnum = t.Union([
   t.Literal("in_person"),
@@ -28,19 +20,6 @@ const LocationTypeEnum = t.Union([
 ])
 
 export const adminRoutes = new Elysia({ prefix: "/admin" })
-  .onError(({ error, set }) => {
-    if (error instanceof AuthError) {
-      set.status = error.statusCode
-      return { error: error.message }
-    }
-    if (error instanceof RateLimitError) {
-      set.status = 429
-      set.headers = getRateLimitHeaders({ allowed: false, remaining: error.remaining, resetAt: error.resetAt }) as Record<string, string>
-      return { error: "Rate limit exceeded" }
-    }
-    set.status = 500
-    return { error: "Internal server error" }
-  })
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     requireAdmin(principal)
@@ -191,6 +170,49 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       detail: {
         summary: "Delete hackathon",
         description: "Permanently delete a hackathon and all associated data. Requires confirm_name matching the hackathon name.",
+      },
+    }
+  )
+  .get(
+    "/activity",
+    async ({ query, principal }) => {
+      requireAdminScopes(principal, ["admin:read"])
+
+      if (query.hackathon_id && !isValidUuid(query.hackathon_id)) {
+        throw new AuthError("Invalid hackathon_id format", 400)
+      }
+      if (query.tenant_id && !isValidUuid(query.tenant_id)) {
+        throw new AuthError("Invalid tenant_id format", 400)
+      }
+
+      const result = await listAllAuditLogs({
+        limit: query.limit,
+        offset: query.offset,
+        hackathonId: query.hackathon_id || undefined,
+        tenantId: query.tenant_id || undefined,
+        action: query.action || undefined,
+        resourceType: query.resource_type || undefined,
+        since: query.since || undefined,
+        until: query.until || undefined,
+        sort: query.sort === "asc" ? "asc" : undefined,
+      })
+      return result
+    },
+    {
+      query: t.Object({
+        limit: t.Optional(t.Numeric({ description: "Page size (1-100, default 50)" })),
+        offset: t.Optional(t.Numeric({ description: "Pagination offset (default 0)" })),
+        hackathon_id: t.Optional(t.String({ description: "Filter by hackathon UUID" })),
+        tenant_id: t.Optional(t.String({ description: "Filter by tenant UUID" })),
+        action: t.Optional(t.String({ description: "Filter by action (substring match)" })),
+        resource_type: t.Optional(t.String({ description: "Filter by resource type (exact match)" })),
+        since: t.Optional(t.String({ description: "Only logs after this ISO 8601 timestamp" })),
+        until: t.Optional(t.String({ description: "Only logs before this ISO 8601 timestamp" })),
+        sort: t.Optional(t.String({ description: "Sort order: 'asc' or 'desc' (default 'desc')" })),
+      }),
+      detail: {
+        summary: "List activity logs",
+        description: "List audit logs across all tenants with pagination, filtering, sorting, and date range.",
       },
     }
   )

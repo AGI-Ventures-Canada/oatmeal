@@ -8,8 +8,8 @@ import {
   listJudgingHackathons,
 } from "@/lib/services/hackathons"
 import { getSubmittedHackathonIds } from "@/lib/services/submissions"
+import { getBatchHackathonStats } from "@/lib/services/organizer-dashboard"
 import { HackathonTabs } from "./hackathon-tabs"
-import { PageHeader } from "@/components/page-header"
 
 export default async function DashboardPage() {
   const { userId } = await auth()
@@ -20,27 +20,31 @@ export default async function DashboardPage() {
 
   const tenant = await resolvePageTenant()
 
-  const [myHackathons, organizedHackathons, sponsoredHackathons, judgingHackathons, submittedHackathonIds] = await Promise.all([
+  const organizedWithStats = listOrganizedHackathons(tenant.id).then(async (hackathons) => {
+    const stats = await getBatchHackathonStats(hackathons.map((h) => h.id))
+    return { hackathons, stats }
+  })
+
+  const [myHackathons, organized, sponsoredHackathons, judgingHackathons, submittedHackathonIds] = await Promise.all([
     listParticipatingHackathons(userId),
-    listOrganizedHackathons(tenant.id),
+    organizedWithStats,
     listSponsoredHackathons(tenant.id),
     listJudgingHackathons(userId),
     getSubmittedHackathonIds(userId),
   ])
 
+  const organizedHackathons = organized.hackathons
+  const serializedStats = Object.fromEntries(organized.stats)
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="Your hackathons at a glance"
-      />
-
       <HackathonTabs
         myHackathons={myHackathons}
         organizedHackathons={organizedHackathons}
         sponsoredHackathons={sponsoredHackathons}
         judgingHackathons={judgingHackathons}
         submittedHackathonIds={Array.from(submittedHackathonIds)}
+        organizedStats={serializedStats}
       />
     </div>
   )

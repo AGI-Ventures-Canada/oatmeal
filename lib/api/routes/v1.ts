@@ -8,27 +8,6 @@ import type { Json } from "@/lib/db/types"
 import { normalizeUrl } from "@/lib/utils/url"
 
 export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
-  .onError(({ error }) => {
-    if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: error.statusCode,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-    if (error instanceof RateLimitError) {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          ...getRateLimitHeaders({ allowed: false, remaining: error.remaining, resetAt: error.resetAt }),
-        },
-      })
-    }
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    })
-  })
   .derive(async ({ request }) => {
     const principal = await resolvePrincipal(request)
     const source = isCliRequest(request) ? "cli" as const : "api" as const
@@ -354,3 +333,57 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
       description: "Deletes a webhook.",
     },
   })
+  .get(
+    "/hackathons/:id/activity",
+    async ({ principal, params, query }) => {
+      requirePrincipal(principal, ["api_key"], ["hackathons:read"])
+
+      const rateLimit = await checkRateLimit(`api_key:${principal.keyId}:default`)
+      if (!rateLimit.allowed) {
+        throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
+      }
+
+      const { listHackathonAuditLogs } = await import("@/lib/services/audit")
+      const result = await listHackathonAuditLogs(
+        principal.tenantId,
+        params.id,
+        {
+          limit: query.limit,
+          offset: query.offset,
+          action: query.action || undefined,
+          resourceType: query.resource_type || undefined,
+          since: query.since || undefined,
+          until: query.until || undefined,
+          sort: query.sort === "asc" ? "asc" : undefined,
+        }
+      )
+
+      return {
+        logs: result.logs.map((log) => ({
+          id: log.id,
+          action: log.action,
+          resourceType: log.resource_type,
+          resourceId: log.resource_id,
+          actorType: log.actor_type,
+          metadata: log.metadata,
+          createdAt: log.created_at,
+        })),
+        total: result.total,
+      }
+    },
+    {
+      query: t.Object({
+        limit: t.Optional(t.Numeric({ description: "Page size (1-100, default 50)" })),
+        offset: t.Optional(t.Numeric({ description: "Pagination offset (default 0)" })),
+        action: t.Optional(t.String({ description: "Filter by action (substring match, e.g. 'hackathon.created')" })),
+        resource_type: t.Optional(t.String({ description: "Filter by resource type (exact match, e.g. 'hackathon')" })),
+        since: t.Optional(t.String({ description: "Only logs after this ISO 8601 timestamp" })),
+        until: t.Optional(t.String({ description: "Only logs before this ISO 8601 timestamp" })),
+        sort: t.Optional(t.String({ description: "Sort order: 'asc' or 'desc' (default 'desc')" })),
+      }),
+      detail: {
+        summary: "List hackathon activity",
+        description: "Returns audit logs for a specific hackathon. Supports filtering by action, resource type, and date range. Requires hackathons:read scope.",
+      },
+    }
+  )

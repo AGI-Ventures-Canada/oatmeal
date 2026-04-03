@@ -51,6 +51,7 @@ interface PrizesEditFormProps {
   criteria?: JudgingCriteria[]
   judgingMode?: JudgingMode
   onSaveAndNext?: () => void
+  onSave?: (data: { prizes: { name: string; description: string | null; value: string | null }[] }) => Promise<boolean>
 }
 
 type PendingChange =
@@ -223,7 +224,9 @@ export function PrizesEditForm({
   criteria = [],
   judgingMode = "points",
   onSaveAndNext,
+  onSave,
 }: PrizesEditFormProps) {
+  const isLocalMode = !!onSave
   const router = useRouter()
   const { closeDrawer } = useEdit()
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
@@ -396,6 +399,19 @@ export function PrizesEditForm({
 
   async function saveChanges() {
     if (!hasChanges) return true
+
+    if (isLocalMode) {
+      const prizesData = currentPrizes.map((p) => ({
+        name: p.name,
+        description: p.description,
+        value: p.value,
+      }))
+      const ok = await onSave!({ prizes: prizesData })
+      if (ok) {
+        setPendingChanges([])
+      }
+      return ok
+    }
 
     setSaving(true)
     setError(null)

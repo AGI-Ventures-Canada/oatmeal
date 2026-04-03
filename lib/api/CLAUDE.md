@@ -8,6 +8,14 @@ All API routes are handled by a single Elysia instance via a Next.js catch-all r
 - `app/api/[[...slugs]]/route.ts` delegates to Elysia
 - Elysia instance defined in `lib/api/index.ts`
 
+## Dev Routes
+
+`lib/api/routes/dev.ts` exports `devRoutes`, which has **no auth**. It is protected at two levels: `lib/api/index.ts` only mounts it when `NODE_ENV === "development"`, and the handler itself returns 403 if `NODE_ENV !== "development"` (defence-in-depth for cases where the app runs locally against a remote DB). Never add it to a production-visible mount.
+
+The handler uses dynamic `import()` for `@/lib/services/public-hackathons` and `@/lib/db/client` to avoid circular dependency issues that arise when those modules are imported at the top level in this file.
+
+The handler calls bare `supabase()` (anon key) rather than the service-role client. The read is dev-only and the blast radius is negligible, but if this handler is ever extended to write data it should switch to the service-role client for consistency with the rest of the API layer.
+
 ## Route Namespaces
 
 ```
@@ -22,6 +30,16 @@ All API routes are handled by a single Elysia instance via a Next.js catch-all r
 - `/credentials/*` - Contains sensitive secrets
 - `/hackathons/participating`, `/hackathons/sponsored` - User-specific views
 - `/organizations/search` - User-specific search
+
+## Error Handling
+
+`handleRouteError` in `lib/api/routes/errors.ts` is registered **once**, on the top-level `api` instance in `lib/api/index.ts`. Do not add per-route `onError` calls to child plugins — Elysia fires the closest handler first, so a child-level `onError` would shadow the parent and create a maintenance trap where future handlers can silently diverge.
+
+`handleRouteError` checks both `instanceof` and `error.name` for `AuthError` and `RateLimitError`. The `.name` fallback guards against cross-module-boundary cases where Bun loads two separate copies of the same class (e.g. in tests), causing `instanceof` to return false for an otherwise identical class.
+
+Errors with a `code` property (Elysia-managed errors such as `NOT_FOUND`, `VALIDATION`, and `PARSE`) are returned as `undefined` so Elysia uses its own native status codes (404, 422, 400). Do not remove this branch — without it, `handleRouteError` would override those responses with a 500.
+
+`handleRouteError` uses `set.status` instead of returning a `new Response` because Elysia 1.4.x ignores the HTTP status of a `Response` object returned from `onError` — only mutations to the `set` context object are respected.
 
 ## Key Patterns
 
@@ -49,6 +67,33 @@ import { auth } from "@clerk/nextjs/server"
   return { userId, orgId }
 })
 ```
+
+### Child Route Derive Hooks and Auth Caching
+
+**CRITICAL: Never call `resolvePrincipal()` in child route `.derive()` hooks without the per-request cache.**
+
+When a child Elysia instance (e.g., `dashboardJudgingRoutes`) is `.use()`'d into a parent that already has a `.derive()` calling `resolvePrincipal()`, Elysia runs **both** derives. The second `resolvePrincipal()` call can fail in Elysia's async context, silently overwriting the valid principal with `{ kind: "anon" }` and causing `Unauthorized` errors.
+
+`resolvePrincipal()` in `lib/auth/principal.ts` uses a `WeakMap<Request, Principal>` cache to ensure auth resolves only once per request. **Do not bypass or duplicate this pattern.** If you extract routes into a new child file:
+
+1. Keep the `.derive()` with `resolvePrincipal()` for TypeScript type inference — the cache makes it a no-op on the second call
+2. Never inline the auth logic directly (skipping the cache)
+3. Never create a parallel auth resolution function
+
+### UUID Validation for Route Parameters
+
+**CRITICAL: All `:id` route parameters that query UUID columns must be validated before hitting the database.**
+
+The `hackathons.id` column (and most primary keys) are `uuid` type. If a non-UUID string like `"draft"` reaches PostgreSQL via `.eq("id", value)`, it throws `invalid input syntax for type uuid` which cascades as a 500 error.
+
+`checkHackathonOrganizer()` in `lib/services/public-hackathons.ts` validates with `isValidUuid()` from `lib/utils/uuid.ts`. When adding new routes that query by ID:
+
+1. Always route through `checkHackathonOrganizer()` for hackathon IDs — it validates UUID format and ownership in one call
+2. For non-hackathon UUID params, call `isValidUuid(params.id)` and return 404 early if invalid
+3. Never pass unvalidated route params directly to `.eq("id", ...)` queries
+4. In tests, use valid UUID strings (e.g., `"11111111-1111-1111-1111-111111111111"`) not short placeholders like `"h1"`
+
+This matters because the `HackathonDraftEditor` component uses `id: "draft"` as a placeholder before persistence — any component rendering during draft mode could trigger API calls with this non-UUID ID.
 
 ### AI SDK Streaming
 ```typescript

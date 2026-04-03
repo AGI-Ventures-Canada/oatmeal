@@ -4,6 +4,7 @@ import {
   resetComponentMocks,
   setRouter,
   setPathname,
+  setSearchParams,
 } from "../../lib/component-mocks"
 
 const storage = new Map<string, string>()
@@ -140,9 +141,14 @@ describe("HackathonDraftEditor", () => {
       ]
     })
 
-    it("shows org gate dialog when submitting without org", async () => {
+    it("shows connect organization button when signed in without org", () => {
       renderEditor()
-      fireEvent.click(screen.getByText("Create Event"))
+      expect(screen.getByText("Connect Organization")).toBeDefined()
+    })
+
+    it("shows org gate dialog when clicking connect organization", async () => {
+      renderEditor()
+      fireEvent.click(screen.getByText("Connect Organization"))
 
       await waitFor(() => {
         expect(screen.getByText("Organization Required")).toBeDefined()
@@ -151,7 +157,7 @@ describe("HackathonDraftEditor", () => {
 
     it("lists existing organizations", async () => {
       renderEditor()
-      fireEvent.click(screen.getByText("Create Event"))
+      fireEvent.click(screen.getByText("Connect Organization"))
 
       await waitFor(() => {
         expect(screen.getByText("Alpha Org")).toBeDefined()
@@ -164,7 +170,7 @@ describe("HackathonDraftEditor", () => {
         clerkState.organization = { id: "org_1", name: "Alpha Org" }
       })
       renderEditor()
-      fireEvent.click(screen.getByText("Create Event"))
+      fireEvent.click(screen.getByText("Connect Organization"))
 
       await waitFor(() => screen.getByText("Alpha Org"))
       fireEvent.click(screen.getByText("Alpha Org"))
@@ -177,7 +183,7 @@ describe("HackathonDraftEditor", () => {
 
     it("auto-submits after creating a new organization", async () => {
       renderEditor()
-      fireEvent.click(screen.getByText("Create Event"))
+      fireEvent.click(screen.getByText("Connect Organization"))
 
       await waitFor(() => screen.getByText("Create New Organization"))
       fireEvent.click(screen.getByText("Create New Organization"))
@@ -193,11 +199,20 @@ describe("HackathonDraftEditor", () => {
 
     it("does not submit when org gate is dismissed", async () => {
       renderEditor()
-      fireEvent.click(screen.getByText("Create Event"))
+      fireEvent.click(screen.getByText("Connect Organization"))
 
       await waitFor(() => screen.getByText("Organization Required"))
 
       expect(mockOnSubmit).not.toHaveBeenCalled()
+    })
+
+    it("auto-opens org gate when returning from sign-in with edit param", async () => {
+      setSearchParams(new URLSearchParams("edit=true"))
+      renderEditor()
+
+      await waitFor(() => {
+        expect(screen.getByText("Organization Required")).toBeDefined()
+      })
     })
   })
 

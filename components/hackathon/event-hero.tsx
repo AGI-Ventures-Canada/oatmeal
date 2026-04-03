@@ -221,6 +221,16 @@ export function EventHero({
           )}
         </p>
       )}
+      {(registrationOpensAt || registrationClosesAt) && (
+        <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+          <Calendar className="size-3.5 shrink-0" />
+          {registrationOpensAt && registrationClosesAt
+            ? `Registration ${formatDateRange(registrationOpensAt, registrationClosesAt)}`
+            : registrationOpensAt
+              ? `Registration opens ${new Date(registrationOpensAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+              : `Registration closes ${new Date(registrationClosesAt!).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+        </p>
+      )}
     </div>
   );
 

@@ -39,7 +39,7 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react"
-import type { HackathonStatus } from "@/lib/db/hackathon-types"
+import type { HackathonStatus, HackathonPhase } from "@/lib/db/hackathon-types"
 
 const phases = [
   { key: "draft" as const, label: "Draft", icon: EyeOff },
@@ -139,6 +139,7 @@ interface LifecycleStepperProps {
   prizeCount?: number
   judgeDisplayCount?: number
   criteriaCount?: number
+  phase?: HackathonPhase | null
 }
 
 type HoverAction = {
@@ -168,6 +169,7 @@ export function LifecycleStepper({
   prizeCount = 0,
   judgeDisplayCount = 0,
   criteriaCount = 0,
+  phase,
 }: LifecycleStepperProps) {
   const router = useRouter()
   const isMobile = useIsMobile()
@@ -287,7 +289,7 @@ export function LifecycleStepper({
             description: "Some submissions don't have judges assigned yet",
             buttonText: "Assign Submissions",
             onClick: () =>
-              router.push(`/e/${hackathonSlug}/manage/judging?tab=assignments`),
+              router.push(`/e/${hackathonSlug}/manage?tab=judges&jtab=assignments`),
           }
         return {
           title: "Start Judging",
@@ -364,6 +366,18 @@ export function LifecycleStepper({
     <>
       <div className="rounded-lg border bg-card">
         <div className="px-3 py-3 sm:px-5 sm:py-4">
+          {phase && (
+            <div className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+              <span>
+                {phase === "build" && "Building"}
+                {phase === "submission_open" && "Submissions Open"}
+                {phase === "preliminaries" && "Preliminary Judging"}
+                {phase === "finals" && "Grand Finals"}
+                {phase === "results_pending" && "Results Pending"}
+              </span>
+            </div>
+          )}
           <div className="flex items-start">
             {phases.map((phase, index) => {
               const isCompleted = index < currentIndex

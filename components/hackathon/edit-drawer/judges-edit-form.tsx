@@ -417,7 +417,7 @@ export function JudgesEditForm({
           }
 
           if (change.email) {
-            await fetch(
+            const judgeRes = await fetch(
               `/api/dashboard/hackathons/${hackathonId}/judging/judges`,
               {
                 method: "POST",
@@ -429,6 +429,11 @@ export function JudgesEditForm({
                 }),
               }
             )
+            if (!judgeRes.ok) {
+              const judgeData = await judgeRes.json()
+              const identifier = change.judge.name || change.email || "Unknown"
+              throw new Error(`${identifier}: ${judgeData.error || "Failed to assign judge role"}`)
+            }
           }
         } else if (change.type === "delete") {
           const res = await fetch(

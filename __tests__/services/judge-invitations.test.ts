@@ -368,4 +368,74 @@ describe("Judge Invitations Service", () => {
       expect(result).toEqual([])
     })
   })
+
+  describe("acceptJudgeInvitation", () => {
+    it("returns role_conflict when user joined a team after invitation was sent", async () => {
+      setMockFromImplementation((table) => {
+        if (table === "judge_invitations") {
+          return createChainableMock({
+            data: {
+              ...mockInvitation,
+              hackathons: { name: "Test Hack", slug: "test-hack", status: "active" },
+            },
+            error: null,
+          })
+        }
+        if (table === "hackathon_participants") {
+          return createChainableMock({
+            data: { id: "p1", role: "participant", team_id: "team_1" },
+            error: null,
+          })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      const result = await acceptJudgeInvitation("test-token-123", "user_123", "judge@example.com")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("role_conflict")
+      }
+    })
+  })
+
+  describe("createJudgeInvitation - role conflict", () => {
+    it("returns role_conflict when invitee is already on a team", async () => {
+      const { mockClerkClient } = await import("../lib/supabase-mock")
+      mockClerkClient.mockResolvedValueOnce({
+        organizations: {
+          getOrganization: mock(() => Promise.resolve({ name: "Test Org" })),
+        },
+        users: {
+          getUserList: mock(() => Promise.resolve({ data: [{ id: "user_on_team" }] })),
+        },
+      } as unknown)
+
+      let checkedExisting = false
+      setMockFromImplementation((table) => {
+        if (table === "judge_invitations" && !checkedExisting) {
+          checkedExisting = true
+          return createChainableMock({ data: null, error: null })
+        }
+        if (table === "hackathon_participants") {
+          return createChainableMock({
+            data: { id: "p1", role: "participant", team_id: "team_1" },
+            error: null,
+          })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      const result = await createJudgeInvitation({
+        hackathonId: "h1",
+        email: "teamplayer@example.com",
+        invitedByClerkUserId: "organizer_123",
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe("role_conflict")
+      }
+    })
+  })
 })

@@ -82,10 +82,7 @@ export function OrgGateDialog({ open, onOpenChange, onOrgSelected }: OrgGateDial
 
       <CreateOrganizationDialog
         open={createOrgOpen}
-        onOpenChange={(o) => {
-          setCreateOrgOpen(o)
-          if (!o) onOpenChange(false)
-        }}
+        onOpenChange={setCreateOrgOpen}
         onSuccess={() => {
           setCreateOrgOpen(false)
           onOrgSelected()

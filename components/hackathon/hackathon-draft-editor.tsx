@@ -1,16 +1,17 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth, useOrganization } from "@clerk/nextjs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { SignInRequiredDialog } from "@/components/sign-in-required-dialog"
 import { OrgGateDialog } from "@/components/org-gate-dialog"
 import { Button } from "@/components/ui/button"
 import { Check, Copy, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
 
-const STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000
+export const STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000
 
 export type DraftSponsor = {
   name: string
@@ -73,6 +74,10 @@ function stateToHackathon(state: DraftState): PublicHackathon {
     max_team_size: 5,
     allow_solo: true,
     status: "draft",
+    phase: null,
+    challenge_title: null,
+    challenge_body: null,
+    challenge_released_at: null,
     banner_url: state.imageUrl,
     location_type: state.locationType,
     location_name: state.locationName,
@@ -103,11 +108,25 @@ function stateToHackathon(state: DraftState): PublicHackathon {
       created_at: new Date().toISOString(),
     })),
     judges: [],
-    prizes: [],
+    prizes: state.prizes.map((p, i) => ({
+      id: `draft-${i}`,
+      hackathon_id: "draft",
+      name: p.name,
+      description: p.description,
+      value: p.value,
+      type: "favorite" as const,
+      rank: null,
+      kind: "other",
+      display_value: null,
+      criteria_id: null,
+      display_order: i,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })),
   }
 }
 
-function loadSavedState(storageKey: string): DraftState | null {
+export function loadSavedState(storageKey: string): DraftState | null {
   if (typeof window === "undefined") return null
   const saved = localStorage.getItem(storageKey)
   if (!saved) return null
@@ -142,8 +161,9 @@ export function HackathonDraftEditor({
   signInDescription = "Your edits have been saved. Sign in to continue.",
 }: HackathonDraftEditorProps) {
   const router = useRouter()
-  const { isSignedIn } = useAuth()
-  const { organization } = useOrganization()
+  const searchParams = useSearchParams()
+  const { isSignedIn, isLoaded } = useAuth()
+  const { organization, isLoaded: isOrgLoaded } = useOrganization()
 
   const [state, setState] = useState<DraftState>(() => {
     return loadSavedState(storageKey) ?? initialState
@@ -155,10 +175,26 @@ export function HackathonDraftEditor({
   const [sourceCopied, setSourceCopied] = useState(false)
   const pendingSubmit = useRef(false)
   const copyTimeoutRef = useRef<number | null>(null)
+  const autoTriggeredRef = useRef(false)
 
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify({ state, savedAt: Date.now() }))
   }, [state, storageKey])
+
+  useEffect(() => {
+    if (!isLoaded || !isOrgLoaded || autoTriggeredRef.current) return
+    if (searchParams.get("edit") !== "true") return
+    if (!isSignedIn) return
+
+    autoTriggeredRef.current = true
+
+    if (organization) {
+      doSubmitRef.current()
+    } else {
+      pendingSubmit.current = true
+      setOrgGateOpen(true)
+    }
+  }, [isLoaded, isOrgLoaded, isSignedIn, organization, searchParams])
 
   useEffect(() => {
     return () => {
@@ -222,6 +258,7 @@ export function HackathonDraftEditor({
       if ("locationUrl" in data) next.locationUrl = data.locationUrl as string | null
       if ("imageUrl" in data) next.imageUrl = data.imageUrl as string | null
       if ("sponsors" in data) next.sponsors = data.sponsors as DraftSponsor[]
+      if ("prizes" in data) next.prizes = data.prizes as DraftPrize[]
       if ("rules" in data) next.rules = data.rules as string | null
       return next
     })
@@ -260,8 +297,13 @@ export function HackathonDraftEditor({
         onAuthRequired={!isSignedIn ? () => setShowSignInDialog(true) : undefined}
       />
       <div className="fixed inset-x-0 bottom-4 z-50 px-4 sm:bottom-6">
-        <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-3 rounded-2xl border bg-background/95 px-3 py-3 shadow-xl backdrop-blur sm:px-4">
-          {sourceDisplayUrl && (
+        <div className={cn(
+          "mx-auto flex w-full flex-col items-center gap-3 rounded-2xl border bg-background/95 shadow-xl backdrop-blur",
+          (sourceDisplayUrl && !isSignedIn) || (isLoaded && isOrgLoaded && isSignedIn && !organization)
+            ? "max-w-md px-3 py-2"
+            : "max-w-3xl px-3 py-3 sm:px-4"
+        )}>
+          {sourceDisplayUrl && !(isLoaded && isOrgLoaded && isSignedIn && !organization) && (
             <div className="flex w-full items-center gap-2 rounded-full border bg-muted/50 px-3 py-2">
               <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground" title={sourceUrl}>
                 {sourceDisplayUrl}
@@ -282,18 +324,38 @@ export function HackathonDraftEditor({
           {error && (
             <p className="text-center text-sm text-destructive">{error}</p>
           )}
-          <Button
-            size="lg"
-            className="rounded-full px-8 text-base"
-            onClick={handleSubmit}
-            disabled={isSubmitting || !state.name.trim()}
-          >
-            {isSubmitting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              "Create Event"
-            )}
-          </Button>
+          {isLoaded && isOrgLoaded && isSignedIn && !organization ? (
+            <div className="flex w-full flex-col items-center gap-2">
+              <p className="cursor-default select-none text-center text-sm text-muted-foreground">
+                Connect an organization to save and publish your event
+              </p>
+              <Button
+                size="lg"
+                className="rounded-full px-8 text-base"
+                onClick={handleSubmit}
+                disabled={isSubmitting || !state.name.trim()}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  "Connect Organization"
+                )}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              size="lg"
+              className="rounded-full px-8 text-base"
+              onClick={handleSubmit}
+              disabled={isSubmitting || !state.name.trim()}
+            >
+              {isSubmitting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                "Create Event"
+              )}
+            </Button>
+          )}
         </div>
       </div>
       <SignInRequiredDialog

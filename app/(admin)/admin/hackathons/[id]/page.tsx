@@ -1,6 +1,7 @@
 import { getHackathonById } from "@/lib/services/admin"
 import { redirect } from "next/navigation"
 import { AdminHackathonEditor } from "./editor"
+import { AdminHackathonActivity } from "./hackathon-activity"
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -44,6 +45,7 @@ export default async function AdminHackathonDetailPage(props: PageProps) {
       </div>
 
       <AdminHackathonEditor hackathon={hackathon} />
+      <AdminHackathonActivity hackathonId={hackathon.id} />
     </div>
   )
 }

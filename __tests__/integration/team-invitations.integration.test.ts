@@ -146,9 +146,12 @@ mock.module("@/lib/auth/principal", () => ({
 const { Elysia } = await import("elysia")
 const { publicRoutes } = await import("@/lib/api/routes/public")
 const { dashboardRoutes } = await import("@/lib/api/routes/dashboard")
+const { handleRouteError } = await import("@/lib/api/routes/errors")
 
 const publicApp = new Elysia({ prefix: "/api" }).use(publicRoutes)
-const dashboardApp = new Elysia({ prefix: "/api" }).use(dashboardRoutes)
+const dashboardApp = new Elysia({ prefix: "/api" })
+  .onError(({ error, set, path }) => handleRouteError(error, set, path))
+  .use(dashboardRoutes)
 
 const mockInvitation = {
   id: "inv_1",

@@ -44,7 +44,7 @@ export default async function AdminOverviewPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Hackathons</CardTitle>
@@ -56,6 +56,20 @@ export default async function AdminOverviewPage() {
               className="mt-3 inline-block text-sm font-medium text-primary underline-offset-4 hover:underline"
             >
               View all hackathons
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Activity Log</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">Track all changes, transitions, and actions across events.</p>
+            <Link
+              href="/admin/activity"
+              className="mt-3 inline-block text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              View activity
             </Link>
           </CardContent>
         </Card>

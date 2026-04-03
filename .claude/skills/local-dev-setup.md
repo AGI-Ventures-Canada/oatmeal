@@ -61,6 +61,9 @@ API_KEY_SECRET=<generate-with-openssl>
 # Encryption (required for CLI auth — encrypts API keys stored in cli_auth_sessions)
 ENCRYPTION_KEY=<generate-with-openssl>
 
+# Admin portal (optional — enables /admin god mode)
+ADMIN_ENABLED=true
+
 # Resend (email sending)
 RESEND_API_KEY=re_...
 RESEND_FROM_EMAIL=noreply@getoatmeal.com
@@ -86,6 +89,8 @@ TAVILY_API_KEY=tvly-...
 echo "API_KEY_SECRET=$(openssl rand -hex 32)" >> .env.local
 echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> .env.local
 ```
+
+**Admin portal access** requires two things: (1) `ADMIN_ENABLED=true` in `.env.local`, and (2) the Clerk user must have `{ "admin": true }` in their public metadata. Set this in Clerk Dashboard > Users > your user > Public metadata. The Clerk session token template must also map `"metadata": "{{user.public_metadata}}"` under Configure > Sessions > Customize session token for the claims to reach the app.
 
 **Supabase keys are auto-configured** when running `bun dev` (local Supabase).
 
