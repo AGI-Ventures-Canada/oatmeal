@@ -326,14 +326,17 @@ export function HackathonTabs({
             </Card>
           ) : isSearching ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {organizedList.map((h) => (
-                <HackathonCard
-                  key={h.id}
-                  hackathon={h}
-                  href={`/e/${h.slug}/manage`}
-                  extras={statsMap.has(h.id) ? <MiniStatsRow stats={statsMap.get(h.id)!} /> : undefined}
-                />
-              ))}
+              {organizedList.map((h) => {
+                const stats = statsMap.get(h.id)
+                return (
+                  <HackathonCard
+                    key={h.id}
+                    hackathon={h}
+                    href={`/e/${h.slug}/manage`}
+                    extras={stats ? <MiniStatsRow stats={stats} /> : undefined}
+                  />
+                )
+              })}
             </div>
           ) : (
             <div className="space-y-8">
@@ -344,14 +347,17 @@ export function HackathonTabs({
                   <div key={group}>
                     <h3 className="text-sm font-medium text-muted-foreground mb-3">{GROUP_LABELS[group]}</h3>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {items.map((h) => (
-                        <HackathonCard
-                          key={h.id}
-                          hackathon={h}
-                          href={`/e/${h.slug}/manage`}
-                          extras={statsMap.has(h.id) ? <MiniStatsRow stats={statsMap.get(h.id)!} /> : undefined}
-                        />
-                      ))}
+                      {items.map((h) => {
+                        const stats = statsMap.get(h.id)
+                        return (
+                          <HackathonCard
+                            key={h.id}
+                            hackathon={h}
+                            href={`/e/${h.slug}/manage`}
+                            extras={stats ? <MiniStatsRow stats={stats} /> : undefined}
+                          />
+                        )
+                      })}
                     </div>
                   </div>
                 )

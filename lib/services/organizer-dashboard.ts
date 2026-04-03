@@ -16,33 +16,37 @@ export async function getBatchHackathonStats(hackathonIds: string[]): Promise<Ma
 
   const client = getSupabase() as unknown as SupabaseClient
 
-  const [participants, teams, submissions, assignments, mentorRequests] = await Promise.all([
-    client.from("hackathon_participants").select("hackathon_id").in("hackathon_id", hackathonIds),
-    client.from("teams").select("hackathon_id").in("hackathon_id", hackathonIds).neq("status", "disbanded"),
-    client.from("submissions").select("hackathon_id").in("hackathon_id", hackathonIds).eq("status", "submitted"),
+  const perHackathonCounts = hackathonIds.map((id) =>
+    Promise.all([
+      client.from("hackathon_participants").select("*", { count: "exact", head: true }).eq("hackathon_id", id),
+      client.from("teams").select("*", { count: "exact", head: true }).eq("hackathon_id", id).neq("status", "disbanded"),
+      client.from("submissions").select("*", { count: "exact", head: true }).eq("hackathon_id", id).eq("status", "submitted"),
+      client.from("mentor_requests").select("*", { count: "exact", head: true }).eq("hackathon_id", id).eq("status", "open"),
+    ])
+  )
+
+  const [counts, assignments] = await Promise.all([
+    Promise.all(perHackathonCounts),
     client.from("judge_assignments").select("hackathon_id, is_complete").in("hackathon_id", hackathonIds),
-    client.from("mentor_requests").select("hackathon_id").in("hackathon_id", hackathonIds).eq("status", "open"),
   ])
 
   const result = new Map<string, HackathonMiniStats>()
 
-  for (const id of hackathonIds) {
+  for (let i = 0; i < hackathonIds.length; i++) {
+    const id = hackathonIds[i]
+    const [participants, teams, submissions, mentorRequests] = counts[i]
     const assignmentRows = (assignments.data ?? []).filter((r: { hackathon_id: string }) => r.hackathon_id === id)
+
     result.set(id, {
       hackathonId: id,
-      participantCount: countByField(participants.data, id),
-      teamCount: countByField(teams.data, id),
-      submissionCount: countByField(submissions.data, id),
+      participantCount: participants.count ?? 0,
+      teamCount: teams.count ?? 0,
+      submissionCount: submissions.count ?? 0,
       judgingComplete: assignmentRows.filter((r: { is_complete: boolean }) => r.is_complete).length,
       judgingTotal: assignmentRows.length,
-      openMentorRequests: countByField(mentorRequests.data, id),
+      openMentorRequests: mentorRequests.count ?? 0,
     })
   }
 
   return result
-}
-
-function countByField(rows: { hackathon_id: string }[] | null, hackathonId: string): number {
-  if (!rows) return 0
-  return rows.filter((r) => r.hackathon_id === hackathonId).length
 }
