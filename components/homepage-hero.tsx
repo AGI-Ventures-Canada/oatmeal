@@ -27,15 +27,10 @@ export function HomepageHero() {
         </p>
 
         <div className="mt-10 flex justify-center">
-          <Button size="hero" asChild>
+          <Button size="lg" asChild>
             <Link href="/create">
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <Plus className="size-4" />
-                Create new hackathon
-              </span>
-              <span className="text-xs text-primary-foreground/80">
-                Set up your event in minutes
-              </span>
+              <Plus className="size-4" />
+              Create event
             </Link>
           </Button>
         </div>

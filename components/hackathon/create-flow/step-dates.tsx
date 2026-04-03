@@ -40,6 +40,7 @@ export function StepDates({ startsAt, endsAt, onChange }: StepDatesProps) {
         fromLabel="Starts"
         toLabel="Ends"
         minDate={today}
+        numberOfMonths={2}
       />
     </div>
   )

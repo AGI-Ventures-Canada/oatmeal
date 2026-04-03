@@ -31,6 +31,7 @@ interface DateTimeRangePickerProps {
   fromLabel?: string
   toLabel?: string
   minDate?: Date
+  numberOfMonths?: number
 }
 
 type TimeState = { hours: string; minutes: string; period: "AM" | "PM" }
@@ -87,6 +88,7 @@ export function DateTimeRangePicker({
   fromLabel = "Start",
   toLabel = "End",
   minDate,
+  numberOfMonths: numberOfMonthsProp,
 }: DateTimeRangePickerProps) {
   const isMobile = useIsMobile()
   const [open, setOpen] = React.useState(false)
@@ -355,8 +357,9 @@ export function DateTimeRangePicker({
       </PopoverTrigger>
       <PopoverContent
         className="w-auto p-0"
-        align="start"
+        align="center"
         side="bottom"
+        collisionPadding={16}
         onKeyDown={handlePopoverKeyDown}
       >
         <Calendar
@@ -364,15 +367,15 @@ export function DateTimeRangePicker({
           defaultMonth={pendingRange?.from}
           selected={pendingRange}
           onSelect={handleRangeSelect}
-          numberOfMonths={isMobile ? 1 : 2}
-          className="w-full [--cell-size:--spacing(8)]"
+          numberOfMonths={numberOfMonthsProp ?? (isMobile ? 1 : 2)}
+          className="w-full"
           fixedWeeks
           showOutsideDays={false}
           disabled={minDate ? { before: minDate } : undefined}
           fromMonth={minDate}
           classNames={{
             months: "flex gap-0 flex-col md:flex-row relative",
-            month: "flex flex-col w-full gap-4 px-4 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
+            month: "flex flex-col w-full gap-1 px-4 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
           }}
           initialFocus
         />

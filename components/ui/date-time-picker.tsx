@@ -261,7 +261,7 @@ export function DateTimePicker({
           mode="single"
           selected={pendingDate ?? undefined}
           onSelect={handleDateSelect}
-          className="w-full [--cell-size:--spacing(8)]"
+          className="w-full"
           disabled={minDate ? { before: minDate } : undefined}
           fromMonth={minDate}
           initialFocus
