@@ -96,6 +96,13 @@ export type AuditAction =
   | "admin.hackathon.updated"
   | "admin.hackathon.deleted"
   | "admin.scenario.created"
+  | "results_announcement.sent"
+  | "feedback_survey.sent"
+  | "fulfillment.initialized"
+  | "fulfillment.updated"
+  | "reminder.scheduled"
+  | "reminder.sent"
+  | "reminder.cancelled"
 
 export type LogAuditInput = {
   principal: Exclude<Principal, { kind: "anon" }>
