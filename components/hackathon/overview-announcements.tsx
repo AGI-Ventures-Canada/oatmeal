@@ -202,6 +202,10 @@ export function OverviewAnnouncements({ slug, hackathonId, announcements }: Prop
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="Write your announcement..."
                 rows={3}
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">

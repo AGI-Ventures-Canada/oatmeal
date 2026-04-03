@@ -235,6 +235,10 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Brief description..."
                 rows={2}
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
               />
             </div>
             <div>

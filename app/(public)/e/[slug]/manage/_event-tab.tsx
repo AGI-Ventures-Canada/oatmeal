@@ -1039,6 +1039,21 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
   const [endsAt, setEndsAt] = useState("")
   const [location, setLocation] = useState("")
   const [saving, setSaving] = useState(false)
+  const [activeDuration, setActiveDuration] = useState<number | null>(30)
+
+  const DURATION_PRESETS = [
+    { label: "15m", minutes: 15 },
+    { label: "30m", minutes: 30 },
+    { label: "1h", minutes: 60 },
+    { label: "2h", minutes: 120 },
+  ] as const
+
+  function applyDuration(minutes: number) {
+    if (!startsAt) return
+    const end = new Date(new Date(startsAt).getTime() + minutes * 60_000)
+    setEndsAt(toLocalDatetime(end))
+    setActiveDuration(minutes)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -1065,6 +1080,7 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
     setStartsAt("")
     setEndsAt("")
     setLocation("")
+    setActiveDuration(30)
     setError(null)
     setDialogOpen(true)
   }
@@ -1076,6 +1092,13 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
     setStartsAt(toLocalDatetime(new Date(item.starts_at)))
     setEndsAt(item.ends_at ? toLocalDatetime(new Date(item.ends_at)) : "")
     setLocation(item.location ?? "")
+    if (item.starts_at && item.ends_at) {
+      const diffMin = Math.round((new Date(item.ends_at).getTime() - new Date(item.starts_at).getTime()) / 60_000)
+      const match = DURATION_PRESETS.find((p) => p.minutes === diffMin)
+      setActiveDuration(match ? match.minutes : null)
+    } else {
+      setActiveDuration(null)
+    }
     setError(null)
     setDialogOpen(true)
   }
@@ -1254,22 +1277,50 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
                 data-form-type="other"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="sched-start">Starts at</Label>
-                <Input
-                  id="sched-start"
-                  type="datetime-local"
-                  value={startsAt}
-                  onChange={(e) => setStartsAt(e.target.value)}
-                  autoComplete="off"
-                  data-1p-ignore
-                  data-lpignore="true"
-                  data-form-type="other"
-                />
+            <div className="space-y-2">
+              <Label htmlFor="sched-start">Starts at</Label>
+              <Input
+                id="sched-start"
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => {
+                  setStartsAt(e.target.value)
+                  if (activeDuration && e.target.value) {
+                    const end = new Date(new Date(e.target.value).getTime() + activeDuration * 60_000)
+                    setEndsAt(toLocalDatetime(end))
+                  }
+                }}
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Duration</Label>
+              <div className="flex gap-1">
+                {DURATION_PRESETS.map((p) => (
+                  <Button
+                    key={p.minutes}
+                    type="button"
+                    variant={activeDuration === p.minutes ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => applyDuration(p.minutes)}
+                    disabled={!startsAt}
+                  >
+                    {p.label}
+                  </Button>
+                ))}
+                <Button
+                  type="button"
+                  variant={activeDuration === null ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setActiveDuration(null)}
+                >
+                  Custom
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="sched-end">Ends at (optional)</Label>
+              {activeDuration === null && (
                 <Input
                   id="sched-end"
                   type="datetime-local"
@@ -1280,7 +1331,12 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
                   data-lpignore="true"
                   data-form-type="other"
                 />
-              </div>
+              )}
+              {activeDuration !== null && endsAt && (
+                <p className="text-xs text-muted-foreground">
+                  Ends at {new Date(endsAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="sched-location">Location (optional)</Label>
