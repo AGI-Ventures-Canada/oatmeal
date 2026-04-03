@@ -445,9 +445,14 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
     const { scheduledAt } = body as { scheduledAt: string }
-    if (isNaN(new Date(scheduledAt).getTime())) {
+    const scheduledDate = new Date(scheduledAt)
+    if (isNaN(scheduledDate.getTime())) {
       set.status = 400
       return { error: "Invalid scheduledAt: must be a valid ISO 8601 datetime" }
+    }
+    if (scheduledDate <= new Date()) {
+      set.status = 400
+      return { error: "scheduledAt must be in the future" }
     }
     const announcement = await scheduleAnnouncement(params.announcementId, params.id, scheduledAt)
     if (!announcement) { set.status = 400; return { error: "Failed to schedule announcement" } }

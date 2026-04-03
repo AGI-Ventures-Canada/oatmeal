@@ -440,6 +440,59 @@ describe("Dashboard Event Routes Integration Tests", () => {
     })
   })
 
+  describe("POST /api/dashboard/hackathons/:id/announcements/:announcementId/schedule", () => {
+    it("schedules an announcement for the future", async () => {
+      mockResolvePrincipal.mockResolvedValue(mockUserPrincipal)
+      const futureDate = new Date(Date.now() + 3_600_000).toISOString()
+      mockScheduleAnnouncement.mockResolvedValue({ id: announcementId, published_at: futureDate })
+
+      const res = await app.handle(
+        new Request(`${baseUrl}/announcements/${announcementId}/schedule`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scheduledAt: futureDate }),
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.published_at).toBe(futureDate)
+    })
+
+    it("rejects past dates", async () => {
+      mockResolvePrincipal.mockResolvedValue(mockUserPrincipal)
+      const pastDate = new Date(Date.now() - 3_600_000).toISOString()
+
+      const res = await app.handle(
+        new Request(`${baseUrl}/announcements/${announcementId}/schedule`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scheduledAt: pastDate }),
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.error).toContain("future")
+    })
+
+    it("rejects invalid dates", async () => {
+      mockResolvePrincipal.mockResolvedValue(mockUserPrincipal)
+
+      const res = await app.handle(
+        new Request(`${baseUrl}/announcements/${announcementId}/schedule`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scheduledAt: "not-a-date" }),
+        })
+      )
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.error).toContain("Invalid")
+    })
+  })
+
   describe("GET /api/dashboard/hackathons/:id/schedule", () => {
     it("lists schedule items", async () => {
       mockResolvePrincipal.mockResolvedValue(mockUserPrincipal)

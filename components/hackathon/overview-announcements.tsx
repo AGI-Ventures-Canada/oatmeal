@@ -212,8 +212,8 @@ export function OverviewAnnouncements({ slug, hackathonId, announcements }: Prop
               <div>
                 <Label>Priority</Label>
                 <div className="flex gap-1 mt-1">
-                  <Button variant={priority === "normal" ? "secondary" : "ghost"} size="sm" onClick={() => setPriority("normal")}>Normal</Button>
-                  <Button variant={priority === "urgent" ? "secondary" : "ghost"} size="sm" onClick={() => setPriority("urgent")}>Urgent</Button>
+                  <Button type="button" variant={priority === "normal" ? "secondary" : "ghost"} size="sm" onClick={() => setPriority("normal")}>Normal</Button>
+                  <Button type="button" variant={priority === "urgent" ? "secondary" : "ghost"} size="sm" onClick={() => setPriority("urgent")}>Urgent</Button>
                 </div>
               </div>
               <div>
@@ -233,12 +233,12 @@ export function OverviewAnnouncements({ slug, hackathonId, announcements }: Prop
             <div>
               <Label>Publish</Label>
               <div className="flex gap-1 mt-1">
-                <Button variant={publishMode === "now" ? "secondary" : "ghost"} size="sm" onClick={() => setPublishMode("now")}>Now</Button>
-                <Button variant={publishMode === "schedule" ? "secondary" : "ghost"} size="sm" onClick={() => { setPublishMode("schedule"); if (!scheduledAt) setScheduledAt(toLocalDatetime(new Date(Date.now() + 3_600_000))) }}>
+                <Button type="button" variant={publishMode === "now" ? "secondary" : "ghost"} size="sm" onClick={() => setPublishMode("now")}>Now</Button>
+                <Button type="button" variant={publishMode === "schedule" ? "secondary" : "ghost"} size="sm" onClick={() => { setPublishMode("schedule"); if (!scheduledAt) setScheduledAt(toLocalDatetime(new Date(Date.now() + 3_600_000))) }}>
                   <Clock className="size-3 mr-1" />
                   Schedule
                 </Button>
-                <Button variant={publishMode === "draft" ? "secondary" : "ghost"} size="sm" onClick={() => setPublishMode("draft")}>Draft</Button>
+                <Button type="button" variant={publishMode === "draft" ? "secondary" : "ghost"} size="sm" onClick={() => setPublishMode("draft")}>Draft</Button>
               </div>
               {publishMode === "schedule" && (
                 <Input

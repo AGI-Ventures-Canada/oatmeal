@@ -1027,6 +1027,13 @@ type ScheduleItemData = {
   sort_order: number
 }
 
+const SCHEDULE_DURATION_PRESETS = [
+  { label: "15m", minutes: 15 },
+  { label: "30m", minutes: 30 },
+  { label: "1h", minutes: 60 },
+  { label: "2h", minutes: 120 },
+] as const
+
 function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -1040,13 +1047,6 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
   const [location, setLocation] = useState("")
   const [saving, setSaving] = useState(false)
   const [activeDuration, setActiveDuration] = useState<number | null>(30)
-
-  const DURATION_PRESETS = [
-    { label: "15m", minutes: 15 },
-    { label: "30m", minutes: 30 },
-    { label: "1h", minutes: 60 },
-    { label: "2h", minutes: 120 },
-  ] as const
 
   function applyDuration(minutes: number) {
     if (!startsAt) return
@@ -1094,7 +1094,7 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
     setLocation(item.location ?? "")
     if (item.starts_at && item.ends_at) {
       const diffMin = Math.round((new Date(item.ends_at).getTime() - new Date(item.starts_at).getTime()) / 60_000)
-      const match = DURATION_PRESETS.find((p) => p.minutes === diffMin)
+      const match = SCHEDULE_DURATION_PRESETS.find((p) => p.minutes === diffMin)
       setActiveDuration(match ? match.minutes : null)
     } else {
       setActiveDuration(null)
@@ -1299,7 +1299,7 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
             <div className="space-y-2">
               <Label>Duration</Label>
               <div className="flex gap-1">
-                {DURATION_PRESETS.map((p) => (
+                {SCHEDULE_DURATION_PRESETS.map((p) => (
                   <Button
                     key={p.minutes}
                     type="button"
