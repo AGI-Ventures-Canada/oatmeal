@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { toLocalDatetime } from "@/lib/utils/datetime"
 import type { ScheduleItem } from "@/lib/services/schedule-items"
 
 type Props = {
@@ -41,15 +42,6 @@ function roundUpTo15Min(date: Date): Date {
   if (remainder > 0) d.setMinutes(d.getMinutes() + (15 - remainder))
   d.setSeconds(0, 0)
   return d
-}
-
-function toLocalDatetime(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, "0")
-  const d = String(date.getDate()).padStart(2, "0")
-  const h = String(date.getHours()).padStart(2, "0")
-  const min = String(date.getMinutes()).padStart(2, "0")
-  return `${y}-${m}-${d}T${h}:${min}`
 }
 
 function computeDefaults(items: ScheduleItem[]): { startsAt: string; endsAt: string } {
@@ -83,6 +75,7 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
   const [location, setLocation] = useState("")
   const [activeDuration, setActiveDuration] = useState<number | null>(30)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const now = new Date().toISOString()
   const upcoming = scheduleItems.filter((s) => s.starts_at > now || (s.ends_at && s.ends_at > now)).slice(0, 6)
@@ -102,6 +95,7 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
     setEndsAt("")
     setLocation("")
     setActiveDuration(30)
+    setError(null)
   }
 
   function applyDuration(minutes: number) {
@@ -114,6 +108,7 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
   async function handleAdd() {
     if (!title.trim() || !startsAt) return
     setSaving(true)
+    setError(null)
     try {
       const payload: Record<string, unknown> = {
         title,
@@ -133,7 +128,7 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
       resetForm()
       router.refresh()
     } catch {
-      // stay in dialog on error
+      setError("Failed to add schedule item")
     } finally {
       setSaving(false)
     }
@@ -307,6 +302,7 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
                 data-form-type="other"
               />
             </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
             <Button onClick={handleAdd} disabled={!title.trim() || !startsAt || saving} className="w-full">
               {saving ? "Adding..." : "Add"}
             </Button>

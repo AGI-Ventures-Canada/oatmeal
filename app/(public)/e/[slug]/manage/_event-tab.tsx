@@ -1110,9 +1110,9 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
       if (!res.ok) throw new Error("Failed to save")
       const saved = await res.json()
       if (editing) {
-        setItems((prev) => prev.map((i) => (i.id === saved.id ? saved : i)).sort((a, b) => a.starts_at.localeCompare(b.starts_at)))
+        setItems((prev) => prev.map((i) => (i.id === saved.id ? saved : i)).sort((a, b) => a.starts_at.localeCompare(b.starts_at) || (a.sort_order ?? 0) - (b.sort_order ?? 0)))
       } else {
-        setItems((prev) => [...prev, saved].sort((a, b) => a.starts_at.localeCompare(b.starts_at)))
+        setItems((prev) => [...prev, saved].sort((a, b) => a.starts_at.localeCompare(b.starts_at) || (a.sort_order ?? 0) - (b.sort_order ?? 0)))
       }
       setDialogOpen(false)
     } catch {

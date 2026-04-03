@@ -6,6 +6,7 @@ import { EventTimer } from "@/components/hackathon/event-timer"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Megaphone, MapPin } from "lucide-react"
+import { timeAgo } from "@/lib/utils/datetime"
 import type { PollAnnouncement, PollScheduleItem } from "@/lib/services/polling"
 
 interface LiveDashboardProps {
@@ -62,15 +63,6 @@ function formatShortTime(iso: string): string {
 function isCurrentItem(item: PollScheduleItem, now: string): boolean {
   if (!item.ends_at) return false
   return item.starts_at <= now && item.ends_at > now
-}
-
-function timeAgo(dateStr: string): string {
-  const ms = Date.now() - new Date(dateStr).getTime()
-  const minutes = Math.floor(ms / 60_000)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
 }
 
 function ScheduleWidget({ items }: { items: PollScheduleItem[] }) {

@@ -94,7 +94,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     registrationClosesAt: hackathon.registration_closes_at,
   })
 
-  const activeTab = resolveTab(tab, VALID_TABS, getDefaultTab(hackathon.status))
+  const activeTab = resolveTab(tab, VALID_TABS, getDefaultTab())
   const activeJtab = resolveTab(jtab, VALID_JTABS, "criteria")
   const activePtab = resolveTab(ptab, VALID_PTABS, "prizes")
   const activeEtab = resolveTab(etab, VALID_ETABS, "challenge")

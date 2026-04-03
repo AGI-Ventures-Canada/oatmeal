@@ -52,6 +52,7 @@ export async function listPublishedAnnouncements(hackathonId: string): Promise<A
     .select("*")
     .eq("hackathon_id", hackathonId)
     .not("published_at", "is", null)
+    .lte("published_at", new Date().toISOString())
     .order("published_at", { ascending: false })
 
   if (error || !data) {

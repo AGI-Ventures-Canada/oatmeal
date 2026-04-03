@@ -15,10 +15,11 @@ describe("VALID_TABS", () => {
     expect(VALID_TABS).toContain("edit")
     expect(VALID_TABS).toContain("teams")
     expect(VALID_TABS).toContain("rooms")
+    expect(VALID_TABS).toContain("submissions")
     expect(VALID_TABS).toContain("judges")
     expect(VALID_TABS).toContain("prizes")
     expect(VALID_TABS).toContain("event")
-    expect(VALID_TABS).toHaveLength(7)
+    expect(VALID_TABS).toHaveLength(8)
   })
 })
 
@@ -53,13 +54,7 @@ describe("VALID_ETABS", () => {
 
 describe("getDefaultTab", () => {
   it("always returns overview", () => {
-    expect(getDefaultTab("draft")).toBe("overview")
-    expect(getDefaultTab("published")).toBe("overview")
-    expect(getDefaultTab("registration_open")).toBe("overview")
-    expect(getDefaultTab("active")).toBe("overview")
-    expect(getDefaultTab("judging")).toBe("overview")
-    expect(getDefaultTab("completed")).toBe("overview")
-    expect(getDefaultTab("archived")).toBe("overview")
+    expect(getDefaultTab()).toBe("overview")
   })
 })
 

@@ -34,7 +34,7 @@ type Props = {
 
 const severityLabel: Record<ActionSeverity, { text: string; className: string }> = {
   urgent: { text: "urgent", className: "text-destructive" },
-  warning: { text: "warning", className: "text-primary" },
+  warning: { text: "warning", className: "text-muted-foreground" },
   info: { text: "info", className: "text-muted-foreground" },
 }
 

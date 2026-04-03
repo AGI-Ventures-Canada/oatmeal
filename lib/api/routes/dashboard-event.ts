@@ -24,6 +24,16 @@ const VALID_PHASES: HackathonPhase[] = [
   "results_pending",
 ]
 
+const announcementAudienceType = t.Union([
+  t.Literal("everyone"),
+  t.Literal("organizers"),
+  t.Literal("judges"),
+  t.Literal("mentors"),
+  t.Literal("attendees"),
+  t.Literal("submitted"),
+  t.Literal("not_submitted"),
+])
+
 async function checkOrganizer(hackathonId: string, tenantId: string, set: { status?: number | string }) {
   const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
   const check = await checkHackathonOrganizer(hackathonId, tenantId)
@@ -51,7 +61,6 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
 
     return { principal }
   })
-  // --- Phase ---
   .patch("/hackathons/:id/phase", async ({ params, body, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
@@ -79,7 +88,6 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     }),
     detail: { summary: "Set hackathon phase" },
   })
-  // --- Rooms ---
   .get("/hackathons/:id/rooms", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
@@ -183,7 +191,6 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
   }, {
     detail: { summary: "Resume paused room timer" },
   })
-  // --- Teams ---
   .get("/hackathons/:id/teams", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
@@ -222,7 +229,6 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     body: t.Object({ assignments: t.Array(t.Object({ teamId: t.String(), roomId: t.String() })) }),
     detail: { summary: "Bulk assign teams to rooms" },
   })
-  // --- Categories ---
   .get("/hackathons/:id/categories", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
@@ -259,7 +265,6 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     if (!ok) { set.status = 400; return { error: "Failed to delete category" } }
     return { success: true }
   }, { detail: { summary: "Delete category" } })
-  // --- Judging Rounds ---
   .get("/hackathons/:id/judging/rounds", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
@@ -304,7 +309,6 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     if (!ok) { set.status = 400; return { error: "Failed to activate round" } }
     return { success: true }
   }, { detail: { summary: "Activate judging round" } })
-  // --- Social Submissions ---
   .get("/hackathons/:id/social-submissions", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
@@ -323,14 +327,12 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     body: t.Object({ status: t.Union([t.Literal("approved"), t.Literal("rejected")]) }),
     detail: { summary: "Review social submission" },
   })
-  // --- Mentor Requests ---
   .get("/hackathons/:id/mentor-requests", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
     return { requests: await listMentorQueue(params.id) }
   }, { detail: { summary: "List mentor requests" } })
-  // --- Challenge ---
   .get("/hackathons/:id/challenge", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
@@ -357,7 +359,6 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     if (!ok) { set.status = 400; return { error: "Failed to release challenge. Ensure a title is set." } }
     return { success: true }
   }, { detail: { summary: "Release challenge" } })
-  // --- Live Stats ---
   .get("/hackathons/:id/live-stats", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
@@ -366,7 +367,6 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     if (!stats) { set.status = 404; return { error: "Hackathon not found" } }
     return stats
   }, { detail: { summary: "Get live event stats" } })
-  // --- Email Blast ---
   .post("/hackathons/:id/email-blast", async ({ params, body, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
@@ -382,7 +382,6 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     }),
     detail: { summary: "Send bulk email to participants" },
   })
-  // --- Announcements ---
   .get("/hackathons/:id/announcements", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
@@ -401,7 +400,7 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
       title: t.String(),
       body: t.String(),
       priority: t.Optional(t.Union([t.Literal("normal"), t.Literal("urgent")])),
-      audience: t.Optional(t.Union([t.Literal("everyone"), t.Literal("organizers"), t.Literal("judges"), t.Literal("mentors"), t.Literal("attendees"), t.Literal("submitted"), t.Literal("not_submitted")])),
+      audience: t.Optional(announcementAudienceType),
     }),
     detail: { summary: "Create announcement" },
   })
@@ -418,7 +417,7 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
       title: t.Optional(t.String()),
       body: t.Optional(t.String()),
       priority: t.Optional(t.Union([t.Literal("normal"), t.Literal("urgent")])),
-      audience: t.Optional(t.Union([t.Literal("everyone"), t.Literal("organizers"), t.Literal("judges"), t.Literal("mentors"), t.Literal("attendees"), t.Literal("submitted"), t.Literal("not_submitted")])),
+      audience: t.Optional(announcementAudienceType),
     }),
     detail: { summary: "Update announcement" },
   })
@@ -446,6 +445,10 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
     const { scheduledAt } = body as { scheduledAt: string }
+    if (isNaN(new Date(scheduledAt).getTime())) {
+      set.status = 400
+      return { error: "Invalid scheduledAt: must be a valid ISO 8601 datetime" }
+    }
     const announcement = await scheduleAnnouncement(params.announcementId, params.id, scheduledAt)
     if (!announcement) { set.status = 400; return { error: "Failed to schedule announcement" } }
     return announcement
@@ -462,7 +465,6 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     if (!announcement) { set.status = 400; return { error: "Failed to unpublish announcement" } }
     return announcement
   }, { detail: { summary: "Unpublish announcement" } })
-  // --- Schedule Items ---
   .get("/hackathons/:id/schedule", async ({ params, principal, set }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)

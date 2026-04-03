@@ -11,11 +11,6 @@ export type HackathonMiniStats = {
   openMentorRequests: number
 }
 
-// Uses 5 batch queries with .in() returning minimal columns (hackathon_id only,
-// plus is_complete for assignments) and groups in JS. This is fewer round-trips
-// than per-hackathon count queries (5 vs N×6) at the cost of transferring rows.
-// Rows are single-column UUIDs so the payload stays small for typical organizer
-// dashboards (< 20 hackathons, < 1000 participants each).
 export async function getBatchHackathonStats(hackathonIds: string[]): Promise<Map<string, HackathonMiniStats>> {
   if (hackathonIds.length === 0) return new Map()
 

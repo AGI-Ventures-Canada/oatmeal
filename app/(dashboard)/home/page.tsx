@@ -21,7 +21,6 @@ export default async function DashboardPage() {
 
   const tenant = await resolvePageTenant()
 
-  // Stats depend on hackathon IDs, so chain off the organized list while other queries run in parallel
   const organizedWithStats = listOrganizedHackathons(tenant.id).then(async (hackathons) => {
     const stats = await getBatchHackathonStats(hackathons.map((h) => h.id))
     return { hackathons, stats }

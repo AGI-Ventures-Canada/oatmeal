@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
 import { getPublicHackathon } from "@/lib/services/public-hackathons"
+import { listScheduleItems } from "@/lib/services/schedule-items"
+import { listPublishedAnnouncements } from "@/lib/services/announcements"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye } from "lucide-react"
@@ -101,7 +103,11 @@ export default async function EventPage({ params }: PageProps) {
   }
 
   const { getHackathonSubmissions } = await import("@/lib/services/submissions")
-  const rawSubmissions = await getHackathonSubmissions(hackathon.id)
+  const [rawSubmissions, scheduleItems, publishedAnnouncements] = await Promise.all([
+    getHackathonSubmissions(hackathon.id),
+    listScheduleItems(hackathon.id),
+    listPublishedAnnouncements(hackathon.id),
+  ])
   const gallerySubmissions = rawSubmissions.map((s) => ({
     id: s.id,
     title: s.title,
@@ -144,6 +150,8 @@ export default async function EventPage({ params }: PageProps) {
         submissions={gallerySubmissions}
         teamInfo={teamInfo}
         publicResults={publicResults}
+        scheduleItems={scheduleItems}
+        announcements={publishedAnnouncements}
       />
     </div>
   )

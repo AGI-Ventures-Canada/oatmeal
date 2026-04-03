@@ -9,14 +9,17 @@ const mockUpdateAnnouncement = mock(() => Promise.resolve(null))
 const mockDeleteAnnouncement = mock(() => Promise.resolve(false))
 const mockPublishAnnouncement = mock(() => Promise.resolve(null))
 const mockUnpublishAnnouncement = mock(() => Promise.resolve(null))
+const mockScheduleAnnouncement = mock(() => Promise.resolve(null))
 
 mock.module("@/lib/services/announcements", () => ({
+  ANNOUNCEMENT_AUDIENCES: ["everyone", "organizers", "judges", "mentors", "attendees", "submitted", "not_submitted"],
   listAnnouncements: mockListAnnouncements,
   createAnnouncement: mockCreateAnnouncement,
   updateAnnouncement: mockUpdateAnnouncement,
   deleteAnnouncement: mockDeleteAnnouncement,
   publishAnnouncement: mockPublishAnnouncement,
   unpublishAnnouncement: mockUnpublishAnnouncement,
+  scheduleAnnouncement: mockScheduleAnnouncement,
 }))
 
 const mockListScheduleItems = mock(() => Promise.resolve([]))
@@ -122,6 +125,7 @@ describe("Dashboard Event Routes Integration Tests", () => {
     mockDeleteAnnouncement.mockReset()
     mockPublishAnnouncement.mockReset()
     mockUnpublishAnnouncement.mockReset()
+    mockScheduleAnnouncement.mockReset()
     mockListScheduleItems.mockReset()
     mockCreateScheduleItem.mockReset()
     mockUpdateScheduleItem.mockReset()
