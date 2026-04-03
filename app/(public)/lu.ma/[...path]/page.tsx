@@ -6,5 +6,5 @@ type PageProps = {
 
 export default async function LumaShortUrlPage({ params }: PageProps) {
   const { path } = await params
-  permanentRedirect(`/luma.com/${path.join("/")}`)
+  permanentRedirect(`/import?url=${encodeURIComponent(`https://luma.com/${path.join("/")}`)}`)
 }

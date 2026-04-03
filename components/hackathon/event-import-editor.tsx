@@ -63,6 +63,7 @@ export function EventImportEditor({
         sponsors: state.sponsors,
         rules: state.rules,
         prizes: state.prizes,
+        sourceUrl,
       }),
     })
 
@@ -72,7 +73,7 @@ export function EventImportEditor({
     }
 
     return res.json()
-  }, [submitPath])
+  }, [submitPath, sourceUrl])
 
   return (
     <HackathonDraftEditor

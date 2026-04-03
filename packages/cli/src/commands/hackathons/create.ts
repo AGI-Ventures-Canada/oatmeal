@@ -52,7 +52,7 @@ export async function runHackathonsCreate(
   let description = options.description
 
   if (options.fromUrl) {
-    const hackathon = await client.post<ImportedHackathonResponse>("/api/dashboard/import/luma-url", {
+    const hackathon = await client.post<ImportedHackathonResponse>("/api/dashboard/import/url", {
       url: options.fromUrl,
       name,
       description,
