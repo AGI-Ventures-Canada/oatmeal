@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import * as dialogMock from "../lib/dialog-mock"
-import { resetComponentMocks, setRouter } from "../lib/component-mocks"
-
-const mockPush = mock(() => {})
+import { cleanup, render, screen } from "@testing-library/react"
+import { resetComponentMocks } from "../lib/component-mocks"
 
 mock.module("next/link", () => ({
   default: ({
@@ -21,14 +18,10 @@ mock.module("next/link", () => ({
   ),
 }))
 
-mock.module("@/components/ui/dialog", () => dialogMock)
-
 const { HomepageHero } = await import("@/components/homepage-hero")
 
 beforeEach(() => {
   resetComponentMocks()
-  setRouter({ push: mockPush })
-  mockPush.mockClear()
 })
 
 afterEach(() => {
@@ -45,11 +38,17 @@ describe("HomepageHero", () => {
     ).toBeDefined()
   })
 
-  it("renders both CTA buttons", () => {
+  it("renders a single create hackathon CTA", () => {
     render(<HomepageHero />)
 
-    expect(screen.getByText("Create from scratch")).toBeDefined()
-    expect(screen.getByText("Import an external event")).toBeDefined()
+    expect(screen.getByText("Create new hackathon")).toBeDefined()
+  })
+
+  it("links the CTA to /create", () => {
+    render(<HomepageHero />)
+
+    const link = screen.getByText("Create new hackathon").closest("a")
+    expect(link?.getAttribute("href")).toBe("/create")
   })
 
   it("renders the install command with a copy button", () => {
@@ -58,22 +57,5 @@ describe("HomepageHero", () => {
     expect(screen.getByText("Or manage hackathons from your AI agent")).toBeDefined()
     expect(screen.getByText("npx skills add AGI-Ventures-Canada/oatmeal")).toBeDefined()
     expect(screen.getByRole("button", { name: "Copy install command" })).toBeDefined()
-  })
-
-  it("links 'Create from scratch' to /create", () => {
-    render(<HomepageHero />)
-
-    const link = screen.getByText("Create from scratch").closest("a")
-    expect(link?.getAttribute("href")).toBe("/create")
-  })
-
-  it("opens the import dialog when clicking 'Import an external event'", async () => {
-    render(<HomepageHero />)
-
-    fireEvent.click(screen.getByText("Import an external event"))
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText("eventbrite.com/e/my-event")).toBeDefined()
-    })
   })
 })

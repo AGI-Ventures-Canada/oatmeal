@@ -30,6 +30,7 @@ interface DateTimeRangePickerProps {
   className?: string
   fromLabel?: string
   toLabel?: string
+  minDate?: Date
 }
 
 type TimeState = { hours: string; minutes: string; period: "AM" | "PM" }
@@ -55,8 +56,8 @@ function applyTime(date: Date, time: TimeState): Date {
   return d
 }
 
-function timeFromDate(date: Date | null): TimeState {
-  if (!date) return { hours: "12", minutes: "00", period: "PM" }
+function timeFromDate(date: Date | null, fallback: TimeState = DEFAULT_FROM_TIME): TimeState {
+  if (!date) return fallback
   const { hours, period } = to12Hour(date.getHours())
   return {
     hours: hours.toString().padStart(2, "0"),
@@ -65,7 +66,8 @@ function timeFromDate(date: Date | null): TimeState {
   }
 }
 
-const DEFAULT_TIME: TimeState = { hours: "12", minutes: "00", period: "PM" }
+const DEFAULT_FROM_TIME: TimeState = { hours: "08", minutes: "30", period: "AM" }
+const DEFAULT_TO_TIME: TimeState = { hours: "05", minutes: "00", period: "PM" }
 
 function formatTrigger(range: DateTimeRange | undefined): string | null {
   if (!range?.from) return null
@@ -84,6 +86,7 @@ export function DateTimeRangePicker({
   className,
   fromLabel = "Start",
   toLabel = "End",
+  minDate,
 }: DateTimeRangePickerProps) {
   const isMobile = useIsMobile()
   const [open, setOpen] = React.useState(false)
@@ -91,8 +94,8 @@ export function DateTimeRangePicker({
   const [pendingRange, setPendingRange] = React.useState<DateRange | undefined>(
     undefined,
   )
-  const [fromTime, setFromTime] = React.useState<TimeState>(DEFAULT_TIME)
-  const [toTime, setToTime] = React.useState<TimeState>(DEFAULT_TIME)
+  const [fromTime, setFromTime] = React.useState<TimeState>(DEFAULT_FROM_TIME)
+  const [toTime, setToTime] = React.useState<TimeState>(DEFAULT_TO_TIME)
 
   React.useEffect(() => {
     if (open) {
@@ -101,8 +104,8 @@ export function DateTimeRangePicker({
           ? { from: value.from, to: value.to ?? undefined }
           : undefined,
       )
-      setFromTime(timeFromDate(value?.from ?? null))
-      setToTime(timeFromDate(value?.to ?? null))
+      setFromTime(timeFromDate(value?.from ?? null, DEFAULT_FROM_TIME))
+      setToTime(timeFromDate(value?.to ?? null, DEFAULT_TO_TIME))
     }
   }, [open, value])
 
@@ -254,8 +257,8 @@ export function DateTimeRangePicker({
           ? { from: value.from, to: value.to ?? undefined }
           : undefined,
       )
-      setFromTime(timeFromDate(value?.from ?? null))
-      setToTime(timeFromDate(value?.to ?? null))
+      setFromTime(timeFromDate(value?.from ?? null, DEFAULT_FROM_TIME))
+      setToTime(timeFromDate(value?.to ?? null, DEFAULT_TO_TIME))
     }
     setOpen(nextOpen)
   }
@@ -365,17 +368,30 @@ export function DateTimeRangePicker({
           className="w-full"
           fixedWeeks
           showOutsideDays={false}
+          disabled={minDate ? { before: minDate } : undefined}
+          fromMonth={minDate}
           classNames={{
             months: "flex gap-0 flex-col md:flex-row relative",
             month: "flex flex-col w-full gap-4 px-4 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
           }}
           initialFocus
         />
-        <div className="border-t p-3 flex gap-4">
+        <div className="p-3 flex gap-4">
           <div className="flex-1">{renderTimeRow("from", fromLabel, fromTime)}</div>
           <div className="flex-1">{renderTimeRow("to", toLabel, toTime)}</div>
         </div>
-        <div className="border-t p-3 flex items-center justify-between">
+        <div className="p-3 flex items-center justify-between">
+          {(hasValue || pendingRange) ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={handleClear}
+            >
+              Clear
+            </Button>
+          ) : <div />}
           <Button
             type="button"
             size="sm"
@@ -387,17 +403,6 @@ export function DateTimeRangePicker({
           >
             Done
           </Button>
-          {(hasValue || pendingRange) && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={handleClear}
-            >
-              Clear
-            </Button>
-          )}
         </div>
       </PopoverContent>
     </Popover>

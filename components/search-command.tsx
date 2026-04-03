@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { useAuth, useOrganization } from "@clerk/nextjs"
+import { useAuth } from "@clerk/nextjs"
 import {
   Home,
   Search,
@@ -31,8 +31,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import { CreateHackathonDialog } from "@/components/hackathon/create-hackathon-dialog"
-import { OrgGateDialog } from "@/components/org-gate-dialog"
 import { DOC_PAGES, PINNED_DOC_URLS, searchDocs } from "@/lib/docs-pages"
 
 type HackathonResult = { id: string; name: string; slug: string; isOrganized?: boolean }
@@ -68,8 +66,6 @@ export const OPEN_SEARCH_EVENT = "open-search"
 export function SearchCommand() {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
-  const [createOpen, setCreateOpen] = useState(false)
-  const [orgGateOpen, setOrgGateOpen] = useState(false)
   const [canScrollMore, setCanScrollMore] = useState(false)
   const [events, setEvents] = useState<HackathonResult[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
@@ -78,7 +74,7 @@ export function SearchCommand() {
   const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const { isSignedIn } = useAuth()
-  const { organization } = useOrganization()
+
 
   function getListEl() {
     return containerRef.current?.querySelector<HTMLDivElement>('[data-slot="command-list"]') ?? null
@@ -188,11 +184,7 @@ export function SearchCommand() {
 
   function handleCreateHackathon() {
     handleOpenChange(false)
-    if (organization) {
-      setCreateOpen(true)
-    } else {
-      setOrgGateOpen(true)
-    }
+    router.push("/create")
   }
 
   const q = query.toLowerCase()
@@ -356,8 +348,6 @@ export function SearchCommand() {
         </Command>
       </CommandDialog>
 
-      <CreateHackathonDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <OrgGateDialog open={orgGateOpen} onOpenChange={setOrgGateOpen} onOrgSelected={() => setCreateOpen(true)} />
     </>
   )
 }

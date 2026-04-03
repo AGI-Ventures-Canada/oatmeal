@@ -11,7 +11,7 @@ import { Check, Copy, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
 
-const STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000
+export const STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000
 
 export type DraftSponsor = {
   name: string
@@ -126,7 +126,7 @@ function stateToHackathon(state: DraftState): PublicHackathon {
   }
 }
 
-function loadSavedState(storageKey: string): DraftState | null {
+export function loadSavedState(storageKey: string): DraftState | null {
   if (typeof window === "undefined") return null
   const saved = localStorage.getItem(storageKey)
   if (!saved) return null

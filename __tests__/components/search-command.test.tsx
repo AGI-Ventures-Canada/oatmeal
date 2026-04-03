@@ -3,7 +3,6 @@ import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/re
 
 const mockPush = mock(() => {})
 let mockIsSignedIn = true
-let mockOrganization: { id: string; name: string } | null = null
 let mockOrganizedResponse: object = { hackathons: [] }
 let mockPublicResponse: object = { hackathons: [] }
 
@@ -13,24 +12,13 @@ mock.module("next/navigation", () => ({
 
 mock.module("@clerk/nextjs", () => ({
   useAuth: () => ({ isSignedIn: mockIsSignedIn }),
-  useOrganization: () => ({ organization: mockOrganization }),
 }))
 
-mock.module("@/components/hackathon/create-hackathon-dialog", () => ({
-  CreateHackathonDialog: ({ open }: { open: boolean; onOpenChange: (v: boolean) => void }) =>
-    open ? <div data-testid="create-hackathon-dialog" /> : null,
-}))
-
-mock.module("@/components/org-gate-dialog", () => ({
-  OrgGateDialog: ({ open }: { open: boolean; onOpenChange: (v: boolean) => void; onOrgSelected: () => void }) =>
-    open ? <div data-testid="org-gate-dialog" /> : null,
-}))
 
 const globalFetch = globalThis.fetch
 beforeEach(() => {
   mockPush.mockClear()
   mockIsSignedIn = true
-  mockOrganization = null
   mockOrganizedResponse = { hackathons: [] }
   mockPublicResponse = { hackathons: [] }
   globalThis.fetch = mock((url: string) => {
@@ -294,35 +282,18 @@ describe("SearchCommand", () => {
   })
 
   describe("Create Hackathon", () => {
-    it("opens CreateHackathonDialog when org is active", async () => {
-      mockOrganization = { id: "org_1", name: "Test Org" }
+    it("navigates to /create when Create Hackathon is clicked", async () => {
       openMenu()
       await waitFor(() => screen.getByText("Create Hackathon"))
       fireEvent.click(screen.getByText("Create Hackathon"))
-      await waitFor(() =>
-        expect(screen.getByTestId("create-hackathon-dialog")).toBeDefined()
-      )
-      expect(mockPush).not.toHaveBeenCalled()
-    })
-
-    it("opens OrgGateDialog when no org is active", async () => {
-      mockOrganization = null
-      openMenu()
-      await waitFor(() => screen.getByText("Create Hackathon"))
-      fireEvent.click(screen.getByText("Create Hackathon"))
-      await waitFor(() =>
-        expect(screen.getByTestId("org-gate-dialog")).toBeDefined()
-      )
-      expect(mockPush).not.toHaveBeenCalled()
+      expect(mockPush).toHaveBeenCalledWith("/create")
     })
 
     it("closes the search menu when Create Hackathon is selected", async () => {
-      mockOrganization = { id: "org_1", name: "Test Org" }
       openMenu()
       await waitFor(() => screen.getByText("Create Hackathon"))
       fireEvent.click(screen.getByText("Create Hackathon"))
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
     })
-
   })
 })

@@ -1066,6 +1066,28 @@ const SCHEDULE_DURATION_PRESETS = [
   { label: "2h", minutes: 120 },
 ] as const
 
+function roundUpTo15Min(date: Date): Date {
+  const d = new Date(date)
+  const remainder = d.getMinutes() % 15
+  if (remainder > 0) d.setMinutes(d.getMinutes() + (15 - remainder))
+  d.setSeconds(0, 0)
+  return d
+}
+
+function computeScheduleDefaults(items: ScheduleItemData[]): { startsAt: string; endsAt: string } {
+  let start: Date
+  if (items.length > 0) {
+    const sorted = [...items].sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+    const last = sorted[sorted.length - 1]
+    start = last.ends_at ? new Date(last.ends_at) : new Date(new Date(last.starts_at).getTime() + 30 * 60_000)
+    if (start < new Date()) start = roundUpTo15Min(new Date())
+  } else {
+    start = roundUpTo15Min(new Date())
+  }
+  const end = new Date(start.getTime() + 30 * 60_000)
+  return { startsAt: toLocalDatetime(start), endsAt: toLocalDatetime(end) }
+}
+
 function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -1109,8 +1131,9 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
     setEditing(null)
     setTitle("")
     setDescription("")
-    setStartsAt("")
-    setEndsAt("")
+    const defaults = computeScheduleDefaults(items)
+    setStartsAt(defaults.startsAt)
+    setEndsAt(defaults.endsAt)
     setLocation("")
     setActiveDuration(30)
     setError(null)
