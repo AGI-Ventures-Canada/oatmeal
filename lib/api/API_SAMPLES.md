@@ -624,6 +624,15 @@ const res = await fetch(`https://your-domain.com/api/public/hackathons/${slug}/a
 const { announcements } = await res.json()
 ```
 
+#### Python
+
+```python
+import requests
+
+response = requests.get(f"https://your-domain.com/api/public/hackathons/{slug}/announcements")
+announcements = response.json()["announcements"]
+```
+
 #### Response
 
 ```json
@@ -658,6 +667,15 @@ curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/schedule"
 ```typescript
 const res = await fetch(`https://your-domain.com/api/public/hackathons/${slug}/schedule`)
 const { scheduleItems } = await res.json()
+```
+
+#### Python
+
+```python
+import requests
+
+response = requests.get(f"https://your-domain.com/api/public/hackathons/{slug}/schedule")
+schedule_items = response.json()["scheduleItems"]
 ```
 
 #### Response

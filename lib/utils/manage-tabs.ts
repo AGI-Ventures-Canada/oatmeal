@@ -8,9 +8,7 @@ export type ManageJtab = (typeof VALID_JTABS)[number]
 export type ManagePtab = (typeof VALID_PTABS)[number]
 export type ManageEtab = (typeof VALID_ETABS)[number]
 
-export function getDefaultTab(): ManageTab {
-  return "overview"
-}
+export const DEFAULT_TAB: ManageTab = "overview"
 
 export function resolveTab(tab: string | undefined, validTabs: readonly string[], fallback: string): string {
   return tab && validTabs.includes(tab) ? tab : fallback

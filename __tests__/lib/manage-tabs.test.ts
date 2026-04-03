@@ -4,7 +4,7 @@ import {
   VALID_JTABS,
   VALID_PTABS,
   VALID_ETABS,
-  getDefaultTab,
+  DEFAULT_TAB,
   resolveTab,
   getJudgingRedirectUrl,
 } from "@/lib/utils/manage-tabs"
@@ -52,9 +52,9 @@ describe("VALID_ETABS", () => {
   })
 })
 
-describe("getDefaultTab", () => {
-  it("always returns overview", () => {
-    expect(getDefaultTab()).toBe("overview")
+describe("DEFAULT_TAB", () => {
+  it("is overview", () => {
+    expect(DEFAULT_TAB).toBe("overview")
   })
 })
 
