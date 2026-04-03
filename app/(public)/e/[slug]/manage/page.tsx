@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { LayoutDashboard } from "lucide-react"
 import { notFound } from "next/navigation"
 import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { getHackathonSubmissions } from "@/lib/services/submissions"
@@ -130,7 +131,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
             <TabsList variant="line">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="overview"><LayoutDashboard className="size-4 mr-1.5" />Overview</TabsTrigger>
               <TabsTrigger value="edit">Event Page</TabsTrigger>
               <TabsTrigger value="teams">Teams</TabsTrigger>
               <TabsTrigger value="rooms">Rooms</TabsTrigger>
