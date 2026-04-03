@@ -80,7 +80,7 @@ mock.module("@clerk/nextjs/errors", () => ({
 }))
 
 mock.module("next/link", () => ({
-  default: ({ children, href, ...props }: { children: unknown; href: string; [key: string]: unknown }) => {
+  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => {
     return createElement("a", { href, ...props }, children)
   },
 }))
