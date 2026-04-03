@@ -198,7 +198,7 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background overflow-y-auto">
-      <div className="w-full px-4 pt-4 sm:px-8">
+      <div className="w-full px-4 pt-6 sm:px-8">
         <div className="mx-auto max-w-2xl">
           <CreateFlowProgress
             currentStep={currentStep}

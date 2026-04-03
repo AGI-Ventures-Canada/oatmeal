@@ -3,7 +3,7 @@
 import { ArrowLeft, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
-import { Progress } from "@/components/ui/progress"
+import { cn } from "@/lib/utils"
 
 interface CreateFlowProgressProps {
   currentStep: number
@@ -22,52 +22,65 @@ export function CreateFlowProgress({
   onBack,
   onClose,
 }: CreateFlowProgressProps) {
-  const progress = ((currentStep + 1) / totalSteps) * 100
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={currentStep === 0 ? onClose : onBack}
-          className="gap-1.5"
-        >
-          {currentStep === 0 ? (
-            <X className="size-4" />
-          ) : (
-            <ArrowLeft className="size-4" />
-          )}
-          <span className="hidden sm:inline">
-            {currentStep === 0 ? "Close" : "Back"}
-          </span>
-        </Button>
+    <div className="flex items-center justify-between">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={currentStep === 0 ? onClose : onBack}
+        className="gap-1.5 text-muted-foreground"
+      >
+        {currentStep === 0 ? (
+          <X className="size-4" />
+        ) : (
+          <ArrowLeft className="size-4" />
+        )}
+        <span className="hidden sm:inline">
+          {currentStep === 0 ? "Close" : "Back"}
+        </span>
+      </Button>
 
-        <span className="text-xs text-muted-foreground tabular-nums">
+      <div
+        role="progressbar"
+        aria-valuenow={currentStep + 1}
+        aria-valuemax={totalSteps}
+        className="flex items-center gap-2"
+      >
+        {Array.from({ length: totalSteps }, (_, i) => (
+          <div
+            key={i}
+            className={cn(
+              "h-1.5 w-6 rounded-full transition-colors duration-500",
+              i <= currentStep
+                ? "bg-primary"
+                : "bg-muted-foreground/15",
+            )}
+          />
+        ))}
+        <span className="sr-only">
           {currentStep + 1} / {totalSteps}
         </span>
-
-        {canSkip ? (
-          <button
-            type="button"
-            onClick={onSkip}
-            className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Skip to event page
-            <Kbd className="hidden sm:inline-flex">
-              {typeof navigator !== "undefined" &&
-              navigator.platform?.includes("Mac")
-                ? "⌘"
-                : "Ctrl"}
-              +Enter
-            </Kbd>
-          </button>
-        ) : (
-          <div className="w-[140px]" />
-        )}
       </div>
-      <Progress value={progress} />
+
+      {canSkip ? (
+        <button
+          type="button"
+          onClick={onSkip}
+          className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Skip to event page
+          <Kbd className="hidden sm:inline-flex">
+            {typeof navigator !== "undefined" &&
+            navigator.platform?.includes("Mac")
+              ? "⌘"
+              : "Ctrl"}
+            +Enter
+          </Kbd>
+        </button>
+      ) : (
+        <div className="w-[140px]" />
+      )}
     </div>
   )
 }

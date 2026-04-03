@@ -9,12 +9,12 @@ interface StepDescriptionProps {
 
 export function StepDescription({ value, onChange }: StepDescriptionProps) {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold sm:text-4xl">
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <h1 className="text-3xl font-medium tracking-tight sm:text-5xl">
           Tell people what it&apos;s about
         </h1>
-        <p className="text-muted-foreground text-sm sm:text-base">
+        <p className="text-muted-foreground">
           A short description so participants know what to expect. Markdown supported.
         </p>
       </div>

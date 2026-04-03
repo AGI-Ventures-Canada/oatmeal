@@ -20,7 +20,7 @@ export function CreateFlowStep({ stepKey, children }: CreateFlowStepProps) {
         setDisplayedKey(stepKey)
         setDisplayedChildren(children)
         requestAnimationFrame(() => setVisible(true))
-      }, 200)
+      }, 300)
       return () => clearTimeout(timeout)
     } else {
       setDisplayedChildren(children)
@@ -34,8 +34,8 @@ export function CreateFlowStep({ stepKey, children }: CreateFlowStepProps) {
   return (
     <div
       className={cn(
-        "w-full transition-all duration-200 ease-in-out",
-        visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
+        "w-full transition-all duration-300 ease-out",
+        visible ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0",
       )}
     >
       {displayedChildren}

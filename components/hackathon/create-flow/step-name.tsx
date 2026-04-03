@@ -9,12 +9,12 @@ interface StepNameProps {
 
 export function StepName({ value, onChange }: StepNameProps) {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold sm:text-4xl">
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <h1 className="text-3xl font-medium tracking-tight sm:text-5xl">
           What&apos;s your hackathon called?
         </h1>
-        <p className="text-muted-foreground text-sm sm:text-base">
+        <p className="text-muted-foreground">
           Pick a name that excites participants. You can always change it later.
         </p>
       </div>
@@ -23,7 +23,7 @@ export function StepName({ value, onChange }: StepNameProps) {
         placeholder="My Awesome Hackathon"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-12 text-lg"
+        className="h-14 text-lg"
         autoFocus
         autoComplete="off"
         data-1p-ignore

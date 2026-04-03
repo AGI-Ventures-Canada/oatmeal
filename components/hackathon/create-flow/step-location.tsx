@@ -23,12 +23,12 @@ interface StepLocationProps {
 
 export function StepLocation({ locationType, locationName, locationUrl, onChange }: StepLocationProps) {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold sm:text-4xl">
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <h1 className="text-3xl font-medium tracking-tight sm:text-5xl">
           Where will it take place?
         </h1>
-        <p className="text-muted-foreground text-sm sm:text-base">
+        <p className="text-muted-foreground">
           In-person, virtual, or skip this for now.
         </p>
       </div>

@@ -280,11 +280,11 @@ export function DateTimeRangePicker({
     time: TimeState,
   ) {
     return (
-      <div className="flex flex-col gap-2">
-        <span className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-muted-foreground">
           {label}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
         <Input
           type="text"
           inputMode="numeric"
@@ -294,14 +294,14 @@ export function DateTimeRangePicker({
           onKeyDown={(e) => handleTimeKeyDown(target, "hours", e)}
           onFocus={(e) => e.target.select()}
           onBlur={() => handleTimeBlur(target, "hours")}
-          className="w-14 text-center"
+          className="h-8 w-11 text-center text-sm px-1"
           maxLength={2}
           autoComplete="off"
           data-1p-ignore
           data-lpignore="true"
           data-form-type="other"
         />
-        <span className="text-muted-foreground" aria-hidden="true">
+        <span className="text-muted-foreground text-xs" aria-hidden="true">
           :
         </span>
         <Input
@@ -313,7 +313,7 @@ export function DateTimeRangePicker({
           onKeyDown={(e) => handleTimeKeyDown(target, "minutes", e)}
           onFocus={(e) => e.target.select()}
           onBlur={() => handleTimeBlur(target, "minutes")}
-          className="w-14 text-center"
+          className="h-8 w-11 text-center text-sm px-1"
           maxLength={2}
           autoComplete="off"
           data-1p-ignore
@@ -324,7 +324,7 @@ export function DateTimeRangePicker({
           type="button"
           variant="outline"
           size="sm"
-          className="w-14"
+          className="h-8 w-11 px-0 text-xs"
           aria-label={`${label} time period: ${time.period}. Press A for AM, P for PM, or arrow keys to toggle`}
           onClick={() => handlePeriodToggle(target)}
           onKeyDown={(e) => handlePeriodKeyDown(target, e)}
@@ -365,7 +365,7 @@ export function DateTimeRangePicker({
           selected={pendingRange}
           onSelect={handleRangeSelect}
           numberOfMonths={isMobile ? 1 : 2}
-          className="w-full"
+          className="w-full [--cell-size:--spacing(8)]"
           fixedWeeks
           showOutsideDays={false}
           disabled={minDate ? { before: minDate } : undefined}
@@ -376,11 +376,11 @@ export function DateTimeRangePicker({
           }}
           initialFocus
         />
-        <div className="p-3 flex gap-4">
+        <div className="px-3 pb-2 pt-1 flex gap-4">
           <div className="flex-1">{renderTimeRow("from", fromLabel, fromTime)}</div>
           <div className="flex-1">{renderTimeRow("to", toLabel, toTime)}</div>
         </div>
-        <div className="p-3 flex items-center justify-between">
+        <div className="px-3 pb-3 flex items-center justify-between">
           {(hasValue || pendingRange) ? (
             <Button
               type="button"
