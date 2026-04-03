@@ -113,6 +113,7 @@ export function TimeRemainingBar(props: Props) {
       </div>
       <div className="h-2 rounded-full bg-muted overflow-hidden">
         <div
+          suppressHydrationWarning
           className={cn(
             "h-full rounded-full transition-all duration-1000",
             isUrgent ? "bg-destructive" : isWarning ? "bg-primary" : "bg-primary/60",

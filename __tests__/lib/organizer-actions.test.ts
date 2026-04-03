@@ -64,6 +64,15 @@ describe("getOrganizerActionItems", () => {
       const dateItem = items.find((i) => i.id === "no-dates")
 
       expect(dateItem?.severity).toBe("urgent")
+      expect(dateItem?.hint).toBe("Required before you can publish")
+    })
+
+    it("includes hint text on all draft action items", () => {
+      const items = getOrganizerActionItems(makeInput())
+      for (const item of items) {
+        expect(typeof item.hint).toBe("string")
+        expect(item.hint!.length).toBeGreaterThan(0)
+      }
     })
 
     it("links action items to correct tabs", () => {
@@ -77,7 +86,7 @@ describe("getOrganizerActionItems", () => {
   })
 
   describe("published status", () => {
-    it("warns about zero registrations", () => {
+    it("warns about zero registrations with sublabel", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "published",
         participantCount: 0,
@@ -85,9 +94,11 @@ describe("getOrganizerActionItems", () => {
         judgeDisplayCount: 2,
         prizeCount: 1,
       }))
-      const ids = items.map((i) => i.id)
+      const item = items.find((i) => i.id === "no-registrations")
 
-      expect(ids).toContain("no-registrations")
+      expect(item).toBeDefined()
+      expect(item?.sublabel).toBe("Invite team captains via email")
+      expect(item?.hint).toBe("Share the link or invite directly")
     })
 
     it("warns about missing criteria", () => {
@@ -132,7 +143,7 @@ describe("getOrganizerActionItems", () => {
   })
 
   describe("active status", () => {
-    it("flags unreleased challenge as urgent", () => {
+    it("flags unreleased challenge as urgent with hint", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "active",
         challengeReleased: false,
@@ -144,6 +155,7 @@ describe("getOrganizerActionItems", () => {
       expect(item).toBeDefined()
       expect(item?.severity).toBe("urgent")
       expect(item?.tab).toBe("event")
+      expect(item?.hint).toBe("Participants can't see what to build yet")
     })
 
     it("shows pending mentor requests", () => {
@@ -212,7 +224,7 @@ describe("getOrganizerActionItems", () => {
   })
 
   describe("completed status", () => {
-    it("flags unpublished results as urgent", () => {
+    it("flags unpublished results as urgent with hint", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "completed",
         resultsPublishedAt: null,
@@ -221,9 +233,10 @@ describe("getOrganizerActionItems", () => {
       const item = items.find((i) => i.id === "results-not-published")
       expect(item).toBeDefined()
       expect(item?.severity).toBe("urgent")
+      expect(item?.hint).toBe("Review scores and publish")
     })
 
-    it("flags unsent winner emails", () => {
+    it("flags unsent winner emails with hint", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "completed",
         resultsPublishedAt: "2026-04-01T00:00:00Z",
@@ -233,6 +246,7 @@ describe("getOrganizerActionItems", () => {
       const item = items.find((i) => i.id === "winner-emails-not-sent")
       expect(item).toBeDefined()
       expect(item?.severity).toBe("warning")
+      expect(item?.hint).toBe("Let winners know they've been selected")
     })
 
     it("returns empty when everything is done", () => {
