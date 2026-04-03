@@ -25,6 +25,8 @@ mock.module("next/headers", () => ({
 const mockCompleteCliAuthSession = mock(() => Promise.resolve({ success: true }))
 
 mock.module("@/lib/services/cli-auth", () => ({
+  createCliAuthSession: mock(() => Promise.resolve(null)),
+  pollCliAuthSession: mock(() => Promise.resolve({ status: "pending" as const })),
   completeCliAuthSession: mockCompleteCliAuthSession,
 }))
 

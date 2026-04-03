@@ -108,6 +108,12 @@ mock.module("@/lib/auth/principal", () => {
       }
     },
     isAdminEnabled: () => true,
+    requirePrincipal: (principal: { kind: string }, _kinds: string[]) => {
+      if (!principal || principal.kind === "anon") {
+        throw new AuthError("Unauthorized", 401)
+      }
+      return principal
+    },
     AuthError,
   }
 })

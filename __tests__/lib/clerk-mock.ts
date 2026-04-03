@@ -1,25 +1,13 @@
 import { mock } from "bun:test"
 
-export const clerkState = {
-  isSignedIn: true,
-  userId: "user_123",
-  user: {
-    id: "user_123",
-    fullName: "Test User",
-    firstName: "Test",
-    imageUrl: null as string | null,
-  } as { id: string; fullName: string; firstName: string; imageUrl: string | null } | null,
-  isLoaded: true,
-  organization: null as { id: string; name: string } | null,
-  memberships: [] as Array<{
-    organization: { id: string; name: string; imageUrl: string | null }
-  }>,
-  setActive: mock(() => Promise.resolve()),
-  openUserProfile: mock(() => {}),
-  signOut: mock(() => Promise.resolve()),
-  theme: "light",
-  setTheme: mock((_t: string) => {}),
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const g = globalThis as any
+
+if (!g.__clerkState) {
+  throw new Error("test-setup.ts must be loaded before clerk-mock.ts — ensure it is listed in the bun preload config")
 }
+
+export const clerkState = g.__clerkState
 
 export function resetClerkState() {
   clerkState.isSignedIn = true

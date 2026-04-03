@@ -3,34 +3,26 @@ import { mock } from "bun:test"
 import { clerkState, resetClerkState } from "./clerk-mock"
 
 // ============================================================================
-// Next.js Navigation State
+// Next.js Navigation State (shared via globalThis, registered in test-setup.ts)
 // ============================================================================
 
-let currentPathname = "/test"
-let currentSearchParams = new URLSearchParams()
-let currentRouter: Record<string, unknown> = {
-  push: mock(() => {}),
-  refresh: mock(() => {}),
-  replace: mock(() => {}),
-  prefetch: mock(() => {}),
-  back: mock(() => {}),
-  forward: mock(() => {}),
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const g = globalThis as any
 
 export function setPathname(pathname: string) {
-  currentPathname = pathname
+  g.__nextNavState.pathname = pathname
 }
 
 export function setSearchParams(params: URLSearchParams) {
-  currentSearchParams = params
+  g.__nextNavState.searchParams = params
 }
 
 export function setRouter(router: Record<string, unknown>) {
-  currentRouter = { ...currentRouter, ...router }
+  g.__nextNavState.router = { ...g.__nextNavState.router, ...router }
 }
 
 export function getRouter() {
-  return currentRouter
+  return g.__nextNavState.router
 }
 
 // ============================================================================
@@ -121,9 +113,9 @@ let realInstallSkillButton: ((props: any) => React.ReactNode) | null = null
 // ============================================================================
 
 export function resetComponentMocks() {
-  currentPathname = "/test"
-  currentSearchParams = new URLSearchParams()
-  currentRouter = {
+  g.__nextNavState.pathname = "/test"
+  g.__nextNavState.searchParams = new URLSearchParams()
+  g.__nextNavState.router = {
     push: mock(() => {}),
     refresh: mock(() => {}),
     replace: mock(() => {}),
@@ -143,25 +135,6 @@ export function resetComponentMocks() {
 // ============================================================================
 
 // Step 1: Mock leaf dependencies first
-mock.module("next/navigation", () => ({
-  usePathname: () => currentPathname,
-  useSearchParams: () => currentSearchParams,
-  useRouter: () => currentRouter,
-  redirect: mock(() => {}),
-  notFound: mock(() => {}),
-}))
-
-mock.module("@clerk/nextjs", () => ({
-  useAuth: () => ({ isSignedIn: clerkState.isSignedIn, isLoaded: clerkState.isLoaded, userId: clerkState.userId }),
-  useUser: () => ({ isLoaded: clerkState.isLoaded, isSignedIn: clerkState.isSignedIn, user: clerkState.isSignedIn ? clerkState.user : null }),
-  useClerk: () => ({ openUserProfile: clerkState.openUserProfile, signOut: clerkState.signOut }),
-  useOrganization: () => ({ organization: clerkState.organization, isLoaded: clerkState.isLoaded }),
-  useOrganizationList: () => ({
-    userMemberships: { data: clerkState.memberships },
-    setActive: clerkState.setActive,
-  }),
-  auth: mock(() => Promise.resolve({ userId: clerkState.userId ?? "user_test", orgId: null })),
-}))
 
 mock.module("@/components/ui/dialog", () => ({
   Dialog: ({ children, open, onOpenChange }: { children: React.ReactNode; open?: boolean; onOpenChange?: (v: boolean) => void }) => {

@@ -131,23 +131,31 @@ const mockResolvePrincipal = mock(() =>
   })
 )
 
-mock.module("@/lib/auth/principal", () => ({
-  resolvePrincipal: mockResolvePrincipal,
-  requirePrincipal: (principal: unknown, _kinds: string[]) => {
-    if (!principal || (principal as { kind: string }).kind === "anonymous") {
-      const error = new Error("Unauthorized")
-      ;(error as Error & { statusCode: number }).statusCode = 401
-      throw error
-    }
-  },
-  AuthError: class AuthError extends Error {
+mock.module("@/lib/auth/principal", () => {
+  class AuthError extends Error {
     statusCode: number
     constructor(message: string, statusCode: number) {
       super(message)
       this.statusCode = statusCode
+      this.name = "AuthError"
     }
-  },
-}))
+  }
+
+  return {
+    resolvePrincipal: mockResolvePrincipal,
+    requirePrincipal: (principal: unknown, _kinds: string[]) => {
+      if (!principal || (principal as { kind: string }).kind === "anonymous") {
+        throw new AuthError("Unauthorized", 401)
+      }
+    },
+    isAdminEnabled: () => true,
+    requireAdmin: (principal: { kind: string }) => {
+      if (principal.kind !== "admin") throw new AuthError("Forbidden", 403)
+    },
+    requireAdminScopes: () => {},
+    AuthError,
+  }
+})
 
 const { Elysia } = await import("elysia")
 const { publicRoutes } = await import("@/lib/api/routes/public")

@@ -79,6 +79,11 @@ mock.module("@/components/hackathon/preview/edit-context", () => ({
   useEdit: () => ({
     closeDrawer: mockCloseDrawer,
   }),
+  useEditOptional: () => ({
+    closeDrawer: mockCloseDrawer,
+  }),
+  EditProvider: ({ children }: { children: React.ReactNode }) => children,
+  SECTION_ORDER: ["name", "dates", "location", "sponsors", "judges", "prizes", "timeline", "about", "rules"],
 }));
 
 mock.module("@/components/ui/optimized-image", () => ({
