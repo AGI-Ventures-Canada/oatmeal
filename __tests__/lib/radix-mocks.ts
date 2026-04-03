@@ -1,3 +1,8 @@
+// Radix UI component mocks for tests that render empty on CI (Linux/happy-dom).
+// Preloaded ONLY for the radix-isolated test group via --preload in run-unit-tests.ts.
+// The Dialog mock here intentionally duplicates the one in component-mocks.tsx —
+// they run in separate bun test processes and use different implementations
+// (this one gates DialogContent visibility via context; component-mocks gates the entire Dialog).
 import { mock } from "bun:test"
 import {
   createElement,
