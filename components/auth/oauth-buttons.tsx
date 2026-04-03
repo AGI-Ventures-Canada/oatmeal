@@ -12,18 +12,21 @@ const VALID_PROVIDERS: OAuthProvider[] = [
   "oauth_linkedin_oidc",
 ];
 
+function getLastUsedProvider(): OAuthProvider | null {
+  if (typeof window === "undefined") return null;
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored && VALID_PROVIDERS.includes(stored as OAuthProvider)) {
+    return stored as OAuthProvider;
+  }
+  return null;
+}
+
 export function OAuthButtons({
   onOAuth,
 }: {
   onOAuth: (provider: OAuthProvider) => void;
 }) {
-  const [lastUsed, setLastUsed] = useState<OAuthProvider | null>(() => {
-    if (typeof window === "undefined") return null;
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored && VALID_PROVIDERS.includes(stored as OAuthProvider)
-      ? (stored as OAuthProvider)
-      : null;
-  });
+  const [lastUsed, setLastUsed] = useState<OAuthProvider | null>(getLastUsedProvider);
 
   function handleOAuth(provider: OAuthProvider) {
     localStorage.setItem(STORAGE_KEY, provider);
