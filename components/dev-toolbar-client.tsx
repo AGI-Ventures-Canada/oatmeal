@@ -21,6 +21,7 @@ export function DevToolbarClient({
   const [open, setOpen] = useState(false);
   const [switching, setSwitching] = useState<string | null>(null);
   const [personaRoles, setPersonaRoles] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
 
   const currentPersona =
     allPersonas.find((p) => p.key === currentPersonaKey) ?? null;
@@ -38,6 +39,7 @@ export function DevToolbarClient({
 
   async function switchTo(persona: PersonaInfo) {
     setSwitching(persona.key);
+    setError(null);
     setOpen(false);
 
     try {
@@ -52,15 +54,15 @@ export function DevToolbarClient({
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        console.error("[dev-toolbar] switch-user failed:", data?.error);
+        setError(data?.error ?? "Switch failed");
         setSwitching(null);
         return;
       }
 
       const { loginUrl } = await res.json();
       window.location.assign(loginUrl);
-    } catch (err) {
-      console.error("[dev-toolbar] switch-user error:", err);
+    } catch {
+      setError("Network error");
       setSwitching(null);
     }
   }
@@ -92,6 +94,16 @@ export function DevToolbarClient({
         </span>
         <ChevronDown className="size-3 text-muted-foreground" />
       </Button>
+
+      {error && (
+        <div
+          role="alert"
+          className="w-64 rounded-md border border-destructive bg-destructive/10 px-3 py-1.5 text-xs text-destructive"
+          onClick={() => setError(null)}
+        >
+          {error}
+        </div>
+      )}
 
       {open && others.length > 0 && (
         <div className="w-64 rounded-md border bg-background py-1 shadow-lg">

@@ -650,12 +650,9 @@ export function HackathonPreviewClient({
         submissions={submissions}
         teamInfo={teamInfo}
         publicResults={publicResults}
-<<<<<<< HEAD
         scheduleItems={scheduleItems}
         announcements={announcements}
-=======
         currentUserId={currentUserId}
->>>>>>> c17c5be (feat(scenarios): add multi-role persona switching for dev/testing)
         onFormSave={onFormSave}
         onBannerChange={onBannerChange}
         onAuthRequired={onAuthRequired}
