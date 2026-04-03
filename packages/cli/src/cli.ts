@@ -100,6 +100,7 @@ const BANNER = `
     events create              Create a hackathon
     events update <id>         Update a hackathon
     events delete <id>         Delete a hackathon
+    events activity <id>       View activity log for a hackathon
     ${pc.dim("(alias: hackathons)")}
 
   ${pc.dim("JUDGING")}
@@ -285,6 +286,11 @@ async function main() {
           case "delete": {
             const { runHackathonsDelete } = await import("./commands/hackathons/delete.js")
             await runHackathonsDelete(client, rest[2], { yes: flags.yes })
+            break
+          }
+          case "activity": {
+            const { runHackathonsActivity } = await import("./commands/hackathons/activity.js")
+            await runHackathonsActivity(client, rest[2], rest.slice(3).concat(flags.json ? ["--json"] : []))
             break
           }
           default:

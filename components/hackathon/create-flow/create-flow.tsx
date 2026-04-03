@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth, useOrganization } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
-import { Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2, X } from "lucide-react"
 import { SignInRequiredDialog } from "@/components/sign-in-required-dialog"
 import { OrgGateDialog } from "@/components/org-gate-dialog"
 import {
@@ -15,6 +15,7 @@ import {
 import { addDays } from "date-fns"
 import { CreateFlowProgress } from "./create-flow-progress"
 import { CreateFlowStep } from "./create-flow-step"
+import { StepImport } from "./step-import"
 import { StepName } from "./step-name"
 import { StepDates } from "./step-dates"
 import { StepLocation } from "./step-location"
@@ -22,7 +23,7 @@ import { StepDescription } from "./step-description"
 import { useCreateFlowKeyboard } from "./use-create-flow-keyboard"
 
 const STORAGE_KEY = "oatmeal:create-from-scratch"
-const TOTAL_STEPS = 4
+const TOTAL_STEPS = 5
 
 function buildDefaultState(): DraftState {
   const start = addDays(new Date(), 14)
@@ -69,6 +70,7 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
   const [error, setError] = useState<string | null>(null)
   const [showSignInDialog, setShowSignInDialog] = useState(false)
   const [orgGateOpen, setOrgGateOpen] = useState(false)
+  const [importMode, setImportMode] = useState<"choose" | "import">("choose")
   const pendingSubmit = useRef(false)
   const autoTriggeredRef = useRef(false)
 
@@ -142,7 +144,7 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
   const handleSubmit = useCallback(async () => {
     if (!state.name.trim()) {
       setError("Hackathon name is required")
-      setCurrentStep(0)
+      setCurrentStep(1)
       return
     }
 
@@ -161,7 +163,7 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
   }, [state, isSignedIn, organization, doSubmit])
 
   const goNext = useCallback(() => {
-    if (currentStep === 0 && !state.name.trim()) {
+    if (currentStep === 1 && !state.name.trim()) {
       setError("Give your hackathon a name first")
       return
     }
@@ -173,12 +175,17 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
     }
   }, [currentStep, state.name, handleSubmit])
 
+  const importKeyRef = useRef(0)
+
   const goBack = useCallback(() => {
-    if (currentStep > 0) {
+    if (currentStep === 0 && importMode === "import") {
+      setImportMode("choose")
+      importKeyRef.current += 1
+    } else if (currentStep > 0) {
       setError(null)
       setCurrentStep((s) => s - 1)
     }
-  }, [currentStep])
+  }, [currentStep, importMode])
 
   const handleClose = useCallback(() => {
     if (window.history.length > 1) {
@@ -201,21 +208,42 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
     <div className="fixed inset-0 z-50 flex flex-col bg-background overflow-y-auto">
       <div className="w-full px-4 pt-6 sm:px-8">
         <div className="mx-auto max-w-2xl">
-          <CreateFlowProgress
-            currentStep={currentStep}
-            totalSteps={TOTAL_STEPS}
-            canSkip={canSkip}
-            onSkip={() => void handleSubmit()}
-            onBack={goBack}
-            onClose={handleClose}
-          />
+          {currentStep === 0 ? (
+            <div className="flex items-center">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleClose}
+                className="gap-1.5 text-muted-foreground"
+              >
+                <X className="size-4" />
+                <span className="hidden sm:inline">Close</span>
+              </Button>
+            </div>
+          ) : (
+            <CreateFlowProgress
+              currentStep={currentStep - 1}
+              totalSteps={TOTAL_STEPS - 1}
+              canSkip={canSkip}
+              onSkip={() => void handleSubmit()}
+              onClose={handleClose}
+            />
+          )}
         </div>
       </div>
 
-      <div className="flex flex-1 items-center px-4 py-8 sm:px-8">
+      <div className="flex flex-1 items-center overflow-y-auto px-4 py-8 sm:px-8">
         <div className="mx-auto w-full max-w-2xl">
-          <CreateFlowStep stepKey={String(currentStep)}>
+          <CreateFlowStep>
             {currentStep === 0 && (
+              <StepImport
+                key={importKeyRef.current}
+                onSkipToScratch={() => setCurrentStep(1)}
+                onModeChange={setImportMode}
+              />
+            )}
+            {currentStep === 1 && (
               <StepName
                 value={state.name}
                 onChange={(name) => {
@@ -224,7 +252,7 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
                 }}
               />
             )}
-            {currentStep === 1 && (
+            {currentStep === 2 && (
               <StepDates
                 startsAt={state.startsAt}
                 endsAt={state.endsAt}
@@ -233,7 +261,7 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
                 }
               />
             )}
-            {currentStep === 2 && (
+            {currentStep === 3 && (
               <StepLocation
                 locationType={state.locationType}
                 locationName={state.locationName}
@@ -241,7 +269,7 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
                 onChange={(data) => setState((prev) => ({ ...prev, ...data }))}
               />
             )}
-            {currentStep === 3 && (
+            {currentStep === 4 && (
               <StepDescription
                 value={state.description}
                 onChange={(description) =>
@@ -254,29 +282,46 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
           {error && (
             <p className="mt-4 text-center text-sm text-destructive">{error}</p>
           )}
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <span className="hidden text-xs text-muted-foreground sm:inline">
-              <Kbd>Enter</Kbd> to continue
-            </span>
-            <Button
-              type="button"
-              size="lg"
-              onClick={isLastStep ? () => void handleSubmit() : goNext}
-              disabled={isSubmitting}
-              className="w-full sm:w-auto"
-            >
-              {isSubmitting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : isLastStep ? (
-                "Create Event"
-              ) : (
-                "Continue"
-              )}
-            </Button>
-          </div>
         </div>
       </div>
+
+      {(currentStep > 0 || importMode === "import") && (
+        <div className="w-full border-t px-4 py-4 sm:px-8">
+          <div className="mx-auto flex max-w-2xl items-center justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={goBack}
+              className="gap-1.5 text-muted-foreground"
+            >
+              <ArrowLeft className="size-4" />
+              <span className="hidden sm:inline">Back</span>
+            </Button>
+            {currentStep > 0 && (
+              <div className="flex items-center gap-3">
+                <span className="hidden text-xs text-muted-foreground sm:inline">
+                  <Kbd>Enter</Kbd> to continue
+                </span>
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={isLastStep ? () => void handleSubmit() : goNext}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : isLastStep ? (
+                    "Create Event"
+                  ) : (
+                    "Continue"
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <SignInRequiredDialog
         open={showSignInDialog}

@@ -2,11 +2,12 @@ import { describe, expect, it, beforeEach } from "bun:test"
 import type { UserPrincipal, ApiKeyPrincipal, AdminPrincipal } from "@/lib/auth/types"
 import {
   createChainableMock,
+  mockFrom,
   resetSupabaseMocks,
   setMockFromImplementation,
 } from "../lib/supabase-mock"
 
-const { logAudit, listAuditLogs } = await import("@/lib/services/audit")
+const { logAudit, listAuditLogs, listAllAuditLogs, listHackathonAuditLogs } = await import("@/lib/services/audit")
 
 const mockUserPrincipal: UserPrincipal = {
   kind: "user",
@@ -383,6 +384,356 @@ describe("Audit Service", () => {
       const result = await listAuditLogs("tenant-123", { limit: 10, offset: 20 })
 
       expect(result).toHaveLength(1)
+    })
+  })
+
+  describe("listAllAuditLogs", () => {
+    const sampleLogs = [
+      {
+        id: "log-1",
+        tenant_id: "tenant-1",
+        action: "hackathon.created",
+        actor_type: "user",
+        actor_id: "user-1",
+        resource_type: "hackathon",
+        resource_id: "h-1",
+        metadata: null,
+        created_at: "2024-01-03T00:00:00Z",
+      },
+      {
+        id: "log-2",
+        tenant_id: "tenant-1",
+        action: "api_key.created",
+        actor_type: "api_key",
+        actor_id: "key-1",
+        resource_type: "api_key",
+        resource_id: "k-1",
+        metadata: null,
+        created_at: "2024-01-02T00:00:00Z",
+      },
+    ]
+
+    it("returns logs with default pagination (limit 50, offset 0)", async () => {
+      const chain = createChainableMock({
+        data: sampleLogs,
+        error: null,
+        count: 2,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listAllAuditLogs()
+
+      expect(result.logs).toHaveLength(2)
+      expect(result.total).toBe(2)
+      expect(chain.range).toHaveBeenCalledWith(0, 49)
+    })
+
+    it("respects custom limit and offset", async () => {
+      const chain = createChainableMock({
+        data: [sampleLogs[0]],
+        error: null,
+        count: 100,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listAllAuditLogs({ limit: 10, offset: 20 })
+
+      expect(result.logs).toHaveLength(1)
+      expect(result.total).toBe(100)
+      expect(chain.range).toHaveBeenCalledWith(20, 29)
+    })
+
+    it("clamps limit to max 100", async () => {
+      const chain = createChainableMock({
+        data: sampleLogs,
+        error: null,
+        count: 2,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listAllAuditLogs({ limit: 500 })
+
+      expect(chain.range).toHaveBeenCalledWith(0, 99)
+    })
+
+    it("filters by tenantId", async () => {
+      const chain = createChainableMock({
+        data: sampleLogs,
+        error: null,
+        count: 2,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listAllAuditLogs({ tenantId: "tenant-1" })
+
+      expect(chain.eq).toHaveBeenCalledWith("tenant_id", "tenant-1")
+    })
+
+    it("filters by hackathonId using or()", async () => {
+      const chain = createChainableMock({
+        data: sampleLogs,
+        error: null,
+        count: 2,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listAllAuditLogs({ hackathonId: "h-1" })
+
+      expect(chain.or).toHaveBeenCalledWith(
+        "resource_id.eq.h-1,metadata->>hackathonId.eq.h-1"
+      )
+    })
+
+    it("filters by action using ilike()", async () => {
+      const chain = createChainableMock({
+        data: [sampleLogs[0]],
+        error: null,
+        count: 1,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listAllAuditLogs({ action: "hackathon" })
+
+      expect(chain.ilike).toHaveBeenCalledWith("action", "%hackathon%")
+    })
+
+    it("filters by resourceType", async () => {
+      const chain = createChainableMock({
+        data: [sampleLogs[1]],
+        error: null,
+        count: 1,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listAllAuditLogs({ resourceType: "api_key" })
+
+      expect(chain.eq).toHaveBeenCalledWith("resource_type", "api_key")
+    })
+
+    it("filters by since date", async () => {
+      const chain = createChainableMock({
+        data: [sampleLogs[0]],
+        error: null,
+        count: 1,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listAllAuditLogs({ since: "2024-01-02T12:00:00Z" })
+
+      expect(chain.gte).toHaveBeenCalledWith("created_at", "2024-01-02T12:00:00Z")
+    })
+
+    it("filters by until date", async () => {
+      const chain = createChainableMock({
+        data: [sampleLogs[1]],
+        error: null,
+        count: 1,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listAllAuditLogs({ until: "2024-01-02T12:00:00Z" })
+
+      expect(chain.lte).toHaveBeenCalledWith("created_at", "2024-01-02T12:00:00Z")
+    })
+
+    it("sorts ascending when sort=asc", async () => {
+      const chain = createChainableMock({
+        data: sampleLogs,
+        error: null,
+        count: 2,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listAllAuditLogs({ sort: "asc" })
+
+      expect(chain.order).toHaveBeenCalledWith("created_at", { ascending: true })
+    })
+
+    it("defaults to descending sort", async () => {
+      const chain = createChainableMock({
+        data: sampleLogs,
+        error: null,
+        count: 2,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listAllAuditLogs()
+
+      expect(chain.order).toHaveBeenCalledWith("created_at", { ascending: false })
+    })
+
+    it("throws on Supabase error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "connection refused" },
+      })
+      setMockFromImplementation(() => chain)
+
+      expect(listAllAuditLogs()).rejects.toThrow(
+        "Failed to list audit logs: connection refused"
+      )
+    })
+  })
+
+  describe("listHackathonAuditLogs", () => {
+    const hackathonLogs = [
+      {
+        id: "hlog-1",
+        tenant_id: "tenant-123",
+        action: "hackathon.updated",
+        actor_type: "user",
+        actor_id: "user-1",
+        resource_type: "hackathon",
+        resource_id: "h-uuid-1",
+        metadata: null,
+        created_at: "2024-03-01T10:00:00Z",
+      },
+      {
+        id: "hlog-2",
+        tenant_id: "tenant-123",
+        action: "judge.added",
+        actor_type: "user",
+        actor_id: "user-1",
+        resource_type: "judge",
+        resource_id: "j-uuid-1",
+        metadata: { hackathonId: "h-uuid-1" },
+        created_at: "2024-02-15T10:00:00Z",
+      },
+    ]
+
+    it("returns logs with default pagination", async () => {
+      const chain = createChainableMock({
+        data: hackathonLogs,
+        error: null,
+        count: 2,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listHackathonAuditLogs("tenant-123", "h-uuid-1")
+
+      expect(result.logs).toHaveLength(2)
+      expect(result.total).toBe(2)
+      expect(chain.eq).toHaveBeenCalledWith("tenant_id", "tenant-123")
+      expect(chain.or).toHaveBeenCalledWith(
+        "resource_id.eq.h-uuid-1,metadata->>hackathonId.eq.h-uuid-1"
+      )
+      expect(chain.range).toHaveBeenCalledWith(0, 49)
+    })
+
+    it("respects custom limit and offset", async () => {
+      const chain = createChainableMock({
+        data: [hackathonLogs[0]],
+        error: null,
+        count: 20,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await listHackathonAuditLogs("tenant-123", "h-uuid-1", {
+        limit: 10,
+        offset: 5,
+      })
+
+      expect(result.logs).toHaveLength(1)
+      expect(result.total).toBe(20)
+      expect(chain.range).toHaveBeenCalledWith(5, 14)
+    })
+
+    it("clamps limit to max 100", async () => {
+      const chain = createChainableMock({
+        data: hackathonLogs,
+        error: null,
+        count: 2,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listHackathonAuditLogs("tenant-123", "h-uuid-1", { limit: 500 })
+
+      expect(chain.range).toHaveBeenCalledWith(0, 99)
+    })
+
+    it("filters by action using ilike()", async () => {
+      const chain = createChainableMock({
+        data: [hackathonLogs[1]],
+        error: null,
+        count: 1,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listHackathonAuditLogs("tenant-123", "h-uuid-1", {
+        action: "judge",
+      })
+
+      expect(chain.ilike).toHaveBeenCalledWith("action", "%judge%")
+    })
+
+    it("filters by resourceType", async () => {
+      const chain = createChainableMock({
+        data: [hackathonLogs[1]],
+        error: null,
+        count: 1,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listHackathonAuditLogs("tenant-123", "h-uuid-1", {
+        resourceType: "judge",
+      })
+
+      expect(chain.eq).toHaveBeenCalledWith("resource_type", "judge")
+    })
+
+    it("filters by date range (since/until)", async () => {
+      const chain = createChainableMock({
+        data: [hackathonLogs[0]],
+        error: null,
+        count: 1,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listHackathonAuditLogs("tenant-123", "h-uuid-1", {
+        since: "2024-02-20T00:00:00Z",
+        until: "2024-03-05T00:00:00Z",
+      })
+
+      expect(chain.gte).toHaveBeenCalledWith("created_at", "2024-02-20T00:00:00Z")
+      expect(chain.lte).toHaveBeenCalledWith("created_at", "2024-03-05T00:00:00Z")
+    })
+
+    it("sorts ascending when sort=asc", async () => {
+      const chain = createChainableMock({
+        data: hackathonLogs,
+        error: null,
+        count: 2,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listHackathonAuditLogs("tenant-123", "h-uuid-1", { sort: "asc" })
+
+      expect(chain.order).toHaveBeenCalledWith("created_at", { ascending: true })
+    })
+
+    it("defaults to descending sort", async () => {
+      const chain = createChainableMock({
+        data: hackathonLogs,
+        error: null,
+        count: 2,
+      })
+      setMockFromImplementation(() => chain)
+
+      await listHackathonAuditLogs("tenant-123", "h-uuid-1")
+
+      expect(chain.order).toHaveBeenCalledWith("created_at", { ascending: false })
+    })
+
+    it("throws on Supabase error", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "connection refused" },
+      })
+      setMockFromImplementation(() => chain)
+
+      expect(
+        listHackathonAuditLogs("tenant-123", "h-uuid-1")
+      ).rejects.toThrow("Failed to list hackathon audit logs: connection refused")
     })
   })
 

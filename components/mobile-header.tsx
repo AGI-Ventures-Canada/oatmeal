@@ -45,10 +45,10 @@ const navSections: NavSection[] = [
     id: HACKATHONS_ID,
     title: "Hackathons",
     children: [
-      { title: "Participating", href: "/home?tab=participating" },
-      { title: "Judging", href: "/home?tab=judging" },
-      { title: "Organizing", href: "/home?tab=organized" },
-      { title: "Sponsoring", href: "/home?tab=sponsored" },
+      { title: "Participating", href: "/home/participating" },
+      { title: "Judging", href: "/home/judging" },
+      { title: "Organizing", href: "/home/organizing" },
+      { title: "Sponsoring", href: "/home/sponsoring" },
     ],
   },
   {

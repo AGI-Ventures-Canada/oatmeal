@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react"
 import {
-  Loader2, Plus, Users, ChevronRight, FileText, DoorOpen, Crown,
+  Loader2, Plus, Users, ChevronRight, FileText, DoorOpen, Crown, Mail,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -35,7 +35,8 @@ type Team = {
   id: string
   name: string
   status: string
-  captainClerkUserId: string
+  captainClerkUserId: string | null
+  pendingCaptainEmail: string | null
   members: TeamMember[]
   submission: { id: string; title: string; status: string } | null
   room: { id: string; name: string } | null
@@ -54,6 +55,7 @@ export function TeamsTab({ hackathonId }: TeamsTabProps) {
   const [captainEmail, setCaptainEmail] = useState("")
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   async function fetchTeams() {
@@ -110,10 +112,18 @@ export function TeamsTab({ hackathonId }: TeamsTabProps) {
         throw new Error(data.error || "Failed to create team")
       }
 
+      const data = await res.json()
+
       setDialogOpen(false)
       setTeamName("")
       setCaptainEmail("")
       setCreateError(null)
+
+      if (data.invited) {
+        setInviteSuccess(`Invite sent to ${captainEmail.trim()}`)
+        setTimeout(() => setInviteSuccess(null), 5000)
+      }
+
       await fetchTeams()
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : "Failed to create team")
@@ -143,6 +153,12 @@ export function TeamsTab({ hackathonId }: TeamsTabProps) {
 
   return (
     <div className="space-y-4">
+      {inviteSuccess && (
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-4 py-3 text-sm">
+          <Mail className="size-4 text-muted-foreground" />
+          {inviteSuccess}
+        </div>
+      )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground">
           {teams.length === 0
@@ -272,7 +288,11 @@ export function TeamsTab({ hackathonId }: TeamsTabProps) {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className="text-muted-foreground">{team.members.length}</span>
+                          <span className="text-muted-foreground">
+                            {team.members.length === 0 && team.pendingCaptainEmail
+                              ? "0 (invited)"
+                              : team.members.length}
+                          </span>
                         </TableCell>
                         <TableCell>
                           {team.submission ? (
@@ -301,7 +321,14 @@ export function TeamsTab({ hackathonId }: TeamsTabProps) {
                                   <Users className="size-3" />
                                   Members
                                 </div>
-                                {team.members.length === 0 ? (
+                                {team.pendingCaptainEmail && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Mail className="size-3 text-muted-foreground" />
+                                    <span className="text-muted-foreground">{team.pendingCaptainEmail}</span>
+                                    <Badge variant="secondary">Pending invite</Badge>
+                                  </div>
+                                )}
+                                {team.members.length === 0 && !team.pendingCaptainEmail ? (
                                   <p className="text-sm text-muted-foreground">No members</p>
                                 ) : (
                                   <div className="flex flex-col gap-1">

@@ -1,17 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ArrowLeft, X } from "lucide-react"
+import { useSyncExternalStore } from "react"
+import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
 import { cn } from "@/lib/utils"
+
+const noop = () => () => {}
+const getIsMac = () => navigator.userAgent.includes("Mac")
+const getServerIsMac = () => false
 
 interface CreateFlowProgressProps {
   currentStep: number
   totalSteps: number
   canSkip: boolean
   onSkip: () => void
-  onBack: () => void
   onClose: () => void
 }
 
@@ -20,29 +23,21 @@ export function CreateFlowProgress({
   totalSteps,
   canSkip,
   onSkip,
-  onBack,
   onClose,
 }: CreateFlowProgressProps) {
-  const [isMac, setIsMac] = useState(false)
-  useEffect(() => { setIsMac(navigator.userAgent.includes("Mac")) }, [])
+  const isMac = useSyncExternalStore(noop, getIsMac, getServerIsMac)
 
   return (
     <div className="flex items-center justify-between">
       <Button
         type="button"
         variant="ghost"
-        size="sm"
-        onClick={currentStep === 0 ? onClose : onBack}
-        className="gap-1.5 text-muted-foreground"
+        size="icon"
+        onClick={onClose}
+        className="size-8 text-muted-foreground"
       >
-        {currentStep === 0 ? (
-          <X className="size-4" />
-        ) : (
-          <ArrowLeft className="size-4" />
-        )}
-        <span className="hidden sm:inline">
-          {currentStep === 0 ? "Close" : "Back"}
-        </span>
+        <X className="size-4" />
+        <span className="sr-only">Close</span>
       </Button>
 
       <div

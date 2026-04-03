@@ -15,7 +15,6 @@ describe("CreateFlowProgress", () => {
     totalSteps: 4,
     canSkip: false,
     onSkip: mock(() => {}),
-    onBack: mock(() => {}),
     onClose: mock(() => {}),
   }
 
@@ -29,28 +28,16 @@ describe("CreateFlowProgress", () => {
     expect(screen.getByText("3 / 4")).toBeDefined()
   })
 
-  it("shows Close button on first step", () => {
+  it("shows Close button", () => {
     render(<CreateFlowProgress {...defaultProps} />)
     expect(screen.getByText("Close")).toBeDefined()
   })
 
-  it("calls onClose when Close is clicked on first step", () => {
+  it("calls onClose when Close is clicked", () => {
     const onClose = mock(() => {})
     render(<CreateFlowProgress {...defaultProps} onClose={onClose} />)
     fireEvent.click(screen.getByText("Close"))
     expect(onClose).toHaveBeenCalled()
-  })
-
-  it("shows Back button on later steps", () => {
-    render(<CreateFlowProgress {...defaultProps} currentStep={1} />)
-    expect(screen.getByText("Back")).toBeDefined()
-  })
-
-  it("calls onBack when Back is clicked", () => {
-    const onBack = mock(() => {})
-    render(<CreateFlowProgress {...defaultProps} currentStep={1} onBack={onBack} />)
-    fireEvent.click(screen.getByText("Back"))
-    expect(onBack).toHaveBeenCalled()
   })
 
   it("hides Skip link when canSkip is false", () => {

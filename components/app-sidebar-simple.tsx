@@ -68,10 +68,10 @@ const mainItems = [
 ]
 
 const hackathonItems = [
-  { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
-  { title: "Participating", href: "/home?tab=participating", icon: Users },
-  { title: "Judging", href: "/home?tab=judging", icon: Scale },
-  { title: "Sponsoring", href: "/home?tab=sponsored", icon: Star },
+  { title: "Organizing", href: "/home/organizing", icon: Megaphone },
+  { title: "Participating", href: "/home/participating", icon: Users },
+  { title: "Judging", href: "/home/judging", icon: Scale },
+  { title: "Sponsoring", href: "/home/sponsoring", icon: Star },
 ]
 
 const manageItems = [
@@ -126,14 +126,10 @@ export function AppSidebarSimple() {
   }, [organization])
 
   const isSettingsView = pathname.startsWith("/settings")
-  const currentTab = searchParams.get("tab")
 
   function isActive(item: { href: string }) {
-    const url = new URL(item.href, "http://x")
-    const tab = url.searchParams.get("tab")
-    if (tab) return pathname === "/home" && currentTab === tab
-    if (pathname === "/home" && currentTab && !tab) return false
-    return pathname.startsWith(url.pathname)
+    if (item.href === "/home") return pathname === "/home"
+    return pathname.startsWith(item.href)
   }
 
   return (

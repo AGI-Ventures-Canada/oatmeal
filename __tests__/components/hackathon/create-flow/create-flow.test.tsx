@@ -91,21 +91,53 @@ function renderFlow() {
   )
 }
 
+async function goToNameStep() {
+  fireEvent.click(screen.getByText("Start from scratch"))
+  await waitFor(() => {
+    expect(screen.getByPlaceholderText("My Awesome Hackathon")).toBeDefined()
+  })
+}
+
 describe("CreateFlow", () => {
-  describe("step navigation", () => {
-    it("renders step 1 (name) initially", () => {
+  describe("import step", () => {
+    it("renders import chooser initially", () => {
       renderFlow()
-      expect(screen.getByText("What's your hackathon called?")).toBeDefined()
-      expect(screen.getByPlaceholderText("My Awesome Hackathon")).toBeDefined()
+      expect(screen.getByText("Create a hackathon")).toBeDefined()
+      expect(screen.getByText("Start from scratch")).toBeDefined()
+      expect(screen.getByText("Import from URL")).toBeDefined()
     })
 
-    it("shows 1 / 4 step counter", () => {
+    it("does not show progress bar or action bar on step 0", () => {
       renderFlow()
+      expect(screen.queryByRole("progressbar")).toBeNull()
+      expect(screen.queryByText("Continue")).toBeNull()
+    })
+
+    it("advances to name step when Start from scratch is clicked", async () => {
+      renderFlow()
+      await goToNameStep()
+      expect(screen.getByText("What's your hackathon called?")).toBeDefined()
+    })
+
+    it("shows URL input when Import from URL is clicked", async () => {
+      renderFlow()
+      fireEvent.click(screen.getByText("Import from URL"))
+      await waitFor(() => {
+        expect(screen.getByText("Paste the event URL")).toBeDefined()
+      })
+    })
+  })
+
+  describe("step navigation", () => {
+    it("shows 1 / 4 step counter on name step", async () => {
+      renderFlow()
+      await goToNameStep()
       expect(screen.getByText("1 / 4")).toBeDefined()
     })
 
     it("advances to step 2 when Continue is clicked with a name", async () => {
       renderFlow()
+      await goToNameStep()
       fireEvent.change(screen.getByPlaceholderText("My Awesome Hackathon"), {
         target: { value: "My Hackathon" },
       })
@@ -117,14 +149,16 @@ describe("CreateFlow", () => {
       })
     })
 
-    it("shows error when trying to advance without a name", () => {
+    it("shows error when trying to advance without a name", async () => {
       renderFlow()
+      await goToNameStep()
       fireEvent.click(screen.getByText("Continue"))
       expect(screen.getByText("Give your hackathon a name first")).toBeDefined()
     })
 
-    it("clears error when typing a name", () => {
+    it("clears error when typing a name", async () => {
       renderFlow()
+      await goToNameStep()
       fireEvent.click(screen.getByText("Continue"))
       expect(screen.getByText("Give your hackathon a name first")).toBeDefined()
 
@@ -136,6 +170,7 @@ describe("CreateFlow", () => {
 
     it("navigates back with the Back button", async () => {
       renderFlow()
+      await goToNameStep()
       fireEvent.change(screen.getByPlaceholderText("My Awesome Hackathon"), {
         target: { value: "My Hackathon" },
       })
@@ -152,6 +187,7 @@ describe("CreateFlow", () => {
 
     it("shows Create Event button on last step", async () => {
       renderFlow()
+      await goToNameStep()
       fireEvent.change(screen.getByPlaceholderText("My Awesome Hackathon"), {
         target: { value: "My Hackathon" },
       })
@@ -168,13 +204,15 @@ describe("CreateFlow", () => {
   })
 
   describe("skip functionality", () => {
-    it("hides Skip when name is empty", () => {
+    it("hides Skip when name is empty", async () => {
       renderFlow()
+      await goToNameStep()
       expect(screen.queryByText("Skip to event page")).toBeNull()
     })
 
-    it("shows Skip when name is non-empty", () => {
+    it("shows Skip when name is non-empty", async () => {
       renderFlow()
+      await goToNameStep()
       fireEvent.change(screen.getByPlaceholderText("My Awesome Hackathon"), {
         target: { value: "My Hackathon" },
       })
@@ -185,6 +223,7 @@ describe("CreateFlow", () => {
   describe("submission", () => {
     it("calls onSubmit with state when submitting", async () => {
       renderFlow()
+      await goToNameStep()
       fireEvent.change(screen.getByPlaceholderText("My Awesome Hackathon"), {
         target: { value: "My Hackathon" },
       })
@@ -200,6 +239,7 @@ describe("CreateFlow", () => {
     it("shows sign-in dialog when not signed in", async () => {
       setClerkIsSignedIn(false)
       renderFlow()
+      await goToNameStep()
       fireEvent.change(screen.getByPlaceholderText("My Awesome Hackathon"), {
         target: { value: "My Hackathon" },
       })
@@ -213,6 +253,7 @@ describe("CreateFlow", () => {
     it("shows org gate dialog when signed in but no org", async () => {
       setClerkOrganization(null)
       renderFlow()
+      await goToNameStep()
       fireEvent.change(screen.getByPlaceholderText("My Awesome Hackathon"), {
         target: { value: "My Hackathon" },
       })
@@ -225,8 +266,9 @@ describe("CreateFlow", () => {
   })
 
   describe("localStorage", () => {
-    it("saves state to localStorage on change", () => {
+    it("saves state to localStorage on change", async () => {
       renderFlow()
+      await goToNameStep()
       fireEvent.change(screen.getByPlaceholderText("My Awesome Hackathon"), {
         target: { value: "Saved Hackathon" },
       })
@@ -237,7 +279,7 @@ describe("CreateFlow", () => {
       expect(parsed.state.name).toBe("Saved Hackathon")
     })
 
-    it("restores state from localStorage on mount", () => {
+    it("restores state from localStorage on mount", async () => {
       localStorage.setItem(
         "oatmeal:create-from-scratch",
         JSON.stringify({
@@ -261,6 +303,7 @@ describe("CreateFlow", () => {
       )
 
       renderFlow()
+      await goToNameStep()
       const input = screen.getByPlaceholderText("My Awesome Hackathon") as HTMLInputElement
       expect(input.value).toBe("Restored Hackathon")
     })

@@ -50,9 +50,9 @@ describe("OrgEventTabs", () => {
       />
     )
 
-    expect(screen.getByText("All (1)")).toBeDefined()
-    expect(screen.getByText("Organizing (1)")).toBeDefined()
-    expect(screen.getByText("Sponsoring (0)")).toBeDefined()
+    expect(screen.getByRole("tab", { name: "All 1" })).toBeDefined()
+    expect(screen.getByRole("tab", { name: "Organizing 1" })).toBeDefined()
+    expect(screen.getByRole("tab", { name: "Sponsoring 0" })).toBeDefined()
   })
 
   it("shows full count when show completed is toggled on", async () => {
@@ -65,14 +65,14 @@ describe("OrgEventTabs", () => {
       />
     )
 
-    expect(screen.getByText("All (1)")).toBeDefined()
+    expect(screen.getByRole("tab", { name: "All 1" })).toBeDefined()
 
     const toggle = screen.getByRole("switch")
     await userEvent.click(toggle)
 
-    expect(screen.getByText("All (2)")).toBeDefined()
-    expect(screen.getByText("Organizing (2)")).toBeDefined()
-    expect(screen.getByText("Sponsoring (1)")).toBeDefined()
+    expect(screen.getByRole("tab", { name: "All 2" })).toBeDefined()
+    expect(screen.getByRole("tab", { name: "Organizing 2" })).toBeDefined()
+    expect(screen.getByRole("tab", { name: "Sponsoring 1" })).toBeDefined()
   })
 
   it("excludes archived events from count by default", () => {
@@ -85,8 +85,8 @@ describe("OrgEventTabs", () => {
       />
     )
 
-    expect(screen.getByText("All (1)")).toBeDefined()
-    expect(screen.getByText("Organizing (1)")).toBeDefined()
+    expect(screen.getByRole("tab", { name: "All 1" })).toBeDefined()
+    expect(screen.getByRole("tab", { name: "Organizing 1" })).toBeDefined()
   })
 
   it("shows all counts when no completed events exist", () => {
@@ -99,8 +99,8 @@ describe("OrgEventTabs", () => {
       />
     )
 
-    expect(screen.getByText("All (1)")).toBeDefined()
-    expect(screen.getByText("Organizing (1)")).toBeDefined()
+    expect(screen.getByRole("tab", { name: "All 1" })).toBeDefined()
+    expect(screen.getByRole("tab", { name: "Organizing 1" })).toBeDefined()
   })
 
   it("hides show completed toggle when no completed events exist", () => {

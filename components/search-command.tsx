@@ -41,10 +41,10 @@ const navigationItems = [
 ]
 
 const hackathonItems = [
-  { title: "Participating", href: "/home?tab=participating", icon: Users },
-  { title: "Judging", href: "/home?tab=judging", icon: Scale },
-  { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
-  { title: "Sponsoring", href: "/home?tab=sponsored", icon: Star },
+  { title: "Participating", href: "/home/participating", icon: Users },
+  { title: "Judging", href: "/home/judging", icon: Scale },
+  { title: "Organizing", href: "/home/organizing", icon: Megaphone },
+  { title: "Sponsoring", href: "/home/sponsoring", icon: Star },
 ]
 
 const settingsItems = [

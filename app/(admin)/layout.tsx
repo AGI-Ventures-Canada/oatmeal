@@ -33,6 +33,7 @@ export default async function AdminLayout({
           <nav className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/admin" className="hover:text-foreground">Overview</Link>
             <Link href="/admin/hackathons" className="hover:text-foreground">Hackathons</Link>
+            <Link href="/admin/activity" className="hover:text-foreground">Activity</Link>
             <Link href="/admin/scenarios" className="hover:text-foreground">Scenarios</Link>
           </nav>
         </div>
