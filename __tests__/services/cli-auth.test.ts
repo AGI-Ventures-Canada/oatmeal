@@ -11,6 +11,12 @@ import {
 mock.module("@/lib/services/encryption", () => ({
   encryptToken: mock((plaintext: string) => `encrypted:${plaintext}`),
   decryptToken: mock((ciphertext: string) => ciphertext.replace("encrypted:", "")),
+  encryptJson: mock((data: Record<string, unknown>) => JSON.stringify(data)),
+  decryptJson: mock((ciphertext: string) => JSON.parse(ciphertext)),
+  generateWebhookSecret: mock(() => "whsec_test"),
+  generateToken: mock(() => "token_test"),
+  signWebhookPayload: mock((_secret: string, _payload: string) => "sig_test"),
+  verifyWebhookSignature: mock((_secret: string, _payload: string, _signature: string) => true),
 }))
 
 const mockCreateApiKey = mock(() =>
