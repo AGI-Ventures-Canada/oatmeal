@@ -69,9 +69,9 @@ const navItems = [
 ]
 
 const hackathonSubItems = [
-  { title: "Participating", href: "/home?tab=participating", icon: Users },
-  { title: "Organizing", href: "/home?tab=organized", icon: Megaphone },
-  { title: "Sponsoring", href: "/home?tab=sponsored", icon: Star },
+  { title: "Participating", href: "/home/participating", icon: Users },
+  { title: "Organizing", href: "/home/organizing", icon: Megaphone },
+  { title: "Sponsoring", href: "/home/sponsoring", icon: Star },
 ]
 
 const manageItems = [

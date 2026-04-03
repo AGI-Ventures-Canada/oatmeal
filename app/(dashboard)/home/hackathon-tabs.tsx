@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Trophy,
   Search,
@@ -136,14 +135,12 @@ function ActiveBanner({
 }
 
 function HackathonSection({
-  id,
   title,
   hackathons,
   emptyMessage,
   renderCard,
   defaultCollapsed = false,
 }: {
-  id?: string
   title: string
   hackathons: Hackathon[]
   emptyMessage?: string
@@ -154,7 +151,7 @@ function HackathonSection({
 
   return (
     <Collapsible defaultOpen={!defaultCollapsed}>
-      <CollapsibleTrigger id={id} className="mb-3 flex w-full items-center gap-2 text-left group scroll-mt-6">
+      <CollapsibleTrigger className="mb-3 flex w-full items-center gap-2 text-left group">
         <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
         <span className="text-xs text-muted-foreground tabular-nums">{hackathons.length}</span>
         <ChevronDown className="ml-auto size-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
@@ -184,27 +181,6 @@ export function HackathonTabs({
 }: Props) {
   const submittedSet = new Set(submittedHackathonIds)
   const [query, setQuery] = useState("")
-  const searchParams = useSearchParams()
-  const scrolledRef = useRef(false)
-
-  const TAB_TO_ID: Record<string, string> = {
-    organized: "organizing",
-    participating: "participating",
-    judging: "judging",
-    sponsored: "sponsoring",
-  }
-
-  useEffect(() => {
-    if (scrolledRef.current) return
-    const tab = searchParams.get("tab")
-    if (!tab) return
-    const id = TAB_TO_ID[tab]
-    if (!id) return
-    scrolledRef.current = true
-    requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
-    })
-  }, [searchParams])
 
   const statsMap = useMemo(
     () => new Map(Object.entries(organizedStats ?? {})),
@@ -301,7 +277,6 @@ export function HackathonTabs({
 
       {(filteredOrganizing.length > 0 || organizedHackathons.length > 0) && (
         <HackathonSection
-          id="organizing"
           title="Organizing"
           hackathons={filteredOrganizing}
           renderCard={(h) => {
@@ -319,7 +294,6 @@ export function HackathonTabs({
 
       {(filteredParticipating.length > 0 || myHackathons.length > 0) && (
         <HackathonSection
-          id="participating"
           title="Participating"
           hackathons={filteredParticipating}
           renderCard={(h) => (
@@ -344,7 +318,6 @@ export function HackathonTabs({
 
       {(filteredJudging.length > 0 || judgingHackathons.length > 0) && (
         <HackathonSection
-          id="judging"
           title="Judging"
           hackathons={filteredJudging}
           renderCard={(h) => (
@@ -364,7 +337,6 @@ export function HackathonTabs({
 
       {(filteredSponsored.length > 0 || sponsoredHackathons.length > 0) && (
         <HackathonSection
-          id="sponsoring"
           title="Sponsoring"
           hackathons={filteredSponsored}
           renderCard={(h) => (

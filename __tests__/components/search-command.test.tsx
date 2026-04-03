@@ -224,11 +224,11 @@ describe("SearchCommand", () => {
       expect(mockPush).toHaveBeenCalledWith("/browse")
     })
 
-    it("navigates to /home?tab=judging when Judging is selected", async () => {
+    it("navigates to /home/judging when Judging is selected", async () => {
       openMenu()
       await waitFor(() => screen.getByText("Judging"))
       fireEvent.click(screen.getByText("Judging"))
-      expect(mockPush).toHaveBeenCalledWith("/home?tab=judging")
+      expect(mockPush).toHaveBeenCalledWith("/home/judging")
     })
 
     it("navigates to /settings/api-keys when API Keys is selected", async () => {
