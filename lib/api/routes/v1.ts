@@ -333,3 +333,49 @@ export const v1Routes = new Elysia({ prefix: "/v1", tags: ["v1"] })
       description: "Deletes a webhook.",
     },
   })
+  .get(
+    "/hackathons/:id/activity",
+    async ({ principal, params, query }) => {
+      requirePrincipal(principal, ["api_key"], ["hackathons:read"])
+
+      const rateLimit = await checkRateLimit(`api_key:${principal.keyId}:default`)
+      if (!rateLimit.allowed) {
+        throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
+      }
+
+      const { listHackathonAuditLogs } = await import("@/lib/services/audit")
+      const result = await listHackathonAuditLogs(
+        principal.tenantId,
+        params.id,
+        {
+          limit: query.limit,
+          offset: query.offset,
+          action: query.action || undefined,
+        }
+      )
+
+      return {
+        logs: result.logs.map((log) => ({
+          id: log.id,
+          action: log.action,
+          resourceType: log.resource_type,
+          resourceId: log.resource_id,
+          actorType: log.actor_type,
+          metadata: log.metadata,
+          createdAt: log.created_at,
+        })),
+        total: result.total,
+      }
+    },
+    {
+      query: t.Object({
+        limit: t.Optional(t.Numeric()),
+        offset: t.Optional(t.Numeric()),
+        action: t.Optional(t.String()),
+      }),
+      detail: {
+        summary: "List hackathon activity",
+        description: "Returns audit logs for a specific hackathon. Requires hackathons:read scope.",
+      },
+    }
+  )

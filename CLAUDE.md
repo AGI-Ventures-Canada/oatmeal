@@ -339,6 +339,10 @@ Every flow must be easy to enter, navigate, and leave:
 
 If a form field requires the user to look something up in a different system, the UX is wrong — do the lookup for them.
 
+### Unknown User by Email
+
+When a feature references a user by email and the user doesn't exist in Clerk, send an invite instead of returning an error. The invite email must be personalized: who invited them, which organization, and what they're being invited to. Use the existing team invitation infrastructure (`team_invitations` table, `sendTeamInvitationEmail`, `/invite/[token]` acceptance page) as the pattern.
+
 ### Date/Time Defaults
 
 **Every date/time input must have a sensible default value.** Users should never open a date picker and see a blank field when a reasonable starting point exists.

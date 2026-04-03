@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
-import { Loader2 } from "lucide-react"
+import { useState, useRef, useCallback, useEffect } from "react"
+import { ChevronDown, ChevronRight, Loader2, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -11,30 +12,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
-
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import type { AuditLog } from "@/lib/db/hackathon-types"
 import type { Json } from "@/lib/db/types"
 
 type Props = {
   initialLogs: AuditLog[]
-  initialPage: number
-  initialTotalPages: number
   initialTotal: number
   initialAction: string
   initialResourceType: string
@@ -78,14 +64,20 @@ const ACTION_CATEGORIES = [
 const PAGE_SIZE = 50
 
 function formatAction(action: string): string {
-  return action.replaceAll(".", " ").replaceAll("_", " ")
+  const parts = action.split(".")
+  const verb = parts[parts.length - 1]
+  return verb.replaceAll("_", " ")
+}
+
+function formatActionFull(action: string): string {
+  return action.replaceAll(".", " > ").replaceAll("_", " ")
 }
 
 function getActionVariant(action: string): "default" | "secondary" | "destructive" | "outline" {
-  if (action.includes("deleted") || action.includes("removed") || action.includes("revoked")) {
+  if (action.includes("deleted") || action.includes("removed") || action.includes("revoked") || action.includes("cancelled")) {
     return "destructive"
   }
-  if (action.includes("created") || action.includes("added")) {
+  if (action.includes("created") || action.includes("added") || action.includes("published")) {
     return "default"
   }
   if (action.startsWith("admin.")) {
@@ -94,19 +86,20 @@ function getActionVariant(action: string): "default" | "secondary" | "destructiv
   return "secondary"
 }
 
-function formatMetadata(metadata: Json): string {
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return ""
-  const filtered = Object.entries(metadata).filter(
-    ([k]) => !["is_admin_action", "admin_user_id", "admin_key_id"].includes(k)
-  )
-  if (filtered.length === 0) return ""
-  return filtered
+function formatResourceType(rt: string): string {
+  return rt.replaceAll("_", " ")
+}
+
+function getMetadataEntries(metadata: Json): [string, string][] {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return []
+  return Object.entries(metadata)
+    .filter(([k]) => !["is_admin_action", "admin_user_id", "admin_key_id"].includes(k))
     .map(([k, v]) => {
-      if (Array.isArray(v)) return `${k}: ${v.join(", ")}`
-      if (typeof v === "object" && v !== null) return `${k}: ${JSON.stringify(v)}`
-      return `${k}: ${String(v)}`
+      const label = k.replaceAll("_", " ")
+      if (Array.isArray(v)) return [label, v.join(", ")] as [string, string]
+      if (typeof v === "object" && v !== null) return [label, JSON.stringify(v, null, 2)] as [string, string]
+      return [label, String(v)] as [string, string]
     })
-    .join(" · ")
 }
 
 function isAdminAction(metadata: Json): boolean {
@@ -133,42 +126,219 @@ function formatRelativeTime(isoDate: string): string {
   return date.toLocaleDateString()
 }
 
+function getDateHeading(isoDate: string): string {
+  const date = new Date(isoDate)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const logDay = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const diffDays = Math.floor((today.getTime() - logDay.getTime()) / 86400000)
+
+  if (diffDays === 0) return "Today"
+  if (diffDays === 1) return "Yesterday"
+  if (diffDays < 7) return date.toLocaleDateString(undefined, { weekday: "long" })
+  return date.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })
+}
+
+function groupByDate(logs: AuditLog[]): { heading: string; logs: AuditLog[] }[] {
+  const groups: { heading: string; logs: AuditLog[] }[] = []
+  let currentHeading = ""
+
+  for (const log of logs) {
+    const heading = getDateHeading(log.created_at)
+    if (heading !== currentHeading) {
+      currentHeading = heading
+      groups.push({ heading, logs: [] })
+    }
+    groups[groups.length - 1].logs.push(log)
+  }
+
+  return groups
+}
+
+function LogEntry({
+  log,
+  onFilterResource,
+  onFilterAction,
+}: {
+  log: AuditLog
+  onFilterResource: (rt: string) => void
+  onFilterAction: (action: string) => void
+}) {
+  const metadataEntries = getMetadataEntries(log.metadata)
+  const hasDetails = metadataEntries.length > 0 || log.resource_id
+
+  return (
+    <Collapsible>
+      <CollapsibleTrigger asChild>
+        <div
+          role="button"
+          tabIndex={0}
+          className="group flex w-full cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+        >
+          <div className="mt-0.5 text-muted-foreground/40">
+            {hasDetails ? (
+              <>
+                <ChevronRight className="size-4 group-data-[state=open]:hidden" />
+                <ChevronDown className="hidden size-4 group-data-[state=open]:block" />
+              </>
+            ) : (
+              <div className="size-4" />
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant={getActionVariant(log.action)}
+                className="cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const parts = log.action.split(".")
+                  const verb = parts[parts.length - 1]
+                  for (const cat of ACTION_CATEGORIES) {
+                    if (cat.value !== "all" && verb.includes(cat.value)) {
+                      onFilterAction(cat.value)
+                      return
+                    }
+                  }
+                }}
+              >
+                {formatAction(log.action)}
+              </Badge>
+              <span
+                role="button"
+                tabIndex={0}
+                className="rounded px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onFilterResource(log.resource_type)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.stopPropagation()
+                    onFilterResource(log.resource_type)
+                  }
+                }}
+              >
+                {formatResourceType(log.resource_type)}
+              </span>
+              {isAdminAction(log.metadata) && (
+                <Badge variant="outline" className="text-[10px]">admin</Badge>
+              )}
+            </div>
+
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span title={new Date(log.created_at).toLocaleString()}>
+                {formatRelativeTime(log.created_at)}
+              </span>
+              <span>{log.actor_type === "api_key" ? "via API key" : "by user"}</span>
+            </div>
+          </div>
+        </div>
+      </CollapsibleTrigger>
+
+      {hasDetails && (
+        <CollapsibleContent>
+          <div className="ml-10 space-y-2 border-l-2 border-muted pb-3 pl-4 text-sm">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Action</span>
+                <span className="text-xs">{formatActionFull(log.action)}</span>
+              </div>
+              {log.resource_id && (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">Resource ID</span>
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{log.resource_id}</code>
+                </div>
+              )}
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Tenant ID</span>
+                <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{log.tenant_id}</code>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Actor</span>
+                <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{log.actor_id}</code>
+                <span className="text-xs text-muted-foreground">({log.actor_type})</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Timestamp</span>
+                <span className="text-xs">{new Date(log.created_at).toLocaleString()}</span>
+              </div>
+            </div>
+
+            {metadataEntries.length > 0 && (
+              <div className="space-y-1.5 border-t border-muted pt-2">
+                <span className="text-xs font-medium text-muted-foreground">Metadata</span>
+                {metadataEntries.map(([label, value]) => (
+                  <div key={label} className="flex items-baseline gap-2">
+                    <span className="text-xs text-muted-foreground">{label}</span>
+                    {value.includes("\n") ? (
+                      <pre className="rounded bg-muted px-2 py-1 text-xs">{value}</pre>
+                    ) : (
+                      <span className="text-xs">{value}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      )}
+    </Collapsible>
+  )
+}
+
 export function ActivityLog({
   initialLogs,
-  initialPage,
-  initialTotalPages,
   initialTotal,
   initialAction,
   initialResourceType,
 }: Props) {
   const [logs, setLogs] = useState<AuditLog[]>(initialLogs)
-  const [page, setPage] = useState(initialPage)
-  const [totalPages, setTotalPages] = useState(initialTotalPages)
   const [total, setTotal] = useState(initialTotal)
   const [action, setAction] = useState(initialAction || "all")
   const [resourceType, setResourceType] = useState(initialResourceType || "all")
   const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const sentinelRef = useRef<HTMLDivElement>(null)
   const isInitialMount = useRef(true)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  const fetchLogs = useCallback(async (p: number, a: string, rt: string) => {
-    setLoading(true)
+  const hasMore = logs.length < total
+
+  const buildParams = useCallback((offset: number, a: string, rt: string) => {
     const params = new URLSearchParams()
     params.set("limit", String(PAGE_SIZE))
-    params.set("offset", String((p - 1) * PAGE_SIZE))
+    params.set("offset", String(offset))
     if (a && a !== "all") params.set("action", a)
     if (rt && rt !== "all") params.set("resource_type", rt)
+    return params
+  }, [])
 
+  const fetchFresh = useCallback(async (a: string, rt: string) => {
+    setLoading(true)
+    const params = buildParams(0, a, rt)
     const res = await fetch(`/api/admin/activity?${params}`)
     if (res.ok) {
       const data = await res.json()
       setLogs(data.logs)
       setTotal(data.total)
-      setTotalPages(Math.ceil(data.total / PAGE_SIZE))
-      setPage(p)
     }
     setLoading(false)
-  }, [])
+  }, [buildParams])
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const params = buildParams(logs.length, action, resourceType)
+    const res = await fetch(`/api/admin/activity?${params}`)
+    if (res.ok) {
+      const data = await res.json()
+      setLogs((prev) => [...prev, ...data.logs])
+      setTotal(data.total)
+    }
+    setLoadingMore(false)
+  }, [loadingMore, hasMore, logs.length, action, resourceType, buildParams])
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -177,73 +347,37 @@ export function ActivityLog({
     }
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      fetchLogs(1, action, resourceType)
+      fetchFresh(action, resourceType)
     }, 150)
     return () => clearTimeout(debounceRef.current)
-  }, [action, resourceType, fetchLogs])
+  }, [action, resourceType, fetchFresh])
 
-  function goToPage(p: number) {
-    fetchLogs(p, action, resourceType)
-    window.scrollTo({ top: 0, behavior: "smooth" })
-  }
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore()
+        }
+      },
+      { rootMargin: "200px" }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [loadMore])
 
-  function handlePageClick(targetPage: number) {
-    return (e: React.MouseEvent) => {
-      e.preventDefault()
-      goToPage(targetPage)
-    }
-  }
+  const hasActiveFilters = action !== "all" || resourceType !== "all"
 
-  function renderPageNumbers() {
-    const pages: React.ReactNode[] = []
-    if (totalPages <= 5) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(
-          <PaginationItem key={i}>
-            <PaginationLink href="#" isActive={i === page} onClick={handlePageClick(i)}>
-              {i}
-            </PaginationLink>
-          </PaginationItem>
-        )
-      }
-    } else {
-      pages.push(
-        <PaginationItem key={1}>
-          <PaginationLink href="#" isActive={1 === page} onClick={handlePageClick(1)}>1</PaginationLink>
-        </PaginationItem>
-      )
-      if (page > 3) {
-        pages.push(<PaginationItem key="start-ellipsis"><PaginationEllipsis /></PaginationItem>)
-      }
-      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
-        pages.push(
-          <PaginationItem key={i}>
-            <PaginationLink href="#" isActive={i === page} onClick={handlePageClick(i)}>
-              {i}
-            </PaginationLink>
-          </PaginationItem>
-        )
-      }
-      if (page < totalPages - 2) {
-        pages.push(<PaginationItem key="end-ellipsis"><PaginationEllipsis /></PaginationItem>)
-      }
-      pages.push(
-        <PaginationItem key={totalPages}>
-          <PaginationLink href="#" isActive={totalPages === page} onClick={handlePageClick(totalPages)}>
-            {totalPages}
-          </PaginationLink>
-        </PaginationItem>
-      )
-    }
-    return pages
-  }
+  const groups = groupByDate(logs)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Activity Log</h1>
         <p className="text-sm text-muted-foreground">
-          {total} events{loading && <Loader2 className="ml-2 inline size-3 animate-spin" />}
+          {total} events
+          {loading && <Loader2 className="ml-2 inline size-3 animate-spin" />}
         </p>
       </div>
 
@@ -270,84 +404,96 @@ export function ActivityLog({
         </Select>
       </div>
 
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Time</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Resource</TableHead>
-              <TableHead className="hidden sm:table-cell">Actor</TableHead>
-              <TableHead className="hidden md:table-cell">Details</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {logs.map((log) => (
-              <TableRow key={log.id}>
-                <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                  <span title={new Date(log.created_at).toLocaleString()}>
-                    {formatRelativeTime(log.created_at)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={getActionVariant(log.action)}>
-                    {formatAction(log.action)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-sm">
-                  <span className="text-muted-foreground">{log.resource_type}</span>
-                  {log.resource_id && (
-                    <p className="truncate text-xs text-muted-foreground/60" title={log.resource_id}>
-                      {log.resource_id.slice(0, 8)}...
-                    </p>
-                  )}
-                </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
-                  <span className="truncate" title={log.actor_id}>
-                    {log.actor_type === "api_key" ? "API Key" : "User"}
-                  </span>
-                  {isAdminAction(log.metadata) && (
-                    <Badge variant="outline" className="ml-1 text-[10px]">admin</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="hidden max-w-xs truncate text-xs text-muted-foreground md:table-cell">
-                  {formatMetadata(log.metadata)}
-                </TableCell>
-              </TableRow>
-            ))}
-            {logs.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  {action !== "all" || resourceType !== "all"
-                    ? "No activity matches your filters."
-                    : "No activity recorded yet."}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Filtered by:</span>
+          {resourceType !== "all" && (
+            <Badge variant="secondary" className="gap-1 pr-1">
+              {RESOURCE_TYPES.find((r) => r.value === resourceType)?.label}
+              <button
+                type="button"
+                onClick={() => setResourceType("all")}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-muted"
+              >
+                <X className="size-3" />
+              </button>
+            </Badge>
+          )}
+          {action !== "all" && (
+            <Badge variant="secondary" className="gap-1 pr-1">
+              {ACTION_CATEGORIES.find((a) => a.value === action)?.label}
+              <button
+                type="button"
+                onClick={() => setAction("all")}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-muted"
+              >
+                <X className="size-3" />
+              </button>
+            </Badge>
+          )}
+          <button
+            type="button"
+            onClick={() => { setAction("all"); setResourceType("all") }}
+            className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
 
-      {totalPages > 1 && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={(e) => { e.preventDefault(); if (page > 1) goToPage(page - 1) }}
-                className={page <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-            {renderPageNumbers()}
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => { e.preventDefault(); if (page < totalPages) goToPage(page + 1) }}
-                className={page >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : logs.length === 0 ? (
+        <div className="py-12 text-center text-muted-foreground">
+          {hasActiveFilters
+            ? "No activity matches your filters."
+            : "No activity recorded yet."}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {groups.map((group) => (
+            <div key={group.heading}>
+              <div className="sticky top-0 z-10 border-b bg-background/95 px-1 py-2 backdrop-blur-sm">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {group.heading}
+                </h2>
+              </div>
+              <div className="divide-y divide-muted/50">
+                {group.logs.map((log) => (
+                  <LogEntry
+                    key={log.id}
+                    log={log}
+                    onFilterResource={setResourceType}
+                    onFilterAction={setAction}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <div ref={sentinelRef} className="py-2">
+            {loadingMore && (
+              <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Loading more...
+              </div>
+            )}
+            {hasMore && !loadingMore && (
+              <div className="flex justify-center">
+                <Button variant="ghost" size="sm" onClick={loadMore}>
+                  Load more ({total - logs.length} remaining)
+                </Button>
+              </div>
+            )}
+            {!hasMore && logs.length > 0 && (
+              <p className="text-center text-xs text-muted-foreground">
+                All {total} events loaded
+              </p>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

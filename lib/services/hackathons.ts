@@ -461,7 +461,8 @@ export type TeamWithMembers = {
   id: string
   name: string
   status: string
-  captainClerkUserId: string
+  captainClerkUserId: string | null
+  pendingCaptainEmail: string | null
   members: { clerkUserId: string; displayName: string | null; email: string | null; role: string }[]
   submission: { id: string; title: string; status: string } | null
   room: { id: string; name: string } | null
@@ -472,7 +473,7 @@ export async function listTeamsWithMembers(hackathonId: string): Promise<TeamWit
 
   const { data: teams, error: teamsErr } = await client
     .from("teams")
-    .select("id, name, status, captain_clerk_user_id")
+    .select("id, name, status, captain_clerk_user_id, pending_captain_email")
     .eq("hackathon_id", hackathonId)
     .neq("status", "disbanded")
     .order("name")
@@ -542,11 +543,12 @@ export async function listTeamsWithMembers(hackathonId: string): Promise<TeamWit
     }
   }
 
-  return teams.map((team: { id: string; name: string; status: string; captain_clerk_user_id: string }) => ({
+  return teams.map((team: { id: string; name: string; status: string; captain_clerk_user_id: string | null; pending_captain_email: string | null }) => ({
     id: team.id,
     name: team.name,
     status: team.status,
     captainClerkUserId: team.captain_clerk_user_id,
+    pendingCaptainEmail: team.pending_captain_email || null,
     members: (participants ?? [])
       .filter((p: { team_id: string }) => p.team_id === team.id)
       .map((p: { clerk_user_id: string; role: string }) => ({
@@ -560,19 +562,26 @@ export async function listTeamsWithMembers(hackathonId: string): Promise<TeamWit
   }))
 }
 
+export type CreateTeamResult =
+  | { team: { id: string; name: string }; invited?: undefined }
+  | { team: { id: string; name: string }; invited: true }
+  | { error: string }
+
 export async function createTeamWithMembers(
   hackathonId: string,
-  input: { name: string; captainEmail: string }
-): Promise<{ id: string; name: string } | { error: string }> {
-  const { clerkClient } = await import("@clerk/nextjs/server")
-  const clerk = await clerkClient()
+  input: { name: string; captainEmail: string; organizerClerkUserId?: string }
+): Promise<CreateTeamResult> {
+  const { clerkClient: getClerk } = await import("@clerk/nextjs/server")
+  const clerk = await getClerk()
   const users = await clerk.users.getUserList({ emailAddress: [input.captainEmail], limit: 1 })
-  if (users.data.length === 0) {
-    return { error: "No user found with that email" }
-  }
-  const captainClerkUserId = users.data[0].id
 
   const client = getSupabase() as unknown as SupabaseClient
+
+  if (users.data.length === 0) {
+    return createPendingTeamWithInvite(client, clerk, hackathonId, input)
+  }
+
+  const captainClerkUserId = users.data[0].id
 
   const { data: participant } = await client
     .from("hackathon_participants")
@@ -611,7 +620,89 @@ export async function createTeamWithMembers(
     .eq("hackathon_id", hackathonId)
     .eq("clerk_user_id", captainClerkUserId)
 
-  return team
+  return { team }
+}
+
+async function createPendingTeamWithInvite(
+  client: SupabaseClient,
+  clerk: Awaited<ReturnType<typeof import("@clerk/nextjs/server").clerkClient>>,
+  hackathonId: string,
+  input: { name: string; captainEmail: string; organizerClerkUserId?: string }
+): Promise<CreateTeamResult> {
+  const { data: hackathon } = await client
+    .from("hackathons")
+    .select("name")
+    .eq("id", hackathonId)
+    .single()
+
+  if (!hackathon) {
+    return { error: "Hackathon not found" }
+  }
+
+  let inviterName = "The organizer"
+  if (input.organizerClerkUserId) {
+    try {
+      const organizer = await clerk.users.getUser(input.organizerClerkUserId)
+      if (organizer.firstName) {
+        inviterName = organizer.firstName + (organizer.lastName ? ` ${organizer.lastName}` : "")
+      }
+    } catch {
+      // fallback to default
+    }
+  }
+
+  const { data: team, error: teamError } = await client
+    .from("teams")
+    .insert({
+      hackathon_id: hackathonId,
+      name: input.name,
+      captain_clerk_user_id: null,
+      pending_captain_email: input.captainEmail.toLowerCase(),
+      invite_code: crypto.randomUUID().slice(0, 8),
+      status: "forming",
+    })
+    .select("id, name")
+    .single()
+
+  if (teamError) {
+    console.error("Failed to create pending team:", teamError)
+    return { error: "Failed to create team" }
+  }
+
+  const { randomBytes } = await import("crypto")
+  const token = randomBytes(32).toString("base64url")
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { error: inviteError } = await client
+    .from("team_invitations")
+    .insert({
+      team_id: team.id,
+      hackathon_id: hackathonId,
+      email: input.captainEmail.toLowerCase(),
+      token,
+      invited_by_clerk_user_id: input.organizerClerkUserId || "system",
+      status: "pending",
+      expires_at: expiresAt,
+      is_captain_invite: true,
+    })
+
+  if (inviteError) {
+    console.error("Failed to create captain invitation:", inviteError)
+    await client.from("teams").delete().eq("id", team.id)
+    return { error: "Failed to send invitation" }
+  }
+
+  const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
+  await sendTeamInvitationEmail({
+    to: input.captainEmail.toLowerCase(),
+    teamName: input.name,
+    hackathonName: hackathon.name,
+    inviterName,
+    inviteToken: token,
+    expiresAt,
+  })
+
+  return { team, invited: true }
 }
 
 export async function modifyTeamMembers(

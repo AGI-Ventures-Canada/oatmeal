@@ -18,13 +18,14 @@ import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
 import { OrganizerOverview } from "@/components/hackathon/organizer-overview"
 import { TimeRemainingBar } from "@/components/hackathon/time-remaining-bar"
 import { DebugStageSwitcher } from "@/components/hackathon/debug-stage-switcher"
-import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabCount, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TabsUrlSync } from "./_tabs-url-sync"
 import { JudgesTabContent } from "./_judges-tab"
 import { PrizesTabContent } from "./_prizes-tab"
 import { EventTabContent } from "./_event-tab"
 import { RoomsTab } from "./_rooms-tab"
 import { TeamsTab } from "./_teams-tab"
+import { ActivityTab } from "./_activity-tab"
 
 type PageProps = {
   params: Promise<{ slug: string }>
@@ -135,10 +136,11 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               <TabsTrigger value="edit">Event Page</TabsTrigger>
               <TabsTrigger value="teams">Teams</TabsTrigger>
               <TabsTrigger value="rooms">Rooms</TabsTrigger>
-              <TabsTrigger value="submissions">Submissions{submissionCount > 0 && <span className="ml-1.5 text-xs tabular-nums text-muted-foreground">{submissionCount}</span>}</TabsTrigger>
+              <TabsTrigger value="submissions">Submissions{submissionCount > 0 && <TabCount>{submissionCount}</TabCount>}</TabsTrigger>
               <TabsTrigger value="judges">Judges</TabsTrigger>
               <TabsTrigger value="prizes">Prizes</TabsTrigger>
               <TabsTrigger value="event">Engage</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -252,6 +254,10 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
 
         <TabsContent value="event" forceMount className="data-[state=inactive]:hidden">
           <EventTabContent hackathonId={hackathon.id} activeEtab={activeEtab} hackathonStatus={hackathon.status} hackathonPhase={hackathon.phase} />
+        </TabsContent>
+
+        <TabsContent value="activity" forceMount className="data-[state=inactive]:hidden">
+          <ActivityTab hackathonId={hackathon.id} />
         </TabsContent>
       </TabsUrlSync>
     </div>

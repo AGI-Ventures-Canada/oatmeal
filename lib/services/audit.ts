@@ -58,6 +58,41 @@ export type AuditAction =
   | "results.published"
   | "results.unpublished"
   | "cli_auth.completed"
+  | "phase.changed"
+  | "room.created"
+  | "room.updated"
+  | "room.deleted"
+  | "room_team.added"
+  | "room_team.removed"
+  | "room_team.presented"
+  | "room_timer.set"
+  | "room_timer.cleared"
+  | "room_timer.paused"
+  | "room_timer.resumed"
+  | "team.created"
+  | "team.captain_invited"
+  | "team.members_modified"
+  | "team.bulk_assigned"
+  | "category.created"
+  | "category.updated"
+  | "category.deleted"
+  | "judging_round.created"
+  | "judging_round.updated"
+  | "judging_round.deleted"
+  | "judging_round.activated"
+  | "social_submission.reviewed"
+  | "challenge.saved"
+  | "challenge.released"
+  | "email_blast.sent"
+  | "announcement.created"
+  | "announcement.updated"
+  | "announcement.deleted"
+  | "announcement.published"
+  | "announcement.unpublished"
+  | "announcement.scheduled"
+  | "schedule_item.created"
+  | "schedule_item.updated"
+  | "schedule_item.deleted"
   | "admin.hackathon.updated"
   | "admin.hackathon.deleted"
   | "admin.scenario.created"
@@ -151,6 +186,35 @@ export async function listAuditLogs(
   return (data as AuditLog[] | null) ?? []
 }
 
+export async function listHackathonAuditLogs(
+  tenantId: string,
+  hackathonId: string,
+  options: { limit?: number; offset?: number; action?: string } = {}
+) {
+  const { limit: rawLimit = 50, offset = 0, action } = options
+  const limit = Math.min(Math.max(rawLimit, 1), MAX_AUDIT_PAGE_SIZE)
+
+  let query = getSupabase()
+    .from("audit_logs")
+    .select("*", { count: "exact" })
+    .eq("tenant_id", tenantId)
+    .or(`resource_id.eq.${hackathonId},metadata->>hackathonId.eq.${hackathonId}`)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  if (action) {
+    query = query.ilike("action", `%${action}%`)
+  }
+
+  const { data, error, count } = await query
+
+  if (error) {
+    throw new Error(`Failed to list hackathon audit logs: ${error.message}`)
+  }
+
+  return { logs: (data as AuditLog[] | null) ?? [], total: count ?? 0 }
+}
+
 export type ListAllAuditLogsOptions = {
   limit?: number
   offset?: number
@@ -176,7 +240,7 @@ export async function listAllAuditLogs(options: ListAllAuditLogsOptions = {}) {
     query = query.eq("tenant_id", tenantId)
   }
   if (hackathonId) {
-    query = query.eq("resource_id", hackathonId)
+    query = query.or(`resource_id.eq.${hackathonId},metadata->>hackathonId.eq.${hackathonId}`)
   }
   if (action) {
     query = query.ilike("action", `%${action}%`)

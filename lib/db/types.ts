@@ -1713,6 +1713,7 @@ export type Database = {
           hackathon_id: string
           id: string
           invited_by_clerk_user_id: string
+          is_captain_invite: boolean
           status: Database["public"]["Enums"]["invitation_status"]
           team_id: string
           token: string
@@ -1727,6 +1728,7 @@ export type Database = {
           hackathon_id: string
           id?: string
           invited_by_clerk_user_id: string
+          is_captain_invite?: boolean
           status?: Database["public"]["Enums"]["invitation_status"]
           team_id: string
           token: string
@@ -1741,6 +1743,7 @@ export type Database = {
           hackathon_id?: string
           id?: string
           invited_by_clerk_user_id?: string
+          is_captain_invite?: boolean
           status?: Database["public"]["Enums"]["invitation_status"]
           team_id?: string
           token?: string
@@ -1765,32 +1768,35 @@ export type Database = {
       }
       teams: {
         Row: {
-          captain_clerk_user_id: string
+          captain_clerk_user_id: string | null
           created_at: string
           hackathon_id: string
           id: string
           invite_code: string
           name: string
+          pending_captain_email: string | null
           status: Database["public"]["Enums"]["team_status"]
           updated_at: string
         }
         Insert: {
-          captain_clerk_user_id: string
+          captain_clerk_user_id?: string | null
           created_at?: string
           hackathon_id: string
           id?: string
           invite_code: string
           name: string
+          pending_captain_email?: string | null
           status?: Database["public"]["Enums"]["team_status"]
           updated_at?: string
         }
         Update: {
-          captain_clerk_user_id?: string
+          captain_clerk_user_id?: string | null
           created_at?: string
           hackathon_id?: string
           id?: string
           invite_code?: string
           name?: string
+          pending_captain_email?: string | null
           status?: Database["public"]["Enums"]["team_status"]
           updated_at?: string
         }

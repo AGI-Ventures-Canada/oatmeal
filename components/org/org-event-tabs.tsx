@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Calendar } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabCount, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription } from "@/components/ui/card"
@@ -47,12 +47,12 @@ export function OrgEventTabs({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="overflow-x-auto overflow-y-hidden">
           <TabsList variant="line">
-            <TabsTrigger value="all">All ({visibleAllCount})</TabsTrigger>
+            <TabsTrigger value="all">All<TabCount>{visibleAllCount}</TabCount></TabsTrigger>
             <TabsTrigger value="organized">
-              Organizing ({visibleOrganizedCount})
+              Organizing<TabCount>{visibleOrganizedCount}</TabCount>
             </TabsTrigger>
             <TabsTrigger value="sponsored">
-              Sponsoring ({visibleSponsoredCount})
+              Sponsoring<TabCount>{visibleSponsoredCount}</TabCount>
             </TabsTrigger>
           </TabsList>
         </div>
