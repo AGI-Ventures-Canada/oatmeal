@@ -6,6 +6,10 @@ import "./__tests__/lib/supabase-mock"
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const g = globalThis as any
 
+if (!process.env.ENCRYPTION_KEY) {
+  process.env.ENCRYPTION_KEY = "0".repeat(64)
+}
+
 g.__nextNavState = {
   pathname: "/test",
   searchParams: new URLSearchParams(),

@@ -3,21 +3,7 @@ import {
   createChainableMock,
   resetSupabaseMocks,
   setMockFromImplementation,
-  mockMultiTableQuery,
-  mockSuccess,
-  mockError,
 } from "../lib/supabase-mock"
-
-mock.module("@/lib/services/encryption", () => ({
-  encryptToken: mock((plaintext: string) => `encrypted:${plaintext}`),
-  decryptToken: mock((ciphertext: string) => ciphertext.replace("encrypted:", "")),
-  encryptJson: mock((data: Record<string, unknown>) => JSON.stringify(data)),
-  decryptJson: mock((ciphertext: string) => JSON.parse(ciphertext)),
-  generateWebhookSecret: mock(() => "whsec_test"),
-  generateToken: mock(() => "token_test"),
-  signWebhookPayload: mock((_secret: string, _payload: string) => "sig_test"),
-  verifyWebhookSignature: mock((_secret: string, _payload: string, _signature: string) => true),
-}))
 
 const mockCreateApiKey = mock(() =>
   Promise.resolve({
@@ -33,6 +19,8 @@ mock.module("@/lib/services/api-keys", () => ({
   revokeApiKey: mock(() => Promise.resolve(true)),
   getApiKeyById: mock(() => Promise.resolve(null)),
 }))
+
+const { encryptToken } = await import("@/lib/services/encryption")
 
 const { createCliAuthSession, pollCliAuthSession, completeCliAuthSession } =
   await import("@/lib/services/cli-auth")
@@ -128,7 +116,7 @@ describe("cli-auth service", () => {
           id: "session-1",
           device_token: "abc123",
           status: "complete",
-          encrypted_api_key: "encrypted:sk_live_real_key",
+          encrypted_api_key: encryptToken("sk_live_real_key"),
           expires_at: new Date(Date.now() + 300_000).toISOString(),
         },
         error: null,
