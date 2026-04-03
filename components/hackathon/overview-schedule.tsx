@@ -208,7 +208,7 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm() }}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Schedule Item</DialogTitle>
           </DialogHeader>

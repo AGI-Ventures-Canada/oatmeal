@@ -191,7 +191,7 @@ export function OverviewAnnouncements({ slug, hackathonId, announcements }: Prop
       )}
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm() }}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Announcement</DialogTitle>
           </DialogHeader>
