@@ -12,6 +12,7 @@ const {
   updateAnnouncement,
   deleteAnnouncement,
   publishAnnouncement,
+  scheduleAnnouncement,
   unpublishAnnouncement,
 } = await import("@/lib/services/announcements")
 
@@ -170,6 +171,34 @@ describe("publishAnnouncement", () => {
       createChainableMock({ data: null, error: { message: "error" } })
     )
     const result = await publishAnnouncement(ANNOUNCEMENT_ID, HACKATHON_ID)
+    expect(result).toBeNull()
+  })
+})
+
+describe("scheduleAnnouncement", () => {
+  beforeEach(() => {
+    resetSupabaseMocks()
+  })
+
+  it("sets published_at to a future timestamp", async () => {
+    const futureDate = "2026-05-01T14:00:00Z"
+    setMockFromImplementation(() =>
+      createChainableMock({
+        data: { id: ANNOUNCEMENT_ID, hackathon_id: HACKATHON_ID, title: "Title", body: "Body", priority: "normal", published_at: futureDate, created_at: "2026-01-01", updated_at: "2026-01-01" },
+        error: null,
+      })
+    )
+
+    const result = await scheduleAnnouncement(ANNOUNCEMENT_ID, HACKATHON_ID, futureDate)
+    expect(result).not.toBeNull()
+    expect(result!.published_at).toBe(futureDate)
+  })
+
+  it("returns null on error", async () => {
+    setMockFromImplementation(() =>
+      createChainableMock({ data: null, error: { message: "error" } })
+    )
+    const result = await scheduleAnnouncement(ANNOUNCEMENT_ID, HACKATHON_ID, "2026-05-01T14:00:00Z")
     expect(result).toBeNull()
   })
 })
