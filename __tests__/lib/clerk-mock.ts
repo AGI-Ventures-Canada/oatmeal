@@ -3,6 +3,10 @@ import { mock } from "bun:test"
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const g = globalThis as any
 
+if (!g.__clerkState) {
+  throw new Error("test-setup.ts must be loaded before clerk-mock.ts — ensure it is listed in the bun preload config")
+}
+
 export const clerkState = g.__clerkState ?? {
   isSignedIn: true,
   userId: "user_123",

@@ -26,10 +26,6 @@ mock.module("next/navigation", () => ({
   notFound: mock(() => {}),
 }))
 
-// Canonical Clerk state — shared with __tests__/lib/clerk-mock.ts via globalThis.
-// test-setup.ts (bun preload) runs before any test file, so clerk-mock.ts picks
-// up this object through `g.__clerkState ?? { ... }` and both files reference the
-// same instance. Changing the load order would break that contract.
 g.__clerkState = {
   isSignedIn: true,
   userId: "user_123",

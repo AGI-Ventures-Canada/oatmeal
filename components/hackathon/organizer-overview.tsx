@@ -101,7 +101,7 @@ export function OrganizerOverview({ slug, hackathonId, stats, actionItems, annou
                 )}
               </div>
               <div className="space-y-1">
-                {severityOrder.flatMap((sev) => actionItems.filter((i) => i.severity === sev)).map((item) => {
+                {[...actionItems].sort((a, b) => severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity)).map((item) => {
                   const severity = severityLabel[item.severity]
                   const href = buildActionHref(slug, item)
                   const row = (
