@@ -29,6 +29,7 @@ mock.module("@/lib/services/luma-extract", () => ({
 const mockLogAudit = mock(() => Promise.resolve())
 mock.module("@/lib/services/audit", () => ({
   logAudit: mockLogAudit,
+  listAllAuditLogs: mock(() => Promise.resolve({ logs: [], total: 0 })),
 }))
 
 const mockTriggerWebhooks = mock(() => Promise.resolve())

@@ -10,6 +10,7 @@ const mockSendJudgeAddedNotification = mock(() => Promise.resolve({ success: tru
 
 mock.module("@/lib/email/judge-invitations", () => ({
   sendJudgeAddedNotification: mockSendJudgeAddedNotification,
+  sendJudgeInvitationEmail: mock(() => Promise.resolve({ success: true })),
 }))
 
 const { fetchPendingNotifications, sendJudgeNotification } = await import(

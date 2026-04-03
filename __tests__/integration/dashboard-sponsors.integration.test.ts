@@ -51,6 +51,7 @@ mock.module("@/lib/services/tenant-profiles", () => ({
 
 mock.module("@/lib/services/audit", () => ({
   logAudit: mockLogAudit,
+  listAllAuditLogs: mock(() => Promise.resolve({ logs: [], total: 0 })),
 }))
 
 const mockResolvePrincipal = mock(() => Promise.resolve({ kind: "anon" }))
