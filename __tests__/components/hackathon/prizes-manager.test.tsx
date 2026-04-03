@@ -86,9 +86,9 @@ describe("PrizesManager", () => {
     const option2 = await screen.findByText("Team Beta Project")
     fireEvent.click(option2)
 
-    const assignButtons = screen.getAllByText("Assign")
-    expect(assignButtons[0]).not.toHaveProperty("disabled", true)
-    expect(assignButtons[1]).not.toHaveProperty("disabled", true)
+    const assignButtons = screen.getAllByRole("button", { name: /^Assign$/ })
+    expect(assignButtons[0].hasAttribute("disabled")).toBe(false)
+    expect(assignButtons[1].hasAttribute("disabled")).toBe(false)
   })
 
   it("assign button is disabled when no submission selected", () => {
@@ -101,9 +101,9 @@ describe("PrizesManager", () => {
       />,
     )
 
-    const assignButtons = screen.getAllByText("Assign")
-    expect(assignButtons[0]).toHaveProperty("disabled", true)
-    expect(assignButtons[1]).toHaveProperty("disabled", true)
+    const assignButtons = screen.getAllByRole("button", { name: /^Assign$/ })
+    expect(assignButtons[0].hasAttribute("disabled")).toBe(true)
+    expect(assignButtons[1].hasAttribute("disabled")).toBe(true)
   })
 
   it("clears only the assigned prize's selection after assigning", async () => {
@@ -124,7 +124,7 @@ describe("PrizesManager", () => {
     fireEvent.click(selects[1])
     fireEvent.click(await screen.findByText("Team Beta Project"))
 
-    const assignButtons = screen.getAllByText("Assign")
+    const assignButtons = screen.getAllByRole("button", { name: /^Assign$/ })
     fireEvent.click(assignButtons[0])
 
     await waitFor(() => {
@@ -138,9 +138,9 @@ describe("PrizesManager", () => {
     })
 
     await waitFor(() => {
-      const updatedAssignButtons = screen.getAllByText("Assign")
-      expect(updatedAssignButtons[0]).toHaveProperty("disabled", true)
-      expect(updatedAssignButtons[1]).not.toHaveProperty("disabled", true)
+      const updatedAssignButtons = screen.getAllByRole("button", { name: /^Assign$/ })
+      expect(updatedAssignButtons[0].hasAttribute("disabled")).toBe(true)
+      expect(updatedAssignButtons[1].hasAttribute("disabled")).toBe(false)
     })
   })
 
