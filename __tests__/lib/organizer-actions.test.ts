@@ -86,7 +86,7 @@ describe("getOrganizerActionItems", () => {
   })
 
   describe("published status", () => {
-    it("warns about zero registrations with sublabel", () => {
+    it("warns about zero registrations with hint", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "published",
         participantCount: 0,
@@ -97,8 +97,8 @@ describe("getOrganizerActionItems", () => {
       const item = items.find((i) => i.id === "no-registrations")
 
       expect(item).toBeDefined()
-      expect(item?.sublabel).toBe("Invite team captains via email")
-      expect(item?.hint).toBe("Share the link or invite directly")
+      expect(item?.sublabel).toBeUndefined()
+      expect(item?.hint).toBe("Share the event link or invite captains by email")
     })
 
     it("warns about missing criteria", () => {

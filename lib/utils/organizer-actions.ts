@@ -81,7 +81,7 @@ function addDraftActions(items: ActionItem[], input: ActionItemsInput) {
 
 function addPublishedActions(items: ActionItem[], input: ActionItemsInput) {
   if (input.participantCount === 0) {
-    items.push({ id: "no-registrations", label: "No registrations yet", sublabel: "Invite team captains via email", hint: "Share the link or invite directly", severity: "warning", tab: "teams" })
+    items.push({ id: "no-registrations", label: "No registrations yet", hint: "Share the event link or invite captains by email", severity: "warning", tab: "teams" })
   }
   if (input.criteriaCount === 0) {
     items.push({ id: "no-criteria", label: "Define judging criteria before event starts", hint: "Judges need these to score submissions", severity: "urgent", tab: "judges", subtab: "criteria", subtabKey: "jtab" })

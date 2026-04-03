@@ -7,26 +7,7 @@ if (!g.__clerkState) {
   throw new Error("test-setup.ts must be loaded before clerk-mock.ts — ensure it is listed in the bun preload config")
 }
 
-export const clerkState = g.__clerkState ?? {
-  isSignedIn: true,
-  userId: "user_123",
-  user: {
-    id: "user_123",
-    fullName: "Test User",
-    firstName: "Test",
-    imageUrl: null as string | null,
-  } as { id: string; fullName: string; firstName: string; imageUrl: string | null } | null,
-  isLoaded: true,
-  organization: null as { id: string; name: string } | null,
-  memberships: [] as Array<{
-    organization: { id: string; name: string; imageUrl: string | null }
-  }>,
-  setActive: mock(() => Promise.resolve()),
-  openUserProfile: mock(() => {}),
-  signOut: mock(() => Promise.resolve()),
-}
-
-if (!g.__clerkState) g.__clerkState = clerkState
+export const clerkState = g.__clerkState
 
 export function resetClerkState() {
   clerkState.isSignedIn = true
