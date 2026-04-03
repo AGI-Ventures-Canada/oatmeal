@@ -10,7 +10,6 @@ import {
 import { getSubmittedHackathonIds } from "@/lib/services/submissions"
 import { getBatchHackathonStats } from "@/lib/services/organizer-dashboard"
 import { HackathonTabs } from "./hackathon-tabs"
-import { PageHeader } from "@/components/page-header"
 
 export default async function DashboardPage() {
   const { userId } = await auth()
@@ -39,11 +38,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="Your hackathons at a glance"
-      />
-
       <HackathonTabs
         myHackathons={myHackathons}
         organizedHackathons={organizedHackathons}

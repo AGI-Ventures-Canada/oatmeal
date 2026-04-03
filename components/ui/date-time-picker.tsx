@@ -22,6 +22,7 @@ interface DateTimePickerProps {
   id?: string;
   name?: string;
   className?: string;
+  minDate?: Date;
 }
 
 function to12Hour(hours24: number): { hours: number; period: "AM" | "PM" } {
@@ -58,6 +59,7 @@ export function DateTimePicker({
   id,
   name,
   className,
+  minDate,
 }: DateTimePickerProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -71,7 +73,7 @@ export function DateTimePicker({
         period,
       };
     }
-    return { hours: "12", minutes: "00", period: "PM" as const };
+    return { hours: "09", minutes: "00", period: "AM" as const };
   });
 
   React.useEffect(() => {
@@ -215,7 +217,7 @@ export function DateTimePicker({
           period,
         });
       } else {
-        setTime({ hours: "12", minutes: "00", period: "PM" });
+        setTime({ hours: "09", minutes: "00", period: "AM" });
       }
     }
     setOpen(nextOpen);
@@ -260,11 +262,13 @@ export function DateTimePicker({
           selected={pendingDate ?? undefined}
           onSelect={handleDateSelect}
           className="w-full"
+          disabled={minDate ? { before: minDate } : undefined}
+          fromMonth={minDate}
           initialFocus
         />
-        <div className="border-t p-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Time:</span>
+        <div className="px-3 pb-2 pt-1">
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-muted-foreground">Time:</span>
             <Input
               type="text"
               inputMode="numeric"
@@ -274,14 +278,14 @@ export function DateTimePicker({
               onKeyDown={(e) => handleTimeKeyDown("hours", e)}
               onFocus={(e) => e.target.select()}
               onBlur={() => handleTimeBlur("hours")}
-              className="w-14 text-center"
+              className="h-8 w-11 text-center text-sm px-1"
               maxLength={2}
               autoComplete="off"
               data-1p-ignore
               data-lpignore="true"
               data-form-type="other"
             />
-            <span className="text-muted-foreground" aria-hidden="true">:</span>
+            <span className="text-muted-foreground text-xs" aria-hidden="true">:</span>
             <Input
               type="text"
               inputMode="numeric"
@@ -291,7 +295,7 @@ export function DateTimePicker({
               onKeyDown={(e) => handleTimeKeyDown("minutes", e)}
               onFocus={(e) => e.target.select()}
               onBlur={() => handleTimeBlur("minutes")}
-              className="w-14 text-center"
+              className="h-8 w-11 text-center text-sm px-1"
               maxLength={2}
               autoComplete="off"
               data-1p-ignore
@@ -302,7 +306,7 @@ export function DateTimePicker({
               type="button"
               variant="outline"
               size="sm"
-              className="w-14"
+              className="h-8 w-11 px-0 text-xs"
               aria-label={`Time period: ${time.period}. Press A for AM, P for PM, or arrow keys to toggle`}
               onClick={handlePeriodToggle}
               onKeyDown={handlePeriodKeyDown}
@@ -311,7 +315,18 @@ export function DateTimePicker({
             </Button>
           </div>
         </div>
-        <div className="border-t p-3 flex items-center justify-between">
+        <div className="px-3 pb-3 flex items-center justify-between">
+          {(value || pendingDate) ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={handleClear}
+            >
+              Clear
+            </Button>
+          ) : <div />}
           <Button
             type="button"
             size="sm"
@@ -323,17 +338,6 @@ export function DateTimePicker({
           >
             Done
           </Button>
-          {(value || pendingDate) && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={handleClear}
-            >
-              Clear
-            </Button>
-          )}
         </div>
       </PopoverContent>
       </Popover>

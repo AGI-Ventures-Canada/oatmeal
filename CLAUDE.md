@@ -316,6 +316,19 @@ Exceptions (don't auto-focus):
 - Multi-step wizards where the user needs to read instructions first
 - Dialogs with destructive actions where accidental input is risky
 
+### Easy Navigation and Exit
+
+Every flow must be easy to enter, navigate, and leave:
+
+- **Easy exit**: Always provide a visible close/X button or cancel action. Support `Escape` to dismiss overlays, modals, and full-screen flows
+- **Easy skip**: When only some steps are required, show a persistent skip action so users can jump straight to the result. Label it with the destination — "Skip to event page" not "Skip, create event"
+- **Keyboard navigation**: `Enter` advances/submits (suppressed inside textareas and contentEditable). `Cmd/Ctrl+Enter` triggers the primary skip/submit action
+- **Keyboard hints**: Show `Kbd` hints next to the action they trigger — e.g., `⌘+Enter` next to the skip button, `Enter` next to the continue button. Hide on mobile (`hidden sm:inline-flex`)
+- **Progress indicators**: For multi-step flows, show a step counter (`1 / N`) and a progress bar so users know where they are and how much is left
+- **Straightforward copy**: Action labels must tell the user exactly what will happen and where they'll end up. No ambiguous verbs
+- **localStorage persistence**: Save draft state in multi-step flows so refreshes or sign-in redirects don't lose work
+- **Late auth gates**: Don't require sign-in to fill out forms — gate only at submission time
+
 ### Human-Friendly Inputs
 
 **Never expose internal IDs, raw timestamps, or technical formats to organizers or participants.** Every input must be designed for someone in a hurry who doesn't know (or care about) the system internals.
@@ -325,6 +338,19 @@ Exceptions (don't auto-focus):
 - **Status values**: Show human-readable labels ("In Progress", "Waiting for Review"), not raw enum values or database states.
 
 If a form field requires the user to look something up in a different system, the UX is wrong — do the lookup for them.
+
+### Date/Time Defaults
+
+**Every date/time input must have a sensible default value.** Users should never open a date picker and see a blank field when a reasonable starting point exists.
+
+- **Event start dates**: Default to 2 weeks from today at 8:30 AM
+- **Event end dates**: Default to the day after the start at 5:00 PM
+- **Registration dates**: Default registration open to now, close to the day before the event
+- **Schedule items**: Default to the next available slot after the last item (rounded up to the nearest 15 minutes), or now if no items exist. Default duration 30 minutes
+- **Scheduled announcements**: Default to 1 hour from now
+- **Recurring agent schedules**: Default to 9:00 AM
+- **Time picker fallback**: When no value is set, default "from" times to 8:30 AM and "to" times to 5:00 PM — never 12:00 PM midnight-adjacent
+- **Past date prevention**: Use `minDate` on `DateTimeRangePicker`/`DateTimePicker` (or `min` on native `datetime-local`) to prevent selecting dates in the past for forward-looking inputs (event start, registration open). Exception: admin editors where backdating may be intentional
 
 ### Mobile-First Responsive Design
 

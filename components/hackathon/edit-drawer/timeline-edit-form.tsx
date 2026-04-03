@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,6 +14,7 @@ import {
   FieldGroup,
 } from "@/components/ui/field"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
+import { startOfDay } from "date-fns"
 import { Undo2 } from "lucide-react"
 import { useEditOptional } from "@/components/hackathon/preview/edit-context"
 import { validateTimelineDates } from "@/lib/utils/timeline"
@@ -45,6 +46,7 @@ function parseDate(dateString: string | null): Date | null {
 
 export function TimelineEditForm({ hackathonId, initialData, showRegistrationDates = true, showHackathonDates = true, onSaveAndNext, onSave, onCancel }: TimelineEditFormProps) {
   const router = useRouter()
+  const today = useMemo(() => startOfDay(new Date()), [])
   const editContext = useEditOptional()
   const closeDrawer = onCancel ?? editContext?.closeDrawer ?? (() => {})
   const [saving, setSaving] = useState(false)
@@ -170,6 +172,7 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
               placeholder="Select registration dates"
               fromLabel="Opens"
               toLabel="Closes"
+              minDate={today}
             />
           </Field>
         )}
@@ -183,6 +186,7 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
               placeholder="Select hackathon dates"
               fromLabel="Start"
               toLabel="End"
+              minDate={today}
             />
           </Field>
         )}

@@ -94,6 +94,19 @@ describe("groupOrganizedHackathons", () => {
     expect(pastIds).toEqual(["recent", "old"])
   })
 
+  it("moves hackathons with past end dates to past regardless of status", () => {
+    const hackathons = [
+      makeHackathon("stale", "published", { ends_at: "2025-01-01T00:00:00Z" }),
+      makeHackathon("future", "published", { starts_at: "2026-06-01T00:00:00Z" }),
+    ]
+    const statsMap = new Map<string, HackathonMiniStats>()
+
+    const groups = groupOrganizedHackathons(hackathons, statsMap)
+
+    expect(groups.past.map((h) => h.id)).toEqual(["stale"])
+    expect(groups.upcoming.map((h) => h.id)).toEqual(["future"])
+  })
+
   it("handles empty input", () => {
     const groups = groupOrganizedHackathons([], new Map())
 

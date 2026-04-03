@@ -2,14 +2,12 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Check, Copy, Globe, Plus, Terminal } from "lucide-react"
+import { Check, Copy, Plus, Terminal } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { CreateHackathonDialog } from "@/components/hackathon/create-hackathon-dialog"
 
 const INSTALL_COMMAND = "npx skills add AGI-Ventures-Canada/oatmeal"
 
 export function HomepageHero() {
-  const [dialogOpen, setDialogOpen] = useState(false)
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
@@ -28,31 +26,12 @@ export function HomepageHero() {
           Registration, teams, submissions, judging, and results — all in one place.
         </p>
 
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button size="hero" asChild>
+        <div className="mt-10 flex justify-center">
+          <Button size="lg" asChild>
             <Link href="/create">
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <Plus className="size-4" />
-                Create from scratch
-              </span>
-              <span className="text-xs text-primary-foreground/80">
-                Start blank and add details as you go
-              </span>
+              <Plus className="size-4" />
+              Create event
             </Link>
-          </Button>
-
-          <Button
-            size="hero"
-            variant="outline"
-            onClick={() => setDialogOpen(true)}
-          >
-            <span className="flex items-center gap-2 text-sm font-medium">
-              <Globe className="size-4" />
-              Import an external event
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Import from Luma, Eventbrite, or any event page
-            </span>
           </Button>
         </div>
 
@@ -80,12 +59,6 @@ export function HomepageHero() {
           </div>
         </div>
       </div>
-
-      <CreateHackathonDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        initialMethod="external"
-      />
     </section>
   )
 }

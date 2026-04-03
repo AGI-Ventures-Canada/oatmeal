@@ -30,6 +30,8 @@ interface DateTimeRangePickerProps {
   className?: string
   fromLabel?: string
   toLabel?: string
+  minDate?: Date
+  numberOfMonths?: number
 }
 
 type TimeState = { hours: string; minutes: string; period: "AM" | "PM" }
@@ -55,8 +57,8 @@ function applyTime(date: Date, time: TimeState): Date {
   return d
 }
 
-function timeFromDate(date: Date | null): TimeState {
-  if (!date) return { hours: "12", minutes: "00", period: "PM" }
+function timeFromDate(date: Date | null, fallback: TimeState = DEFAULT_FROM_TIME): TimeState {
+  if (!date) return fallback
   const { hours, period } = to12Hour(date.getHours())
   return {
     hours: hours.toString().padStart(2, "0"),
@@ -65,7 +67,8 @@ function timeFromDate(date: Date | null): TimeState {
   }
 }
 
-const DEFAULT_TIME: TimeState = { hours: "12", minutes: "00", period: "PM" }
+const DEFAULT_FROM_TIME: TimeState = { hours: "08", minutes: "30", period: "AM" }
+const DEFAULT_TO_TIME: TimeState = { hours: "05", minutes: "00", period: "PM" }
 
 function formatTrigger(range: DateTimeRange | undefined): string | null {
   if (!range?.from) return null
@@ -84,6 +87,8 @@ export function DateTimeRangePicker({
   className,
   fromLabel = "Start",
   toLabel = "End",
+  minDate,
+  numberOfMonths: numberOfMonthsProp,
 }: DateTimeRangePickerProps) {
   const isMobile = useIsMobile()
   const [open, setOpen] = React.useState(false)
@@ -91,8 +96,8 @@ export function DateTimeRangePicker({
   const [pendingRange, setPendingRange] = React.useState<DateRange | undefined>(
     undefined,
   )
-  const [fromTime, setFromTime] = React.useState<TimeState>(DEFAULT_TIME)
-  const [toTime, setToTime] = React.useState<TimeState>(DEFAULT_TIME)
+  const [fromTime, setFromTime] = React.useState<TimeState>(DEFAULT_FROM_TIME)
+  const [toTime, setToTime] = React.useState<TimeState>(DEFAULT_TO_TIME)
 
   React.useEffect(() => {
     if (open) {
@@ -101,8 +106,8 @@ export function DateTimeRangePicker({
           ? { from: value.from, to: value.to ?? undefined }
           : undefined,
       )
-      setFromTime(timeFromDate(value?.from ?? null))
-      setToTime(timeFromDate(value?.to ?? null))
+      setFromTime(timeFromDate(value?.from ?? null, DEFAULT_FROM_TIME))
+      setToTime(timeFromDate(value?.to ?? null, DEFAULT_TO_TIME))
     }
   }, [open, value])
 
@@ -254,8 +259,8 @@ export function DateTimeRangePicker({
           ? { from: value.from, to: value.to ?? undefined }
           : undefined,
       )
-      setFromTime(timeFromDate(value?.from ?? null))
-      setToTime(timeFromDate(value?.to ?? null))
+      setFromTime(timeFromDate(value?.from ?? null, DEFAULT_FROM_TIME))
+      setToTime(timeFromDate(value?.to ?? null, DEFAULT_TO_TIME))
     }
     setOpen(nextOpen)
   }
@@ -277,11 +282,11 @@ export function DateTimeRangePicker({
     time: TimeState,
   ) {
     return (
-      <div className="flex flex-col gap-2">
-        <span className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-muted-foreground">
           {label}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
         <Input
           type="text"
           inputMode="numeric"
@@ -291,14 +296,14 @@ export function DateTimeRangePicker({
           onKeyDown={(e) => handleTimeKeyDown(target, "hours", e)}
           onFocus={(e) => e.target.select()}
           onBlur={() => handleTimeBlur(target, "hours")}
-          className="w-14 text-center"
+          className="h-8 w-11 text-center text-sm px-1"
           maxLength={2}
           autoComplete="off"
           data-1p-ignore
           data-lpignore="true"
           data-form-type="other"
         />
-        <span className="text-muted-foreground" aria-hidden="true">
+        <span className="text-muted-foreground text-xs" aria-hidden="true">
           :
         </span>
         <Input
@@ -310,7 +315,7 @@ export function DateTimeRangePicker({
           onKeyDown={(e) => handleTimeKeyDown(target, "minutes", e)}
           onFocus={(e) => e.target.select()}
           onBlur={() => handleTimeBlur(target, "minutes")}
-          className="w-14 text-center"
+          className="h-8 w-11 text-center text-sm px-1"
           maxLength={2}
           autoComplete="off"
           data-1p-ignore
@@ -321,7 +326,7 @@ export function DateTimeRangePicker({
           type="button"
           variant="outline"
           size="sm"
-          className="w-14"
+          className="h-8 w-11 px-0 text-xs"
           aria-label={`${label} time period: ${time.period}. Press A for AM, P for PM, or arrow keys to toggle`}
           onClick={() => handlePeriodToggle(target)}
           onKeyDown={(e) => handlePeriodKeyDown(target, e)}
@@ -352,8 +357,9 @@ export function DateTimeRangePicker({
       </PopoverTrigger>
       <PopoverContent
         className="w-auto p-0"
-        align="start"
+        align="center"
         side="bottom"
+        collisionPadding={16}
         onKeyDown={handlePopoverKeyDown}
       >
         <Calendar
@@ -361,21 +367,34 @@ export function DateTimeRangePicker({
           defaultMonth={pendingRange?.from}
           selected={pendingRange}
           onSelect={handleRangeSelect}
-          numberOfMonths={isMobile ? 1 : 2}
+          numberOfMonths={numberOfMonthsProp ?? (isMobile ? 1 : 2)}
           className="w-full"
           fixedWeeks
           showOutsideDays={false}
+          disabled={minDate ? { before: minDate } : undefined}
+          fromMonth={minDate}
           classNames={{
             months: "flex gap-0 flex-col md:flex-row relative",
-            month: "flex flex-col w-full gap-4 px-4 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
+            month: "flex flex-col w-full gap-1 px-4 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
           }}
           initialFocus
         />
-        <div className="border-t p-3 flex gap-4">
+        <div className="px-3 pb-2 pt-1 flex gap-4">
           <div className="flex-1">{renderTimeRow("from", fromLabel, fromTime)}</div>
           <div className="flex-1">{renderTimeRow("to", toLabel, toTime)}</div>
         </div>
-        <div className="border-t p-3 flex items-center justify-between">
+        <div className="px-3 pb-3 flex items-center justify-between">
+          {(hasValue || pendingRange) ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={handleClear}
+            >
+              Clear
+            </Button>
+          ) : <div />}
           <Button
             type="button"
             size="sm"
@@ -387,17 +406,6 @@ export function DateTimeRangePicker({
           >
             Done
           </Button>
-          {(hasValue || pendingRange) && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={handleClear}
-            >
-              Clear
-            </Button>
-          )}
         </div>
       </PopoverContent>
     </Popover>
