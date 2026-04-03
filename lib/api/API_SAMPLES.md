@@ -2188,3 +2188,96 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3)
   throw new Error("Max retries exceeded")
 }
 ```
+
+---
+
+### GET /api/v1/hackathons/:id/activity
+
+Returns audit logs for a hackathon. Supports filtering, sorting, date ranges, and pagination.
+
+#### Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | number | 50 | Page size (1-100) |
+| `offset` | number | 0 | Pagination offset |
+| `action` | string | — | Substring filter on action (e.g. `hackathon.created`) |
+| `resource_type` | string | — | Exact match on resource type (e.g. `hackathon`, `team`) |
+| `since` | string | — | ISO 8601 timestamp, only logs after this time |
+| `until` | string | — | ISO 8601 timestamp, only logs before this time |
+| `sort` | string | `desc` | Sort by created_at: `asc` or `desc` |
+
+#### curl
+
+```bash
+# Basic: latest 50 logs
+curl -H "Authorization: Bearer $API_KEY" \
+  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity"
+
+# Filter by action
+curl -H "Authorization: Bearer $API_KEY" \
+  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity?action=judge"
+
+# Date range + resource type
+curl -H "Authorization: Bearer $API_KEY" \
+  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity?since=2026-04-01T00:00:00Z&until=2026-04-03T23:59:59Z&resource_type=team"
+
+# Oldest first, page 2
+curl -H "Authorization: Bearer $API_KEY" \
+  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity?sort=asc&limit=20&offset=20"
+```
+
+#### TypeScript
+
+```typescript
+type ActivityLog = {
+  id: string
+  action: string
+  resourceType: string
+  resourceId: string | null
+  actorType: "user" | "api_key"
+  metadata: Record<string, unknown> | null
+  createdAt: string
+}
+
+async function listActivity(hackathonId: string, params?: {
+  action?: string
+  resource_type?: string
+  since?: string
+  until?: string
+  sort?: "asc" | "desc"
+  limit?: number
+  offset?: number
+}) {
+  const qs = new URLSearchParams()
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v))
+    }
+  }
+  const url = `https://your-domain.com/api/v1/hackathons/${hackathonId}/activity?${qs}`
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${API_KEY}` },
+  })
+  return res.json() as Promise<{ logs: ActivityLog[]; total: number }>
+}
+```
+
+#### Response
+
+```json
+{
+  "logs": [
+    {
+      "id": "a1b2c3d4-...",
+      "action": "judge.added",
+      "resourceType": "hackathon_participant",
+      "resourceId": "p1-uuid",
+      "actorType": "api_key",
+      "metadata": { "hackathonId": "h1-uuid", "email": "judge@example.com" },
+      "createdAt": "2026-04-03T14:30:00.000Z"
+    }
+  ],
+  "total": 142
+}
+```

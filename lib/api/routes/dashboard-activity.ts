@@ -35,6 +35,10 @@ export const dashboardActivityRoutes = new Elysia({ prefix: "/dashboard" })
           limit: query.limit,
           offset: query.offset,
           action: query.action || undefined,
+          resourceType: query.resource_type || undefined,
+          since: query.since || undefined,
+          until: query.until || undefined,
+          sort: query.sort === "asc" ? "asc" : undefined,
         }
       )
 
@@ -42,13 +46,17 @@ export const dashboardActivityRoutes = new Elysia({ prefix: "/dashboard" })
     },
     {
       query: t.Object({
-        limit: t.Optional(t.Numeric()),
-        offset: t.Optional(t.Numeric()),
-        action: t.Optional(t.String()),
+        limit: t.Optional(t.Numeric({ description: "Page size (1-100, default 50)" })),
+        offset: t.Optional(t.Numeric({ description: "Pagination offset (default 0)" })),
+        action: t.Optional(t.String({ description: "Filter by action (substring match)" })),
+        resource_type: t.Optional(t.String({ description: "Filter by resource type (exact match)" })),
+        since: t.Optional(t.String({ description: "Only logs after this ISO 8601 timestamp" })),
+        until: t.Optional(t.String({ description: "Only logs before this ISO 8601 timestamp" })),
+        sort: t.Optional(t.String({ description: "Sort order: 'asc' or 'desc' (default 'desc')" })),
       }),
       detail: {
         summary: "List hackathon activity",
-        description: "List audit logs for a specific hackathon.",
+        description: "List audit logs for a specific hackathon. Supports filtering by action, resource type, and date range.",
       },
     }
   )

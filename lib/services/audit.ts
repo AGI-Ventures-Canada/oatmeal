@@ -186,12 +186,22 @@ export async function listAuditLogs(
   return (data as AuditLog[] | null) ?? []
 }
 
+export type ListHackathonAuditLogsOptions = {
+  limit?: number
+  offset?: number
+  action?: string
+  resourceType?: string
+  since?: string
+  until?: string
+  sort?: "asc" | "desc"
+}
+
 export async function listHackathonAuditLogs(
   tenantId: string,
   hackathonId: string,
-  options: { limit?: number; offset?: number; action?: string } = {}
+  options: ListHackathonAuditLogsOptions = {}
 ) {
-  const { limit: rawLimit = 50, offset = 0, action } = options
+  const { limit: rawLimit = 50, offset = 0, action, resourceType, since, until, sort = "desc" } = options
   const limit = Math.min(Math.max(rawLimit, 1), MAX_AUDIT_PAGE_SIZE)
 
   let query = getSupabase()
@@ -199,11 +209,20 @@ export async function listHackathonAuditLogs(
     .select("*", { count: "exact" })
     .eq("tenant_id", tenantId)
     .or(`resource_id.eq.${hackathonId},metadata->>hackathonId.eq.${hackathonId}`)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: sort === "asc" })
     .range(offset, offset + limit - 1)
 
   if (action) {
     query = query.ilike("action", `%${action}%`)
+  }
+  if (resourceType) {
+    query = query.eq("resource_type", resourceType)
+  }
+  if (since) {
+    query = query.gte("created_at", since)
+  }
+  if (until) {
+    query = query.lte("created_at", until)
   }
 
   const { data, error, count } = await query
@@ -222,18 +241,21 @@ export type ListAllAuditLogsOptions = {
   tenantId?: string
   action?: string
   resourceType?: string
+  since?: string
+  until?: string
+  sort?: "asc" | "desc"
 }
 
 const MAX_AUDIT_PAGE_SIZE = 100
 
 export async function listAllAuditLogs(options: ListAllAuditLogsOptions = {}) {
-  const { limit: rawLimit = 50, offset = 0, hackathonId, tenantId, action, resourceType } = options
+  const { limit: rawLimit = 50, offset = 0, hackathonId, tenantId, action, resourceType, since, until, sort = "desc" } = options
   const limit = Math.min(Math.max(rawLimit, 1), MAX_AUDIT_PAGE_SIZE)
 
   let query = getSupabase()
     .from("audit_logs")
     .select("*", { count: "exact" })
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: sort === "asc" })
     .range(offset, offset + limit - 1)
 
   if (tenantId) {
@@ -247,6 +269,12 @@ export async function listAllAuditLogs(options: ListAllAuditLogsOptions = {}) {
   }
   if (resourceType) {
     query = query.eq("resource_type", resourceType)
+  }
+  if (since) {
+    query = query.gte("created_at", since)
+  }
+  if (until) {
+    query = query.lte("created_at", until)
   }
 
   const { data, error, count } = await query

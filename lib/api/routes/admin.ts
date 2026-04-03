@@ -192,21 +192,27 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         tenantId: query.tenant_id || undefined,
         action: query.action || undefined,
         resourceType: query.resource_type || undefined,
+        since: query.since || undefined,
+        until: query.until || undefined,
+        sort: query.sort === "asc" ? "asc" : undefined,
       })
       return result
     },
     {
       query: t.Object({
-        limit: t.Optional(t.Numeric()),
-        offset: t.Optional(t.Numeric()),
-        hackathon_id: t.Optional(t.String()),
-        tenant_id: t.Optional(t.String()),
-        action: t.Optional(t.String()),
-        resource_type: t.Optional(t.String()),
+        limit: t.Optional(t.Numeric({ description: "Page size (1-100, default 50)" })),
+        offset: t.Optional(t.Numeric({ description: "Pagination offset (default 0)" })),
+        hackathon_id: t.Optional(t.String({ description: "Filter by hackathon UUID" })),
+        tenant_id: t.Optional(t.String({ description: "Filter by tenant UUID" })),
+        action: t.Optional(t.String({ description: "Filter by action (substring match)" })),
+        resource_type: t.Optional(t.String({ description: "Filter by resource type (exact match)" })),
+        since: t.Optional(t.String({ description: "Only logs after this ISO 8601 timestamp" })),
+        until: t.Optional(t.String({ description: "Only logs before this ISO 8601 timestamp" })),
+        sort: t.Optional(t.String({ description: "Sort order: 'asc' or 'desc' (default 'desc')" })),
       }),
       detail: {
         summary: "List activity logs",
-        description: "List audit logs across all tenants with pagination and filters.",
+        description: "List audit logs across all tenants with pagination, filtering, sorting, and date range.",
       },
     }
   )

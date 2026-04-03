@@ -17,8 +17,19 @@ type ActivityResponse = {
   total: number
 }
 
-function parseArgs(args: string[]): { json?: boolean; limit?: number; offset?: number; action?: string } {
-  const options: { json?: boolean; limit?: number; offset?: number; action?: string } = {}
+type ActivityOptions = {
+  json?: boolean
+  limit?: number
+  offset?: number
+  action?: string
+  resourceType?: string
+  since?: string
+  until?: string
+  sort?: string
+}
+
+function parseArgs(args: string[]): ActivityOptions {
+  const options: ActivityOptions = {}
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
       case "--json":
@@ -33,6 +44,18 @@ function parseArgs(args: string[]): { json?: boolean; limit?: number; offset?: n
       case "--action":
         options.action = args[++i]
         break
+      case "--resource-type":
+        options.resourceType = args[++i]
+        break
+      case "--since":
+        options.since = args[++i]
+        break
+      case "--until":
+        options.until = args[++i]
+        break
+      case "--sort":
+        options.sort = args[++i]
+        break
     }
   }
   return options
@@ -44,7 +67,7 @@ export async function runHackathonsActivity(
   args: string[]
 ): Promise<void> {
   if (!idOrSlug) {
-    console.error("Usage: hackathon events activity <id-or-slug> [--limit N] [--offset N] [--action filter]")
+    console.error("Usage: hackathon events activity <id-or-slug> [--limit N] [--offset N] [--action filter] [--resource-type type] [--since ISO] [--until ISO] [--sort asc|desc]")
     process.exit(1)
   }
 
@@ -55,6 +78,10 @@ export async function runHackathonsActivity(
   if (options.limit) params.set("limit", String(options.limit))
   if (options.offset) params.set("offset", String(options.offset))
   if (options.action) params.set("action", options.action)
+  if (options.resourceType) params.set("resource_type", options.resourceType)
+  if (options.since) params.set("since", options.since)
+  if (options.until) params.set("until", options.until)
+  if (options.sort) params.set("sort", options.sort)
 
   const qs = params.toString()
   const data = await client.get<ActivityResponse>(`/api/v1/hackathons/${id}/activity${qs ? `?${qs}` : ""}`)
