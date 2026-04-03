@@ -10,7 +10,9 @@ import {
   updateHackathonAsAdmin,
   deleteHackathon,
 } from "@/lib/services/admin"
-import { listScenarios, runScenario } from "@/lib/services/admin-scenarios"
+import { listScenarios, runScenario, generateRoleTokens, getActiveScenarios } from "@/lib/services/admin-scenarios"
+import { getPersonaUserId, findPersonaByUserId, TEST_PERSONAS } from "@/lib/dev/test-personas"
+import { safeRedirectUrl } from "@/lib/utils/url"
 import { supabase } from "@/lib/db/client"
 import { HackathonStatusEnum } from "@/lib/api/validators"
 
@@ -225,11 +227,154 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       description: "Returns available test scenarios with descriptions.",
     },
   })
+  .get("/scenario-active", async ({ principal }) => {
+    requireAdminScopes(principal, ["admin:scenarios"])
+    const active = await getActiveScenarios()
+    return { active }
+  }, {
+    detail: {
+      summary: "Get active scenario runs",
+      description: "Returns the most recent hackathon for each scenario type, visible to all admins.",
+    },
+  })
+  .get("/scenario-personas", ({ principal }) => {
+    requireAdminScopes(principal, ["admin:scenarios"])
+    return {
+      personas: TEST_PERSONAS.map((p) => ({
+        key: p.key,
+        name: p.name,
+        configured: !!(process.env[p.env] ?? p.fallback),
+      })),
+    }
+  }, {
+    detail: {
+      summary: "List test personas",
+      description: "Returns persona keys, display names, and whether each is configured via env vars.",
+    },
+  })
+  .get("/persona-roles", async ({ principal, query }) => {
+    requireAdminScopes(principal, ["admin:scenarios"])
+    const personaRoles: Record<string, string> = {}
+    const db = supabase()
+
+    if (query.hackathonId) {
+      if (!isValidUuid(query.hackathonId)) {
+        throw new AuthError("Invalid hackathon ID", 400)
+      }
+      const { data: participants } = await db
+        .from("hackathon_participants")
+        .select("clerk_user_id, role")
+        .eq("hackathon_id", query.hackathonId)
+      for (const p of participants ?? []) {
+        const persona = findPersonaByUserId(p.clerk_user_id)
+        if (persona) personaRoles[persona.key] = p.role
+      }
+    } else {
+      const activeScenarios = await getActiveScenarios()
+      if (activeScenarios.length > 0) {
+        const { data: participants } = await db
+          .from("hackathon_participants")
+          .select("clerk_user_id, role")
+          .in("hackathon_id", activeScenarios.map((s) => s.hackathonId))
+        for (const p of participants ?? []) {
+          const persona = findPersonaByUserId(p.clerk_user_id)
+          if (persona && !personaRoles[persona.key]) {
+            personaRoles[persona.key] = p.role
+          }
+        }
+      }
+    }
+
+    return { roles: personaRoles }
+  }, {
+    query: t.Object({
+      hackathonId: t.Optional(t.String()),
+    }),
+    detail: {
+      summary: "Get persona roles",
+      description: "Returns the current hackathon role for each configured test persona. Pass hackathonId to scope to a specific event.",
+    },
+  })
   .post(
-    "/scenarios/:name",
+    "/scenario-tokens",
+    async ({ body, principal }) => {
+      requireAdminScopes(principal, ["admin:scenarios"])
+      if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
+        throw new AuthError("Not available in production", 403)
+      }
+      if (!isValidUuid(body.hackathon_id)) {
+        throw new AuthError("Invalid hackathon ID", 400)
+      }
+      const db = supabase()
+      const { data: hackathon } = await db
+        .from("hackathons")
+        .select("slug")
+        .eq("id", body.hackathon_id)
+        .single()
+
+      if (!hackathon) {
+        throw new AuthError("Hackathon not found", 404)
+      }
+
+      const roles = await generateRoleTokens(body.hackathon_id, hackathon.slug)
+      return { roles }
+    },
+    {
+      body: t.Object({
+        hackathon_id: t.String({ description: "Hackathon UUID to generate tokens for" }),
+      }),
+      detail: {
+        summary: "Refresh role sign-in tokens",
+        description: "Generate fresh one-click sign-in tokens for each test persona in a scenario hackathon.",
+      },
+    }
+  )
+  .post(
+    "/scenario-switch",
+    async ({ body, principal }) => {
+      requireAdminScopes(principal, ["admin:scenarios"])
+      if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
+        throw new AuthError("Not available in production", 403)
+      }
+
+      const targetUserId = getPersonaUserId(body.persona)
+      if (!targetUserId) {
+        throw new AuthError(`Unknown persona or TEST_USER_${body.persona.toUpperCase()}_ID not set`, 400)
+      }
+
+      const { clerkClient } = await import("@clerk/nextjs/server")
+      const clerk = await clerkClient()
+      const token = await clerk.signInTokens.createSignInToken({
+        userId: targetUserId,
+        expiresInSeconds: 300,
+      })
+
+      return {
+        loginUrl: `/dev-switch?token=${token.token}&redirect=${encodeURIComponent(safeRedirectUrl(body.redirect))}`,
+      }
+    },
+    {
+      body: t.Object({
+        persona: t.Union([t.Literal("organizer"), t.Literal("user1"), t.Literal("user2"), t.Literal("user3"), t.Literal("user4"), t.Literal("user5")], { description: "Persona key" }),
+        redirect: t.Optional(t.String({ description: "Path to redirect to after sign-in" })),
+      }),
+      detail: {
+        summary: "Switch to test persona",
+        description: "Generate a sign-in token for a test persona and return a login URL. Admin-only, dev/staging only.",
+      },
+    }
+  )
+  .post(
+    "/scenario-run/:name",
     async ({ params, body, principal }) => {
       requireAdminScopes(principal, ["admin:scenarios"])
-      const result = await runScenario(params.name, body?.tenant_id || undefined)
+
+      let result: Awaited<ReturnType<typeof runScenario>>
+      try {
+        result = await runScenario(params.name, body?.tenant_id || undefined)
+      } catch (err) {
+        throw new AuthError(err instanceof Error ? err.message : "Failed to run scenario", 400)
+      }
 
       await logAudit({
         principal,
@@ -241,7 +386,8 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         critical: true,
       })
 
-      return result
+      const roles = await generateRoleTokens(result.hackathonId, result.slug)
+      return { ...result, roles }
     },
     {
       body: t.Optional(

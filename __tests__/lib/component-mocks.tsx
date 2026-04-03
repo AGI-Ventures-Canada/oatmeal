@@ -155,7 +155,7 @@ mock.module("@clerk/nextjs", () => ({
   useAuth: () => ({ isSignedIn: clerkState.isSignedIn, isLoaded: clerkState.isLoaded, userId: clerkState.userId }),
   useUser: () => ({ isLoaded: clerkState.isLoaded, isSignedIn: clerkState.isSignedIn, user: clerkState.isSignedIn ? clerkState.user : null }),
   useClerk: () => ({ openUserProfile: clerkState.openUserProfile, signOut: clerkState.signOut }),
-  useOrganization: () => ({ organization: clerkState.organization }),
+  useOrganization: () => ({ organization: clerkState.organization, isLoaded: clerkState.isLoaded }),
   useOrganizationList: () => ({
     userMemberships: { data: clerkState.memberships },
     setActive: clerkState.setActive,

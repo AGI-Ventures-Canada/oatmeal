@@ -50,8 +50,8 @@ describe("DateTimeRangePicker", () => {
       />,
     )
     fireEvent.click(screen.getByRole("button", { name: /Mar 23/ }))
-    expect(screen.getByText("Opens:")).toBeTruthy()
-    expect(screen.getByText("Closes:")).toBeTruthy()
+    expect(screen.getByText("Opens")).toBeTruthy()
+    expect(screen.getByText("Closes")).toBeTruthy()
     expect(screen.getByText("Done")).toBeTruthy()
   })
 
@@ -134,8 +134,8 @@ describe("DateTimeRangePicker", () => {
   it("uses default time labels", () => {
     render(<DateTimeRangePicker />)
     fireEvent.click(screen.getByRole("button"))
-    expect(screen.getByText("Start:")).toBeTruthy()
-    expect(screen.getByText("End:")).toBeTruthy()
+    expect(screen.getByText("Start")).toBeTruthy()
+    expect(screen.getByText("End")).toBeTruthy()
   })
 
   it("uses custom time labels", () => {
@@ -143,8 +143,8 @@ describe("DateTimeRangePicker", () => {
       <DateTimeRangePicker fromLabel="Opens" toLabel="Closes" />,
     )
     fireEvent.click(screen.getByRole("button"))
-    expect(screen.getByText("Opens:")).toBeTruthy()
-    expect(screen.getByText("Closes:")).toBeTruthy()
+    expect(screen.getByText("Opens")).toBeTruthy()
+    expect(screen.getByText("Closes")).toBeTruthy()
   })
 
   describe("time validation", () => {

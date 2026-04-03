@@ -1,17 +1,11 @@
 import React from "react"
 import { describe, expect, it, beforeEach, afterEach, mock } from "bun:test"
 import { render, screen, cleanup, fireEvent } from "@testing-library/react"
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({
-    push: mock(() => {}),
-    refresh: mock(() => {}),
-    replace: mock(() => {}),
-  }),
-}))
+import "../../lib/component-mocks"
 
 mock.module("@/components/hackathon/preview/edit-context", () => ({
   useEditOptional: () => null,
+  useEdit: () => { throw new Error("useEdit must be used within EditProvider") },
 }))
 
 const { TimelineEditForm } = await import(

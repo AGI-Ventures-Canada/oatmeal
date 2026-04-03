@@ -19,6 +19,18 @@ export function ThemedClerkProvider({
     <ClerkProvider
       appearance={{
         baseTheme: resolvedTheme === "dark" ? dark : undefined,
+        elements: {
+          card: "rounded-none shadow-none",
+          formButtonPrimary:
+            "bg-primary text-primary-foreground rounded-none hover:bg-primary/90",
+          formFieldInput: "rounded-none border-input",
+          socialButtonsBlockButton: "rounded-none border-border",
+          otpCodeFieldInput: "rounded-none",
+          alternativeMethodsBlockButton: "rounded-none",
+          avatarBox: "rounded-none",
+          userButtonPopoverCard: "rounded-none border border-border",
+          userPreviewMainIdentifier: "font-medium",
+        },
       }}
     >
       {children}

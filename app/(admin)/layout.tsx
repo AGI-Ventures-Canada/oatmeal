@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { isAdminEnabled } from "@/lib/auth/principal"
+import { AdminNav } from "./admin-nav"
 
 export default async function AdminLayout({
   children,
@@ -30,12 +31,10 @@ export default async function AdminLayout({
       <header className="border-b">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4 md:px-6">
           <Link href="/admin" className="text-sm font-semibold">Admin</Link>
-          <nav className="flex gap-4 text-sm text-muted-foreground">
-            <Link href="/admin" className="hover:text-foreground">Overview</Link>
-            <Link href="/admin/hackathons" className="hover:text-foreground">Hackathons</Link>
-            <Link href="/admin/activity" className="hover:text-foreground">Activity</Link>
-            <Link href="/admin/scenarios" className="hover:text-foreground">Scenarios</Link>
-          </nav>
+          <AdminNav />
+          <Link href="/" className="ml-auto text-sm text-muted-foreground hover:text-foreground">
+            Home dashboard →
+          </Link>
         </div>
       </header>
       <main className="mx-auto max-w-7xl p-4 md:p-6">{children}</main>

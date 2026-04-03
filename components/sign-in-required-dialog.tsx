@@ -48,11 +48,27 @@ export function SignInRequiredDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <DialogFooter>
+        <DialogFooter className="flex-col gap-2 sm:flex-row">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={() => router.push(`/sign-in?redirect_url=${redirectUrl}`)}>
+          <Button
+            variant="outline"
+            onClick={() =>
+              router.push(
+                `/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`,
+              )
+            }
+          >
+            Sign Up
+          </Button>
+          <Button
+            onClick={() =>
+              router.push(
+                `/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`,
+              )
+            }
+          >
             Sign In
           </Button>
         </DialogFooter>
