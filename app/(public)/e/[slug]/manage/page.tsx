@@ -238,7 +238,14 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
         </TabsContent>
 
         <TabsContent value="submissions" forceMount className="data-[state=inactive]:hidden">
-          <SubmissionGallery submissions={submissionsForGallery} />
+          {submissionsForGallery.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <p className="text-lg font-semibold mb-1">No submissions yet</p>
+              <p className="text-sm text-muted-foreground">Submissions will appear here once participants submit their projects.</p>
+            </div>
+          ) : (
+            <SubmissionGallery submissions={submissionsForGallery} />
+          )}
         </TabsContent>
 
         <TabsContent value="event" forceMount className="data-[state=inactive]:hidden">
