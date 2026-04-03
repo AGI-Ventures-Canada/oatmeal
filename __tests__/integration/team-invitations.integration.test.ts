@@ -85,6 +85,7 @@ const mockLogAudit = mock(() => Promise.resolve())
 
 mock.module("@/lib/services/audit", () => ({
   logAudit: mockLogAudit,
+  listAllAuditLogs: mock(() => Promise.resolve({ logs: [], total: 0 })),
 }))
 
 const mockCheckRateLimit = mock(() => ({ allowed: true, remaining: 9, resetAt: Date.now() + 60000 }))

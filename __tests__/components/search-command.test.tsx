@@ -1,24 +1,16 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react"
 
-const mockPush = mock(() => {})
-let mockIsSignedIn = true
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const g = globalThis as any
+const mockPush = g.__nextNavState.router.push
 let mockOrganizedResponse: object = { hackathons: [] }
 let mockPublicResponse: object = { hackathons: [] }
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
-}))
-
-mock.module("@clerk/nextjs", () => ({
-  useAuth: () => ({ isSignedIn: mockIsSignedIn }),
-}))
-
 
 const globalFetch = globalThis.fetch
 beforeEach(() => {
   mockPush.mockClear()
-  mockIsSignedIn = true
+  g.__clerkState.isSignedIn = true
   mockOrganizedResponse = { hackathons: [] }
   mockPublicResponse = { hackathons: [] }
   globalThis.fetch = mock((url: string) => {

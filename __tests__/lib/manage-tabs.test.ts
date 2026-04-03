@@ -19,7 +19,8 @@ describe("VALID_TABS", () => {
     expect(VALID_TABS).toContain("judges")
     expect(VALID_TABS).toContain("prizes")
     expect(VALID_TABS).toContain("event")
-    expect(VALID_TABS).toHaveLength(8)
+    expect(VALID_TABS).toContain("activity")
+    expect(VALID_TABS).toHaveLength(9)
   })
 })
 
