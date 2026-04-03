@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { toLocalDatetime } from "@/lib/utils/datetime"
+import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsUrlSync } from "./_tabs-url-sync"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -23,8 +25,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown } from "lucide-react"
-import { VALID_ETABS } from "@/lib/utils/manage-tabs"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Calendar, MapPin, Clock, Zap, FileText, MessageCircle, Share2, Mail } from "lucide-react"
+import type { AnnouncementAudience } from "@/lib/services/announcements"
+import type { HackathonStatus, HackathonPhase } from "@/lib/db/hackathon-types"
 
 type ChallengeData = {
   title: string | null
@@ -59,6 +86,8 @@ type EmailResult = {
 interface EventTabContentProps {
   hackathonId: string
   activeEtab: string
+  hackathonStatus: HackathonStatus
+  hackathonPhase: HackathonPhase | null
 }
 
 function formatDate(dateStr: string): string {
@@ -276,7 +305,8 @@ function MentorsSubTab({ hackathonId }: { hackathonId: string }) {
   if (requests.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center text-muted-foreground">
-        No mentor requests yet
+        <MessageCircle className="size-8 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">No mentor requests yet</p>
       </div>
     )
   }
@@ -376,7 +406,8 @@ function SocialSubTab({ hackathonId }: { hackathonId: string }) {
   if (submissions.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center text-muted-foreground">
-        No social submissions yet
+        <Share2 className="size-8 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">No social submissions yet</p>
       </div>
     )
   }
@@ -466,6 +497,7 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
     mentor: false,
   })
   const [sending, setSending] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<EmailResult | null>(null)
 
@@ -473,12 +505,16 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
     .filter(([, checked]) => checked)
     .map(([role]) => role)
 
-  async function handleSend(e?: React.FormEvent) {
-    if (e) e.preventDefault()
+  const recipientLabel = selectedRoles.length > 0
+    ? selectedRoles.map((r) => `${r}s`).join(", ")
+    : "all participants"
+
+  async function handleSend() {
     if (!subject.trim() || !html.trim()) return
     setSending(true)
     setError(null)
     setResult(null)
+    setConfirmOpen(false)
     try {
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/email-blast`, {
         method: "POST",
@@ -495,6 +531,9 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
       }
       const data: EmailResult = await res.json()
       setResult(data)
+      setSubject("")
+      setHtml("")
+      setRoles({ participant: false, judge: false, mentor: false })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send emails")
     } finally {
@@ -503,9 +542,9 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !sending) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !sending && subject.trim() && html.trim()) {
       e.preventDefault()
-      handleSend()
+      setConfirmOpen(true)
     }
   }
 
@@ -521,7 +560,7 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
       </CardHeader>
       <CardContent>
         <form
-          onSubmit={handleSend}
+          onSubmit={(e) => { e.preventDefault(); setConfirmOpen(true) }}
           onKeyDown={handleKeyDown}
           autoComplete="off"
           className="space-y-4"
@@ -557,7 +596,7 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
             />
           </div>
           <div className="space-y-2">
-            <Label>Filter by role (optional)</Label>
+            <Label>Send to</Label>
             <div className="flex flex-wrap gap-4">
               {(["participant", "judge", "mentor"] as const).map((role) => (
                 <div key={role} className="flex items-center gap-2">
@@ -572,6 +611,9 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
                 </div>
               ))}
             </div>
+            {selectedRoles.length === 0 && (
+              <p className="text-xs text-muted-foreground">No filter selected — sends to everyone</p>
+            )}
           </div>
           {error && <p className="text-destructive text-xs">{error}</p>}
           {result && (
@@ -587,28 +629,796 @@ function EmailSubTab({ hackathonId }: { hackathonId: string }) {
             Send
           </Button>
         </form>
+
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Send email to {recipientLabel}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Subject: &quot;{subject}&quot;. This will send immediately and cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleSend}>Send Now</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   )
 }
 
-export function EventTabContent({ hackathonId, activeEtab }: EventTabContentProps) {
-  const [currentTab, setCurrentTab] = useState(activeEtab)
+type AnnouncementData = {
+  id: string
+  title: string
+  body: string
+  priority: "normal" | "urgent"
+  audience: string
+  published_at: string | null
+  created_at: string
+}
+
+type SuggestedAnnouncement = {
+  title: string
+  body: string
+  priority: "normal" | "urgent"
+}
+
+function getSuggestedAnnouncements(status: HackathonStatus, phase: HackathonPhase | null): SuggestedAnnouncement[] {
+  const suggestions: SuggestedAnnouncement[] = []
+  if (status === "registration_open") {
+    suggestions.push({ title: "Registration is open!", body: "Sign up now to secure your spot. We can't wait to see what you build!", priority: "normal" })
+    suggestions.push({ title: "Last chance to register", body: "Registration closes soon. Don't miss out — sign up before it's too late!", priority: "urgent" })
+  }
+  if (status === "active") {
+    if (phase === "build") {
+      suggestions.push({ title: "Hacking has begun!", body: "The clock is ticking. Start building your project and don't forget to ask mentors for help!", priority: "normal" })
+      suggestions.push({ title: "Halfway through!", body: "You're halfway there. Make sure your project is on track and start thinking about your presentation.", priority: "normal" })
+    }
+    if (phase === "submission_open") {
+      suggestions.push({ title: "Submissions are open", body: "You can now submit your project. Make sure to include a demo link and description.", priority: "normal" })
+      suggestions.push({ title: "Submission deadline approaching", body: "Time is running out! Submit your project before the deadline.", priority: "urgent" })
+    }
+  }
+  if (status === "judging") {
+    suggestions.push({ title: "Judging has started", body: "Our judges are reviewing all submissions. Results will be announced soon!", priority: "normal" })
+    if (phase === "finals") {
+      suggestions.push({ title: "Finals round underway", body: "The finalists have been selected and are presenting to our judges. Stay tuned for results!", priority: "normal" })
+    }
+  }
+  if (status === "completed") {
+    suggestions.push({ title: "Results are in!", body: "Thank you to everyone who participated. Check the results page to see the winners!", priority: "normal" })
+    suggestions.push({ title: "Thank you!", body: "What an incredible event. Thank you to all participants, judges, mentors, and sponsors for making this possible.", priority: "normal" })
+  }
+  return suggestions
+}
+
+function AnnouncementsSubTab({ hackathonId, hackathonStatus, hackathonPhase }: { hackathonId: string; hackathonStatus: HackathonStatus; hackathonPhase: HackathonPhase | null }) {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [items, setItems] = useState<AnnouncementData[]>([])
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<AnnouncementData | null>(null)
+  const [title, setTitle] = useState("")
+  const [body, setBody] = useState("")
+  const [priority, setPriority] = useState<"normal" | "urgent">("normal")
+  const [audience, setAudience] = useState<AnnouncementAudience>("everyone")
+  const [saving, setSaving] = useState(false)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+
+  const suggestions = getSuggestedAnnouncements(hackathonStatus, hackathonPhase)
+  const published = items.filter((i) => i.published_at)
+  const drafts = items.filter((i) => !i.published_at)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements`)
+        if (!res.ok) throw new Error("Failed to load")
+        const data = await res.json()
+        if (!cancelled) setItems(data.announcements)
+      } catch {
+        if (!cancelled) setError("Failed to load announcements")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [hackathonId])
+
+  function openCreate() {
+    setEditing(null)
+    setTitle("")
+    setBody("")
+    setPriority("normal")
+    setAudience("everyone")
+    setError(null)
+    setDialogOpen(true)
+  }
+
+  function openFromSuggestion(suggestion: SuggestedAnnouncement) {
+    setEditing(null)
+    setTitle(suggestion.title)
+    setBody(suggestion.body)
+    setPriority(suggestion.priority)
+    setAudience("everyone")
+    setError(null)
+    setDialogOpen(true)
+  }
+
+  function openEdit(item: AnnouncementData) {
+    setEditing(item)
+    setTitle(item.title)
+    setBody(item.body)
+    setPriority(item.priority)
+    setAudience((item.audience as AnnouncementAudience) || "everyone")
+    setError(null)
+    setDialogOpen(true)
+  }
+
+  async function handleSave(publish: boolean) {
+    if (!title.trim() || !body.trim()) return
+    setSaving(true)
+    setError(null)
+    try {
+      if (editing) {
+        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements/${editing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, body, priority, audience }),
+        })
+        if (!res.ok) throw new Error("Failed to save")
+        const saved = await res.json()
+        setItems((prev) => prev.map((i) => (i.id === saved.id ? saved : i)))
+      } else {
+        const createRes = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, body, priority, audience }),
+        })
+        if (!createRes.ok) throw new Error("Failed to create")
+        const created = await createRes.json()
+
+        if (publish) {
+          const pubRes = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements/${created.id}/publish`, { method: "POST" })
+          if (!pubRes.ok) throw new Error("Created but failed to publish")
+          const published = await pubRes.json()
+          setItems((prev) => [published, ...prev])
+        } else {
+          setItems((prev) => [created, ...prev])
+        }
+      }
+      setDialogOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save announcement")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete")
+      setItems((prev) => prev.filter((i) => i.id !== id))
+    } catch {
+      setError("Failed to delete announcement")
+    }
+  }
+
+  async function handleTogglePublish(item: AnnouncementData) {
+    setTogglingId(item.id)
+    try {
+      const action = item.published_at ? "unpublish" : "publish"
+      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements/${item.id}/${action}`, { method: "POST" })
+      if (!res.ok) throw new Error("Failed to toggle")
+      const updated = await res.json()
+      setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
+    } catch {
+      setError("Failed to update publish status")
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
+      e.preventDefault()
+      handleSave(true)
+    }
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" /></div>
+  }
+
+  function renderAnnouncementCard(item: AnnouncementData) {
+    const isDraft = !item.published_at
+    return (
+      <div key={item.id} className={isDraft ? "rounded-lg border border-dashed p-4" : "rounded-lg border p-4"}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="text-sm font-medium truncate">{item.title}</h4>
+              {item.priority === "urgent" && <Badge variant="destructive">urgent</Badge>}
+            </div>
+            <p className="text-xs text-muted-foreground line-clamp-2">{item.body}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {isDraft ? `Created ${formatDate(item.created_at)}` : `Sent ${formatDate(item.published_at!)}`}
+            </p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {isDraft && (
+              <Button
+                size="sm"
+                variant="default"
+                disabled={togglingId === item.id}
+                onClick={() => handleTogglePublish(item)}
+              >
+                {togglingId === item.id ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                <span className="hidden sm:inline">Publish</span>
+              </Button>
+            )}
+            {!isDraft && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={togglingId === item.id}
+                onClick={() => handleTogglePublish(item)}
+              >
+                {togglingId === item.id ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
+                <span className="hidden sm:inline">Unpublish</span>
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => openEdit(item)}>
+              <Pencil className="size-4" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="ghost">
+                  <Trash2 className="size-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete announcement?</AlertDialogTitle>
+                  <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleDelete(item.id)}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-medium">Announcements</h3>
+          <p className="text-xs text-muted-foreground">Broadcast messages to participants</p>
+        </div>
+        <Button size="sm" onClick={openCreate}>
+          <Plus className="size-4" />
+          <span className="hidden sm:inline">New Announcement</span>
+        </Button>
+      </div>
+
+      {suggestions.length > 0 && (
+        <div className="rounded-lg border bg-muted/30 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="size-4 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">Suggested for this stage</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((s, idx) => (
+              <Button key={idx} size="sm" variant="outline" onClick={() => openFromSuggestion(s)}>
+                {s.priority === "urgent" && <span className="text-destructive">!</span>}
+                {s.title}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-destructive text-xs">{error}</p>}
+
+      {items.length === 0 ? (
+        <div className="rounded-lg border p-8 text-center text-muted-foreground">
+          <Megaphone className="size-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">No announcements yet</p>
+          <p className="text-xs mt-1">Create one or pick from a suggestion above</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {drafts.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Drafts</h4>
+              <div className="space-y-3">
+                {drafts.map(renderAnnouncementCard)}
+              </div>
+            </div>
+          )}
+          {published.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Published</h4>
+              <div className="space-y-3">
+                {published.map(renderAnnouncementCard)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Announcement" : "New Announcement"}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSave(true) }}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="ann-title">Title</Label>
+              <Input
+                id="ann-title"
+                name="ann-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Announcement title"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ann-body">Message</Label>
+              <Textarea
+                id="ann-body"
+                name="ann-body"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write your announcement..."
+                rows={4}
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-4">
+                <Label>Priority</Label>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant={priority === "normal" ? "default" : "outline"} onClick={() => setPriority("normal")}>Normal</Button>
+                  <Button type="button" size="sm" variant={priority === "urgent" ? "destructive" : "outline"} onClick={() => setPriority("urgent")}>Urgent</Button>
+                </div>
+              </div>
+              <div>
+                <Label>Audience</Label>
+                <Select value={audience} onValueChange={(v) => setAudience(v as AnnouncementAudience)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="everyone">Everyone</SelectItem>
+                    <SelectItem value="attendees">Attendees</SelectItem>
+                    <SelectItem value="judges">Judges</SelectItem>
+                    <SelectItem value="mentors">Mentors</SelectItem>
+                    <SelectItem value="organizers">Organizers</SelectItem>
+                    <SelectItem value="submitted">Teams who submitted</SelectItem>
+                    <SelectItem value="not_submitted">Teams without submission</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {editing ? (
+              <Button type="submit" disabled={saving || !title.trim() || !body.trim()} className="w-full">
+                {saving && <Loader2 className="animate-spin" />}
+                Update
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button type="submit" disabled={saving || !title.trim() || !body.trim()} className="flex-1">
+                  {saving && <Loader2 className="animate-spin" />}
+                  <Send className="size-4" />
+                  Publish Now
+                </Button>
+                <Button type="button" variant="outline" disabled={saving || !title.trim() || !body.trim()} onClick={() => handleSave(false)}>
+                  Save Draft
+                </Button>
+              </div>
+            )}
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+type ScheduleItemData = {
+  id: string
+  title: string
+  description: string | null
+  starts_at: string
+  ends_at: string | null
+  location: string | null
+  sort_order: number
+}
+
+const SCHEDULE_DURATION_PRESETS = [
+  { label: "15m", minutes: 15 },
+  { label: "30m", minutes: 30 },
+  { label: "1h", minutes: 60 },
+  { label: "2h", minutes: 120 },
+] as const
+
+function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [items, setItems] = useState<ScheduleItemData[]>([])
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<ScheduleItemData | null>(null)
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [startsAt, setStartsAt] = useState("")
+  const [endsAt, setEndsAt] = useState("")
+  const [location, setLocation] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [activeDuration, setActiveDuration] = useState<number | null>(30)
+
+  function applyDuration(minutes: number) {
+    if (!startsAt) return
+    const end = new Date(new Date(startsAt).getTime() + minutes * 60_000)
+    setEndsAt(toLocalDatetime(end))
+    setActiveDuration(minutes)
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule`)
+        if (!res.ok) throw new Error("Failed to load")
+        const data = await res.json()
+        if (!cancelled) setItems(data.scheduleItems)
+      } catch {
+        if (!cancelled) setError("Failed to load schedule")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [hackathonId])
+
+  function openCreate() {
+    setEditing(null)
+    setTitle("")
+    setDescription("")
+    setStartsAt("")
+    setEndsAt("")
+    setLocation("")
+    setActiveDuration(30)
+    setError(null)
+    setDialogOpen(true)
+  }
+
+  function openEdit(item: ScheduleItemData) {
+    setEditing(item)
+    setTitle(item.title)
+    setDescription(item.description ?? "")
+    setStartsAt(toLocalDatetime(new Date(item.starts_at)))
+    setEndsAt(item.ends_at ? toLocalDatetime(new Date(item.ends_at)) : "")
+    setLocation(item.location ?? "")
+    if (item.starts_at && item.ends_at) {
+      const diffMin = Math.round((new Date(item.ends_at).getTime() - new Date(item.starts_at).getTime()) / 60_000)
+      const match = SCHEDULE_DURATION_PRESETS.find((p) => p.minutes === diffMin)
+      setActiveDuration(match ? match.minutes : null)
+    } else {
+      setActiveDuration(null)
+    }
+    setError(null)
+    setDialogOpen(true)
+  }
+
+  async function handleSave() {
+    if (!title.trim() || !startsAt) return
+    setSaving(true)
+    setError(null)
+    try {
+      const payload: Record<string, unknown> = {
+        title,
+        startsAt: new Date(startsAt).toISOString(),
+      }
+      if (description.trim()) payload.description = description
+      if (endsAt) payload.endsAt = new Date(endsAt).toISOString()
+      if (location.trim()) payload.location = location
+
+      const url = editing
+        ? `/api/dashboard/hackathons/${hackathonId}/schedule/${editing.id}`
+        : `/api/dashboard/hackathons/${hackathonId}/schedule`
+      const res = await fetch(url, {
+        method: editing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error("Failed to save")
+      const saved = await res.json()
+      if (editing) {
+        setItems((prev) => prev.map((i) => (i.id === saved.id ? saved : i)).sort((a, b) => a.starts_at.localeCompare(b.starts_at) || (a.sort_order ?? 0) - (b.sort_order ?? 0)))
+      } else {
+        setItems((prev) => [...prev, saved].sort((a, b) => a.starts_at.localeCompare(b.starts_at) || (a.sort_order ?? 0) - (b.sort_order ?? 0)))
+      }
+      setDialogOpen(false)
+    } catch {
+      setError("Failed to save schedule item")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete")
+      setItems((prev) => prev.filter((i) => i.id !== id))
+    } catch {
+      setError("Failed to delete schedule item")
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
+      e.preventDefault()
+      handleSave()
+    }
+  }
+
+  function formatTime(iso: string): string {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    })
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" /></div>
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-medium">Schedule</h3>
+          <p className="text-xs text-muted-foreground">Manage the event agenda</p>
+        </div>
+        <Button size="sm" onClick={openCreate}>
+          <Plus className="size-4" />
+          <span className="hidden sm:inline">Add Item</span>
+        </Button>
+      </div>
+
+      {error && <p className="text-destructive text-xs">{error}</p>}
+
+      {items.length === 0 ? (
+        <div className="rounded-lg border p-8 text-center text-muted-foreground">
+          <Calendar className="size-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">No schedule items yet</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map((item) => (
+            <div key={item.id} className="flex items-start gap-3 rounded-lg border p-3">
+              <div className="shrink-0 pt-0.5 text-muted-foreground">
+                <Clock className="size-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{item.title}</p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-0.5">
+                  <span>{formatTime(item.starts_at)}{item.ends_at ? ` – ${formatTime(item.ends_at)}` : ""}</span>
+                  {item.location && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="size-3" />
+                      {item.location}
+                    </span>
+                  )}
+                </div>
+                {item.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{item.description}</p>}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button size="sm" variant="ghost" onClick={() => openEdit(item)}>
+                  <Pencil className="size-4" />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="ghost">
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete schedule item?</AlertDialogTitle>
+                      <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(item.id)}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Schedule Item" : "Add Schedule Item"}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSave() }}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="sched-title">Title</Label>
+              <Input
+                id="sched-title"
+                name="sched-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Opening Ceremony"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sched-desc">Description (optional)</Label>
+              <Textarea
+                id="sched-desc"
+                name="sched-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Brief description..."
+                rows={2}
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sched-start">Starts at</Label>
+              <Input
+                id="sched-start"
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => {
+                  setStartsAt(e.target.value)
+                  if (activeDuration && e.target.value) {
+                    const end = new Date(new Date(e.target.value).getTime() + activeDuration * 60_000)
+                    setEndsAt(toLocalDatetime(end))
+                  }
+                }}
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Duration</Label>
+              <div className="flex gap-1">
+                {SCHEDULE_DURATION_PRESETS.map((p) => (
+                  <Button
+                    key={p.minutes}
+                    type="button"
+                    variant={activeDuration === p.minutes ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => applyDuration(p.minutes)}
+                    disabled={!startsAt}
+                  >
+                    {p.label}
+                  </Button>
+                ))}
+                <Button
+                  type="button"
+                  variant={activeDuration === null ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setActiveDuration(null)}
+                >
+                  Custom
+                </Button>
+              </div>
+              {activeDuration === null && (
+                <Input
+                  id="sched-end"
+                  type="datetime-local"
+                  value={endsAt}
+                  onChange={(e) => setEndsAt(e.target.value)}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
+                />
+              )}
+              {activeDuration !== null && endsAt && (
+                <p className="text-xs text-muted-foreground">
+                  Ends at {new Date(endsAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sched-location">Location (optional)</Label>
+              <Input
+                id="sched-location"
+                name="sched-location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g., Main Hall, Zoom link"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <Button type="submit" disabled={saving || !title.trim() || !startsAt} className="w-full">
+              {saving && <Loader2 className="animate-spin" />}
+              {editing ? "Update" : "Add"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+export function EventTabContent({ hackathonId, activeEtab, hackathonStatus, hackathonPhase }: EventTabContentProps) {
+  return (
+    <TabsUrlSync paramKey="etab" value={activeEtab} className="space-y-6">
       <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
         <TabsList>
-          {VALID_ETABS.map((tab) => (
-            <TabsTrigger key={tab} value={tab} className="capitalize">
-              {tab}
-            </TabsTrigger>
-          ))}
+          <TabsTrigger value="challenge"><FileText className="size-4" /><span className="hidden sm:inline">Challenge</span></TabsTrigger>
+          <TabsTrigger value="announcements"><Megaphone className="size-4" /><span className="hidden sm:inline">Announcements</span></TabsTrigger>
+          <TabsTrigger value="schedule"><Calendar className="size-4" /><span className="hidden sm:inline">Schedule</span></TabsTrigger>
+          <TabsTrigger value="mentors"><MessageCircle className="size-4" /><span className="hidden sm:inline">Mentors</span></TabsTrigger>
+          <TabsTrigger value="social"><Share2 className="size-4" /><span className="hidden sm:inline">Social</span></TabsTrigger>
+          <TabsTrigger value="email"><Mail className="size-4" /><span className="hidden sm:inline">Email</span></TabsTrigger>
         </TabsList>
       </div>
 
       <TabsContent value="challenge" forceMount className="data-[state=inactive]:hidden">
         <ChallengeSubTab hackathonId={hackathonId} />
+      </TabsContent>
+
+      <TabsContent value="announcements" forceMount className="data-[state=inactive]:hidden">
+        <AnnouncementsSubTab hackathonId={hackathonId} hackathonStatus={hackathonStatus} hackathonPhase={hackathonPhase} />
+      </TabsContent>
+
+      <TabsContent value="schedule" forceMount className="data-[state=inactive]:hidden">
+        <ScheduleSubTab hackathonId={hackathonId} />
       </TabsContent>
 
       <TabsContent value="mentors" forceMount className="data-[state=inactive]:hidden">
@@ -622,6 +1432,6 @@ export function EventTabContent({ hackathonId, activeEtab }: EventTabContentProp
       <TabsContent value="email" forceMount className="data-[state=inactive]:hidden">
         <EmailSubTab hackathonId={hackathonId} />
       </TabsContent>
-    </Tabs>
+    </TabsUrlSync>
   )
 }

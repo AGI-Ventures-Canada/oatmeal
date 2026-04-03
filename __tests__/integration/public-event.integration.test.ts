@@ -11,6 +11,14 @@ mock.module("@/lib/services/polling", () => ({
   buildPollPayload: mockBuildPollPayload,
 }))
 
+mock.module("@/lib/services/announcements", () => ({
+  listPublishedAnnouncements: mock(() => Promise.resolve([])),
+}))
+
+mock.module("@/lib/services/schedule-items", () => ({
+  listScheduleItems: mock(() => Promise.resolve([])),
+}))
+
 const { Elysia } = await import("elysia")
 const { publicEventRoutes } = await import("@/lib/api/routes/public-event")
 const { handleRouteError } = await import("@/lib/api/routes/errors")

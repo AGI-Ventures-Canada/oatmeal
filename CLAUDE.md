@@ -431,6 +431,19 @@ For RPC calls, use `setMockRpcImplementation()` instead.
 
 ## Git Workflow
 
+### Starting New Work
+
+When the user wants to start working on something new, automatically run this checklist before creating a feature branch:
+
+1. **Check for pending changes**: Run `git status`. If there are uncommitted changes, investigate what they're for. Discard auto-generated files (lock files, build artifacts). For real work, either commit it to a branch or stash it — don't lose it silently.
+2. **Sync with remote**: Run `git fetch origin` and check if the current branch is behind. Rebase or pull as needed.
+3. **Branch from staging**: Create the new feature branch from the latest `origin/staging`:
+   ```bash
+   git checkout -b feature/<name> origin/staging
+   ```
+
+Do all of this without being asked — the user shouldn't need to spell out these steps each time.
+
 ### Always Commit All Changes
 
 **When committing, stage and include ALL changes in the working tree.** Do not cherry-pick only the files that seem related to the current task — treat every uncommitted change as part of the same work unit. Leaving behind orphaned changes clutters future diffs and risks losing work.
@@ -465,7 +478,7 @@ Before making changes:
 **All pull requests must target `staging`, never `main`.** The `main` branch is only updated via merges from `staging` after testing.
 
 ```bash
-gh pr create --base staging --draft --title "feat: your feature" --body "Description"
+gh pr create --base staging --title "feat: your feature" --body "Description"
 ```
 
 ### Merge Staging to Main via PR Only
@@ -541,12 +554,26 @@ gh pr view <branch-name> --json state,mergedAt
 
 If PR is `MERGED`, create a new feature branch for additional changes.
 
-### Create PRs as Drafts
+### Create PRs Ready for Review
+
+**Do not create draft PRs.** PRs should be ready for review when created. Ensure all CI checks pass before opening.
 
 ```bash
-gh pr create --base staging --draft --title "feat: your feature" --body "Description"
-gh pr ready  # When ready for review
+gh pr create --base staging --title "feat: your feature" --body "Description"
 ```
+
+### Resolve Merge Conflicts Before Opening PRs
+
+**Always rebase onto the latest base branch and resolve any merge conflicts before creating or updating a PR.** Never open a PR with conflicts — the reviewer should never have to deal with them.
+
+```bash
+git fetch origin
+git rebase origin/staging
+# Resolve any conflicts, then:
+git push --force-with-lease
+```
+
+If a PR develops conflicts after creation (e.g., another PR merged first), rebase and force-push immediately rather than leaving the PR in a conflicted state.
 
 ### Commit Message Style
 
@@ -578,6 +605,14 @@ refactor: extract payment logic into service
 ```
 
 This catches style violations, shadcn primitive misuse, dead code, and other issues before they land in a PR.
+
+### Address All PR Review Warnings
+
+**All warnings from PR reviewers (automated or human) must be resolved before merging.** Do not treat warnings as optional — they indicate real issues that will compound if left unaddressed.
+
+- **Warnings**: Must be fixed or refactored. If a warning is genuinely inapplicable, reply on the PR explaining why — don't silently ignore it.
+- **Suggestions**: Evaluate and apply if they improve the code. If skipping, have a concrete reason (not "it works fine as-is").
+- **Dead code, unused parameters, stale comments**: Fix immediately — these are easy wins that reviewers shouldn't have to flag twice.
 
 ### Browser Verification
 

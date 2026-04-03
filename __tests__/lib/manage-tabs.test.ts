@@ -4,20 +4,22 @@ import {
   VALID_JTABS,
   VALID_PTABS,
   VALID_ETABS,
-  getDefaultTab,
+  DEFAULT_TAB,
   resolveTab,
   getJudgingRedirectUrl,
 } from "@/lib/utils/manage-tabs"
 
 describe("VALID_TABS", () => {
   it("contains all manage tabs", () => {
+    expect(VALID_TABS).toContain("overview")
     expect(VALID_TABS).toContain("edit")
     expect(VALID_TABS).toContain("teams")
     expect(VALID_TABS).toContain("rooms")
+    expect(VALID_TABS).toContain("submissions")
     expect(VALID_TABS).toContain("judges")
     expect(VALID_TABS).toContain("prizes")
     expect(VALID_TABS).toContain("event")
-    expect(VALID_TABS).toHaveLength(6)
+    expect(VALID_TABS).toHaveLength(8)
   })
 })
 
@@ -39,42 +41,20 @@ describe("VALID_PTABS", () => {
 })
 
 describe("VALID_ETABS", () => {
-  it("contains challenge, mentors, social, email", () => {
+  it("contains challenge, announcements, schedule, mentors, social, email", () => {
     expect(VALID_ETABS).toContain("challenge")
+    expect(VALID_ETABS).toContain("announcements")
+    expect(VALID_ETABS).toContain("schedule")
     expect(VALID_ETABS).toContain("mentors")
     expect(VALID_ETABS).toContain("social")
     expect(VALID_ETABS).toContain("email")
-    expect(VALID_ETABS).toHaveLength(4)
+    expect(VALID_ETABS).toHaveLength(6)
   })
 })
 
-describe("getDefaultTab", () => {
-  it("returns edit for draft", () => {
-    expect(getDefaultTab("draft")).toBe("edit")
-  })
-
-  it("returns edit for published", () => {
-    expect(getDefaultTab("published")).toBe("edit")
-  })
-
-  it("returns teams for registration_open", () => {
-    expect(getDefaultTab("registration_open")).toBe("teams")
-  })
-
-  it("returns event for active", () => {
-    expect(getDefaultTab("active")).toBe("event")
-  })
-
-  it("returns prizes for completed", () => {
-    expect(getDefaultTab("completed")).toBe("prizes")
-  })
-
-  it("returns prizes for archived", () => {
-    expect(getDefaultTab("archived")).toBe("prizes")
-  })
-
-  it("returns judges for judging", () => {
-    expect(getDefaultTab("judging")).toBe("judges")
+describe("DEFAULT_TAB", () => {
+  it("is overview", () => {
+    expect(DEFAULT_TAB).toBe("overview")
   })
 })
 

@@ -209,6 +209,50 @@ export type Database = {
           },
         ]
       }
+      hackathon_announcements: {
+        Row: {
+          audience: string
+          body: string
+          created_at: string
+          hackathon_id: string
+          id: string
+          priority: string
+          published_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          body: string
+          created_at?: string
+          hackathon_id: string
+          id?: string
+          priority?: string
+          published_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          body?: string
+          created_at?: string
+          hackathon_id?: string
+          id?: string
+          priority?: string
+          published_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hackathon_announcements_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hackathon_judges_display: {
         Row: {
           clerk_user_id: string | null
@@ -365,6 +409,53 @@ export type Database = {
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hackathon_schedule_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          hackathon_id: string
+          id: string
+          location: string | null
+          sort_order: number
+          starts_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          hackathon_id: string
+          id?: string
+          location?: string | null
+          sort_order?: number
+          starts_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          hackathon_id?: string
+          id?: string
+          location?: string | null
+          sort_order?: number
+          starts_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hackathon_schedule_items_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
             referencedColumns: ["id"]
           },
         ]

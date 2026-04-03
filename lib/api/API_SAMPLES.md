@@ -607,6 +607,97 @@ curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/results"
 
 ---
 
+### GET /api/public/hackathons/:slug/announcements
+
+Returns published announcements for a hackathon, ordered by most recent first. Excludes drafts and future-scheduled announcements.
+
+#### curl
+
+```bash
+curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/announcements"
+```
+
+#### TypeScript
+
+```typescript
+const res = await fetch(`https://your-domain.com/api/public/hackathons/${slug}/announcements`)
+const { announcements } = await res.json()
+```
+
+#### Python
+
+```python
+import requests
+
+response = requests.get(f"https://your-domain.com/api/public/hackathons/{slug}/announcements")
+announcements = response.json()["announcements"]
+```
+
+#### Response
+
+```json
+{
+  "announcements": [
+    {
+      "id": "uuid",
+      "title": "Submission deadline extended",
+      "body": "You have an extra hour to submit your projects!",
+      "priority": "urgent",
+      "audience": "everyone",
+      "published_at": "2026-04-28T14:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### GET /api/public/hackathons/:slug/schedule
+
+Returns all schedule items for a hackathon, ordered by start time.
+
+#### curl
+
+```bash
+curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/schedule"
+```
+
+#### TypeScript
+
+```typescript
+const res = await fetch(`https://your-domain.com/api/public/hackathons/${slug}/schedule`)
+const { scheduleItems } = await res.json()
+```
+
+#### Python
+
+```python
+import requests
+
+response = requests.get(f"https://your-domain.com/api/public/hackathons/{slug}/schedule")
+schedule_items = response.json()["scheduleItems"]
+```
+
+#### Response
+
+```json
+{
+  "scheduleItems": [
+    {
+      "id": "uuid",
+      "title": "Opening Ceremony",
+      "description": "Welcome and kickoff",
+      "starts_at": "2026-04-28T09:00:00Z",
+      "ends_at": "2026-04-28T09:30:00Z",
+      "location": "Main Hall",
+      "sort_order": 0
+    }
+  ]
+}
+```
+
+---
+
 ### POST /api/public/import/luma
 
 Extracts structured event data from a public Luma event page by parsing JSON-LD metadata.
@@ -1795,6 +1886,117 @@ Hides published results from public view. Requires scope: `hackathons:write`
 
 ```bash
 curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/results/unpublish" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+---
+
+#### GET /api/dashboard/hackathons/:id/announcements
+
+Lists all announcements for a hackathon (including drafts). Requires scope: `hackathons:read`
+
+```bash
+curl "https://your-domain.com/api/dashboard/hackathons/{id}/announcements" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### POST /api/dashboard/hackathons/:id/announcements
+
+Creates a draft announcement. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Submission deadline extended", "body": "You have an extra hour!", "priority": "urgent", "audience": "everyone"}'
+```
+
+#### PATCH /api/dashboard/hackathons/:id/announcements/:announcementId
+
+Updates an announcement. Requires scope: `hackathons:write`
+
+```bash
+curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Updated title", "audience": "judges"}'
+```
+
+#### DELETE /api/dashboard/hackathons/:id/announcements/:announcementId
+
+Deletes an announcement. Requires scope: `hackathons:write`
+
+```bash
+curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### POST /api/dashboard/hackathons/:id/announcements/:announcementId/publish
+
+Publishes an announcement immediately. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}/publish" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### POST /api/dashboard/hackathons/:id/announcements/:announcementId/schedule
+
+Schedules an announcement for future publishing. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}/schedule" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"scheduledAt": "2026-04-28T14:00:00Z"}'
+```
+
+#### POST /api/dashboard/hackathons/:id/announcements/:announcementId/unpublish
+
+Reverts a published announcement to draft. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}/unpublish" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### GET /api/dashboard/hackathons/:id/schedule
+
+Lists all schedule items for a hackathon. Requires scope: `hackathons:read`
+
+```bash
+curl "https://your-domain.com/api/dashboard/hackathons/{id}/schedule" \
+  -H "Authorization: Bearer sk_live_your_api_key_here"
+```
+
+#### POST /api/dashboard/hackathons/:id/schedule
+
+Creates a schedule item. Requires scope: `hackathons:write`
+
+```bash
+curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/schedule" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Opening Ceremony", "startsAt": "2026-04-28T09:00:00Z", "endsAt": "2026-04-28T09:30:00Z", "location": "Main Hall"}'
+```
+
+#### PATCH /api/dashboard/hackathons/:id/schedule/:itemId
+
+Updates a schedule item. Requires scope: `hackathons:write`
+
+```bash
+curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/schedule/{itemId}" \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Updated title", "location": "Room B"}'
+```
+
+#### DELETE /api/dashboard/hackathons/:id/schedule/:itemId
+
+Deletes a schedule item. Requires scope: `hackathons:write`
+
+```bash
+curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/schedule/{itemId}" \
   -H "Authorization: Bearer sk_live_your_api_key_here"
 ```
 

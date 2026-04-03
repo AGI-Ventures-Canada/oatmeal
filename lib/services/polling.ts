@@ -2,6 +2,24 @@ import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { HackathonPhase, HackathonStatus } from "@/lib/db/hackathon-types"
 
+export interface PollAnnouncement {
+  id: string
+  title: string
+  body: string
+  priority: "normal" | "urgent"
+  audience: string
+  published_at: string
+}
+
+export interface PollScheduleItem {
+  id: string
+  title: string
+  description: string | null
+  starts_at: string
+  ends_at: string | null
+  location: string | null
+}
+
 export interface PollResponse {
   ts: number
   phase: HackathonPhase | null
@@ -22,6 +40,8 @@ export interface PollResponse {
     judgingTotal: number
     mentorQueueOpen: number
   }
+  announcements: PollAnnouncement[]
+  scheduleItems: PollScheduleItem[]
 }
 
 export async function buildPollPayload(hackathonId: string): Promise<PollResponse | null> {
@@ -66,11 +86,27 @@ export async function buildPollPayload(hackathonId: string): Promise<PollRespons
     .eq("status", "open")
   if (mentorCount !== null) mentorQueueOpen = mentorCount
 
-  const { data: rooms } = await client
-    .from("rooms")
-    .select("id, name, timer_ends_at, timer_label")
-    .eq("hackathon_id", hackathonId)
-    .order("display_order")
+  const [{ data: rooms }, { data: announcements }, { data: scheduleRows }] = await Promise.all([
+    client
+      .from("rooms")
+      .select("id, name, timer_ends_at, timer_label")
+      .eq("hackathon_id", hackathonId)
+      .order("display_order"),
+    client
+      .from("hackathon_announcements")
+      .select("id, title, body, priority, audience, published_at")
+      .eq("hackathon_id", hackathonId)
+      .not("published_at", "is", null)
+      .lte("published_at", new Date().toISOString())
+      .order("published_at", { ascending: false })
+      .limit(10),
+    client
+      .from("hackathon_schedule_items")
+      .select("id, title, description, starts_at, ends_at, location")
+      .eq("hackathon_id", hackathonId)
+      .order("starts_at")
+      .order("sort_order"),
+  ])
 
   let globalTimer: { endsAt: string; label: string } | undefined
   if (hackathon.ends_at && hackathon.status === "active") {
@@ -102,5 +138,7 @@ export async function buildPollPayload(hackathonId: string): Promise<PollRespons
       judgingTotal: judgingTotal ?? 0,
       mentorQueueOpen,
     },
+    announcements: (announcements ?? []) as PollAnnouncement[],
+    scheduleItems: (scheduleRows ?? []) as PollScheduleItem[],
   }
 }
