@@ -135,7 +135,6 @@ export function resetComponentMocks() {
 // ============================================================================
 
 // Step 1: Mock leaf dependencies first
-// next/navigation and @clerk/nextjs are mocked in test-setup.ts (preload)
 
 mock.module("@/components/ui/dialog", () => ({
   Dialog: ({ children, open, onOpenChange }: { children: React.ReactNode; open?: boolean; onOpenChange?: (v: boolean) => void }) => {
