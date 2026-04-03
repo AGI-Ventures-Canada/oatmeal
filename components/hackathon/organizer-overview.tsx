@@ -36,7 +36,7 @@ const severityOrder: ActionSeverity[] = ["urgent", "warning", "info"]
 
 const severityLabel: Record<ActionSeverity, { text: string; className: string }> = {
   urgent: { text: "urgent", className: "text-destructive" },
-  warning: { text: "warning", className: "text-chart-2" },
+  warning: { text: "warning", className: "text-muted-foreground" },
   info: { text: "info", className: "text-muted-foreground" },
 }
 
