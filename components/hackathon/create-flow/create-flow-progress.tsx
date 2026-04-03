@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { ArrowLeft, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
@@ -22,6 +23,9 @@ export function CreateFlowProgress({
   onBack,
   onClose,
 }: CreateFlowProgressProps) {
+  const [isMac, setIsMac] = useState(false)
+  useEffect(() => { setIsMac(navigator.userAgent.includes("Mac")) }, [])
+
   return (
     <div className="flex items-center justify-between">
       <Button
@@ -74,7 +78,7 @@ export function CreateFlowProgress({
         >
           Skip to event page
           <Kbd className="hidden sm:inline-flex">
-            {navigator.userAgent.includes("Mac") ? "⌘" : "Ctrl"}
+            {isMac ? "⌘" : "Ctrl"}
             +Enter
           </Kbd>
         </Button>

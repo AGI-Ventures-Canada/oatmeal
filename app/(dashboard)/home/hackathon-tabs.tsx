@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useMemo } from "react"
+import { useMemo, useState } from "react"
 import {
   Trophy,
   Search,
@@ -25,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { HackathonCard } from "@/components/hackathon/hackathon-card"
 import { groupOrganizedHackathons, hasUrgencySignals } from "@/lib/utils/organize-groups"
 import type { HackathonMiniStats } from "@/lib/services/organizer-dashboard"
@@ -146,25 +147,17 @@ function HackathonSection({
   renderCard: (h: Hackathon) => React.ReactNode
   defaultCollapsed?: boolean
 }) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed)
-
   if (hackathons.length === 0 && !emptyMessage) return null
 
   return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setCollapsed(!collapsed)}
-        className="mb-3 flex w-full items-center gap-2 text-left"
-      >
+    <Collapsible defaultOpen={!defaultCollapsed}>
+      <CollapsibleTrigger className="mb-3 flex w-full items-center gap-2 text-left group">
         <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
         <span className="text-xs text-muted-foreground tabular-nums">{hackathons.length}</span>
-        <ChevronDown
-          className={`ml-auto size-4 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`}
-        />
-      </button>
-      {!collapsed && (
-        hackathons.length === 0 ? (
+        <ChevronDown className="ml-auto size-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {hackathons.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -172,9 +165,9 @@ function HackathonSection({
               <div key={h.id}>{renderCard(h)}</div>
             ))}
           </div>
-        )
-      )}
-    </div>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 
