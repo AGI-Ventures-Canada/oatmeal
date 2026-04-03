@@ -12,7 +12,7 @@ const radixSet = new Set(RADIX_ISOLATED_TESTS)
 async function resolveArgs(patterns: string[], exclude?: Set<string>): Promise<string[]> {
   const files: string[] = []
   for (const pattern of patterns) {
-    if (pattern.includes("*") || !pattern.endsWith(".tsx") && !pattern.endsWith(".ts")) {
+    if (pattern.includes("*") || (!pattern.endsWith(".tsx") && !pattern.endsWith(".ts"))) {
       const glob = new Glob(pattern.endsWith(".tsx") || pattern.endsWith(".ts") ? pattern : `${pattern}/**/*.test.{ts,tsx}`)
       for await (const file of glob.scan({ cwd: import.meta.dir + "/.." })) {
         if (!exclude || !exclude.has(file)) files.push(file)
