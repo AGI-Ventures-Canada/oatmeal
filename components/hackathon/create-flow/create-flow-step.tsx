@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 
 interface CreateFlowStepProps {
@@ -9,36 +9,32 @@ interface CreateFlowStepProps {
 }
 
 export function CreateFlowStep({ stepKey, children }: CreateFlowStepProps) {
-  const [visible, setVisible] = useState(false)
-  const [displayedKey, setDisplayedKey] = useState(stepKey)
-  const [displayedChildren, setDisplayedChildren] = useState(children)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const committedKeyRef = useRef(stepKey)
 
   useEffect(() => {
-    if (stepKey !== displayedKey) {
-      setVisible(false)
+    const el = containerRef.current
+    if (!el) return
+
+    if (stepKey !== committedKeyRef.current) {
+      el.classList.add("translate-y-3", "opacity-0")
+      el.classList.remove("translate-y-0", "opacity-100")
+
       const timeout = setTimeout(() => {
-        setDisplayedKey(stepKey)
-        setDisplayedChildren(children)
-        requestAnimationFrame(() => setVisible(true))
+        committedKeyRef.current = stepKey
+        el.classList.remove("translate-y-3", "opacity-0")
+        el.classList.add("translate-y-0", "opacity-100")
       }, 300)
       return () => clearTimeout(timeout)
-    } else {
-      setDisplayedChildren(children)
     }
-  }, [stepKey, displayedKey, children])
-
-  useEffect(() => {
-    requestAnimationFrame(() => setVisible(true))
-  }, [])
+  }, [stepKey])
 
   return (
     <div
-      className={cn(
-        "w-full transition-all duration-300 ease-out",
-        visible ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0",
-      )}
+      ref={containerRef}
+      className="w-full translate-y-0 opacity-100 transition-all duration-300 ease-out"
     >
-      {displayedChildren}
+      {children}
     </div>
   )
 }

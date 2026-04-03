@@ -75,7 +75,6 @@ export function SearchCommand() {
   const router = useRouter()
   const { isSignedIn } = useAuth()
 
-
   function getListEl() {
     return containerRef.current?.querySelector<HTMLDivElement>('[data-slot="command-list"]') ?? null
   }

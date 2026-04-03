@@ -80,7 +80,8 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
   }, [state])
 
   useEffect(() => {
-    if (!isLoaded || !isOrgLoaded || autoTriggeredRef.current) return
+    if (autoTriggeredRef.current) return
+    if (!isLoaded || !isOrgLoaded) return
     if (searchParams.get("edit") !== "true") return
     if (!isSignedIn) return
 

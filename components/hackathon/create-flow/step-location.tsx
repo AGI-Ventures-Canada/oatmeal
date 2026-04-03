@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete"
-import { cn } from "@/lib/utils"
 import { normalizeUrlFieldValue, urlInputProps } from "@/lib/utils/url"
 
 type LocationType = "in_person" | "virtual" | null
@@ -37,7 +36,7 @@ export function StepLocation({ locationType, locationName, locationUrl, onChange
         <Button
           type="button"
           variant={locationType === "in_person" ? "default" : "outline"}
-          className={cn("h-auto flex-1 flex-col gap-1 py-4")}
+          className="h-auto flex-1 flex-col gap-1 py-4"
           onClick={() =>
             onChange({
               locationType: "in_person",
@@ -52,7 +51,7 @@ export function StepLocation({ locationType, locationName, locationUrl, onChange
         <Button
           type="button"
           variant={locationType === "virtual" ? "default" : "outline"}
-          className={cn("h-auto flex-1 flex-col gap-1 py-4")}
+          className="h-auto flex-1 flex-col gap-1 py-4"
           onClick={() =>
             onChange({
               locationType: "virtual",

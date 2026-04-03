@@ -64,20 +64,22 @@ export function CreateFlowProgress({
       </div>
 
       {canSkip ? (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={onSkip}
-          className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="gap-2 text-muted-foreground"
         >
           Skip to event page
           <Kbd className="hidden sm:inline-flex">
             {typeof navigator !== "undefined" &&
-            navigator.platform?.includes("Mac")
+            (navigator.userAgent?.includes("Mac") ?? false)
               ? "⌘"
               : "Ctrl"}
             +Enter
           </Kbd>
-        </button>
+        </Button>
       ) : (
         <div className="w-[140px]" />
       )}
