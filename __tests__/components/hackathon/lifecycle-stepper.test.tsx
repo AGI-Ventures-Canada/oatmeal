@@ -41,18 +41,29 @@ describe("LifecycleStepper", () => {
     cleanup()
   })
 
-  it("renders all four phase labels", () => {
+  it("renders all six phase labels", () => {
     render(<LifecycleStepper {...baseProps} />)
     expect(screen.getByText("Draft")).toBeDefined()
-    expect(screen.getByText("Go Live")).toBeDefined()
-    expect(screen.getByText("Closed for submissions")).toBeDefined()
+    expect(screen.getByText("Published")).toBeDefined()
+    expect(screen.getByText("Registration Open")).toBeDefined()
+    expect(screen.getByText("Live")).toBeDefined()
+    expect(screen.getByText("Judging")).toBeDefined()
     expect(screen.getByText("Completed")).toBeDefined()
   })
 
-  it("renders 'Go Live' phase label instead of 'Published'", () => {
-    render(<LifecycleStepper {...baseProps} />)
-    expect(screen.getByText("Go Live")).toBeDefined()
-    expect(screen.queryByText("Published")).toBeNull()
+  it("renders 'Published' as current node in published status", () => {
+    render(<LifecycleStepper {...baseProps} status="published" />)
+    expect(findPhaseNode("Published")).toBeDefined()
+  })
+
+  it("renders 'Registration Open' as current node in registration_open status", () => {
+    render(<LifecycleStepper {...baseProps} status="registration_open" />)
+    expect(findPhaseNode("Registration Open")).toBeDefined()
+  })
+
+  it("renders 'Live' as current node in active status", () => {
+    render(<LifecycleStepper {...baseProps} status="active" />)
+    expect(findPhaseNode("Live")).toBeDefined()
   })
 
   it("does not render any CTA buttons on connectors", () => {
@@ -113,24 +124,24 @@ describe("LifecycleStepper", () => {
 
     it("does not apply opacity to adjacent nodes", () => {
       render(<LifecycleStepper {...baseProps} />)
-      expect(findPhaseNode("Go Live")?.className).not.toContain("opacity")
+      expect(findPhaseNode("Published")?.className).not.toContain("opacity")
     })
 
     it("applies hover:bg-muted to actionable nodes", () => {
       render(<LifecycleStepper {...baseProps} />)
-      expect(findPhaseNode("Go Live")?.className).toContain("hover:bg-muted")
+      expect(findPhaseNode("Published")?.className).toContain("hover:bg-muted")
     })
   })
 
   describe("action wrappers (desktop — HoverCard)", () => {
-    it("wraps adjacent forward node in HoverCard trigger (draft → Go Live)", () => {
+    it("wraps adjacent forward node in HoverCard trigger (draft → Published)", () => {
       render(<LifecycleStepper {...baseProps} />)
-      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Published")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
 
     it("wraps adjacent backward node in HoverCard trigger (published → Draft)", () => {
       render(<LifecycleStepper {...baseProps} status="published" />)
-      expect(findPhaseNode("Take Offline")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
 
     it("wraps distant future node in Tooltip trigger (draft → Completed)", () => {
@@ -146,15 +157,19 @@ describe("LifecycleStepper", () => {
     it("wraps all non-current nodes for judging phase", () => {
       render(<LifecycleStepper {...baseProps} status="judging" />)
       expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
-      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Published")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Registration Open")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
       expect(findPhaseNode("Completed")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
 
     it("wraps all past nodes in HoverCard for completed phase", () => {
       render(<LifecycleStepper {...baseProps} status="completed" />)
       expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
-      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
-      expect(findPhaseNode("Closed for submissions")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Published")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Registration Open")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
+      expect(findPhaseNode("Judging")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
 
     it("does not wrap current completed node", () => {
@@ -170,14 +185,82 @@ describe("LifecycleStepper", () => {
 
     it("wraps actionable nodes in Popover trigger on mobile", () => {
       render(<LifecycleStepper {...baseProps} />)
-      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("popover-trigger")
+      expect(findPhaseNode("Published")?.getAttribute("data-slot")).toBe("popover-trigger")
     })
 
     it("wraps all past nodes in Popover for judging phase on mobile", () => {
       render(<LifecycleStepper {...baseProps} status="judging" />)
       expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("popover-trigger")
-      expect(findPhaseNode("Go Live")?.getAttribute("data-slot")).toBe("popover-trigger")
+      expect(findPhaseNode("Published")?.getAttribute("data-slot")).toBe("popover-trigger")
+      expect(findPhaseNode("Registration Open")?.getAttribute("data-slot")).toBe("popover-trigger")
+      expect(findPhaseNode("Live")?.getAttribute("data-slot")).toBe("popover-trigger")
       expect(findPhaseNode("Completed")?.getAttribute("data-slot")).toBe("popover-trigger")
+    })
+  })
+
+  describe("action content (forward transitions via mobile Popover)", () => {
+    beforeEach(() => {
+      mockIsMobile = true
+    })
+
+    function openNode(label: string) {
+      const node = findPhaseNode(label)
+      if (node) fireEvent.click(node)
+    }
+
+    it("draft → Published: Publish action", () => {
+      render(<LifecycleStepper {...baseProps} />)
+      openNode("Published")
+      expect(screen.getByText("Make the event visible on the browse page")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Publish" })).toBeDefined()
+    })
+
+    it("published → Registration Open: Open for Registration action", () => {
+      render(<LifecycleStepper {...baseProps} status="published" />)
+      openNode("Registration Open")
+      expect(screen.getByText("Allow participants to register for the hackathon")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Open Registration" })).toBeDefined()
+    })
+
+    it("registration_open → Live: Start Hackathon action", () => {
+      render(<LifecycleStepper {...baseProps} status="registration_open" />)
+      openNode("Live")
+      expect(screen.getByText("Start the hackathon and let participants begin building")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Start Hackathon" })).toBeDefined()
+    })
+
+    it("active → Judging: Start Judging action when no unassigned submissions", () => {
+      render(<LifecycleStepper {...baseProps} status="active" />)
+      openNode("Judging")
+      expect(screen.getByText("Close submissions and begin judging")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Start Judging" })).toBeDefined()
+    })
+
+    it("active → Judging: Assign Submissions action when there are unassigned submissions", () => {
+      render(
+        <LifecycleStepper
+          {...baseProps}
+          status="active"
+          judgingSetupStatus={{ judgeCount: 3, hasUnassignedSubmissions: true }}
+        />
+      )
+      openNode("Judging")
+      expect(screen.getByText("Some submissions don't have judges assigned yet")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Assign Submissions" })).toBeDefined()
+    })
+
+    it("judging → Completed: End Event action", () => {
+      render(<LifecycleStepper {...baseProps} status="judging" />)
+      openNode("Completed")
+      expect(screen.getByText("End the event and publish results")).toBeDefined()
+      expect(screen.getByRole("button", { name: "End Event" })).toBeDefined()
+    })
+
+    it("published → Draft: Revert to Draft action", () => {
+      render(<LifecycleStepper {...baseProps} status="published" />)
+      openNode("Draft")
+      expect(screen.getByText("Take the hackathon offline and hide it from the browse page")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Revert to Draft" })).toBeDefined()
     })
   })
 
