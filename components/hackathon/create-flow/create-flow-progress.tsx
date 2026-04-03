@@ -43,6 +43,7 @@ export function CreateFlowProgress({
 
       <div
         role="progressbar"
+        aria-valuemin={1}
         aria-valuenow={currentStep + 1}
         aria-valuemax={totalSteps}
         className="flex items-center gap-2"
@@ -73,10 +74,7 @@ export function CreateFlowProgress({
         >
           Skip to event page
           <Kbd className="hidden sm:inline-flex">
-            {typeof navigator !== "undefined" &&
-            (navigator.userAgent?.includes("Mac") ?? false)
-              ? "⌘"
-              : "Ctrl"}
+            {navigator.userAgent.includes("Mac") ? "⌘" : "Ctrl"}
             +Enter
           </Kbd>
         </Button>

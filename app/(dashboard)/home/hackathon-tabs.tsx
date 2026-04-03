@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Trophy, Search, Star, Check, Loader2, Scale, Users, UsersRound, FolderOpen } from "lucide-react"
+import { Trophy, Search, Star, Check, Loader2, Scale, Users, UsersRound, FolderOpen, ArrowRight, AlertCircle } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HackathonCard } from "@/components/hackathon/hackathon-card"
 import { sortByStatusPriority } from "@/lib/utils/sort-hackathons"
-import { groupOrganizedHackathons, GROUP_LABELS, GROUP_ORDER } from "@/lib/utils/organize-groups"
+import { groupOrganizedHackathons, GROUP_LABELS, GROUP_ORDER, hasUrgencySignals } from "@/lib/utils/organize-groups"
 import type { HackathonMiniStats } from "@/lib/services/organizer-dashboard"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
@@ -343,6 +343,47 @@ export function HackathonTabs({
               {organizedGroups && GROUP_ORDER.map((group) => {
                 const items = organizedGroups[group]
                 if (items.length === 0) return null
+
+                if (group === "active") {
+                  return (
+                    <div key={group} className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex size-2">
+                          <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
+                          <span className="relative inline-flex size-2 rounded-full bg-primary" />
+                        </span>
+                        <h3 className="text-sm font-semibold">{GROUP_LABELS[group]}</h3>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {items.map((h) => {
+                          const stats = statsMap.get(h.id)
+                          const urgent = hasUrgencySignals(h.id, statsMap)
+                          return (
+                            <Link
+                              key={h.id}
+                              href={`/e/${h.slug}/manage`}
+                              className="group block rounded-lg border border-primary/20 bg-primary/5 p-4 transition-colors hover:border-primary/40 hover:bg-primary/10"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="truncate font-semibold">{h.name}</h4>
+                                    {urgent && (
+                                      <AlertCircle className="size-4 shrink-0 text-destructive" />
+                                    )}
+                                  </div>
+                                  {stats && <MiniStatsRow stats={stats} />}
+                                </div>
+                                <ArrowRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                              </div>
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                }
+
                 return (
                   <div key={group}>
                     <h3 className="text-sm font-medium text-muted-foreground mb-3">{GROUP_LABELS[group]}</h3>
