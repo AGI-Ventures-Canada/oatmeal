@@ -7,7 +7,7 @@ import { getJudgingProgress, getJudgingSetupStatus, listJudgingCriteria } from "
 import { listPrizes } from "@/lib/services/prizes"
 import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
 import { getManageOverviewStats } from "@/lib/services/manage-overview"
-import { listPublishedAnnouncements } from "@/lib/services/announcements"
+import { listAnnouncements } from "@/lib/services/announcements"
 import { listScheduleItems } from "@/lib/services/schedule-items"
 import { getOrganizerActionItems } from "@/lib/utils/organizer-actions"
 import { VALID_TABS, VALID_JTABS, VALID_PTABS, VALID_ETABS, DEFAULT_TAB, resolveTab } from "@/lib/utils/manage-tabs"
@@ -64,7 +64,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     countJudgeDisplayProfiles(hackathon.id),
     listJudgingCriteria(hackathon.id),
     getManageOverviewStats(hackathon.id),
-    listPublishedAnnouncements(hackathon.id),
+    listAnnouncements(hackathon.id),
     listScheduleItems(hackathon.id),
   ])
 

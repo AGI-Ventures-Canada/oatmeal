@@ -42,7 +42,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Calendar, MapPin, Clock, Zap, FileText, MessageCircle, Share2, Mail } from "lucide-react"
+import type { AnnouncementAudience } from "@/lib/services/announcements"
 import type { HackathonStatus, HackathonPhase } from "@/lib/db/hackathon-types"
 
 type ChallengeData = {
@@ -646,6 +654,7 @@ type AnnouncementData = {
   title: string
   body: string
   priority: "normal" | "urgent"
+  audience: string
   published_at: string | null
   created_at: string
 }
@@ -694,6 +703,7 @@ function AnnouncementsSubTab({ hackathonId, hackathonStatus, hackathonPhase }: {
   const [title, setTitle] = useState("")
   const [body, setBody] = useState("")
   const [priority, setPriority] = useState<"normal" | "urgent">("normal")
+  const [audience, setAudience] = useState<AnnouncementAudience>("everyone")
   const [saving, setSaving] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
@@ -724,6 +734,7 @@ function AnnouncementsSubTab({ hackathonId, hackathonStatus, hackathonPhase }: {
     setTitle("")
     setBody("")
     setPriority("normal")
+    setAudience("everyone")
     setError(null)
     setDialogOpen(true)
   }
@@ -733,6 +744,7 @@ function AnnouncementsSubTab({ hackathonId, hackathonStatus, hackathonPhase }: {
     setTitle(suggestion.title)
     setBody(suggestion.body)
     setPriority(suggestion.priority)
+    setAudience("everyone")
     setError(null)
     setDialogOpen(true)
   }
@@ -742,6 +754,7 @@ function AnnouncementsSubTab({ hackathonId, hackathonStatus, hackathonPhase }: {
     setTitle(item.title)
     setBody(item.body)
     setPriority(item.priority)
+    setAudience((item.audience as AnnouncementAudience) || "everyone")
     setError(null)
     setDialogOpen(true)
   }
@@ -755,7 +768,7 @@ function AnnouncementsSubTab({ hackathonId, hackathonStatus, hackathonPhase }: {
         const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements/${editing.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, body, priority }),
+          body: JSON.stringify({ title, body, priority, audience }),
         })
         if (!res.ok) throw new Error("Failed to save")
         const saved = await res.json()
@@ -764,7 +777,7 @@ function AnnouncementsSubTab({ hackathonId, hackathonStatus, hackathonPhase }: {
         const createRes = await fetch(`/api/dashboard/hackathons/${hackathonId}/announcements`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, body, priority }),
+          body: JSON.stringify({ title, body, priority, audience }),
         })
         if (!createRes.ok) throw new Error("Failed to create")
         const created = await createRes.json()
@@ -986,11 +999,30 @@ function AnnouncementsSubTab({ hackathonId, hackathonStatus, hackathonPhase }: {
                 data-form-type="other"
               />
             </div>
-            <div className="flex items-center gap-4">
-              <Label>Priority</Label>
-              <div className="flex gap-2">
-                <Button type="button" size="sm" variant={priority === "normal" ? "default" : "outline"} onClick={() => setPriority("normal")}>Normal</Button>
-                <Button type="button" size="sm" variant={priority === "urgent" ? "destructive" : "outline"} onClick={() => setPriority("urgent")}>Urgent</Button>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-4">
+                <Label>Priority</Label>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant={priority === "normal" ? "default" : "outline"} onClick={() => setPriority("normal")}>Normal</Button>
+                  <Button type="button" size="sm" variant={priority === "urgent" ? "destructive" : "outline"} onClick={() => setPriority("urgent")}>Urgent</Button>
+                </div>
+              </div>
+              <div>
+                <Label>Audience</Label>
+                <Select value={audience} onValueChange={(v) => setAudience(v as AnnouncementAudience)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="everyone">Everyone</SelectItem>
+                    <SelectItem value="attendees">Attendees</SelectItem>
+                    <SelectItem value="judges">Judges</SelectItem>
+                    <SelectItem value="mentors">Mentors</SelectItem>
+                    <SelectItem value="organizers">Organizers</SelectItem>
+                    <SelectItem value="submitted">Teams who submitted</SelectItem>
+                    <SelectItem value="not_submitted">Teams without submission</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {editing ? (
