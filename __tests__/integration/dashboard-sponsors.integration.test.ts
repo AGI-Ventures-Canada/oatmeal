@@ -73,6 +73,11 @@ mock.module("@/lib/auth/principal", () => {
       }
       return principal
     },
+    isAdminEnabled: () => true,
+    requireAdmin: (principal: { kind: string }) => {
+      if (principal.kind !== "admin") throw new AuthError("Forbidden", 403)
+    },
+    requireAdminScopes: () => {},
     AuthError,
   }
 })

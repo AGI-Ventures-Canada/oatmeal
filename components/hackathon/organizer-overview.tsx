@@ -32,9 +32,11 @@ type Props = {
   scheduleItems: ScheduleItem[]
 }
 
+const severityOrder: ActionSeverity[] = ["urgent", "warning", "info"]
+
 const severityLabel: Record<ActionSeverity, { text: string; className: string }> = {
   urgent: { text: "urgent", className: "text-destructive" },
-  warning: { text: "warning", className: "text-muted-foreground" },
+  warning: { text: "warning", className: "text-chart-2" },
   info: { text: "info", className: "text-muted-foreground" },
 }
 
@@ -84,31 +86,35 @@ export function OrganizerOverview({ slug, hackathonId, stats, actionItems, annou
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
-        <div className="space-y-4">
+      <div className="grid gap-3 lg:grid-cols-4">
+        <div className="lg:col-span-3 space-y-4">
           <OverviewSchedule slug={slug} hackathonId={hackathonId} scheduleItems={scheduleItems} />
         </div>
 
         <div className="space-y-4">
           {actionItems.length > 0 ? (
             <div className="rounded-lg border p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold">Action Items</h3>
+              <div className="flex items-center justify-between border-b pb-3 mb-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Action Items</h3>
                 {urgentCount > 0 && (
-                  <span className="text-xs font-medium text-destructive">{urgentCount} urgent</span>
+                  <span className="text-xs font-medium text-destructive-foreground bg-destructive px-2 py-0.5 rounded-full">{urgentCount} urgent</span>
                 )}
               </div>
               <div className="space-y-1">
-                {actionItems.map((item) => {
+                {severityOrder.flatMap((sev) => actionItems.filter((i) => i.severity === sev)).map((item) => {
                   const severity = severityLabel[item.severity]
                   const href = buildActionHref(slug, item)
                   const row = (
-                    <span className="flex items-center gap-3 py-2">
-                      <span className="flex-1 text-sm">{item.label}</span>
-                      <span className={cn("text-xs font-medium shrink-0", severity.className)}>
+                    <span className="flex items-center py-2">
+                      <span className="flex-1 min-w-0">
+                        <span className="text-sm block">{item.label}</span>
+                        {item.sublabel && <span className="text-xs text-muted-foreground block">{item.sublabel}</span>}
+                        {item.hint && <span className="text-xs text-muted-foreground block">{item.hint}</span>}
+                      </span>
+                      <span className={cn("text-xs font-medium shrink-0 ml-3", severity.className)}>
                         {severity.text}
                       </span>
-                      {href && <ArrowRight className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+                      <ArrowRight className={cn("size-3 shrink-0 text-muted-foreground transition-all duration-200", href ? "ml-0 w-0 opacity-0 group-hover:ml-2 group-hover:w-3 group-hover:opacity-100" : "ml-0 w-0 opacity-0")} />
                     </span>
                   )
                   return href ? (

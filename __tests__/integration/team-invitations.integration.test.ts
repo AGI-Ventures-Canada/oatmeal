@@ -140,6 +140,13 @@ mock.module("@/lib/auth/principal", () => ({
       throw error
     }
   },
+  isAdminEnabled: () => true,
+  requireAdmin: (principal: { kind: string }) => {
+    const error = new Error("Forbidden")
+    ;(error as Error & { statusCode: number }).statusCode = 403
+    if (principal.kind !== "admin") throw error
+  },
+  requireAdminScopes: () => {},
   AuthError: class AuthError extends Error {
     statusCode: number
     constructor(message: string, statusCode: number) {

@@ -72,12 +72,9 @@ function formatRemaining(ms: number): string {
 }
 
 export function TimeRemainingBar(props: Props) {
-  const [mounted, setMounted] = useState(false)
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
-    setMounted(true)
-    setNow(Date.now())
     const interval = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(interval)
   }, [])
@@ -117,11 +114,10 @@ export function TimeRemainingBar(props: Props) {
       <div className="h-2 rounded-full bg-muted overflow-hidden">
         <div
           className={cn(
-            "h-full rounded-full",
-            mounted && "transition-all duration-1000",
+            "h-full rounded-full transition-all duration-1000",
             isUrgent ? "bg-destructive" : isWarning ? "bg-primary" : "bg-primary/60",
           )}
-          style={{ width: mounted ? `${progress}%` : "0%" }}
+          style={{ width: `${progress}%` }}
         />
       </div>
     </div>

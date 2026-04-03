@@ -12,16 +12,20 @@ mock.module("posthog-node", () => ({
   },
 }))
 
+const posthog = await import("@/lib/analytics/posthog")
+
 const originalKey = process.env.NEXT_PUBLIC_POSTHOG_KEY
 
 describe("Server Analytics", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     mockCapture.mockClear()
     mockIdentify.mockClear()
     mockShutdown.mockClear()
+    await posthog.shutdownAnalytics()
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    await posthog.shutdownAnalytics()
     if (originalKey === undefined) {
       delete process.env.NEXT_PUBLIC_POSTHOG_KEY
     } else {
@@ -29,11 +33,10 @@ describe("Server Analytics", () => {
     }
   })
 
-  it("trackEvent sends event to PostHog when key is set", async () => {
+  it("trackEvent sends event to PostHog when key is set", () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key"
 
-    const { trackEvent } = await import("@/lib/analytics/posthog")
-    trackEvent("user-123", "hackathon.created", { hackathonId: "h1" })
+    posthog.trackEvent("user-123", "hackathon.created", { hackathonId: "h1" })
 
     expect(mockCapture).toHaveBeenCalledWith({
       distinctId: "user-123",
@@ -42,11 +45,10 @@ describe("Server Analytics", () => {
     })
   })
 
-  it("identifyUser sends identify to PostHog", async () => {
+  it("identifyUser sends identify to PostHog", () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key"
 
-    const { identifyUser } = await import("@/lib/analytics/posthog")
-    identifyUser("user-123", { email: "test@test.com" })
+    posthog.identifyUser("user-123", { email: "test@test.com" })
 
     expect(mockIdentify).toHaveBeenCalledWith({
       distinctId: "user-123",
@@ -57,8 +59,8 @@ describe("Server Analytics", () => {
   it("shutdownAnalytics flushes the client", async () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key"
 
-    const { shutdownAnalytics } = await import("@/lib/analytics/posthog")
-    await shutdownAnalytics()
+    posthog.trackEvent("user-123", "test", {})
+    await posthog.shutdownAnalytics()
 
     expect(mockShutdown).toHaveBeenCalled()
   })

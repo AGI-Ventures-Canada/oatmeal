@@ -1,6 +1,9 @@
 import { mock } from "bun:test"
 
-export const clerkState = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const g = globalThis as any
+
+export const clerkState = g.__clerkState ?? {
   isSignedIn: true,
   userId: "user_123",
   user: {
@@ -17,9 +20,9 @@ export const clerkState = {
   setActive: mock(() => Promise.resolve()),
   openUserProfile: mock(() => {}),
   signOut: mock(() => Promise.resolve()),
-  theme: "light",
-  setTheme: mock((_t: string) => {}),
 }
+
+if (!g.__clerkState) g.__clerkState = clerkState
 
 export function resetClerkState() {
   clerkState.isSignedIn = true
