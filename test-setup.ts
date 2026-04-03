@@ -1,4 +1,5 @@
 import { mock } from "bun:test"
+import { createElement } from "react"
 import { Window } from "happy-dom"
 import "./__tests__/lib/supabase-mock"
 
@@ -80,8 +81,6 @@ mock.module("@clerk/nextjs/errors", () => ({
 
 mock.module("next/link", () => ({
   default: ({ children, href, ...props }: { children: unknown; href: string; [key: string]: unknown }) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { createElement } = require("react")
     return createElement("a", { href, ...props }, children)
   },
 }))
