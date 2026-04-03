@@ -326,6 +326,39 @@ export const dashboardJudgingRoutes = new Elysia()
       const client = await clerkClient()
 
       if (typedBody.clerkUserId) {
+        const hackathon = result.hackathon
+
+        let judgeEmail: string | undefined
+        try {
+          const judgeUser = await client.users.getUser(typedBody.clerkUserId)
+          judgeEmail = judgeUser.primaryEmailAddress?.emailAddress
+        } catch {
+          return new Response(JSON.stringify({ error: "Failed to look up judge info", code: "lookup_failed" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          })
+        }
+
+        // No email → skip guard; addJudge still prevents duplicate participants
+        if (judgeEmail) {
+          const { hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
+          let isPending: boolean
+          try {
+            isPending = await hasPendingJudgeEntry(params.id, judgeEmail)
+          } catch {
+            return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            })
+          }
+          if (isPending) {
+            return new Response(JSON.stringify({ error: "This judge already has a pending invitation or notification", code: "already_pending" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            })
+          }
+        }
+
         const { addJudge } = await import("@/lib/services/judging")
         const addResult = await addJudge(params.id, typedBody.clerkUserId)
 
@@ -336,12 +369,10 @@ export const dashboardJudgingRoutes = new Elysia()
           })
         }
 
-        const hackathon = result.hackathon
-        if (hackathon.status !== "draft") {
+        let notificationFailed = false
+        if (judgeEmail) {
           try {
-            const judgeUser = await client.users.getUser(typedBody.clerkUserId)
-            const judgeEmail = judgeUser.primaryEmailAddress?.emailAddress
-            if (judgeEmail) {
+            if (hackathon.status !== "draft") {
               const addedByName = await resolveAdderName(principal, client)
               const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
               sendJudgeAddedNotification({
@@ -350,9 +381,14 @@ export const dashboardJudgingRoutes = new Elysia()
                 hackathonSlug: hackathon.slug,
                 addedByName,
               }).catch(console.error)
+            } else {
+              const addedByName = await resolveAdderName(principal, client)
+              const { createJudgePendingNotification } = await import("@/lib/services/judge-invitations")
+              await createJudgePendingNotification(hackathon.id, addResult.participant.id, judgeEmail, addedByName)
             }
-          } catch {
-            // non-blocking — judge was still added
+          } catch (err) {
+            console.error(`Failed to handle judge notification for ${judgeEmail}:`, err)
+            notificationFailed = true
           }
         }
 
@@ -367,6 +403,7 @@ export const dashboardJudgingRoutes = new Elysia()
         return {
           participantId: addResult.participant.id,
           clerkUserId: addResult.participant.clerkUserId,
+          ...(notificationFailed && { notificationFailed: true }),
         }
       }
 
@@ -376,6 +413,23 @@ export const dashboardJudgingRoutes = new Elysia()
         try {
           const users = await client.users.getUserList({ emailAddress: [email] })
           if (users.data.length > 0) {
+            const { hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
+            let isPending: boolean
+            try {
+              isPending = await hasPendingJudgeEntry(params.id, email)
+            } catch {
+              return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), {
+                status: 500,
+                headers: { "Content-Type": "application/json" },
+              })
+            }
+            if (isPending) {
+              return new Response(JSON.stringify({ error: "This judge already has a pending invitation or notification", code: "already_pending" }), {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+              })
+            }
+
             const { addJudge } = await import("@/lib/services/judging")
             const addResult = await addJudge(params.id, users.data[0].id)
 
@@ -387,9 +441,10 @@ export const dashboardJudgingRoutes = new Elysia()
             }
 
             const hackathon = result.hackathon
-            if (hackathon.status !== "draft") {
-              try {
-                const addedByName = await resolveAdderName(principal, client)
+            let notificationFailed = false
+            try {
+              const addedByName = await resolveAdderName(principal, client)
+              if (hackathon.status !== "draft") {
                 const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
                 sendJudgeAddedNotification({
                   to: email,
@@ -397,9 +452,16 @@ export const dashboardJudgingRoutes = new Elysia()
                   hackathonSlug: hackathon.slug,
                   addedByName,
                 }).catch(console.error)
-              } catch {
-                // non-blocking — judge was still added
+              } else {
+                const { createJudgePendingNotification } = await import("@/lib/services/judge-invitations")
+                try {
+                  await createJudgePendingNotification(hackathon.id, addResult.participant.id, email, addedByName)
+                } catch {
+                  notificationFailed = true
+                }
               }
+            } catch {
+              notificationFailed = true
             }
 
             await logAudit({
@@ -413,6 +475,7 @@ export const dashboardJudgingRoutes = new Elysia()
             return {
               participantId: addResult.participant.id,
               clerkUserId: addResult.participant.clerkUserId,
+              ...(notificationFailed && { notificationFailed: true }),
             }
           }
         } catch {

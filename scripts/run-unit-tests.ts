@@ -18,6 +18,10 @@ const groups = [
     name: "mobile-header (isolated)",
     args: ["__tests__/components/mobile-header.test.tsx"],
   },
+  {
+    name: "workflows",
+    args: ["__tests__/workflows"],
+  },
 ]
 
 for (const group of groups) {

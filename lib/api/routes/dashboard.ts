@@ -1149,7 +1149,55 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
         const inviterName = await resolveAdderName(principal)
         const { sendPendingJudgeInvitationEmails } = await import("@/lib/services/judge-invitations")
-        sendPendingJudgeInvitationEmails(hackathon.id, hackathon.name, inviterName).catch(console.error)
+        sendPendingJudgeInvitationEmails(hackathon.id, hackathon.name, inviterName)
+          .then(({ sent, total, failedEmails }) => {
+            if (total === 0) return
+            if (failedEmails.length > 0) {
+              console.error(
+                `Judge invitation emails: ${sent}/${total} sent for hackathon ${hackathon.id}. Failed: ${failedEmails.join(", ")}. These invitations remain with emailed_at IS NULL and will not be automatically retried.`
+              )
+            }
+          })
+          .catch((err) => {
+            console.error(`Failed to send pending judge invitation emails for hackathon ${hackathon.id}:`, err)
+          })
+        const { start } = await import("workflow/api")
+        const { sendJudgeNotificationsWorkflow } = await import(
+          "@/lib/workflows/judge-notifications"
+        )
+        start(sendJudgeNotificationsWorkflow, [
+          {
+            hackathonId: hackathon.id,
+            hackathonName: hackathon.name,
+            hackathonSlug: hackathon.slug,
+          },
+        ]).catch(async (err) => {
+          console.error("Failed to start judge notifications workflow, falling back to direct send:", err)
+          const { fetchPendingNotifications, sendJudgeNotification } = await import(
+            "@/lib/workflows/judge-notifications/steps"
+          )
+          const notifications = await fetchPendingNotifications(hackathon.id).catch((fetchErr) => {
+            console.error(`Judge notification fallback: failed to fetch pending notifications for hackathon ${hackathon.id}:`, fetchErr)
+            return [] as Awaited<ReturnType<typeof fetchPendingNotifications>>
+          })
+          const failedIds: string[] = []
+          for (const n of notifications) {
+            try {
+              await sendJudgeNotification({
+                notification: n,
+                hackathonName: hackathon.name,
+                hackathonSlug: hackathon.slug,
+              })
+            } catch {
+              failedIds.push(n.id)
+            }
+          }
+          if (failedIds.length > 0) {
+            console.error(
+              `Judge notification fallback: ${failedIds.length} notification(s) failed to send and remain stuck (ids: ${failedIds.join(", ")}). These will not be automatically retried.`
+            )
+          }
+        })
       }
 
       return {
@@ -2002,7 +2050,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       const { createTeamInvitation, getTeamWithHackathon } = await import(
         "@/lib/services/team-invitations"
       )
-      const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
 
       const result = await createTeamInvitation({
         teamId: params.teamId,
@@ -2018,19 +2065,24 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         })
       }
 
-      let emailSent = false
       const teamInfo = await getTeamWithHackathon(params.teamId)
 
       if (teamInfo) {
-        const emailResult = await sendTeamInvitationEmail({
+        const emailInput = {
           to: body.email,
           teamName: teamInfo.name,
           hackathonName: teamInfo.hackathon.name,
           inviterName: body.inviterName || "A team captain",
           inviteToken: result.invitation.token,
           expiresAt: result.invitation.expires_at,
+        }
+        const { start } = await import("workflow/api")
+        const { sendTeamInvitationWorkflow } = await import("@/lib/workflows/team-invitations")
+        start(sendTeamInvitationWorkflow, [emailInput]).catch(async (err) => {
+          console.error("Failed to start team invitation workflow, falling back to direct send:", err)
+          const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
+          sendTeamInvitationEmail(emailInput).catch(console.error)
         })
-        emailSent = emailResult.success
       }
 
       await logAudit({
@@ -2045,7 +2097,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         id: result.invitation.id,
         email: result.invitation.email,
         expiresAt: result.invitation.expires_at,
-        emailSent,
       }
     },
     {

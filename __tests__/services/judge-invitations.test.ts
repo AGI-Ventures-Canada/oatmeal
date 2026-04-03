@@ -1,15 +1,18 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test"
-import type { JudgeInvitation } from "@/lib/db/hackathon-types"
+import type { JudgeInvitation, JudgePendingNotification } from "@/lib/db/hackathon-types"
 import {
   createChainableMock,
   resetSupabaseMocks,
   setMockFromImplementation,
+  mockMultiTableQuery,
 } from "../lib/supabase-mock"
 
 const mockSendJudgeInvitationEmail = mock(() => Promise.resolve({ success: true }))
+const mockSendJudgeAddedNotification = mock(() => Promise.resolve({ success: true }))
 
 mock.module("@/lib/email/judge-invitations", () => ({
   sendJudgeInvitationEmail: mockSendJudgeInvitationEmail,
+  sendJudgeAddedNotification: mockSendJudgeAddedNotification,
 }))
 
 const {
@@ -19,6 +22,9 @@ const {
   cancelJudgeInvitation,
   listJudgeInvitations,
   sendPendingJudgeInvitationEmails,
+  createJudgePendingNotification,
+  hasPendingJudgeInvitation,
+  hasPendingJudgeEntry,
 } = await import("@/lib/services/judge-invitations")
 
 const mockInvitation: JudgeInvitation = {
@@ -315,6 +321,155 @@ describe("Judge Invitations Service", () => {
 
       expect(result.sent).toBe(0)
       expect(mockSendJudgeInvitationEmail).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("createJudgePendingNotification", () => {
+    it("upserts a pending notification record", async () => {
+      const chain = createChainableMock({ data: null, error: null })
+      setMockFromImplementation(() => chain)
+
+      await createJudgePendingNotification("h1", "participant1", "judge@example.com", "Organizer Name")
+
+      expect(chain.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          hackathon_id: "h1",
+          participant_id: "participant1",
+          email: "judge@example.com",
+          added_by_name: "Organizer Name",
+          sent_at: null,
+        }),
+        expect.objectContaining({ onConflict: "hackathon_id,participant_id" })
+      )
+    })
+
+    it("normalizes email to lowercase", async () => {
+      const chain = createChainableMock({ data: null, error: null })
+      setMockFromImplementation(() => chain)
+
+      await createJudgePendingNotification("h1", "participant1", "JUDGE@EXAMPLE.COM", "Organizer")
+
+      expect(chain.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ email: "judge@example.com" }),
+        expect.anything()
+      )
+    })
+
+    it("throws when upsert fails", async () => {
+      const chain = createChainableMock({
+        data: null,
+        error: { message: "unique constraint violation", code: "23505" },
+      })
+      setMockFromImplementation(() => chain)
+
+      await expect(
+        createJudgePendingNotification("h1", "participant1", "judge@example.com", "Organizer")
+      ).rejects.toThrow("Failed to create judge pending notification: unique constraint violation")
+    })
+  })
+
+  describe("hasPendingJudgeInvitation", () => {
+    it("returns true when a pending invitation exists", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: { id: "inv1" }, error: null })
+      )
+
+      const result = await hasPendingJudgeInvitation("h1", "judge@example.com")
+
+      expect(result).toBe(true)
+    })
+
+    it("returns false when no pending invitation exists", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: null, error: null })
+      )
+
+      const result = await hasPendingJudgeInvitation("h1", "judge@example.com")
+
+      expect(result).toBe(false)
+    })
+
+    it("normalizes email to lowercase", async () => {
+      const chain = createChainableMock({ data: null, error: null })
+      setMockFromImplementation(() => chain)
+
+      await hasPendingJudgeInvitation("h1", "JUDGE@EXAMPLE.COM")
+
+      expect(chain.eq).toHaveBeenCalledWith("email", "judge@example.com")
+    })
+
+    it("throws on DB error", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: null, error: { message: "connection failed" } })
+      )
+
+      await expect(hasPendingJudgeInvitation("h1", "judge@example.com")).rejects.toThrow(
+        "Failed to check pending invitation: connection failed"
+      )
+    })
+  })
+
+  describe("hasPendingJudgeEntry", () => {
+    it("returns true when a pending invitation exists", async () => {
+      mockMultiTableQuery({
+        judge_invitations: { data: { id: "inv1" }, error: null },
+        judge_pending_notifications: { data: null, error: null },
+      })
+
+      const result = await hasPendingJudgeEntry("h1", "judge@example.com")
+      expect(result).toBe(true)
+    })
+
+    it("returns true when a pending notification exists", async () => {
+      mockMultiTableQuery({
+        judge_invitations: { data: null, error: null },
+        judge_pending_notifications: { data: { id: "notif1" }, error: null },
+      })
+
+      const result = await hasPendingJudgeEntry("h1", "judge@example.com")
+      expect(result).toBe(true)
+    })
+
+    it("returns true when both exist", async () => {
+      mockMultiTableQuery({
+        judge_invitations: { data: { id: "inv1" }, error: null },
+        judge_pending_notifications: { data: { id: "notif1" }, error: null },
+      })
+
+      const result = await hasPendingJudgeEntry("h1", "judge@example.com")
+      expect(result).toBe(true)
+    })
+
+    it("returns false when neither exists", async () => {
+      mockMultiTableQuery({
+        judge_invitations: { data: null, error: null },
+        judge_pending_notifications: { data: null, error: null },
+      })
+
+      const result = await hasPendingJudgeEntry("h1", "judge@example.com")
+      expect(result).toBe(false)
+    })
+
+    it("throws on invitation DB error", async () => {
+      mockMultiTableQuery({
+        judge_invitations: { data: null, error: { message: "connection failed" } },
+        judge_pending_notifications: { data: null, error: null },
+      })
+
+      await expect(hasPendingJudgeEntry("h1", "judge@example.com")).rejects.toThrow(
+        "Failed to check pending invitation: connection failed"
+      )
+    })
+
+    it("throws on notification DB error", async () => {
+      mockMultiTableQuery({
+        judge_invitations: { data: null, error: null },
+        judge_pending_notifications: { data: null, error: { message: "connection failed" } },
+      })
+
+      await expect(hasPendingJudgeEntry("h1", "judge@example.com")).rejects.toThrow(
+        "Failed to check pending notification: connection failed"
+      )
     })
   })
 

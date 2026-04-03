@@ -1,5 +1,5 @@
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { JudgeInvitation } from "@/lib/db/hackathon-types"
+import type { JudgeInvitation, JudgePendingNotification } from "@/lib/db/hackathon-types"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { randomBytes } from "crypto"
 import { checkRoleConflict } from "@/lib/services/role-conflict"
@@ -217,7 +217,7 @@ export async function sendPendingJudgeInvitationEmails(
   hackathonId: string,
   hackathonName: string,
   inviterName: string
-): Promise<{ sent: number }> {
+): Promise<{ sent: number; total: number; failedEmails: string[] }> {
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data: pending } = await client
@@ -227,7 +227,7 @@ export async function sendPendingJudgeInvitationEmails(
     .eq("status", "pending")
     .is("emailed_at", null)
 
-  if (!pending || pending.length === 0) return { sent: 0 }
+  if (!pending || pending.length === 0) return { sent: 0, total: 0, failedEmails: [] }
 
   const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
 
@@ -254,7 +254,72 @@ export async function sendPendingJudgeInvitationEmails(
     (r) => r.status === "fulfilled" && r.value.success
   ).length
 
-  return { sent }
+  const failedEmails = (pending as JudgeInvitation[])
+    .filter((_, i) => results[i].status === "rejected" || (results[i].status === "fulfilled" && !(results[i] as PromiseFulfilledResult<{ success: boolean }>).value.success))
+    .map((inv) => inv.email)
+
+  return { sent, total: pending.length, failedEmails }
+}
+
+export async function hasPendingJudgeInvitation(hackathonId: string, email: string): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data, error } = await client
+    .from("judge_invitations")
+    .select("id")
+    .eq("hackathon_id", hackathonId)
+    .eq("email", email.toLowerCase())
+    .eq("status", "pending")
+    .maybeSingle()
+
+  if (error) throw new Error(`Failed to check pending invitation: ${error.message}`)
+
+  return data !== null
+}
+
+export async function hasPendingJudgeEntry(hackathonId: string, email: string): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const [invitationResult, notificationResult] = await Promise.allSettled([
+    hasPendingJudgeInvitation(hackathonId, email),
+    client
+      .from("judge_pending_notifications")
+      .select("id")
+      .eq("hackathon_id", hackathonId)
+      .eq("email", email.toLowerCase())
+      .is("sent_at", null)
+      .maybeSingle(),
+  ])
+
+  if (invitationResult.status === "rejected") throw invitationResult.reason
+  if (notificationResult.status === "rejected") throw notificationResult.reason
+  if (notificationResult.value.error) throw new Error(`Failed to check pending notification: ${notificationResult.value.error.message}`)
+
+  return invitationResult.value || notificationResult.value.data !== null
+}
+
+export async function createJudgePendingNotification(
+  hackathonId: string,
+  participantId: string,
+  email: string,
+  addedByName: string
+): Promise<void> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error } = await client.from("judge_pending_notifications").upsert(
+    {
+      hackathon_id: hackathonId,
+      participant_id: participantId,
+      email: email.toLowerCase(),
+      added_by_name: addedByName,
+      sent_at: null,
+    },
+    { onConflict: "hackathon_id,participant_id" }
+  )
+
+  if (error) {
+    throw new Error(`Failed to create judge pending notification: ${error.message}`)
+  }
 }
 
 export async function listJudgeInvitations(

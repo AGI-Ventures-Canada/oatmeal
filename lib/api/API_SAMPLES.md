@@ -1345,7 +1345,7 @@ curl -X POST "https://your-domain.com/api/dashboard/teams/{teamId}/invitations" 
 
 **Response:**
 ```json
-{ "id": "uuid", "email": "teammate@example.com", "expiresAt": "2026-02-20T00:00:00Z", "emailSent": true }
+{ "id": "uuid", "email": "teammate@example.com", "expiresAt": "2026-02-20T00:00:00Z" }
 ```
 
 #### GET /api/dashboard/teams/:teamId/invitations
