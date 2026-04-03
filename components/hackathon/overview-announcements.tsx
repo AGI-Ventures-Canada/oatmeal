@@ -67,6 +67,15 @@ export function OverviewAnnouncements({ slug, hackathonId, announcements }: Prop
     setError(null)
   }
 
+  const canSubmit = title.trim() && body.trim() && (publishMode !== "schedule" || scheduledAt) && !saving
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && canSubmit) {
+      e.preventDefault()
+      handleSubmit()
+    }
+  }
+
   async function handleSubmit() {
     if (!title.trim() || !body.trim()) return
     if (publishMode === "schedule" && !scheduledAt) return
@@ -108,8 +117,6 @@ export function OverviewAnnouncements({ slug, hackathonId, announcements }: Prop
     if (!a.audience || a.audience === "everyone") return null
     return AUDIENCE_OPTIONS.find((o) => o.value === a.audience)?.label
   }
-
-  const canSubmit = title.trim() && body.trim() && (publishMode !== "schedule" || scheduledAt) && !saving
 
   return (
     <div className="rounded-lg border p-4">
@@ -174,7 +181,7 @@ export function OverviewAnnouncements({ slug, hackathonId, announcements }: Prop
           <DialogHeader>
             <DialogTitle>New Announcement</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <form autoComplete="off" onSubmit={(e) => { e.preventDefault(); handleSubmit() }} onKeyDown={handleKeyDown} className="space-y-4">
             <div>
               <Label>Title</Label>
               <Input
@@ -243,12 +250,12 @@ export function OverviewAnnouncements({ slug, hackathonId, announcements }: Prop
               )}
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full">
+            <Button type="submit" disabled={!canSubmit} className="w-full">
               {publishMode === "now" && <><Send className="size-4 mr-2" />{saving ? "Publishing..." : "Publish Now"}</>}
               {publishMode === "schedule" && <><Clock className="size-4 mr-2" />{saving ? "Scheduling..." : "Schedule"}</>}
               {publishMode === "draft" && <>{saving ? "Saving..." : "Save Draft"}</>}
             </Button>
-          </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

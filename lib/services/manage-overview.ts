@@ -18,6 +18,11 @@ export async function getManageOverviewStats(hackathonId: string): Promise<Manag
     client.from("hackathons").select("challenge_released_at").eq("id", hackathonId).single(),
   ])
 
+  if (participantResult.error) console.error("Failed to count participants:", participantResult.error)
+  if (teamResult.error) console.error("Failed to count teams:", teamResult.error)
+  if (mentorOpenResult.error) console.error("Failed to count mentor requests:", mentorOpenResult.error)
+  if (hackathonResult.error) console.error("Failed to fetch hackathon:", hackathonResult.error)
+
   return {
     participantCount: participantResult.count ?? 0,
     teamCount: teamResult.count ?? 0,

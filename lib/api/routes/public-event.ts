@@ -110,7 +110,6 @@ export const publicEventRoutes = new Elysia({ prefix: "/public" })
     if (!ok) { set.status = 400; return { error: "Failed to resolve request" } }
     return { success: true }
   }, { detail: { summary: "Resolve mentor request" } })
-  // --- Winners ---
   .get("/hackathons/:slug/announcements", async ({ params, set }) => {
     const { error, hackathon } = await resolveHackathonBySlug(params.slug, set)
     if (error) return { error }

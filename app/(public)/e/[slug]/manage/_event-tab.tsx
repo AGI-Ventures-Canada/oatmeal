@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toLocalDatetime } from "@/lib/utils/datetime"
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TabsUrlSync } from "./_tabs-url-sync"
 import { Button } from "@/components/ui/button"
@@ -1026,13 +1027,6 @@ type ScheduleItemData = {
   sort_order: number
 }
 
-function toLocalDatetime(iso: string): string {
-  const d = new Date(iso)
-  const offset = d.getTimezoneOffset()
-  const local = new Date(d.getTime() - offset * 60 * 1000)
-  return local.toISOString().slice(0, 16)
-}
-
 function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -1079,8 +1073,8 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
     setEditing(item)
     setTitle(item.title)
     setDescription(item.description ?? "")
-    setStartsAt(toLocalDatetime(item.starts_at))
-    setEndsAt(item.ends_at ? toLocalDatetime(item.ends_at) : "")
+    setStartsAt(toLocalDatetime(new Date(item.starts_at)))
+    setEndsAt(item.ends_at ? toLocalDatetime(new Date(item.ends_at)) : "")
     setLocation(item.location ?? "")
     setError(null)
     setDialogOpen(true)

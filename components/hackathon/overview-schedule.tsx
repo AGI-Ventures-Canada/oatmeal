@@ -105,6 +105,13 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
     setActiveDuration(minutes)
   }
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && title.trim() && startsAt && !saving) {
+      e.preventDefault()
+      handleAdd()
+    }
+  }
+
   async function handleAdd() {
     if (!title.trim() || !startsAt) return
     setSaving(true)
@@ -207,7 +214,7 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
           <DialogHeader>
             <DialogTitle>Add Schedule Item</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <form autoComplete="off" onSubmit={(e) => { e.preventDefault(); handleAdd() }} onKeyDown={handleKeyDown} className="space-y-4">
             <div>
               <Label>Title</Label>
               <Input
@@ -303,10 +310,10 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button onClick={handleAdd} disabled={!title.trim() || !startsAt || saving} className="w-full">
+            <Button type="submit" disabled={!title.trim() || !startsAt || saving} className="w-full">
               {saving ? "Adding..." : "Add"}
             </Button>
-          </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
