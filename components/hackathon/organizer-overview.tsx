@@ -66,6 +66,7 @@ export function OrganizerOverview({ slug, hackathonId, stats, actionItems, annou
     ? `${Math.round((stats.judgingProgress.completedAssignments / stats.judgingProgress.totalAssignments) * 100)}%`
     : "—"
 
+  const sortedActionItems = [...actionItems].sort((a, b) => severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity))
   const urgentCount = actionItems.filter((i) => i.severity === "urgent").length
 
   return (
@@ -101,7 +102,7 @@ export function OrganizerOverview({ slug, hackathonId, stats, actionItems, annou
                 )}
               </div>
               <div className="space-y-1">
-                {[...actionItems].sort((a, b) => severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity)).map((item) => {
+                {sortedActionItems.map((item) => {
                   const severity = severityLabel[item.severity]
                   const href = buildActionHref(slug, item)
                   const row = (

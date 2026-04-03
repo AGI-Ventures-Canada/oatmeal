@@ -75,8 +75,10 @@ export function TimeRemainingBar(props: Props) {
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 60_000)
-    return () => clearInterval(interval)
+    const sync = () => setNow(Date.now())
+    const frame = requestAnimationFrame(sync)
+    const interval = setInterval(sync, 60_000)
+    return () => { cancelAnimationFrame(frame); clearInterval(interval) }
   }, [])
 
   const milestone = getMilestone(props)
