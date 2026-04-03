@@ -8,6 +8,7 @@ import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/servi
 import { dashboardJudgingRoutes } from "./dashboard-judging"
 import { dashboardResultsRoutes } from "./dashboard-results"
 import { dashboardJudgeDisplayRoutes } from "./dashboard-judge-display"
+import { dashboardPostEventRoutes } from "./dashboard-post-event"
 import { getEffectiveStatus } from "@/lib/utils/timeline"
 import type { Scope } from "@/lib/auth/types"
 import { ALL_SCOPES } from "@/lib/auth/types"
@@ -2253,3 +2254,4 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .use(dashboardJudgingRoutes)
   .use(dashboardResultsRoutes)
   .use(dashboardJudgeDisplayRoutes)
+  .use(dashboardPostEventRoutes)

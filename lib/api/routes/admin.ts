@@ -372,7 +372,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       let result: Awaited<ReturnType<typeof runScenario>>
       try {
         const orgId = principal.kind === "admin" ? principal.orgId : null
-        result = await runScenario(params.name, body?.tenant_id || undefined, orgId)
+        result = await runScenario(params.name, body?.tenant_id || undefined, orgId, body?.options || undefined)
       } catch (err) {
         throw new AuthError(err instanceof Error ? err.message : "Failed to run scenario", 400)
       }
@@ -394,11 +394,12 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       body: t.Optional(
         t.Object({
           tenant_id: t.Optional(t.String()),
+          options: t.Optional(t.Record(t.String(), t.Boolean())),
         })
       ),
       detail: {
         summary: "Run test scenario",
-        description: "Run a test scenario to seed the database with sample data.",
+        description: "Run a test scenario to seed the database with sample data. Pass options to customize seeding (e.g., criteria, preJudge).",
       },
     }
   )
