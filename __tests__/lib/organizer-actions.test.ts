@@ -97,7 +97,6 @@ describe("getOrganizerActionItems", () => {
       const item = items.find((i) => i.id === "no-registrations")
 
       expect(item).toBeDefined()
-      expect(item?.sublabel).toBeUndefined()
       expect(item?.hint).toBe("Share the event link or invite captains by email")
       expect(item?.tab).toBe("teams")
     })

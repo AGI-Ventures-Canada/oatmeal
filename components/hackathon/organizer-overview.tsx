@@ -108,7 +108,6 @@ export function OrganizerOverview({ slug, hackathonId, stats, actionItems, annou
                     <span className="flex items-center py-2">
                       <span className="flex-1 min-w-0">
                         <span className="text-sm block">{item.label}</span>
-                        {item.sublabel && <span className="text-xs text-muted-foreground block">{item.sublabel}</span>}
                         {item.hint && <span className="text-xs text-muted-foreground block">{item.hint}</span>}
                       </span>
                       <span className={cn("text-xs font-medium shrink-0 ml-3", severity.className)}>

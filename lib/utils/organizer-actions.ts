@@ -5,7 +5,6 @@ export type ActionSeverity = "urgent" | "warning" | "info"
 export type ActionItem = {
   id: string
   label: string
-  sublabel?: string
   hint?: string
   severity: ActionSeverity
   tab?: string
