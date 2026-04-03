@@ -1,9 +1,21 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect, useRef, useMemo } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
-import { Trophy, Search, Star, Check, Loader2, Scale, Users, UsersRound, FolderOpen, ArrowRight, AlertCircle } from "lucide-react"
+import { useState, useMemo } from "react"
+import {
+  Trophy,
+  Search,
+  Star,
+  Check,
+  Scale,
+  Users,
+  UsersRound,
+  FolderOpen,
+  ArrowRight,
+  AlertCircle,
+  ChevronDown,
+  Plus,
+} from "lucide-react"
 import {
   Card,
   CardContent,
@@ -13,10 +25,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HackathonCard } from "@/components/hackathon/hackathon-card"
-import { sortByStatusPriority } from "@/lib/utils/sort-hackathons"
-import { groupOrganizedHackathons, GROUP_LABELS, GROUP_ORDER, hasUrgencySignals } from "@/lib/utils/organize-groups"
+import { groupOrganizedHackathons, hasUrgencySignals } from "@/lib/utils/organize-groups"
 import type { HackathonMiniStats } from "@/lib/services/organizer-dashboard"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
@@ -43,44 +53,10 @@ type Props = {
   organizedStats?: Record<string, HackathonMiniStats>
 }
 
-type ApiHackathon = {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  status: string
-  startsAt: string | null
-  endsAt: string | null
-  registrationOpensAt: string | null
-  registrationClosesAt: string | null
-  role?: string
-}
-
-function fromApi(h: ApiHackathon): Hackathon {
-  return {
-    id: h.id,
-    slug: h.slug,
-    name: h.name,
-    description: h.description,
-    status: h.status as HackathonStatus,
-    registration_opens_at: h.registrationOpensAt,
-    registration_closes_at: h.registrationClosesAt,
-    starts_at: h.startsAt,
-    ends_at: h.endsAt,
-  }
-}
-
-const API_PATHS: Record<string, string> = {
-  participating: "/api/dashboard/hackathons/participating",
-  organized: "/api/dashboard/hackathons",
-  sponsored: "/api/dashboard/hackathons/sponsored",
-  judging: "/api/dashboard/hackathons/judging",
-}
-
 function MiniStatsRow({ stats }: { stats: HackathonMiniStats }) {
   const judgingPct = stats.judgingTotal > 0 ? Math.round((stats.judgingComplete / stats.judgingTotal) * 100) : null
   return (
-    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
       <span className="flex items-center gap-1">
         <Users className="size-3" />
         {stats.participantCount}
@@ -103,6 +79,105 @@ function MiniStatsRow({ stats }: { stats: HackathonMiniStats }) {
   )
 }
 
+function matchesQuery(h: Hackathon, q: string): boolean {
+  const lower = q.toLowerCase()
+  return (
+    h.name.toLowerCase().includes(lower) ||
+    (h.description?.toLowerCase().includes(lower) ?? false)
+  )
+}
+
+function ActiveBanner({
+  hackathons,
+  statsMap,
+}: {
+  hackathons: Hackathon[]
+  statsMap: Map<string, HackathonMiniStats>
+}) {
+  if (hackathons.length === 0) return null
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="relative flex size-2">
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
+          <span className="relative inline-flex size-2 rounded-full bg-primary" />
+        </span>
+        <h2 className="text-sm font-semibold">Needs attention</h2>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {hackathons.map((h) => {
+          const stats = statsMap.get(h.id)
+          const urgent = hasUrgencySignals(h.id, statsMap)
+          return (
+            <Link
+              key={h.id}
+              href={`/e/${h.slug}/manage`}
+              className="group flex items-start justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 transition-colors hover:border-primary/40 hover:bg-primary/10"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="truncate font-semibold">{h.name}</h3>
+                  {urgent && (
+                    <AlertCircle className="size-4 shrink-0 text-destructive" />
+                  )}
+                </div>
+                {stats && <MiniStatsRow stats={stats} />}
+              </div>
+              <ArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+            </Link>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function HackathonSection({
+  title,
+  hackathons,
+  emptyMessage,
+  renderCard,
+  defaultCollapsed = false,
+}: {
+  title: string
+  hackathons: Hackathon[]
+  emptyMessage?: string
+  renderCard: (h: Hackathon) => React.ReactNode
+  defaultCollapsed?: boolean
+}) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
+
+  if (hackathons.length === 0 && !emptyMessage) return null
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setCollapsed(!collapsed)}
+        className="mb-3 flex w-full items-center gap-2 text-left"
+      >
+        <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
+        <span className="text-xs text-muted-foreground tabular-nums">{hackathons.length}</span>
+        <ChevronDown
+          className={`ml-auto size-4 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`}
+        />
+      </button>
+      {!collapsed && (
+        hackathons.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {hackathons.map((h) => (
+              <div key={h.id}>{renderCard(h)}</div>
+            ))}
+          </div>
+        )
+      )}
+    </div>
+  )
+}
+
 export function HackathonTabs({
   myHackathons,
   organizedHackathons,
@@ -112,108 +187,87 @@ export function HackathonTabs({
   organizedStats,
 }: Props) {
   const submittedSet = new Set(submittedHackathonIds)
-  const searchParams = useSearchParams()
-  const router = useRouter()
-
-  const tabFromUrl = searchParams.get("tab")
-  const validTabs = ["participating", "organized", "sponsored", "judging"]
-
-  const defaultTab = organizedHackathons.length > 0
-    ? "organized"
-    : judgingHackathons.length > 0
-      ? "judging"
-      : sponsoredHackathons.length > 0
-        ? "sponsored"
-        : "participating"
-
-  const activeTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : defaultTab
-
   const [query, setQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<Record<string, Hackathon[] | null>>({})
-  const [loading, setLoading] = useState(false)
-  const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
-  useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-    }
-
-    if (query.length < 2) {
-      setSearchResults({})
-      setLoading(false)
-      return
-    }
-
-    setLoading(true)
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const path = API_PATHS[activeTab]
-        const res = await fetch(`${path}?q=${encodeURIComponent(query)}`)
-        if (res.ok) {
-          const data = await res.json()
-          const hackathons = data.hackathons.map((h: ApiHackathon) => ({
-            ...fromApi(h),
-            ...(h.role ? { role: h.role } : {}),
-          }))
-          setSearchResults((prev) => ({ ...prev, [activeTab]: hackathons }))
-        }
-      } catch {
-        // Ignore search errors
-      } finally {
-        setLoading(false)
-      }
-    }, 300)
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current)
-      }
-    }
-  }, [query, activeTab])
-
-  const handleTabChange = (value: string) => {
-    router.push(`/home?tab=${value}`, { scroll: false })
-    if (query.length >= 2 && !searchResults[value]) {
-      setLoading(true)
-    }
-  }
-
-  const statsMap = useMemo(() => new Map(Object.entries(organizedStats ?? {})), [organizedStats])
-
-  const isSearching = query.length >= 2
-
-  const participatingList = isSearching
-    ? (searchResults.participating as HackathonWithRole[] | null) ?? []
-    : sortByStatusPriority(myHackathons)
-
-  const organizedList = isSearching
-    ? (searchResults.organized ?? [])
-    : sortByStatusPriority(organizedHackathons)
-
-  const organizedGroups = useMemo(
-    () => isSearching ? null : groupOrganizedHackathons(organizedHackathons, statsMap),
-    [isSearching, organizedHackathons, statsMap],
+  const statsMap = useMemo(
+    () => new Map(Object.entries(organizedStats ?? {})),
+    [organizedStats],
   )
 
-  const sponsoredList = isSearching
-    ? (searchResults.sponsored ?? [])
-    : sortByStatusPriority(sponsoredHackathons)
+  const organizedGroups = useMemo(
+    () => groupOrganizedHackathons(organizedHackathons, statsMap),
+    [organizedHackathons, statsMap],
+  )
 
-  const judgingList = isSearching
-    ? (searchResults.judging ?? [])
-    : sortByStatusPriority(judgingHackathons)
+  const q = query.trim()
+  const isSearching = q.length >= 2
+
+  const filteredActive = isSearching
+    ? organizedGroups.active.filter((h) => matchesQuery(h, q))
+    : organizedGroups.active
+
+  const filteredOrganizing = useMemo(() => {
+    const nonActive = [...organizedGroups.upcoming, ...organizedGroups.setup]
+    return isSearching ? nonActive.filter((h) => matchesQuery(h, q)) : nonActive
+  }, [organizedGroups, isSearching, q])
+
+  const filteredPast = isSearching
+    ? organizedGroups.past.filter((h) => matchesQuery(h, q))
+    : organizedGroups.past
+
+  const filteredParticipating = isSearching
+    ? myHackathons.filter((h) => matchesQuery(h, q))
+    : myHackathons
+
+  const filteredJudging = isSearching
+    ? judgingHackathons.filter((h) => matchesQuery(h, q))
+    : judgingHackathons
+
+  const filteredSponsored = isSearching
+    ? sponsoredHackathons.filter((h) => matchesQuery(h, q))
+    : sponsoredHackathons
+
+  const totalCount =
+    organizedHackathons.length +
+    myHackathons.length +
+    judgingHackathons.length +
+    sponsoredHackathons.length
+
+  if (totalCount === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <Trophy className="size-10 text-muted-foreground mb-4" />
+          <CardTitle className="mb-2">No hackathons yet</CardTitle>
+          <CardDescription className="mb-6 max-w-sm">
+            Create your first event or browse existing hackathons to get started
+          </CardDescription>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button asChild>
+              <Link href="/create">
+                <Plus className="mr-2 size-4" />
+                Create event
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/browse">
+                <Search className="mr-2 size-4" />
+                Browse hackathons
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
-    <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="relative w-full sm:w-64">
-          {loading ? (
-            <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
-          ) : (
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          )}
+    <div className="space-y-6">
+      {totalCount > 5 && (
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="Search..."
+            placeholder="Filter hackathons..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-9"
@@ -224,264 +278,106 @@ export function HackathonTabs({
             data-form-type="other"
           />
         </div>
-        <div className="overflow-x-auto overflow-y-hidden">
-        <TabsList variant="line">
-          <TabsTrigger value="participating">
-            Participating
-            {myHackathons.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {myHackathons.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="organized">
-            Organizing
-            {organizedHackathons.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {organizedHackathons.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="judging">
-            Judging
-            {judgingHackathons.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {judgingHackathons.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="sponsored">
-            Sponsoring
-            {sponsoredHackathons.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {sponsoredHackathons.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
-        </div>
-      </div>
+      )}
 
-      <TabsContent value="participating">
-          {participatingList.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Trophy className="size-10 text-muted-foreground mb-4" />
-                <CardTitle className="mb-2">
-                  {isSearching ? "No results found" : "No hackathons yet"}
-                </CardTitle>
-                <CardDescription className="mb-4">
-                  {isSearching
-                    ? "Try a different search term"
-                    : "Browse and join hackathons to get started"}
-                </CardDescription>
-                {!isSearching && (
-                  <Button asChild>
-                    <Link href="/browse">
-                      <Search className="mr-2 size-4" />
-                      Browse hackathons
-                    </Link>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {participatingList.map((h) => (
-                <HackathonCard
-                  key={h.id}
-                  hackathon={h}
-                  href={`/e/${h.slug}`}
-                  extras={
-                    <>
-                      <Badge variant="outline">{(h as HackathonWithRole).role}</Badge>
-                      {submittedSet.has(h.id) && (
-                        <Badge variant="secondary">
-                          <Check className="mr-1 size-3" />
-                          Submitted
-                        </Badge>
-                      )}
-                    </>
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
+      <ActiveBanner hackathons={filteredActive} statsMap={statsMap} />
 
-        <TabsContent value="organized">
-          {organizedList.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Trophy className="size-10 text-muted-foreground mb-4" />
-                <CardTitle className="mb-2">
-                  {isSearching ? "No results found" : "No hackathons created"}
-                </CardTitle>
-                <CardDescription>
-                  {isSearching
-                    ? "Try a different search term"
-                    : "Create your first hackathon from the sidebar"}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ) : isSearching ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {organizedList.map((h) => {
-                const stats = statsMap.get(h.id)
-                return (
-                  <HackathonCard
-                    key={h.id}
-                    hackathon={h}
-                    href={`/e/${h.slug}/manage`}
-                    extras={stats ? <MiniStatsRow stats={stats} /> : undefined}
-                  />
-                )
-              })}
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {organizedGroups && GROUP_ORDER.map((group) => {
-                const items = organizedGroups[group]
-                if (items.length === 0) return null
+      {(filteredOrganizing.length > 0 || organizedHackathons.length > 0) && (
+        <HackathonSection
+          title="Organizing"
+          hackathons={filteredOrganizing}
+          renderCard={(h) => {
+            const stats = statsMap.get(h.id)
+            return (
+              <HackathonCard
+                hackathon={h}
+                href={`/e/${h.slug}/manage`}
+                extras={stats ? <MiniStatsRow stats={stats} /> : undefined}
+              />
+            )
+          }}
+        />
+      )}
 
-                if (group === "active") {
-                  return (
-                    <div key={group} className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="relative flex size-2">
-                          <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
-                          <span className="relative inline-flex size-2 rounded-full bg-primary" />
-                        </span>
-                        <h3 className="text-sm font-semibold">{GROUP_LABELS[group]}</h3>
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {items.map((h) => {
-                          const stats = statsMap.get(h.id)
-                          const urgent = hasUrgencySignals(h.id, statsMap)
-                          return (
-                            <Link
-                              key={h.id}
-                              href={`/e/${h.slug}/manage`}
-                              className="group block rounded-lg border border-primary/20 bg-primary/5 p-4 transition-colors hover:border-primary/40 hover:bg-primary/10"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="truncate font-semibold">{h.name}</h4>
-                                    {urgent && (
-                                      <AlertCircle className="size-4 shrink-0 text-destructive" />
-                                    )}
-                                  </div>
-                                  {stats && <MiniStatsRow stats={stats} />}
-                                </div>
-                                <ArrowRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                              </div>
-                            </Link>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                }
-
-                return (
-                  <div key={group}>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3">{GROUP_LABELS[group]}</h3>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {items.map((h) => {
-                        const stats = statsMap.get(h.id)
-                        return (
-                          <HackathonCard
-                            key={h.id}
-                            hackathon={h}
-                            href={`/e/${h.slug}/manage`}
-                            extras={stats ? <MiniStatsRow stats={stats} /> : undefined}
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="judging">
-          {judgingList.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Scale className="size-10 text-muted-foreground mb-4" />
-                <CardTitle className="mb-2">
-                  {isSearching ? "No results found" : "Not judging any hackathons"}
-                </CardTitle>
-                <CardDescription className="mb-4">
-                  {isSearching
-                    ? "Try a different search term"
-                    : "When you're invited to judge a hackathon, it will appear here"}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {judgingList.map((h) => (
-                <HackathonCard
-                  key={h.id}
-                  hackathon={h}
-                  href={`/e/${h.slug}`}
-                  extras={
-                    <Badge variant="outline">
-                      <Scale className="mr-1 size-3" />
-                      Judge
+      {(filteredParticipating.length > 0 || myHackathons.length > 0) && (
+        <HackathonSection
+          title="Participating"
+          hackathons={filteredParticipating}
+          renderCard={(h) => (
+            <HackathonCard
+              hackathon={h}
+              href={`/e/${h.slug}`}
+              extras={
+                <>
+                  <Badge variant="outline">{(h as HackathonWithRole).role}</Badge>
+                  {submittedSet.has(h.id) && (
+                    <Badge variant="secondary">
+                      <Check className="mr-1 size-3" />
+                      Submitted
                     </Badge>
-                  }
-                />
-              ))}
-            </div>
+                  )}
+                </>
+              }
+            />
           )}
-        </TabsContent>
+        />
+      )}
 
-        <TabsContent value="sponsored">
-          {sponsoredList.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Star className="size-10 text-muted-foreground mb-4" />
-                <CardTitle className="mb-2">
-                  {isSearching ? "No results found" : "Not sponsoring any hackathons"}
-                </CardTitle>
-                <CardDescription className="mb-4">
-                  {isSearching
-                    ? "Try a different search term"
-                    : "Browse hackathons to find sponsorship opportunities"}
-                </CardDescription>
-                {!isSearching && (
-                  <Button asChild>
-                    <Link href="/browse">
-                      <Search className="mr-2 size-4" />
-                      Browse hackathons
-                    </Link>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {sponsoredList.map((h) => (
-                <HackathonCard
-                  key={h.id}
-                  hackathon={h}
-                  href={`/e/${h.slug}`}
-                  extras={
-                    <Badge variant="outline">
-                      <Star className="mr-1 size-3" />
-                      Sponsor
-                    </Badge>
-                  }
-                />
-              ))}
-            </div>
+      {(filteredJudging.length > 0 || judgingHackathons.length > 0) && (
+        <HackathonSection
+          title="Judging"
+          hackathons={filteredJudging}
+          renderCard={(h) => (
+            <HackathonCard
+              hackathon={h}
+              href={`/e/${h.slug}`}
+              extras={
+                <Badge variant="outline">
+                  <Scale className="mr-1 size-3" />
+                  Judge
+                </Badge>
+              }
+            />
           )}
-        </TabsContent>
-    </Tabs>
+        />
+      )}
+
+      {(filteredSponsored.length > 0 || sponsoredHackathons.length > 0) && (
+        <HackathonSection
+          title="Sponsoring"
+          hackathons={filteredSponsored}
+          renderCard={(h) => (
+            <HackathonCard
+              hackathon={h}
+              href={`/e/${h.slug}`}
+              extras={
+                <Badge variant="outline">
+                  <Star className="mr-1 size-3" />
+                  Sponsor
+                </Badge>
+              }
+            />
+          )}
+        />
+      )}
+
+      {filteredPast.length > 0 && (
+        <HackathonSection
+          title="Past events"
+          hackathons={filteredPast}
+          defaultCollapsed
+          renderCard={(h) => {
+            const stats = statsMap.get(h.id)
+            return (
+              <HackathonCard
+                hackathon={h}
+                href={`/e/${h.slug}/manage`}
+                extras={stats ? <MiniStatsRow stats={stats} /> : undefined}
+              />
+            )
+          }}
+        />
+      )}
+    </div>
   )
 }
