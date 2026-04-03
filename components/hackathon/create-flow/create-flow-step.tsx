@@ -1,8 +1,3 @@
-interface CreateFlowStepProps {
-  stepKey: string
-  children: React.ReactNode
-}
-
-export function CreateFlowStep({ children }: CreateFlowStepProps) {
+export function CreateFlowStep({ children }: { children: React.ReactNode }) {
   return <div className="w-full">{children}</div>
 }

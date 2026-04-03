@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requireAdmin, requireAdminScopes, AuthError } from "@/lib/auth/principal"
+import { isValidUuid } from "@/lib/utils/uuid"
 import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
 import { logAudit, listAllAuditLogs } from "@/lib/services/audit"
 import {
@@ -176,6 +177,14 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     "/activity",
     async ({ query, principal }) => {
       requireAdminScopes(principal, ["admin:read"])
+
+      if (query.hackathon_id && !isValidUuid(query.hackathon_id)) {
+        throw new AuthError("Invalid hackathon_id format", 400)
+      }
+      if (query.tenant_id && !isValidUuid(query.tenant_id)) {
+        throw new AuthError("Invalid tenant_id format", 400)
+      }
+
       const result = await listAllAuditLogs({
         limit: query.limit,
         offset: query.offset,

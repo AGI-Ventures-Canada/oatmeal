@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { Calendar } from "lucide-react"
-import { TabCount, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabCount } from "@/components/ui/tab-count"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription } from "@/components/ui/card"

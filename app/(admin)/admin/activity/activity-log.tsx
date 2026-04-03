@@ -300,6 +300,7 @@ export function ActivityLog({
   const [resourceType, setResourceType] = useState(initialResourceType || "all")
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const isInitialMount = useRef(true)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -317,12 +318,15 @@ export function ActivityLog({
 
   const fetchFresh = useCallback(async (a: string, rt: string) => {
     setLoading(true)
+    setError(null)
     const params = buildParams(0, a, rt)
     const res = await fetch(`/api/admin/activity?${params}`)
     if (res.ok) {
       const data = await res.json()
       setLogs(data.logs)
       setTotal(data.total)
+    } else {
+      setError(`Failed to load activity (${res.status})`)
     }
     setLoading(false)
   }, [buildParams])
@@ -336,6 +340,8 @@ export function ActivityLog({
       const data = await res.json()
       setLogs((prev) => [...prev, ...data.logs])
       setTotal(data.total)
+    } else {
+      setError(`Failed to load more activity (${res.status})`)
     }
     setLoadingMore(false)
   }, [loadingMore, hasMore, logs.length, action, resourceType, buildParams])
@@ -438,6 +444,12 @@ export function ActivityLog({
           >
             Clear all
           </button>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
         </div>
       )}
 

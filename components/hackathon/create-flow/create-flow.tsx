@@ -70,6 +70,7 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
   const [error, setError] = useState<string | null>(null)
   const [showSignInDialog, setShowSignInDialog] = useState(false)
   const [orgGateOpen, setOrgGateOpen] = useState(false)
+  const [importMode, setImportMode] = useState<"choose" | "import">("choose")
   const pendingSubmit = useRef(false)
   const autoTriggeredRef = useRef(false)
 
@@ -174,12 +175,17 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
     }
   }, [currentStep, state.name, handleSubmit])
 
+  const importKeyRef = useRef(0)
+
   const goBack = useCallback(() => {
-    if (currentStep > 0) {
+    if (currentStep === 0 && importMode === "import") {
+      setImportMode("choose")
+      importKeyRef.current += 1
+    } else if (currentStep > 0) {
       setError(null)
       setCurrentStep((s) => s - 1)
     }
-  }, [currentStep])
+  }, [currentStep, importMode])
 
   const handleClose = useCallback(() => {
     if (window.history.length > 1) {
@@ -229,9 +235,13 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
 
       <div className="flex flex-1 items-center overflow-y-auto px-4 py-8 sm:px-8">
         <div className="mx-auto w-full max-w-2xl">
-          <CreateFlowStep stepKey={String(currentStep)}>
+          <CreateFlowStep>
             {currentStep === 0 && (
-              <StepImport onSkipToScratch={() => setCurrentStep(1)} />
+              <StepImport
+                key={importKeyRef.current}
+                onSkipToScratch={() => setCurrentStep(1)}
+                onModeChange={setImportMode}
+              />
             )}
             {currentStep === 1 && (
               <StepName
@@ -275,7 +285,7 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
         </div>
       </div>
 
-      {currentStep > 0 && (
+      {(currentStep > 0 || importMode === "import") && (
         <div className="w-full border-t px-4 py-4 sm:px-8">
           <div className="mx-auto flex max-w-2xl items-center justify-between">
             <Button
@@ -288,25 +298,27 @@ export function CreateFlow({ onSubmit, onPatchSettings }: CreateFlowProps) {
               <ArrowLeft className="size-4" />
               <span className="hidden sm:inline">Back</span>
             </Button>
-            <div className="flex items-center gap-3">
-              <span className="hidden text-xs text-muted-foreground sm:inline">
-                <Kbd>Enter</Kbd> to continue
-              </span>
-              <Button
-                type="button"
-                size="lg"
-                onClick={isLastStep ? () => void handleSubmit() : goNext}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : isLastStep ? (
-                  "Create Event"
-                ) : (
-                  "Continue"
-                )}
-              </Button>
-            </div>
+            {currentStep > 0 && (
+              <div className="flex items-center gap-3">
+                <span className="hidden text-xs text-muted-foreground sm:inline">
+                  <Kbd>Enter</Kbd> to continue
+                </span>
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={isLastStep ? () => void handleSubmit() : goNext}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : isLastStep ? (
+                    "Create Event"
+                  ) : (
+                    "Continue"
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

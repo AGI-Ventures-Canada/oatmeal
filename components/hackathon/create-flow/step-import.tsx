@@ -4,11 +4,12 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, ArrowRight, Globe, Loader2, PenLine } from "lucide-react"
+import { ArrowRight, Globe, Loader2, PenLine } from "lucide-react"
 import { normalizeUrl } from "@/lib/utils/url"
 
 interface StepImportProps {
   onSkipToScratch: () => void
+  onModeChange?: (mode: "choose" | "import") => void
 }
 
 function looksLikeUrl(input: string): boolean {
@@ -17,9 +18,14 @@ function looksLikeUrl(input: string): boolean {
   return /^(https?:\/\/)?[\w.-]+\.\w{2,}(\/|$)/i.test(trimmed)
 }
 
-export function StepImport({ onSkipToScratch }: StepImportProps) {
+export function StepImport({ onSkipToScratch, onModeChange }: StepImportProps) {
   const router = useRouter()
-  const [mode, setMode] = useState<"choose" | "import">("choose")
+  const [mode, _setMode] = useState<"choose" | "import">("choose")
+
+  function setMode(m: "choose" | "import") {
+    _setMode(m)
+    onModeChange?.(m)
+  }
   const [url, setUrl] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,83 +47,64 @@ export function StepImport({ onSkipToScratch }: StepImportProps) {
 
   if (mode === "import") {
     return (
-      <>
-        <div className="space-y-8">
-          <div className="space-y-3">
-            <h1 className="text-3xl font-medium tracking-tight sm:text-5xl">
-              Paste the event URL
-            </h1>
-            <p className="text-muted-foreground">
-              We&apos;ll pull in the name, dates, location, and description.
-            </p>
-          </div>
+      <div className="space-y-8">
+        <div className="space-y-3">
+          <h1 className="text-3xl font-medium tracking-tight sm:text-5xl">
+            Paste the event URL
+          </h1>
+          <p className="text-muted-foreground">
+            We&apos;ll pull in the name, dates, location, and description.
+          </p>
+        </div>
 
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                inputMode="url"
-                placeholder="luma.com/your-event"
-                value={url}
-                onChange={(e) => {
-                  setUrl(e.target.value)
-                  if (error) setError(null)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && url.trim()) {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    handleImport()
-                  }
-                }}
-                className="h-14 text-lg"
-                autoFocus
-                autoComplete="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                data-1p-ignore
-                data-lpignore="true"
-                data-form-type="other"
-              />
-              {url.trim() && (
-                <Button
-                  type="button"
-                  size="lg"
-                  onClick={handleImport}
-                  disabled={loading}
-                  className="h-14 px-4"
-                >
-                  {loading ? (
-                    <Loader2 className="size-5 animate-spin" />
-                  ) : (
-                    <ArrowRight className="size-5" />
-                  )}
-                </Button>
-              )}
-            </div>
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              inputMode="url"
+              placeholder="luma.com/your-event"
+              value={url}
+              onChange={(e) => {
+                setUrl(e.target.value)
+                if (error) setError(null)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && url.trim()) {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleImport()
+                }
+              }}
+              className="h-14 text-lg"
+              autoFocus
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-1p-ignore
+              data-lpignore="true"
+              data-form-type="other"
+            />
+            {url.trim() && (
+              <Button
+                type="button"
+                size="lg"
+                onClick={handleImport}
+                disabled={loading}
+                className="h-14 px-4"
+              >
+                {loading ? (
+                  <Loader2 className="size-5 animate-spin" />
+                ) : (
+                  <ArrowRight className="size-5" />
+                )}
+              </Button>
             )}
           </div>
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
         </div>
-
-        <div className="fixed bottom-0 left-0 px-4 py-4 sm:px-8">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setMode("choose")
-              setUrl("")
-              setError(null)
-            }}
-            className="gap-1.5 text-muted-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            Back
-          </Button>
-        </div>
-      </>
+      </div>
     )
   }
 

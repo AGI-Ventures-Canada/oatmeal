@@ -4,7 +4,6 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Tabs as TabsPrimitive } from "radix-ui"
 
-import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 function Tabs({
@@ -88,15 +87,4 @@ function TabsContent({
   )
 }
 
-function TabCount({
-  children,
-  ...props
-}: Omit<React.ComponentProps<typeof Badge>, "variant">) {
-  return (
-    <Badge variant="secondary" {...props}>
-      {children}
-    </Badge>
-  )
-}
-
-export { Tabs, TabsList, TabsTrigger, TabsContent, TabCount, tabsListVariants }
+export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants }

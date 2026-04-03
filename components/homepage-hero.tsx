@@ -39,10 +39,11 @@ export function HomepageHero() {
           <p className="text-sm text-muted-foreground">
             Or manage hackathons from your AI agent
           </p>
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={handleCopy}
-            className="mx-auto flex max-w-sm items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 font-mono text-sm transition-colors hover:bg-muted cursor-pointer"
+            className="mx-auto flex h-auto max-w-sm items-center gap-2 px-3 py-2 font-mono text-sm"
           >
             <Terminal className="size-3.5 shrink-0 text-muted-foreground" />
             <code className="min-w-0 flex-1 truncate text-left">
@@ -55,7 +56,7 @@ export function HomepageHero() {
                 <Copy className="size-3" />
               )}
             </span>
-          </button>
+          </Button>
         </div>
       </div>
     </section>
