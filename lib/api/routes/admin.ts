@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requireAdmin, requireAdminScopes, AuthError } from "@/lib/auth/principal"
 import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
-import { logAudit } from "@/lib/services/audit"
+import { logAudit, listAllAuditLogs } from "@/lib/services/audit"
 import {
   getPlatformStats,
   listAllHackathons,
@@ -169,6 +169,35 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       detail: {
         summary: "Delete hackathon",
         description: "Permanently delete a hackathon and all associated data. Requires confirm_name matching the hackathon name.",
+      },
+    }
+  )
+  .get(
+    "/activity",
+    async ({ query, principal }) => {
+      requireAdminScopes(principal, ["admin:read"])
+      const result = await listAllAuditLogs({
+        limit: query.limit,
+        offset: query.offset,
+        hackathonId: query.hackathon_id || undefined,
+        tenantId: query.tenant_id || undefined,
+        action: query.action || undefined,
+        resourceType: query.resource_type || undefined,
+      })
+      return result
+    },
+    {
+      query: t.Object({
+        limit: t.Optional(t.Numeric()),
+        offset: t.Optional(t.Numeric()),
+        hackathon_id: t.Optional(t.String()),
+        tenant_id: t.Optional(t.String()),
+        action: t.Optional(t.String()),
+        resource_type: t.Optional(t.String()),
+      }),
+      detail: {
+        summary: "List activity logs",
+        description: "List audit logs across all tenants with pagination and filters.",
       },
     }
   )

@@ -150,3 +150,46 @@ export async function listAuditLogs(
 
   return (data as AuditLog[] | null) ?? []
 }
+
+export type ListAllAuditLogsOptions = {
+  limit?: number
+  offset?: number
+  hackathonId?: string
+  tenantId?: string
+  action?: string
+  resourceType?: string
+}
+
+const MAX_AUDIT_PAGE_SIZE = 100
+
+export async function listAllAuditLogs(options: ListAllAuditLogsOptions = {}) {
+  const { limit: rawLimit = 50, offset = 0, hackathonId, tenantId, action, resourceType } = options
+  const limit = Math.min(Math.max(rawLimit, 1), MAX_AUDIT_PAGE_SIZE)
+
+  let query = getSupabase()
+    .from("audit_logs")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  if (tenantId) {
+    query = query.eq("tenant_id", tenantId)
+  }
+  if (hackathonId) {
+    query = query.eq("resource_id", hackathonId)
+  }
+  if (action) {
+    query = query.ilike("action", `%${action}%`)
+  }
+  if (resourceType) {
+    query = query.eq("resource_type", resourceType)
+  }
+
+  const { data, error, count } = await query
+
+  if (error) {
+    throw new Error(`Failed to list audit logs: ${error.message}`)
+  }
+
+  return { logs: (data as AuditLog[] | null) ?? [], total: count ?? 0 }
+}

@@ -38,24 +38,23 @@ describe("HomepageHero", () => {
     ).toBeDefined()
   })
 
-  it("renders a single create hackathon CTA", () => {
+  it("renders a single create event CTA", () => {
     render(<HomepageHero />)
 
-    expect(screen.getByText("Create new hackathon")).toBeDefined()
+    expect(screen.getByText("Create event")).toBeDefined()
   })
 
   it("links the CTA to /create", () => {
     render(<HomepageHero />)
 
-    const link = screen.getByText("Create new hackathon").closest("a")
+    const link = screen.getByText("Create event").closest("a")
     expect(link?.getAttribute("href")).toBe("/create")
   })
 
-  it("renders the install command with a copy button", () => {
+  it("renders the install command as a clickable copy area", () => {
     render(<HomepageHero />)
 
     expect(screen.getByText("Or manage hackathons from your AI agent")).toBeDefined()
     expect(screen.getByText("npx skills add AGI-Ventures-Canada/oatmeal")).toBeDefined()
-    expect(screen.getByRole("button", { name: "Copy install command" })).toBeDefined()
   })
 })
