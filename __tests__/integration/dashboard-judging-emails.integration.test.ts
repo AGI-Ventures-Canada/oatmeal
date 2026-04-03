@@ -69,6 +69,7 @@ mock.module("@/lib/email/judge-invitations", () => ({
 const mockLogAudit = mock(() => Promise.resolve(null))
 mock.module("@/lib/services/audit", () => ({
   logAudit: mockLogAudit,
+  listAllAuditLogs: mock(() => Promise.resolve({ logs: [], total: 0 })),
 }))
 
 const mockGetUser = mock(() =>
