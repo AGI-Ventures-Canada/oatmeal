@@ -30,8 +30,9 @@ export function groupOrganizedHackathons<T extends GroupableHackathon>(
     past: [],
   }
 
+  const now = new Date()
   for (const h of hackathons) {
-    const group = resolveGroup(h.status)
+    const group = resolveGroup(h.status, h.ends_at, now)
     groups[group].push(h)
   }
 
@@ -52,7 +53,11 @@ export function groupOrganizedHackathons<T extends GroupableHackathon>(
   return groups
 }
 
-function resolveGroup(status: HackathonStatus): OrganizerGroup {
+function resolveGroup(status: HackathonStatus, endsAt: string | null, now: Date): OrganizerGroup {
+  if (endsAt && new Date(endsAt) < now && status !== "draft") {
+    return "past"
+  }
+
   switch (status) {
     case "active":
     case "judging":

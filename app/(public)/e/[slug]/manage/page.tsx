@@ -144,6 +144,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
           <div className="flex items-center gap-2 shrink-0">
             <HackathonPageActions
               slug={hackathon.slug}
+              hackathonName={hackathon.name}
               isOrganizer={true}
             />
           </div>
