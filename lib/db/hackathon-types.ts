@@ -458,6 +458,8 @@ export interface PrizeFulfillment {
   shipping_address: string | null
   tracking_number: string | null
   notes: string | null
+  claim_token: string | null
+  claim_token_expires_at: string | null
   contacted_at: string | null
   shipped_at: string | null
   claimed_at: string | null

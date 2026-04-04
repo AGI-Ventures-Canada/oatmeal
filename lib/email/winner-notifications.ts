@@ -18,6 +18,12 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
+type WinnerPrize = {
+  name: string
+  value: string | null
+  claimToken: string | null
+}
+
 type WinnerInfo = {
   email: string
   displayName: string
@@ -25,11 +31,14 @@ type WinnerInfo = {
   hackathonSlug: string
   submissionTitle: string
   rank: number
-  prizes: { name: string; value: string | null }[]
+  prizes: WinnerPrize[]
 }
 
 function buildWinnerEmail(info: WinnerInfo) {
   const resultsUrl = `${process.env.NEXT_PUBLIC_APP_URL}/e/${info.hackathonSlug}`
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+  const hasClaimablePrizes = info.prizes.some((p) => p.claimToken)
 
   const prizesHtml =
     info.prizes.length > 0
@@ -38,16 +47,36 @@ function buildWinnerEmail(info: WinnerInfo) {
           <p style="margin: 0 0 12px 0; font-size: 14px; color: #71717a;">Prizes won:</p>
           ${info.prizes
             .map(
-              (p) =>
-                `<p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600;">${escapeHtml(p.name)}${p.value ? ` — ${escapeHtml(p.value)}` : ""}</p>`
+              (p) => {
+                const label = `${escapeHtml(p.name)}${p.value ? ` — ${escapeHtml(p.value)}` : ""}`
+                const claimLink = p.claimToken
+                  ? ` <a href="${baseUrl}/prizes/claim/${p.claimToken}" style="color: #18181b; font-size: 13px; font-weight: 500; text-decoration: underline;">Claim</a>`
+                  : ""
+                return `<p style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">${label}${claimLink}</p>`
+              }
             )
             .join("")}
         </div>`
       : ""
 
+  const claimHtml = hasClaimablePrizes
+    ? `
+        <a href="${baseUrl}/prizes/claim/${info.prizes.find((p) => p.claimToken)!.claimToken}"
+           style="display: inline-block; background: #18181b; color: white; padding: 14px 28px;
+                  text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin-bottom: 12px;">
+          Claim Your Prize
+        </a>
+        <p style="font-size: 13px; color: #71717a; margin: 0 0 16px 0;">
+          We just need your name and where to send it.
+        </p>`
+    : ""
+
   const prizesText =
     info.prizes.length > 0
-      ? `\nPrizes won:\n${info.prizes.map((p) => `  - ${p.name}${p.value ? ` — ${p.value}` : ""}`).join("\n")}\n`
+      ? `\nPrizes won:\n${info.prizes.map((p) => {
+          const label = `  - ${p.name}${p.value ? ` — ${p.value}` : ""}`
+          return p.claimToken ? `${label}\n    Claim: ${baseUrl}/prizes/claim/${p.claimToken}` : label
+        }).join("\n")}\n`
       : ""
 
   const html = `
@@ -70,9 +99,11 @@ function buildWinnerEmail(info: WinnerInfo) {
 
         ${prizesHtml}
 
+        ${claimHtml}
+
         <a href="${resultsUrl}"
-           style="display: inline-block; background: #18181b; color: white; padding: 14px 28px;
-                  text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+           style="display: inline-block; background: ${hasClaimablePrizes ? "transparent" : "#18181b"}; color: ${hasClaimablePrizes ? "#18181b" : "white"}; padding: 14px 28px;
+                  text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;${hasClaimablePrizes ? " border: 1px solid #e5e7eb;" : ""}">
           View Results
         </a>
 
@@ -86,11 +117,15 @@ function buildWinnerEmail(info: WinnerInfo) {
     </html>
   `
 
+  const claimText = hasClaimablePrizes
+    ? `\nClaim your prize: ${baseUrl}/prizes/claim/${info.prizes.find((p) => p.claimToken)!.claimToken}\n`
+    : ""
+
   const text = `
 Congratulations!
 
 Your submission "${info.submissionTitle}" placed ${ordinal(info.rank)} in the ${info.hackathonName} hackathon!
-${prizesText}
+${prizesText}${claimText}
 View results: ${resultsUrl}
 
 You're receiving this because you participated in ${info.hackathonName}.
@@ -135,17 +170,30 @@ export async function sendWinnerEmails(hackathonId: string): Promise<number> {
   const { data: prizeAssignments } = await client
     .from("prize_assignments")
     .select(`
+      id,
       submission_id,
       prize:prizes!prize_id(name, value)
     `)
     .in("submission_id", submissionIds)
 
-  const prizeMap: Record<string, { name: string; value: string | null }[]> = {}
+  let claimTokenMap: Record<string, string> = {}
+  try {
+    const { getClaimTokensForHackathon } = await import("@/lib/services/prize-fulfillment")
+    claimTokenMap = await getClaimTokensForHackathon(hackathonId)
+  } catch {
+    // Claim tokens unavailable - send emails without claim links
+  }
+
+  const prizeMap: Record<string, WinnerPrize[]> = {}
   for (const pa of prizeAssignments ?? []) {
     const prize = (pa as Record<string, unknown>).prize as unknown as { name: string; value: string | null } | null
     if (!prize) continue
     if (!prizeMap[pa.submission_id]) prizeMap[pa.submission_id] = []
-    prizeMap[pa.submission_id].push(prize)
+    const assignmentId = (pa as Record<string, unknown>).id as string
+    prizeMap[pa.submission_id].push({
+      ...prize,
+      claimToken: claimTokenMap[assignmentId] ?? null,
+    })
   }
 
   const teamIds = results

@@ -258,6 +258,13 @@ export async function publishResults(
     console.error("Failed to update results published_at:", updateError)
   }
 
+  try {
+    const { initializeFulfillments } = await import("@/lib/services/prize-fulfillment")
+    await initializeFulfillments(hackathonId)
+  } catch (err) {
+    console.error("Failed to initialize fulfillments (non-blocking):", err)
+  }
+
   if (!hackathon.winner_emails_sent_at) {
     try {
       const { sendWinnerEmails } = await import("@/lib/email/winner-notifications")
@@ -278,13 +285,6 @@ export async function publishResults(
     await sendResultsAnnouncementEmails(hackathonId)
   } catch (err) {
     console.error("Failed to send results announcement (non-blocking):", err)
-  }
-
-  try {
-    const { initializeFulfillments } = await import("@/lib/services/prize-fulfillment")
-    await initializeFulfillments(hackathonId)
-  } catch (err) {
-    console.error("Failed to initialize fulfillments (non-blocking):", err)
   }
 
   try {
