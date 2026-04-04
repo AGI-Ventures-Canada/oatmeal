@@ -979,8 +979,8 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     return { success: true }
   }, {
     body: t.Object({
-      recipientName: t.String({ description: "Full name of the prize recipient" }),
-      recipientEmail: t.String({ description: "Email address of the prize recipient" }),
+      recipientName: t.String({ minLength: 1, description: "Full name of the prize recipient" }),
+      recipientEmail: t.String({ format: "email", description: "Email address of the prize recipient" }),
       shippingAddress: t.Optional(t.String({ description: "Shipping address for physical prizes" })),
     }),
     detail: {
