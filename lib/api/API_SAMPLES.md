@@ -1,72 +1,49 @@
-# Oatmeal API Code Samples
+# Oatmeal API Reference
 
-Code samples for integrating with the Oatmeal hackathon platform API.
+Reference guide for the Oatmeal hackathon platform REST API. All endpoints use JSON request/response bodies unless noted.
+
+## Setup
+
+Store your API key and base URL as environment variables:
+
+```bash
+export BASE_URL="https://your-domain.com"  # or http://localhost:3000 for local dev
+export API_KEY="sk_live_your_api_key_here"
+```
+
+Get your API key from the dashboard at **Settings > API Keys**. Test it:
+
+```bash
+curl -s "$BASE_URL/api/v1/whoami" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+```
 
 ## Authentication
 
-### Public Endpoints (`/api/public/*`)
-No authentication required.
+| Namespace | Auth | Description |
+|-----------|------|-------------|
+| `/api/public/*` | None | Read-only public data (hackathons, results, announcements) |
+| `/api/dashboard/*` | API key or Clerk session | Manage hackathons, judges, prizes, sponsors |
+| `/api/v1/*` | API key only | Programmatic access for jobs, webhooks, activity logs |
 
-### Dashboard Endpoints (`/api/dashboard/*`)
-Requires Clerk session (browser) **or** API key:
-```
-Authorization: Bearer sk_live_your_api_key_here
-```
-
-### Integration Endpoints (`/api/v1/*`)
-API key only:
-```
-Authorization: Bearer sk_live_your_api_key_here
-```
+All authenticated requests use the `Authorization: Bearer $API_KEY` header.
 
 ---
 
 ## Public Endpoints
 
-### GET /api/public/health
+No authentication required. Read-only access to public hackathon data.
 
-Returns service health status.
-
-#### curl
+### List hackathons
 
 ```bash
-curl "https://your-domain.com/api/public/health"
-```
-
-#### Response
-
-```json
-{ "status": "ok", "timestamp": "2026-01-15T10:30:00.000Z" }
-```
-
----
-
-### GET /api/public/hackathons
-
-Lists all public hackathons, sorted by status priority (active first). Supports search.
-
-#### curl
-
-```bash
-curl "https://your-domain.com/api/public/hackathons"
+curl -s "$BASE_URL/api/public/hackathons" | jq .
 
 # With search
-curl "https://your-domain.com/api/public/hackathons?q=ai"
+curl -s "$BASE_URL/api/public/hackathons?q=ai" | jq .
 ```
 
-#### TypeScript
-
-```typescript
-async function listHackathons(search?: string) {
-  const url = new URL("https://your-domain.com/api/public/hackathons")
-  if (search) url.searchParams.set("q", search)
-
-  const res = await fetch(url)
-  return res.json()
-}
-```
-
-#### Response
+**Response:**
 
 ```json
 {
@@ -95,17 +72,13 @@ async function listHackathons(search?: string) {
 
 ---
 
-### GET /api/public/hackathons/:slug
-
-Returns details for a single hackathon including sponsors.
-
-#### curl
+### Get hackathon details
 
 ```bash
-curl "https://your-domain.com/api/public/hackathons/ai-builders-2026"
+curl -s "$BASE_URL/api/public/hackathons/ai-builders-2026" | jq .
 ```
 
-#### Response
+**Response:**
 
 ```json
 {
@@ -145,67 +118,37 @@ curl "https://your-domain.com/api/public/hackathons/ai-builders-2026"
 
 ---
 
-### GET /api/public/hackathons/:slug/registration
-
-Returns participant count and current user's registration status.
-
-#### curl
+### Get organization profile
 
 ```bash
-curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/registration"
+curl -s "$BASE_URL/api/public/orgs/acme" | jq .
 ```
 
-#### Response
+**Response:**
 
 ```json
 {
-  "participantCount": 42,
-  "isRegistered": true
+  "id": "uuid",
+  "name": "Acme Corp",
+  "slug": "acme",
+  "logoUrl": "https://storage.example.com/logos/acme.png",
+  "logoUrlDark": "https://storage.example.com/logos/acme-dark.png",
+  "description": "Building the future",
+  "websiteUrl": "https://acme.com",
+  "organizedHackathons": [],
+  "sponsoredHackathons": []
 }
 ```
 
-`isRegistered` is `null` when the user is not signed in.
-
 ---
 
-### POST /api/public/hackathons/:slug/register
-
-Registers the current user for a hackathon. Requires Clerk session.
-
-#### curl
+### View submissions
 
 ```bash
-curl -X POST "https://your-domain.com/api/public/hackathons/ai-builders-2026/register"
+curl -s "$BASE_URL/api/public/hackathons/ai-builders-2026/submissions" | jq .
 ```
 
-#### Response
-
-```json
-{ "success": true, "participantId": "uuid" }
-```
-
-#### Error Codes
-
-| Code | Status | Meaning |
-|------|--------|---------|
-| `not_authenticated` | 401 | User not signed in |
-| `hackathon_not_found` | 404 | Invalid slug |
-| `already_registered` | 409 | User already registered |
-| `registration_closed` | 400 | Registration period closed |
-
----
-
-### GET /api/public/hackathons/:slug/submissions
-
-Lists all submissions for a hackathon.
-
-#### curl
-
-```bash
-curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/submissions"
-```
-
-#### Response
+**Response:**
 
 ```json
 {
@@ -227,368 +170,15 @@ curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/submissions
 
 ---
 
-### POST /api/public/hackathons/:slug/submissions
+### View results
 
-Creates a submission. Requires Clerk session and hackathon registration.
-
-#### curl
+Returns published results. Returns 404 if results are not yet published.
 
 ```bash
-curl -X POST "https://your-domain.com/api/public/hackathons/ai-builders-2026/submissions" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "AI Code Review Bot",
-    "description": "Automated code review powered by LLMs",
-    "githubUrl": "https://github.com/user/project",
-    "liveAppUrl": "https://my-app.vercel.app"
-  }'
-```
-
-#### TypeScript
-
-```typescript
-async function createSubmission(slug: string, data: {
-  title: string
-  description: string
-  githubUrl: string
-  liveAppUrl?: string
-}) {
-  const res = await fetch(
-    `https://your-domain.com/api/public/hackathons/${slug}/submissions`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }
-  )
-  return res.json()
-}
-```
-
-#### Validation
-
-- `title`: 1-100 characters
-- `description`: 1-280 characters
-- `githubUrl`: Must be from github.com
-- `liveAppUrl`: Optional
-
-#### Error Codes
-
-| Code | Status | Meaning |
-|------|--------|---------|
-| `not_authenticated` | 401 | User not signed in |
-| `hackathon_not_found` | 404 | Invalid slug |
-| `submissions_closed` | 400 | Hackathon not in `active` status |
-| `not_registered` | 403 | User must register first |
-| `already_submitted` | 409 | One submission per user/team |
-| `invalid_github_url` | 400 | URL not from github.com |
-
----
-
-### PATCH /api/public/hackathons/:slug/submissions
-
-Updates an existing submission. Same auth and validation rules as create.
-
-#### curl
-
-```bash
-curl -X PATCH "https://your-domain.com/api/public/hackathons/ai-builders-2026/submissions" \
-  -H "Content-Type: application/json" \
-  -d '{ "title": "Updated Title", "liveAppUrl": "https://new-app.vercel.app" }'
-```
-
-All fields are optional. Only provided fields are updated.
-
----
-
-### GET /api/public/orgs/:slug
-
-Returns an organization's public profile with their hackathons.
-
-#### curl
-
-```bash
-curl "https://your-domain.com/api/public/orgs/acme"
-```
-
-#### Response
-
-```json
-{
-  "id": "uuid",
-  "name": "Acme Corp",
-  "slug": "acme",
-  "logoUrl": "https://storage.example.com/logos/acme.png",
-  "logoUrlDark": "https://storage.example.com/logos/acme-dark.png",
-  "description": "Building the future",
-  "websiteUrl": "https://acme.com",
-  "organizedHackathons": [...],
-  "sponsoredHackathons": [...]
-}
-```
-
----
-
-### GET /api/public/hackathons/:slug/submissions/me
-
-Returns the authenticated user's submission for a hackathon. Returns `null` if not signed in or no submission exists.
-
-#### curl
-
-```bash
-curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/submissions/me"
-```
-
-#### Response
-
-```json
-{
-  "submission": {
-    "id": "uuid",
-    "title": "AI Code Review Bot",
-    "description": "Automated code review powered by LLMs",
-    "githubUrl": "https://github.com/user/project",
-    "liveAppUrl": "https://my-app.vercel.app",
-    "screenshotUrl": "https://storage.example.com/screenshots/abc.webp",
-    "status": "submitted",
-    "createdAt": "2026-02-10T15:30:00Z",
-    "updatedAt": "2026-02-12T08:00:00Z"
-  }
-}
-```
-
----
-
-### POST /api/public/hackathons/:slug/submissions/screenshot
-
-Uploads a screenshot image for the user's submission. Requires Clerk session and existing submission.
-
-#### curl
-
-```bash
-curl -X POST "https://your-domain.com/api/public/hackathons/ai-builders-2026/submissions/screenshot" \
-  -F "file=@screenshot.png"
-```
-
-Accepted types: PNG, JPEG, WebP. Max size: 10MB.
-
-#### Response
-
-```json
-{ "success": true, "screenshotUrl": "https://storage.example.com/screenshots/abc.webp" }
-```
-
----
-
-### DELETE /api/public/hackathons/:slug/submissions/screenshot
-
-Removes the screenshot from the user's submission. Requires Clerk session.
-
-```bash
-curl -X DELETE "https://your-domain.com/api/public/hackathons/ai-builders-2026/submissions/screenshot"
-```
-
----
-
-### GET /api/public/invitations/:token
-
-Returns team invitation details by token.
-
-#### curl
-
-```bash
-curl "https://your-domain.com/api/public/invitations/abc123token"
-```
-
-#### Response
-
-```json
-{
-  "id": "uuid",
-  "status": "pending",
-  "teamName": "BuilderSquad",
-  "hackathonName": "AI Builders Hackathon",
-  "hackathonSlug": "ai-builders-2026",
-  "hackathonStatus": "active",
-  "email": "invitee@example.com",
-  "expiresAt": "2026-02-20T00:00:00Z"
-}
-```
-
-Status values: `pending`, `accepted`, `declined`, `expired`, `cancelled`
-
----
-
-### POST /api/public/invitations/:token/accept
-
-Accepts a team invitation and joins the team. Requires Clerk session.
-
-```bash
-curl -X POST "https://your-domain.com/api/public/invitations/abc123token/accept"
+curl -s "$BASE_URL/api/public/hackathons/ai-builders-2026/results" | jq .
 ```
 
 **Response:**
-```json
-{ "success": true, "teamId": "uuid", "hackathonSlug": "ai-builders-2026" }
-```
-
----
-
-### POST /api/public/invitations/:token/decline
-
-Declines a team invitation. Requires Clerk session.
-
-```bash
-curl -X POST "https://your-domain.com/api/public/invitations/abc123token/decline"
-```
-
----
-
-### GET /api/public/hackathons/:slug/judging/assignments
-
-Returns the authenticated judge's assignments for a hackathon. Requires Clerk session.
-
-#### curl
-
-```bash
-curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/judging/assignments"
-```
-
-#### Response
-
-```json
-{
-  "assignments": [
-    {
-      "id": "uuid",
-      "submissionId": "uuid",
-      "submissionTitle": "AI Code Review Bot",
-      "submissionDescription": "Automated code review powered by LLMs",
-      "submissionGithubUrl": "https://github.com/user/project",
-      "submissionLiveAppUrl": "https://my-app.vercel.app",
-      "submissionScreenshotUrl": null,
-      "teamName": "BuilderSquad",
-      "isComplete": false,
-      "notes": null
-    }
-  ]
-}
-```
-
-`teamName` is `null` when anonymous judging is enabled.
-
----
-
-### GET /api/public/hackathons/:slug/judging/assignments/:assignmentId
-
-Returns full details for a specific judging assignment including criteria and scores.
-
-```bash
-curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/judging/assignments/{assignmentId}"
-```
-
----
-
-### POST /api/public/hackathons/:slug/judging/assignments/:assignmentId/scores
-
-Submits scores for a judging assignment. Hackathon must be in `judging` phase.
-
-#### curl
-
-```bash
-curl -X POST "https://your-domain.com/api/public/hackathons/ai-builders-2026/judging/assignments/{assignmentId}/scores" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "scores": [
-      { "criteriaId": "uuid-1", "score": 8 },
-      { "criteriaId": "uuid-2", "score": 9 }
-    ],
-    "notes": "Excellent implementation, clean code"
-  }'
-```
-
-#### Error Codes
-
-| Code | Status | Meaning |
-|------|--------|---------|
-| `not_authenticated` | 401 | User not signed in |
-| `not_judging` | 400 | Hackathon not in judging phase |
-
----
-
-### PATCH /api/public/hackathons/:slug/judging/assignments/:assignmentId/notes
-
-Saves private notes for a judging assignment.
-
-```bash
-curl -X PATCH "https://your-domain.com/api/public/hackathons/ai-builders-2026/judging/assignments/{assignmentId}/notes" \
-  -H "Content-Type: application/json" \
-  -d '{ "notes": "Good project but needs better docs" }'
-```
-
----
-
-### GET /api/public/judge-invitations/:token
-
-Returns judge invitation details by token.
-
-#### curl
-
-```bash
-curl "https://your-domain.com/api/public/judge-invitations/abc123token"
-```
-
-#### Response
-
-```json
-{
-  "id": "uuid",
-  "status": "pending",
-  "hackathonName": "AI Builders Hackathon",
-  "hackathonSlug": "ai-builders-2026",
-  "email": "judge@example.com",
-  "expiresAt": "2026-02-20T00:00:00Z"
-}
-```
-
----
-
-### POST /api/public/judge-invitations/:token/accept
-
-Accepts a judge invitation and adds the user as a judge. Requires Clerk session.
-
-```bash
-curl -X POST "https://your-domain.com/api/public/judge-invitations/abc123token/accept"
-```
-
-**Response:**
-```json
-{ "success": true, "hackathonSlug": "ai-builders-2026" }
-```
-
----
-
-### POST /api/public/judge-invitations/:token/decline
-
-Declines a judge invitation. Requires Clerk session.
-
-```bash
-curl -X POST "https://your-domain.com/api/public/judge-invitations/abc123token/decline"
-```
-
----
-
-### GET /api/public/hackathons/:slug/results
-
-Returns published results and rankings for a hackathon. Returns 404 if results are not yet published.
-
-#### curl
-
-```bash
-curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/results"
-```
-
-#### Response
 
 ```json
 {
@@ -607,33 +197,15 @@ curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/results"
 
 ---
 
-### GET /api/public/hackathons/:slug/announcements
+### View announcements
 
-Returns published announcements for a hackathon, ordered by most recent first. Excludes drafts and future-scheduled announcements.
-
-#### curl
+Returns published announcements, most recent first. Excludes drafts and scheduled.
 
 ```bash
-curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/announcements"
+curl -s "$BASE_URL/api/public/hackathons/ai-builders-2026/announcements" | jq .
 ```
 
-#### TypeScript
-
-```typescript
-const res = await fetch(`https://your-domain.com/api/public/hackathons/${slug}/announcements`)
-const { announcements } = await res.json()
-```
-
-#### Python
-
-```python
-import requests
-
-response = requests.get(f"https://your-domain.com/api/public/hackathons/{slug}/announcements")
-announcements = response.json()["announcements"]
-```
-
-#### Response
+**Response:**
 
 ```json
 {
@@ -652,33 +224,13 @@ announcements = response.json()["announcements"]
 
 ---
 
-### GET /api/public/hackathons/:slug/schedule
-
-Returns all schedule items for a hackathon, ordered by start time.
-
-#### curl
+### View schedule
 
 ```bash
-curl "https://your-domain.com/api/public/hackathons/ai-builders-2026/schedule"
+curl -s "$BASE_URL/api/public/hackathons/ai-builders-2026/schedule" | jq .
 ```
 
-#### TypeScript
-
-```typescript
-const res = await fetch(`https://your-domain.com/api/public/hackathons/${slug}/schedule`)
-const { scheduleItems } = await res.json()
-```
-
-#### Python
-
-```python
-import requests
-
-response = requests.get(f"https://your-domain.com/api/public/hackathons/{slug}/schedule")
-schedule_items = response.json()["scheduleItems"]
-```
-
-#### Response
+**Response:**
 
 ```json
 {
@@ -698,55 +250,38 @@ schedule_items = response.json()["scheduleItems"]
 
 ---
 
-### POST /api/public/import/luma
-
-Extracts structured event data from a public Luma event page by parsing JSON-LD metadata.
-
-#### curl
+### View registration status
 
 ```bash
-curl -X POST "https://your-domain.com/api/public/import/luma" \
-  -H "Content-Type: application/json" \
-  -d '{"slug": "sfagents"}'
+curl -s "$BASE_URL/api/public/hackathons/ai-builders-2026/registration" | jq .
 ```
 
-#### TypeScript
-
-```typescript
-const response = await fetch("https://your-domain.com/api/public/import/luma", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ slug: "sfagents" })
-})
-
-const eventData = await response.json()
-```
-
-#### Python
-
-```python
-import requests
-
-response = requests.post(
-    "https://your-domain.com/api/public/import/luma",
-    json={"slug": "sfagents"}
-)
-
-event_data = response.json()
-```
-
-#### Request Body
+**Response:**
 
 ```json
 {
-  "slug": "sfagents"
+  "participantCount": 42,
+  "isRegistered": null
 }
 ```
 
-**Parameters:**
-- `slug` (string, required): Luma event slug from the URL (e.g., "sfagents" from `luma.com/sfagents`)
+`isRegistered` is `true`/`false` for signed-in users, `null` otherwise.
 
-#### Response (200 OK)
+---
+
+### Import from Luma
+
+Extracts structured event data from a public Luma event page.
+
+```bash
+curl -s -X POST "$BASE_URL/api/public/import/luma" \
+  -H "Content-Type: application/json" \
+  -d '{"slug": "sfagents"}' | jq .
+```
+
+`slug` is the Luma event slug from the URL (e.g., `sfagents` from `lu.ma/sfagents`).
+
+**Response:**
 
 ```json
 {
@@ -761,34 +296,22 @@ event_data = response.json()
 }
 ```
 
-#### Response (404 Not Found)
-
-```json
-{
-  "error": "Could not extract event data from Luma"
-}
-```
-
-**Note:** Returns 404 if the Luma event doesn't exist, is private, or the page structure has changed.
+Returns 404 if the event doesn't exist, is private, or the page structure has changed.
 
 ---
 
 ## Dashboard Endpoints
 
-All dashboard endpoints require Clerk session or API key (`Authorization: Bearer sk_live_...`).
+All dashboard endpoints require an API key: `-H "Authorization: Bearer $API_KEY"`.
 
-### GET /api/dashboard/me
-
-Returns info about the authenticated principal.
-
-#### curl
+### Check who you are
 
 ```bash
-curl "https://your-domain.com/api/dashboard/me" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+curl -s "$BASE_URL/api/dashboard/me" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
-#### Response (API Key)
+**Response:**
 
 ```json
 {
@@ -798,32 +321,59 @@ curl "https://your-domain.com/api/dashboard/me" \
 }
 ```
 
-#### Response (Clerk User)
-
-```json
-{
-  "tenantId": "uuid",
-  "userId": "user_abc",
-  "orgId": "org_xyz",
-  "orgRole": "org:admin",
-  "scopes": ["hackathons:read", "hackathons:write", "keys:read", "keys:write"]
-}
-```
-
 ---
 
 ### Hackathon Management
 
-#### POST /api/dashboard/import/luma
+#### List your hackathons
 
-Creates a new hackathon from imported Luma event data. Extracts the event metadata, downloads the banner image, and creates a fully configured hackathon.
-
-##### curl
+Scope: `hackathons:read`
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/import/luma" \
+curl -s "$BASE_URL/api/dashboard/hackathons" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+
+# With search
+curl -s "$BASE_URL/api/dashboard/hackathons?q=ai" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+```
+
+---
+
+#### Create a hackathon
+
+Scope: `hackathons:write`
+
+```bash
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -d '{
+    "name": "AI Builders 2026",
+    "description": "Build AI-powered apps"
+  }' | jq .
+```
+
+**Response:**
+
+```json
+{ "id": "uuid", "name": "AI Builders 2026", "slug": "ai-builders-2026" }
+```
+
+Save the returned `id` — you'll need it for all subsequent management calls.
+
+---
+
+#### Create from Luma event
+
+Scope: `hackathons:write`
+
+Imports a Luma event and creates a fully configured hackathon with banner image.
+
+```bash
+curl -s -X POST "$BASE_URL/api/dashboard/import/luma" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
   -d '{
     "name": "Autonomous Agents Hackathon",
     "description": "Build AI agents that work autonomously...",
@@ -831,167 +381,51 @@ curl -X POST "https://your-domain.com/api/dashboard/import/luma" \
     "endsAt": "2026-02-27T19:30:00.000-08:00",
     "locationType": "in_person",
     "locationName": "San Francisco, California",
-    "locationUrl": null,
     "imageUrl": "https://images.lumacdn.com/cdn-cgi/image/.../event-covers/..."
-  }'
-```
-
-##### TypeScript
-
-```typescript
-const response = await fetch("https://your-domain.com/api/dashboard/import/luma", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer sk_live_your_api_key_here"
-  },
-  body: JSON.stringify({
-    name: "Autonomous Agents Hackathon",
-    description: "Build AI agents that work autonomously...",
-    startsAt: "2026-02-27T09:30:00.000-08:00",
-    endsAt: "2026-02-27T19:30:00.000-08:00",
-    locationType: "in_person",
-    locationName: "San Francisco, California",
-    locationUrl: null,
-    imageUrl: "https://images.lumacdn.com/cdn-cgi/image/.../event-covers/..."
-  })
-})
-
-const hackathon = await response.json()
-```
-
-##### Python
-
-```python
-import requests
-
-response = requests.post(
-    "https://your-domain.com/api/dashboard/import/luma",
-    headers={
-        "Content-Type": "application/json",
-        "Authorization": "Bearer sk_live_your_api_key_here"
-    },
-    json={
-        "name": "Autonomous Agents Hackathon",
-        "description": "Build AI agents that work autonomously...",
-        "startsAt": "2026-02-27T09:30:00.000-08:00",
-        "endsAt": "2026-02-27T19:30:00.000-08:00",
-        "locationType": "in_person",
-        "locationName": "San Francisco, California",
-        "locationUrl": None,
-        "imageUrl": "https://images.lumacdn.com/cdn-cgi/image/.../event-covers/..."
-    }
-)
-
-hackathon = response.json()
-```
-
-##### Request Body
-
-```json
-{
-  "name": "Autonomous Agents Hackathon",
-  "description": "Build AI agents that work autonomously...",
-  "startsAt": "2026-02-27T09:30:00.000-08:00",
-  "endsAt": "2026-02-27T19:30:00.000-08:00",
-  "locationType": "in_person",
-  "locationName": "San Francisco, California",
-  "locationUrl": null,
-  "imageUrl": "https://images.lumacdn.com/cdn-cgi/image/.../event-covers/..."
-}
+  }' | jq .
 ```
 
 **Parameters:**
-- `name` (string, required): Hackathon name
-- `description` (string, optional): Full description of the hackathon
-- `startsAt` (string, optional): ISO 8601 datetime for hackathon start
-- `endsAt` (string, optional): ISO 8601 datetime for hackathon end
-- `locationType` (string, optional): Either `"in_person"` or `"virtual"`
-- `locationName` (string, optional): Human-readable location name
-- `locationUrl` (string, optional): URL for virtual events or location details
-- `imageUrl` (string, optional): URL of the banner image to download and import
 
-##### Response (200 OK)
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Hackathon name |
+| `description` | No | Full description |
+| `startsAt` | No | ISO 8601 datetime |
+| `endsAt` | No | ISO 8601 datetime |
+| `locationType` | No | `"in_person"` or `"virtual"` |
+| `locationName` | No | Human-readable location |
+| `locationUrl` | No | URL for virtual events |
+| `imageUrl` | No | Banner image URL to download and import |
 
-```json
-{
-  "id": "uuid",
-  "name": "Autonomous Agents Hackathon",
-  "slug": "autonomous-agents-hackathon"
-}
-```
-
-##### Response (401 Unauthorized)
+**Response:**
 
 ```json
-{
-  "error": "Unauthorized"
-}
+{ "id": "uuid", "name": "Autonomous Agents Hackathon", "slug": "autonomous-agents-hackathon" }
 ```
 
-##### Response (500 Internal Server Error)
-
-```json
-{
-  "error": "Failed to create hackathon"
-}
-```
-
-**Note:** The banner image (if provided) is downloaded, optimized, and uploaded to storage. If the download fails, the hackathon is still created but without a banner. This endpoint requires the `hackathons:write` scope.
+The banner image (if provided) is downloaded, optimized, and uploaded to storage. If the download fails, the hackathon is still created without a banner.
 
 ---
 
-#### GET /api/dashboard/hackathons
+#### Get hackathon details
 
-Lists hackathons organized by the authenticated tenant.
-
-```bash
-curl "https://your-domain.com/api/dashboard/hackathons" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-
-# With search
-curl "https://your-domain.com/api/dashboard/hackathons?q=ai" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-Requires scope: `hackathons:read`
-
-#### POST /api/dashboard/hackathons
-
-Creates a new hackathon.
+Scope: `hackathons:read`
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{ "name": "AI Builders 2026", "description": "Build AI-powered apps" }'
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
-Requires scope: `hackathons:write`
+---
 
-**Response:**
-```json
-{ "id": "uuid", "name": "AI Builders 2026", "slug": "ai-builders-2026" }
-```
+#### Update hackathon settings
 
-#### GET /api/dashboard/hackathons/:id
-
-Returns full hackathon details for organizers (includes settings like team sizes).
+Scope: `hackathons:write`. All fields optional — only provided fields are updated.
 
 ```bash
-curl "https://your-domain.com/api/dashboard/hackathons/{id}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-Requires scope: `hackathons:read`
-
-#### PATCH /api/dashboard/hackathons/:id/settings
-
-Updates hackathon settings.
-
-```bash
-curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/settings" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/settings" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Updated Name",
@@ -1006,54 +440,115 @@ curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/settings" \
     "maxTeamSize": 5,
     "allowSolo": false,
     "judgingMode": "points"
-  }'
+  }' | jq .
 ```
-
-Requires scope: `hackathons:write`
 
 **Valid statuses:** `draft`, `published`, `registration_open`, `active`, `judging`, `completed`, `archived`
 
-**Team/participant fields:**
 | Field | Type | Description |
 |-------|------|-------------|
-| `maxParticipants` | `number \| null` | Maximum number of participants (null = unlimited) |
-| `minTeamSize` | `number` | Minimum team size |
-| `maxTeamSize` | `number` | Maximum team size |
-| `allowSolo` | `boolean` | Whether solo participation is allowed |
-| `judgingMode` | `"points" \| "subjective"` | Judging mode |
+| `maxParticipants` | number or null | Maximum participants (null = unlimited) |
+| `minTeamSize` | number | Minimum team size |
+| `maxTeamSize` | number | Maximum team size |
+| `allowSolo` | boolean | Whether solo participation is allowed |
+| `judgingMode` | string | `"points"` or `"subjective"` |
 
-#### POST /api/dashboard/hackathons/:id/banner
+---
 
-Uploads a hackathon banner image (form data).
+#### Upload / remove banner
+
+Scope: `hackathons:write`. Accepted types: PNG, JPEG, WebP. Max size: 50MB.
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/banner" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -F "file=@banner.png"
+# Upload
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/banner" \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@banner.png" | jq .
+
+# Remove
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/banner" \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
-Accepted types: PNG, JPEG, WebP. Max size: 50MB.
+---
 
-#### DELETE /api/dashboard/hackathons/:id/banner
+### Sponsors
 
-Removes the hackathon banner.
+#### List sponsors
+
+Scope: `hackathons:read`
+
+```bash
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+```
+
+---
+
+#### Add a sponsor
+
+Scope: `hackathons:write`. Valid tiers: `title`, `gold`, `silver`, `bronze`, `partner`
+
+```bash
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "TechCo",
+    "tier": "gold",
+    "websiteUrl": "https://techco.com",
+    "logoUrl": "https://example.com/techco.png"
+  }' | jq .
+```
+
+---
+
+#### Update / remove a sponsor
+
+Scope: `hackathons:write`
+
+```bash
+# Update
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/$SPONSOR_ID" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "tier": "title" }' | jq .
+
+# Remove
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/$SPONSOR_ID" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+---
+
+#### Reorder sponsors
+
+Scope: `hackathons:write`
+
+```bash
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/reorder" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "sponsorIds": ["uuid-1", "uuid-2", "uuid-3"] }' | jq .
+```
 
 ---
 
 ### Judge Display Profiles
 
-Manage the public-facing judge profiles shown on hackathon pages. These are separate from judge operational records (assignments, invitations).
+Public-facing judge profiles shown on hackathon pages. Separate from judge operational records (assignments, invitations).
 
-#### GET /api/dashboard/hackathons/:id/judges/display
+#### List judge profiles
 
-Lists all judge display profiles. Requires scope: `hackathons:read`
+Scope: `hackathons:read`
 
 ```bash
-curl "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 **Response:**
+
 ```json
 {
   "judges": [
@@ -1063,8 +558,6 @@ curl "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display" \
       "title": "VP of Engineering",
       "organization": "Acme Corp",
       "headshotUrl": "https://storage.example.com/headshots/uuid.webp",
-      "clerkUserId": "user_abc123",
-      "participantId": null,
       "displayOrder": 0,
       "createdAt": "2026-01-15T10:00:00Z"
     }
@@ -1072,424 +565,87 @@ curl "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display" \
 }
 ```
 
-#### POST /api/dashboard/hackathons/:id/judges/display
+---
 
-Creates a judge display profile. Requires scope: `hackathons:write`
+#### Create a judge profile
+
+Scope: `hackathons:write`
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Jane Smith",
     "title": "VP of Engineering",
     "organization": "Acme Corp",
     "email": "jane@acme.com"
-  }'
-```
-
-**Response:**
-```json
-{
-  "id": "uuid",
-  "name": "Jane Smith",
-  "headshotUrl": null,
-  "clerkUserId": null,
-  "displayOrder": 0
-}
-```
-
-#### PATCH /api/dashboard/hackathons/:id/judges/display/:judgeId
-
-Updates a judge display profile. Requires scope: `hackathons:write`
-
-```bash
-curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display/{judgeId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{ "title": "CTO", "organization": "New Corp" }'
-```
-
-#### DELETE /api/dashboard/hackathons/:id/judges/display/:judgeId
-
-Deletes a judge display profile. Requires scope: `hackathons:write`
-
-```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display/{judgeId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-#### POST /api/dashboard/hackathons/:id/judges/display/reorder
-
-Reorders judge display profiles. Requires scope: `hackathons:write`
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display/reorder" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{ "orderedIds": ["judge-id-2", "judge-id-1", "judge-id-3"] }'
-```
-
-#### POST /api/dashboard/hackathons/:id/judges/display/:judgeId/headshot
-
-Uploads a headshot for a judge display profile (form data). Requires scope: `hackathons:write`
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display/{judgeId}/headshot" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -F "file=@headshot.jpg"
-```
-
-Accepted types: PNG, JPEG, WebP. Max size: 5MB.
-
-**Response:**
-```json
-{ "success": true, "headshotUrl": "https://storage.example.com/headshots/uuid.webp" }
-```
-
-#### DELETE /api/dashboard/hackathons/:id/judges/display/:judgeId/headshot
-
-Removes the headshot from a judge display profile. Requires scope: `hackathons:write`
-
-```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/judges/display/{judgeId}/headshot" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+  }' | jq .
 ```
 
 ---
 
-### Sponsor Management
+#### Update / delete a judge profile
 
-#### GET /api/dashboard/hackathons/:id/sponsors
-
-Lists sponsors for a hackathon.
-
-#### POST /api/dashboard/hackathons/:id/sponsors
-
-Adds a sponsor.
+Scope: `hackathons:write`
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/sponsors" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
+# Update
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display/$JUDGE_ID" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "TechCo",
-    "tier": "gold",
-    "websiteUrl": "https://techco.com",
-    "logoUrl": "https://example.com/techco.png"
-  }'
-```
+  -d '{ "title": "CTO", "organization": "New Corp" }' | jq .
 
-**Valid tiers:** `title`, `gold`, `silver`, `bronze`, `partner`
-
-#### PATCH /api/dashboard/hackathons/:id/sponsors/:sponsorId
-
-Updates a sponsor.
-
-#### DELETE /api/dashboard/hackathons/:id/sponsors/:sponsorId
-
-Removes a sponsor.
-
-#### PATCH /api/dashboard/hackathons/:id/sponsors/reorder
-
-Reorders sponsors by display position.
-
-```bash
-curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/sponsors/reorder" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{ "sponsorIds": ["uuid-1", "uuid-2", "uuid-3"] }'
+# Delete
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display/$JUDGE_ID" \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 ---
 
-### Organization Profile
+#### Reorder judge profiles
 
-#### GET /api/dashboard/org-profile
-
-Returns the authenticated tenant's profile. Requires scope: `org:read`
-
-#### PATCH /api/dashboard/org-profile
-
-Updates the organization profile.
+Scope: `hackathons:write`
 
 ```bash
-curl -X PATCH "https://your-domain.com/api/dashboard/org-profile" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display/reorder" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "Acme Corp",
-    "slug": "acme",
-    "description": "Building the future",
-    "websiteUrl": "https://acme.com"
-  }'
-```
-
-Requires scope: `org:write`. Slug uniqueness is validated.
-
-#### POST /api/dashboard/upload-logo
-
-Uploads an organization logo (form data with `variant` field: `light` or `dark`).
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/upload-logo" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -F "file=@logo.png" \
-  -F "variant=light"
-```
-
-Accepted types: PNG, JPEG, WebP, SVG. Max size: 2MB.
-
-#### DELETE /api/dashboard/logo/:variant
-
-Deletes a logo variant (`light` or `dark`).
-
----
-
-### API Key Management (Clerk-only)
-
-#### GET /api/dashboard/keys
-
-Lists API keys for the tenant. Requires scope: `keys:read`
-
-#### POST /api/dashboard/keys
-
-Creates a new API key. Returns the raw key **once**.
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/keys" \
-  -H "Content-Type: application/json" \
-  -d '{ "name": "CI Pipeline", "scopes": ["hackathons:read", "hackathons:write"] }'
-```
-
-**Response:**
-```json
-{
-  "id": "uuid",
-  "name": "CI Pipeline",
-  "prefix": "sk_live_abc1",
-  "scopes": ["hackathons:read", "hackathons:write"],
-  "createdAt": "2026-01-15T10:00:00Z",
-  "key": "sk_live_abc1234567890abcdef..."
-}
-```
-
-Save the `key` value immediately - it cannot be retrieved again.
-
-#### POST /api/dashboard/keys/:id/revoke
-
-Revokes an API key. Requires scope: `keys:write`
-
----
-
-### Hackathon Views (Clerk-only)
-
-#### GET /api/dashboard/hackathons/participating
-
-Lists hackathons the current user is participating in. Clerk-only.
-
-```bash
-curl "https://your-domain.com/api/dashboard/hackathons/participating"
-```
-
-#### GET /api/dashboard/hackathons/sponsored
-
-Lists hackathons sponsored by the tenant. Clerk-only.
-
-```bash
-curl "https://your-domain.com/api/dashboard/hackathons/sponsored"
-```
-
-#### GET /api/dashboard/hackathons/judging
-
-Lists hackathons where the current user is a judge. Clerk-only.
-
-```bash
-curl "https://your-domain.com/api/dashboard/hackathons/judging"
-```
-
-#### GET /api/dashboard/organizations/search
-
-Searches organizations by name. Clerk-only.
-
-```bash
-curl "https://your-domain.com/api/dashboard/organizations/search?q=acme"
-```
-
-**Response:**
-```json
-{
-  "organizations": [
-    { "id": "uuid", "name": "Acme Corp", "slug": "acme", "logoUrl": "...", "websiteUrl": "..." }
-  ]
-}
+  -d '{ "orderedIds": ["judge-id-2", "judge-id-1", "judge-id-3"] }' | jq .
 ```
 
 ---
 
-### Team Invitations (Clerk-only)
+#### Upload / remove headshot
 
-#### POST /api/dashboard/teams/:teamId/invitations
-
-Sends an email invitation to join a team. Rate limited (10/minute per team).
+Scope: `hackathons:write`. Accepted types: PNG, JPEG, WebP. Max size: 5MB.
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/teams/{teamId}/invitations" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "hackathonId": "uuid",
-    "email": "teammate@example.com",
-    "inviterName": "Jane Smith"
-  }'
-```
+# Upload
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display/$JUDGE_ID/headshot" \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@headshot.jpg" | jq .
 
-**Response:**
-```json
-{ "id": "uuid", "email": "teammate@example.com", "expiresAt": "2026-02-20T00:00:00Z", "emailSent": true }
-```
-
-#### GET /api/dashboard/teams/:teamId/invitations
-
-Lists invitations for a team. Supports `?status=pending` filter.
-
-```bash
-curl "https://your-domain.com/api/dashboard/teams/{teamId}/invitations?status=pending"
-```
-
-#### DELETE /api/dashboard/teams/:teamId/invitations/:invitationId
-
-Cancels a pending team invitation.
-
-```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/teams/{teamId}/invitations/{invitationId}"
+# Remove
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display/$JUDGE_ID/headshot" \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 ---
 
-### Integrations (Clerk-only)
+### Judging Criteria
 
-#### GET /api/dashboard/integrations
+#### List criteria
 
-Lists OAuth integrations for the tenant.
+Scope: `hackathons:read`
 
 ```bash
-curl "https://your-domain.com/api/dashboard/integrations"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/criteria" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 **Response:**
-```json
-{
-  "integrations": [
-    {
-      "id": "uuid",
-      "provider": "luma",
-      "accountEmail": "user@example.com",
-      "isActive": true,
-      "scopes": ["read", "write"],
-      "tokenExpiresAt": "2026-03-01T00:00:00Z",
-      "createdAt": "2026-01-15T10:00:00Z"
-    }
-  ]
-}
-```
 
-#### GET /api/dashboard/integrations/:provider/auth-url
-
-Returns the OAuth authorization URL for a provider.
-
-```bash
-curl "https://your-domain.com/api/dashboard/integrations/luma/auth-url"
-```
-
-**Response:**
-```json
-{ "authUrl": "https://api.lu.ma/oauth/authorize?..." }
-```
-
-#### DELETE /api/dashboard/integrations/:provider
-
-Removes an OAuth integration.
-
-```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/integrations/luma"
-```
-
----
-
-### Credentials (Clerk-only)
-
-#### GET /api/dashboard/credentials
-
-Lists stored API credentials for the tenant.
-
-```bash
-curl "https://your-domain.com/api/dashboard/credentials"
-```
-
-**Response:**
-```json
-{
-  "credentials": [
-    {
-      "id": "uuid",
-      "provider": "luma",
-      "label": "Production Luma Key",
-      "accountIdentifier": "acme-org",
-      "isActive": true,
-      "lastUsedAt": "2026-02-10T08:00:00Z",
-      "createdAt": "2026-01-15T10:00:00Z"
-    }
-  ]
-}
-```
-
-#### POST /api/dashboard/credentials
-
-Saves an API credential (e.g. Luma API key).
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/credentials" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "provider": "luma",
-    "apiKey": "luma_key_abc123",
-    "label": "Production Luma Key",
-    "accountIdentifier": "acme-org"
-  }'
-```
-
-#### PATCH /api/dashboard/credentials/:provider
-
-Updates a stored credential.
-
-```bash
-curl -X PATCH "https://your-domain.com/api/dashboard/credentials/luma" \
-  -H "Content-Type: application/json" \
-  -d '{ "apiKey": "luma_key_new456", "isActive": true }'
-```
-
-#### DELETE /api/dashboard/credentials/:provider
-
-Deletes a stored credential.
-
-```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/credentials/luma"
-```
-
----
-
-### Judging Management
-
-#### GET /api/dashboard/hackathons/:id/judging/criteria
-
-Lists all judging criteria for a hackathon. Requires scope: `hackathons:read`
-
-```bash
-curl "https://your-domain.com/api/dashboard/hackathons/{id}/judging/criteria" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-**Response:**
 ```json
 {
   "criteria": [
@@ -1506,87 +662,62 @@ curl "https://your-domain.com/api/dashboard/hackathons/{id}/judging/criteria" \
 }
 ```
 
-#### POST /api/dashboard/hackathons/:id/judging/criteria
+---
 
-Creates a new judging criteria. Requires scope: `hackathons:write`
+#### Create a criterion
+
+Scope: `hackathons:write`
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judging/criteria" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/criteria" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Innovation",
     "description": "How novel is the approach?",
     "maxScore": 10,
     "weight": 1.5
-  }'
+  }' | jq .
 ```
 
-#### PATCH /api/dashboard/hackathons/:id/judging/criteria/:criteriaId
+---
 
-Updates a judging criteria. Requires scope: `hackathons:write`
+#### Update / delete a criterion
+
+Scope: `hackathons:write`
 
 ```bash
-curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/judging/criteria/{criteriaId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
+# Update
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/criteria/$CRITERIA_ID" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "weight": 2.0 }'
-```
+  -d '{ "weight": 2.0 }' | jq .
 
-#### DELETE /api/dashboard/hackathons/:id/judging/criteria/:criteriaId
-
-Deletes a judging criteria. Requires scope: `hackathons:write`
-
-```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/judging/criteria/{criteriaId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+# Delete
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/criteria/$CRITERIA_ID" \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 ---
 
-#### GET /api/dashboard/hackathons/:id/judging/user-search
+### Judge Management
 
-Searches Clerk users by name or email for adding as judges. Requires scope: `hackathons:read`
+#### List judges
+
+Scope: `hackathons:read`
 
 ```bash
-curl "https://your-domain.com/api/dashboard/hackathons/{id}/judging/user-search?q=jane" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/judges" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 **Response:**
-```json
-{
-  "users": [
-    {
-      "id": "user_abc",
-      "email": "jane@example.com",
-      "firstName": "Jane",
-      "lastName": "Smith",
-      "username": "janesmith",
-      "imageUrl": "https://img.clerk.com/..."
-    }
-  ]
-}
-```
 
----
-
-#### GET /api/dashboard/hackathons/:id/judging/judges
-
-Lists all judges for a hackathon with assignment progress. Requires scope: `hackathons:read`
-
-```bash
-curl "https://your-domain.com/api/dashboard/hackathons/{id}/judging/judges" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-**Response:**
 ```json
 {
   "judges": [
     {
       "participantId": "uuid",
-      "clerkUserId": "user_abc",
       "displayName": "Jane Smith",
       "email": "jane@example.com",
       "imageUrl": "https://img.clerk.com/...",
@@ -1597,52 +728,102 @@ curl "https://your-domain.com/api/dashboard/hackathons/{id}/judging/judges" \
 }
 ```
 
-#### POST /api/dashboard/hackathons/:id/judging/judges
+---
 
-Adds a judge by Clerk user ID or email. If the email user is not found, sends an invitation email. Requires scope: `hackathons:write`
+#### Add a judge
+
+Scope: `hackathons:write`. Add by email — if the user doesn't have an account, an invitation email is sent automatically.
 
 ```bash
-# By Clerk user ID
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judging/judges" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/judges" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "clerkUserId": "user_abc" }'
-
-# By email (sends invitation if user not found)
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judging/judges" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{ "email": "judge@example.com" }'
+  -d '{ "email": "judge@example.com" }' | jq .
 ```
 
-#### DELETE /api/dashboard/hackathons/:id/judging/judges/:participantId
+---
 
-Removes a judge from a hackathon. Requires scope: `hackathons:write`
+#### Remove a judge
+
+Scope: `hackathons:write`
 
 ```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/judging/judges/{participantId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/judges/$PARTICIPANT_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 **Response:**
+
 ```json
 { "success": true, "resultsStale": true }
 ```
 
-`resultsStale` indicates if previously calculated results need recalculation.
+`resultsStale` indicates previously calculated results need recalculation.
 
 ---
 
-#### GET /api/dashboard/hackathons/:id/judging/assignments
+#### Search users
 
-Lists all judge-submission assignments with progress stats. Requires scope: `hackathons:read`
+Scope: `hackathons:read`. Search by name or email to find users to add as judges.
 
 ```bash
-curl "https://your-domain.com/api/dashboard/hackathons/{id}/judging/assignments" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/user-search?q=jane" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 **Response:**
+
+```json
+{
+  "users": [
+    {
+      "id": "user_abc",
+      "email": "jane@example.com",
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "imageUrl": "https://img.clerk.com/..."
+    }
+  ]
+}
+```
+
+---
+
+#### List judge invitations
+
+Scope: `hackathons:read`
+
+```bash
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/invitations" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+```
+
+---
+
+#### Cancel a judge invitation
+
+Scope: `hackathons:write`
+
+```bash
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/invitations/$INVITATION_ID" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+---
+
+### Judging Assignments
+
+#### List assignments
+
+Scope: `hackathons:read`
+
+```bash
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/assignments" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+```
+
+**Response:**
+
 ```json
 {
   "assignments": [
@@ -1665,76 +846,58 @@ curl "https://your-domain.com/api/dashboard/hackathons/{id}/judging/assignments"
 }
 ```
 
-#### POST /api/dashboard/hackathons/:id/judging/assignments
+---
 
-Manually assigns a judge to a submission. Requires scope: `hackathons:write`
+#### Auto-assign judges to submissions
+
+Scope: `hackathons:write`. Distributes submissions across judges evenly.
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judging/assignments" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/auto-assign" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "judgeParticipantId": "uuid", "submissionId": "uuid" }'
-```
-
-#### DELETE /api/dashboard/hackathons/:id/judging/assignments/:assignmentId
-
-Removes a judge-submission assignment. Requires scope: `hackathons:write`
-
-```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/judging/assignments/{assignmentId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-#### POST /api/dashboard/hackathons/:id/judging/auto-assign
-
-Automatically distributes submissions across judges evenly. Requires scope: `hackathons:write`
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/judging/auto-assign" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{ "submissionsPerJudge": 3 }'
+  -d '{ "submissionsPerJudge": 3 }' | jq .
 ```
 
 **Response:**
+
 ```json
 { "assignedCount": 15 }
 ```
 
 ---
 
-#### GET /api/dashboard/hackathons/:id/judging/invitations
+#### Manually assign / remove an assignment
 
-Lists pending judge invitations for a hackathon. Requires scope: `hackathons:read`
-
-```bash
-curl "https://your-domain.com/api/dashboard/hackathons/{id}/judging/invitations" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-#### DELETE /api/dashboard/hackathons/:id/judging/invitations/:invitationId
-
-Cancels a pending judge invitation. Requires scope: `hackathons:write`
+Scope: `hackathons:write`
 
 ```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/judging/invitations/{invitationId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+# Assign
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/assignments" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "judgeParticipantId": "uuid", "submissionId": "uuid" }' | jq .
+
+# Remove
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/assignments/$ASSIGNMENT_ID" \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 ---
 
-### Prize Management
+### Prizes
 
-#### GET /api/dashboard/hackathons/:id/prizes
+#### List prizes
 
-Lists all prizes and prize-submission assignments for a hackathon. Requires scope: `hackathons:read`
+Scope: `hackathons:read`
 
 ```bash
-curl "https://your-domain.com/api/dashboard/hackathons/{id}/prizes" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 **Response:**
+
 ```json
 {
   "prizes": [
@@ -1761,96 +924,100 @@ curl "https://your-domain.com/api/dashboard/hackathons/{id}/prizes" \
 }
 ```
 
-#### POST /api/dashboard/hackathons/:id/prizes
+---
 
-Creates a new prize. Requires scope: `hackathons:write`
+#### Create a prize
+
+Scope: `hackathons:write`
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/prizes" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Best Overall", "description": "Top project", "value": "$5,000" }'
-```
-
-#### PATCH /api/dashboard/hackathons/:id/prizes/:prizeId
-
-Updates a prize. Requires scope: `hackathons:write`
-
-```bash
-curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/prizes/{prizeId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{ "value": "$10,000" }'
-```
-
-#### DELETE /api/dashboard/hackathons/:id/prizes/:prizeId
-
-Deletes a prize. Requires scope: `hackathons:write`
-
-```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/prizes/{prizeId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-#### POST /api/dashboard/hackathons/:id/prizes/reorder
-
-Reorders prizes by setting display order. Requires scope: `hackathons:write`
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/prizes/reorder" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{ "orderedIds": ["prize-id-3", "prize-id-1", "prize-id-2"] }'
-```
-
-#### POST /api/dashboard/hackathons/:id/prizes/:prizeId/assign
-
-Assigns a prize to a submission. Requires scope: `hackathons:write`
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/prizes/{prizeId}/assign" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{ "submissionId": "uuid" }'
-```
-
-#### DELETE /api/dashboard/hackathons/:id/prizes/:prizeId/assign/:submissionId
-
-Removes a prize assignment from a submission. Requires scope: `hackathons:write`
-
-```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/prizes/{prizeId}/assign/{submissionId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+  -d '{ "name": "Best Overall", "description": "Top project", "value": "$5,000" }' | jq .
 ```
 
 ---
 
-### Results Management
+#### Update / delete a prize
 
-#### POST /api/dashboard/hackathons/:id/results/calculate
-
-Calculates rankings from judging scores. Requires scope: `hackathons:write`
+Scope: `hackathons:write`
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/results/calculate" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+# Update
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/$PRIZE_ID" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "value": "$10,000" }' | jq .
+
+# Delete
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/$PRIZE_ID" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+---
+
+#### Reorder prizes
+
+Scope: `hackathons:write`
+
+```bash
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/reorder" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "orderedIds": ["prize-id-3", "prize-id-1", "prize-id-2"] }' | jq .
+```
+
+---
+
+#### Assign / unassign a prize to a submission
+
+Scope: `hackathons:write`
+
+```bash
+# Assign
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/$PRIZE_ID/assign" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "submissionId": "uuid" }' | jq .
+
+# Unassign
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/$PRIZE_ID/assign/$SUBMISSION_ID" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+---
+
+### Results
+
+#### Calculate rankings
+
+Scope: `hackathons:write`. Computes rankings from judging scores.
+
+```bash
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results/calculate" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 **Response:**
+
 ```json
 { "success": true, "count": 5 }
 ```
 
-#### GET /api/dashboard/hackathons/:id/results
+---
 
-Returns detailed results with scores for organizers. Requires scope: `hackathons:read`
+#### View results
+
+Scope: `hackathons:read`. Detailed results with scores (organizer view).
 
 ```bash
-curl "https://your-domain.com/api/dashboard/hackathons/{id}/results" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 **Response:**
+
 ```json
 {
   "results": [
@@ -1871,173 +1038,258 @@ curl "https://your-domain.com/api/dashboard/hackathons/{id}/results" \
 }
 ```
 
-#### POST /api/dashboard/hackathons/:id/results/publish
+---
 
-Makes results publicly visible and transitions hackathon to completed. Requires scope: `hackathons:write`
+#### Publish / unpublish results
 
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/results/publish" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-#### POST /api/dashboard/hackathons/:id/results/unpublish
-
-Hides published results from public view. Requires scope: `hackathons:write`
+Scope: `hackathons:write`. Publishing makes results publicly visible and transitions the hackathon to `completed`.
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/results/unpublish" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+# Publish
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results/publish" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+
+# Unpublish
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results/unpublish" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 ---
 
-#### GET /api/dashboard/hackathons/:id/announcements
+### Announcements
 
-Lists all announcements for a hackathon (including drafts). Requires scope: `hackathons:read`
+#### List announcements
 
-```bash
-curl "https://your-domain.com/api/dashboard/hackathons/{id}/announcements" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-#### POST /api/dashboard/hackathons/:id/announcements
-
-Creates a draft announcement. Requires scope: `hackathons:write`
+Scope: `hackathons:read`. Includes drafts and scheduled (organizer view).
 
 ```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Submission deadline extended", "body": "You have an extra hour!", "priority": "urgent", "audience": "everyone"}'
-```
-
-#### PATCH /api/dashboard/hackathons/:id/announcements/:announcementId
-
-Updates an announcement. Requires scope: `hackathons:write`
-
-```bash
-curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Updated title", "audience": "judges"}'
-```
-
-#### DELETE /api/dashboard/hackathons/:id/announcements/:announcementId
-
-Deletes an announcement. Requires scope: `hackathons:write`
-
-```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-#### POST /api/dashboard/hackathons/:id/announcements/:announcementId/publish
-
-Publishes an announcement immediately. Requires scope: `hackathons:write`
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}/publish" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-#### POST /api/dashboard/hackathons/:id/announcements/:announcementId/schedule
-
-Schedules an announcement for future publishing. Requires scope: `hackathons:write`
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}/schedule" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{"scheduledAt": "2026-04-28T14:00:00Z"}'
-```
-
-#### POST /api/dashboard/hackathons/:id/announcements/:announcementId/unpublish
-
-Reverts a published announcement to draft. Requires scope: `hackathons:write`
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/announcements/{announcementId}/unpublish" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-#### GET /api/dashboard/hackathons/:id/schedule
-
-Lists all schedule items for a hackathon. Requires scope: `hackathons:read`
-
-```bash
-curl "https://your-domain.com/api/dashboard/hackathons/{id}/schedule" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
-```
-
-#### POST /api/dashboard/hackathons/:id/schedule
-
-Creates a schedule item. Requires scope: `hackathons:write`
-
-```bash
-curl -X POST "https://your-domain.com/api/dashboard/hackathons/{id}/schedule" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Opening Ceremony", "startsAt": "2026-04-28T09:00:00Z", "endsAt": "2026-04-28T09:30:00Z", "location": "Main Hall"}'
-```
-
-#### PATCH /api/dashboard/hackathons/:id/schedule/:itemId
-
-Updates a schedule item. Requires scope: `hackathons:write`
-
-```bash
-curl -X PATCH "https://your-domain.com/api/dashboard/hackathons/{id}/schedule/{itemId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Updated title", "location": "Room B"}'
-```
-
-#### DELETE /api/dashboard/hackathons/:id/schedule/:itemId
-
-Deletes a schedule item. Requires scope: `hackathons:write`
-
-```bash
-curl -X DELETE "https://your-domain.com/api/dashboard/hackathons/{id}/schedule/{itemId}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/announcements" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 ---
 
-### Webhooks, Schedules, Jobs
+#### Create / update / delete an announcement
 
-#### Webhooks (`webhooks:read` / `webhooks:write`)
-- `GET /api/dashboard/webhooks` - List webhooks
-- `POST /api/dashboard/webhooks` - Create webhook
-- `DELETE /api/dashboard/webhooks/:id` - Delete webhook
+Scope: `hackathons:write`. Created as a draft — use publish or schedule to make it visible.
 
-#### Schedules (`schedules:read` / `schedules:write`)
-- `GET /api/dashboard/schedules` - List schedules
-- `POST /api/dashboard/schedules` - Create schedule
-- `GET /api/dashboard/schedules/:id` - Get schedule
-- `PATCH /api/dashboard/schedules/:id` - Update schedule
-- `DELETE /api/dashboard/schedules/:id` - Delete schedule
+```bash
+# Create
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/announcements" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Submission deadline extended",
+    "body": "You have an extra hour!",
+    "priority": "urgent",
+    "audience": "everyone"
+  }' | jq .
 
-#### Jobs
-- `GET /api/dashboard/jobs` - List jobs (with `limit`, `offset`)
-- `GET /api/dashboard/jobs/:id` - Get job details
+# Update
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/announcements/$ANNOUNCEMENT_ID" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "title": "Updated title", "audience": "judges" }' | jq .
+
+# Delete
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/announcements/$ANNOUNCEMENT_ID" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+---
+
+#### Publish / schedule / unpublish an announcement
+
+Scope: `hackathons:write`
+
+```bash
+# Publish immediately
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/announcements/$ANNOUNCEMENT_ID/publish" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+
+# Schedule for later
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/announcements/$ANNOUNCEMENT_ID/schedule" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "scheduledAt": "2026-04-28T14:00:00Z" }' | jq .
+
+# Revert to draft
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/announcements/$ANNOUNCEMENT_ID/unpublish" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+```
+
+---
+
+### Schedule
+
+#### List schedule items
+
+Scope: `hackathons:read`
+
+```bash
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/schedule" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+```
+
+---
+
+#### Create / update / delete a schedule item
+
+Scope: `hackathons:write`
+
+```bash
+# Create
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/schedule" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Opening Ceremony",
+    "startsAt": "2026-04-28T09:00:00Z",
+    "endsAt": "2026-04-28T09:30:00Z",
+    "location": "Main Hall"
+  }' | jq .
+
+# Update
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/schedule/$ITEM_ID" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "title": "Updated title", "location": "Room B" }' | jq .
+
+# Delete
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/schedule/$ITEM_ID" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+---
+
+### Organization Profile
+
+#### Get / update profile
+
+```bash
+# Get (scope: org:read)
+curl -s "$BASE_URL/api/dashboard/org-profile" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+
+# Update (scope: org:write)
+curl -s -X PATCH "$BASE_URL/api/dashboard/org-profile" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Acme Corp",
+    "slug": "acme",
+    "description": "Building the future",
+    "websiteUrl": "https://acme.com"
+  }' | jq .
+```
+
+---
+
+#### Upload / delete logo
+
+Scope: `org:write`. Accepted types: PNG, JPEG, WebP, SVG. Max size: 2MB.
+
+```bash
+# Upload (variant: "light" or "dark")
+curl -s -X POST "$BASE_URL/api/dashboard/upload-logo" \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@logo.png" \
+  -F "variant=light" | jq .
+
+# Delete
+curl -s -X DELETE "$BASE_URL/api/dashboard/logo/light" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+---
+
+### Webhooks
+
+Scope: `webhooks:read` / `webhooks:write`
+
+```bash
+# List
+curl -s "$BASE_URL/api/dashboard/webhooks" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+
+# Create
+curl -s -X POST "$BASE_URL/api/dashboard/webhooks" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-server.com/webhook",
+    "events": ["hackathon.updated", "submission.submitted", "results.published"]
+  }' | jq .
+
+# Delete
+curl -s -X DELETE "$BASE_URL/api/dashboard/webhooks/$WEBHOOK_ID" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+---
+
+### Schedules (recurring jobs)
+
+Scope: `schedules:read` / `schedules:write`
+
+```bash
+# List
+curl -s "$BASE_URL/api/dashboard/schedules" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+
+# Create
+curl -s -X POST "$BASE_URL/api/dashboard/schedules" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "sync-event",
+    "cron": "0 9 * * *",
+    "input": { "eventId": "abc" }
+  }' | jq .
+
+# Get details
+curl -s "$BASE_URL/api/dashboard/schedules/$SCHEDULE_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+
+# Update
+curl -s -X PATCH "$BASE_URL/api/dashboard/schedules/$SCHEDULE_ID" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "cron": "0 12 * * *" }' | jq .
+
+# Delete
+curl -s -X DELETE "$BASE_URL/api/dashboard/schedules/$SCHEDULE_ID" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+---
+
+### Jobs
+
+```bash
+# List (with pagination)
+curl -s "$BASE_URL/api/dashboard/jobs?limit=10&offset=0" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+
+# Get details
+curl -s "$BASE_URL/api/dashboard/jobs/$JOB_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+```
 
 ---
 
 ## v1 Integration Endpoints
 
-All v1 endpoints require API key authentication.
+All v1 endpoints require API key authentication. For programmatic and async operations.
 
-### GET /api/v1/whoami
-
-Returns API key info.
-
-#### curl
+### Check API key identity
 
 ```bash
-curl "https://your-domain.com/api/v1/whoami" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+curl -s "$BASE_URL/api/v1/whoami" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
-#### Response
+**Response:**
 
 ```json
 { "tenantId": "uuid", "keyId": "uuid", "scopes": ["hackathons:read", "hackathons:write"] }
@@ -2045,225 +1297,123 @@ curl "https://your-domain.com/api/v1/whoami" \
 
 ---
 
-### POST /api/v1/jobs
+### Create a job
 
-Creates a job and starts workflow execution. Supports idempotency.
-
-#### curl
+Scope: `hackathons:write`. Starts a workflow execution. Supports idempotency.
 
 ```bash
-curl -X POST "https://your-domain.com/api/v1/jobs" \
-  -H "Authorization: Bearer sk_live_your_api_key_here" \
+curl -s -X POST "$BASE_URL/api/v1/jobs" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: unique-request-id-123" \
-  -d '{ "type": "sync-event", "input": { "eventId": "abc" } }'
+  -d '{ "type": "sync-event", "input": { "eventId": "abc" } }' | jq .
 ```
-
-#### TypeScript
-
-```typescript
-async function createJob(apiKey: string, type: string, input?: Record<string, unknown>) {
-  const res = await fetch("https://your-domain.com/api/v1/jobs", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ type, input }),
-  })
-  return res.json()
-}
-```
-
-#### Python
-
-```python
-import requests
-
-def create_job(api_key: str, job_type: str, input_data: dict | None = None) -> dict:
-    response = requests.post(
-        "https://your-domain.com/api/v1/jobs",
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        json={"type": job_type, "input": input_data},
-    )
-    response.raise_for_status()
-    return response.json()
-```
-
-Requires scope: `hackathons:write`
 
 ---
 
-### GET /api/v1/jobs/:id
+### Get job status
 
-Returns job status. Requires scope: `hackathons:read`
+Scope: `hackathons:read`
 
 ```bash
-curl "https://your-domain.com/api/v1/jobs/{id}" \
-  -H "Authorization: Bearer sk_live_your_api_key_here"
+curl -s "$BASE_URL/api/v1/jobs/$JOB_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 ---
 
-### GET /api/v1/jobs/:id/result
+### Get job result
 
-Returns job result. Returns **202** if still running. Requires scope: `hackathons:read`
+Scope: `hackathons:read`. Returns **202** with empty body while the job is still running.
 
-#### TypeScript (with polling)
+```bash
+curl -s "$BASE_URL/api/v1/jobs/$JOB_ID/result" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 
-```typescript
-async function waitForResult(apiKey: string, jobId: string, maxAttempts = 60) {
-  for (let i = 0; i < maxAttempts; i++) {
-    const res = await fetch(`https://your-domain.com/api/v1/jobs/${jobId}/result`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    })
-    if (res.status === 202) {
-      await new Promise((r) => setTimeout(r, 1000))
-      continue
-    }
-    return res.json()
-  }
-  throw new Error("Job timed out")
-}
+# Poll until complete
+while true; do
+  HTTP_CODE=$(curl -s -o /tmp/job-result.json -w "%{http_code}" \
+    "$BASE_URL/api/v1/jobs/$JOB_ID/result" \
+    -H "Authorization: Bearer $API_KEY")
+  if [ "$HTTP_CODE" -ne 202 ]; then
+    cat /tmp/job-result.json | jq .
+    break
+  fi
+  sleep 1
+done
 ```
 
 ---
 
-### POST /api/v1/jobs/:id/cancel
+### Cancel a job
 
-Cancels a queued or running job. Requires scope: `hackathons:write`
+Scope: `hackathons:write`
+
+```bash
+curl -s -X POST "$BASE_URL/api/v1/jobs/$JOB_ID/cancel" \
+  -H "Authorization: Bearer $API_KEY" | jq .
+```
 
 ---
 
 ### Webhooks (v1)
 
-- `GET /api/v1/webhooks` - List webhooks (`webhooks:read`)
-- `POST /api/v1/webhooks` - Create webhook, returns secret **once** (`webhooks:write`)
-- `DELETE /api/v1/webhooks/:id` - Delete webhook (`webhooks:write`)
+Scope: `webhooks:read` / `webhooks:write`
 
----
+```bash
+# List
+curl -s "$BASE_URL/api/v1/webhooks" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 
-## Error Handling
+# Create (returns secret once — save it)
+curl -s -X POST "$BASE_URL/api/v1/webhooks" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-server.com/webhook",
+    "events": ["hackathon.updated", "submission.submitted"]
+  }' | jq .
 
-All endpoints return errors in this format:
-
-```json
-{ "error": "Error message here", "code": "error_code" }
-```
-
-Common HTTP status codes:
-- `400` - Bad request (invalid input)
-- `401` - Unauthorized (missing or invalid auth)
-- `403` - Forbidden (missing required scope)
-- `404` - Not found
-- `409` - Conflict (duplicate resource)
-- `429` - Rate limit exceeded
-- `500` - Internal server error
-
-### Rate Limiting
-
-When rate limited, the response includes headers:
-- `X-RateLimit-Remaining`: Requests remaining in window
-- `X-RateLimit-Reset`: Unix timestamp when limit resets
-
-```typescript
-async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3) {
-  for (let i = 0; i < maxRetries; i++) {
-    const response = await fetch(url, options)
-
-    if (response.status === 429) {
-      const resetAt = response.headers.get("X-RateLimit-Reset")
-      const waitMs = resetAt
-        ? Math.max(0, Number(resetAt) * 1000 - Date.now())
-        : 1000 * (i + 1)
-      await new Promise(resolve => setTimeout(resolve, waitMs))
-      continue
-    }
-
-    return response
-  }
-  throw new Error("Max retries exceeded")
-}
+# Delete
+curl -s -X DELETE "$BASE_URL/api/v1/webhooks/$WEBHOOK_ID" \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 ---
 
-### GET /api/v1/hackathons/:id/activity
+### Activity logs
 
-Returns audit logs for a hackathon. Supports filtering, sorting, date ranges, and pagination.
-
-#### Query Parameters
+Scope: `hackathons:read`. Returns audit logs for a hackathon with filtering, sorting, date ranges, and pagination.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `limit` | number | 50 | Page size (1-100) |
 | `offset` | number | 0 | Pagination offset |
-| `action` | string | — | Substring filter on action (e.g. `hackathon.created`) |
-| `resource_type` | string | — | Exact match on resource type (e.g. `hackathon`, `team`) |
+| `action` | string | — | Substring filter (e.g. `judge`) |
+| `resource_type` | string | — | Exact match (e.g. `hackathon`, `team`) |
 | `since` | string | — | ISO 8601 timestamp, only logs after this time |
 | `until` | string | — | ISO 8601 timestamp, only logs before this time |
-| `sort` | string | `desc` | Sort by created_at: `asc` or `desc` |
-
-#### curl
+| `sort` | string | `desc` | `asc` or `desc` |
 
 ```bash
-# Basic: latest 50 logs
-curl -H "Authorization: Bearer $API_KEY" \
-  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity"
+# Latest 50 logs
+curl -s "$BASE_URL/api/v1/hackathons/$HACKATHON_ID/activity" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 
 # Filter by action
-curl -H "Authorization: Bearer $API_KEY" \
-  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity?action=judge"
+curl -s "$BASE_URL/api/v1/hackathons/$HACKATHON_ID/activity?action=judge" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 
 # Date range + resource type
-curl -H "Authorization: Bearer $API_KEY" \
-  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity?since=2026-04-01T00:00:00Z&until=2026-04-03T23:59:59Z&resource_type=team"
+curl -s "$BASE_URL/api/v1/hackathons/$HACKATHON_ID/activity?since=2026-04-01T00:00:00Z&until=2026-04-03T23:59:59Z&resource_type=team" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 
 # Oldest first, page 2
-curl -H "Authorization: Bearer $API_KEY" \
-  "https://your-domain.com/api/v1/hackathons/$HACKATHON_ID/activity?sort=asc&limit=20&offset=20"
+curl -s "$BASE_URL/api/v1/hackathons/$HACKATHON_ID/activity?sort=asc&limit=20&offset=20" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
-#### TypeScript
-
-```typescript
-type ActivityLog = {
-  id: string
-  action: string
-  resourceType: string
-  resourceId: string | null
-  actorType: "user" | "api_key"
-  metadata: Record<string, unknown> | null
-  createdAt: string
-}
-
-async function listActivity(hackathonId: string, params?: {
-  action?: string
-  resource_type?: string
-  since?: string
-  until?: string
-  sort?: "asc" | "desc"
-  limit?: number
-  offset?: number
-}) {
-  const qs = new URLSearchParams()
-  if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined) qs.set(k, String(v))
-    }
-  }
-  const url = `https://your-domain.com/api/v1/hackathons/${hackathonId}/activity?${qs}`
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${API_KEY}` },
-  })
-  return res.json() as Promise<{ logs: ActivityLog[]; total: number }>
-}
-```
-
-#### Response
+**Response:**
 
 ```json
 {
@@ -2280,4 +1430,39 @@ async function listActivity(hackathonId: string, params?: {
   ],
   "total": 142
 }
+```
+
+---
+
+## Error Handling
+
+All endpoints return errors in this format:
+
+```json
+{ "error": "Error message here", "code": "error_code" }
+```
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Bad request (invalid input) |
+| `401` | Unauthorized (missing or invalid auth) |
+| `403` | Forbidden (missing required scope) |
+| `404` | Not found |
+| `409` | Conflict (duplicate resource) |
+| `429` | Rate limit exceeded |
+| `500` | Internal server error |
+
+### Rate limiting
+
+When rate limited (429), check these response headers:
+
+- `X-RateLimit-Remaining` — requests remaining in the current window
+- `X-RateLimit-Reset` — Unix timestamp when the limit resets
+
+Wait until the reset timestamp before retrying.
+
+```bash
+# Use -i to see rate limit headers
+curl -i "$BASE_URL/api/v1/jobs" \
+  -H "Authorization: Bearer $API_KEY"
 ```

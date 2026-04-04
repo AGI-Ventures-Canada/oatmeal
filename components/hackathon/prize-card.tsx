@@ -1,12 +1,13 @@
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import type { PrizeType, HackathonStatus } from "@/lib/db/hackathon-types"
+import type { PrizeType, PrizeJudgingStyle, HackathonStatus } from "@/lib/db/hackathon-types"
 
 interface PrizeCardProps {
   name: string
   description: string | null
   value: string | null
   type: PrizeType
+  judgingStyle: PrizeJudgingStyle | null
   winner?: {
     submissionTitle: string
     teamName: string | null
@@ -15,19 +16,34 @@ interface PrizeCardProps {
   hackathonStatus?: HackathonStatus
 }
 
-const typeLabels: Record<PrizeType, string> = {
-  score: "Score-based",
-  criteria: "Best in Category",
-  favorite: "Organizer's Pick",
-  crowd: "Crowd's Favorite",
+const judgingStyleLabels: Record<PrizeJudgingStyle, string> = {
+  bucket_sort: "Judged",
+  gate_check: "Gate Check",
+  crowd_vote: "Crowd Vote",
+  judges_pick: "Judge's Pick",
 }
 
-export function PrizeCard({ name, description, value, type, winner, hackathonSlug, hackathonStatus }: PrizeCardProps) {
+const typeLabels: Record<PrizeType, string> = {
+  score: "Judged",
+  criteria: "Judged",
+  favorite: "Judged",
+  crowd: "Crowd Vote",
+}
+
+function getBadgeLabel(judgingStyle: PrizeJudgingStyle | null, type: PrizeType): string {
+  if (judgingStyle) return judgingStyleLabels[judgingStyle]
+  return typeLabels[type]
+}
+
+export function PrizeCard({ name, description, value, type, judgingStyle, winner, hackathonSlug, hackathonStatus }: PrizeCardProps) {
+  const isCrowd = judgingStyle === "crowd_vote" || type === "crowd"
   const showCrowdLink =
-    type === "crowd" &&
+    isCrowd &&
     hackathonSlug &&
     hackathonStatus &&
     ["active", "judging"].includes(hackathonStatus)
+
+  const badgeLabel = getBadgeLabel(judgingStyle, type)
 
   return (
     <div className="rounded-lg border p-4 space-y-2">
@@ -41,12 +57,12 @@ export function PrizeCard({ name, description, value, type, winner, hackathonSlu
         {showCrowdLink ? (
           <Link href={`/e/${hackathonSlug}/vote`}>
             <Badge variant="secondary" className="shrink-0 text-xs hover:bg-secondary/80 cursor-pointer">
-              {typeLabels[type]}
+              {badgeLabel}
             </Badge>
           </Link>
         ) : (
           <Badge variant="secondary" className="shrink-0 text-xs">
-            {typeLabels[type]}
+            {badgeLabel}
           </Badge>
         )}
       </div>

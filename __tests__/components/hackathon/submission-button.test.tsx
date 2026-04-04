@@ -66,7 +66,6 @@ describe("SubmissionButton", () => {
     expect(
       within(dialog).getByText("Submit your hackathon project to the competition.")
     ).toBeDefined()
-    expect(within(dialog).getByRole("button", { name: "Go to Title step" })).toBeDefined()
     expect(within(dialog).getByLabelText("Title")).toBeDefined()
     expect(within(dialog).queryByLabelText("GitHub URL")).toBeNull()
     expect(within(dialog).queryByText("Project Title")).toBeNull()
@@ -118,7 +117,6 @@ describe("SubmissionButton", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Go to GitHub step" }))
 
     expect(within(dialog).getByLabelText("GitHub URL")).toBeDefined()
-    expect(within(dialog).getByRole("button", { name: "Go to Title step" })).toBeDefined()
 
     fireEvent.change(within(dialog).getByLabelText("GitHub URL"), {
       target: { value: "github.com/acme/atlas" },

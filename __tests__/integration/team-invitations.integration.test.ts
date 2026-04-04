@@ -75,6 +75,12 @@ mock.module("@/lib/email/team-invitations", () => ({
   sendTeamInvitationEmail: mockSendTeamInvitationEmail,
 }))
 
+const mockWorkflowStart = mock(() => Promise.resolve({ runId: "run_1" }))
+mock.module("workflow/api", () => ({ start: mockWorkflowStart }))
+mock.module("@/lib/workflows/team-invitations", () => ({
+  sendTeamInvitationWorkflow: mock(() => Promise.resolve()),
+}))
+
 const mockLogAudit = mock(() => Promise.resolve())
 
 mock.module("@/lib/services/audit", () => ({
@@ -125,23 +131,31 @@ const mockResolvePrincipal = mock(() =>
   })
 )
 
-mock.module("@/lib/auth/principal", () => ({
-  resolvePrincipal: mockResolvePrincipal,
-  requirePrincipal: (principal: unknown, _kinds: string[]) => {
-    if (!principal || (principal as { kind: string }).kind === "anonymous") {
-      const error = new Error("Unauthorized")
-      ;(error as Error & { statusCode: number }).statusCode = 401
-      throw error
-    }
-  },
-  AuthError: class AuthError extends Error {
+mock.module("@/lib/auth/principal", () => {
+  class AuthError extends Error {
     statusCode: number
     constructor(message: string, statusCode: number) {
       super(message)
       this.statusCode = statusCode
+      this.name = "AuthError"
     }
-  },
-}))
+  }
+
+  return {
+    resolvePrincipal: mockResolvePrincipal,
+    requirePrincipal: (principal: unknown, _kinds: string[]) => {
+      if (!principal || (principal as { kind: string }).kind === "anonymous") {
+        throw new AuthError("Unauthorized", 401)
+      }
+    },
+    isAdminEnabled: () => true,
+    requireAdmin: (principal: { kind: string }) => {
+      if (principal.kind !== "admin") throw new AuthError("Forbidden", 403)
+    },
+    requireAdminScopes: () => {},
+    AuthError,
+  }
+})
 
 const { Elysia } = await import("elysia")
 const { publicRoutes } = await import("@/lib/api/routes/public")
@@ -443,6 +457,8 @@ describe("Dashboard Team Invitations Routes", () => {
     mockGetTeamWithHackathon.mockReset()
     mockSendTeamInvitationEmail.mockReset()
     mockSendTeamInvitationEmail.mockResolvedValue({ success: true })
+    mockWorkflowStart.mockReset()
+    mockWorkflowStart.mockResolvedValue({ runId: "run_1" })
     mockLogAudit.mockReset()
     mockCheckRateLimit.mockReset()
     mockCheckRateLimit.mockReturnValue({ allowed: true, remaining: 9, resetAt: Date.now() + 60000 })
@@ -490,8 +506,8 @@ describe("Dashboard Team Invitations Routes", () => {
       expect(res.status).toBe(200)
       expect(data.id).toBe("inv_1")
       expect(data.email).toBe("test@example.com")
-      expect(data.emailSent).toBe(true)
-      expect(mockSendTeamInvitationEmail).toHaveBeenCalled()
+      expect(data.emailSent).toBeUndefined()
+      expect(mockWorkflowStart).toHaveBeenCalled()
       expect(mockLogAudit).toHaveBeenCalled()
     })
 
@@ -540,8 +556,9 @@ describe("Dashboard Team Invitations Routes", () => {
         })
       )
 
-      expect(mockSendTeamInvitationEmail).toHaveBeenCalledWith(
-        expect.objectContaining({ inviterName: "A team captain" })
+      expect(mockWorkflowStart).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.arrayContaining([expect.objectContaining({ inviterName: "A team captain" })])
       )
     })
   })

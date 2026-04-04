@@ -1,18 +1,12 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test"
 import type { ClerkClient } from "@clerk/backend"
+import { mockClerkClient } from "./supabase-mock"
+
+const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
 
 const mockGetUser = mock(() =>
   Promise.resolve({ firstName: "Jane", lastName: "Doe" })
 )
-const mockClerkClientFactory = mock(() =>
-  Promise.resolve({ users: { getUser: mockGetUser } })
-)
-
-mock.module("@clerk/nextjs/server", () => ({
-  clerkClient: mockClerkClientFactory,
-}))
-
-const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
 
 function makeClient(firstName: string | null, lastName: string | null): ClerkClient {
   return {
@@ -23,7 +17,10 @@ function makeClient(firstName: string | null, lastName: string | null): ClerkCli
 describe("resolveAdderName", () => {
   beforeEach(() => {
     mockGetUser.mockClear()
-    mockClerkClientFactory.mockClear()
+    mockClerkClient.mockClear()
+    mockClerkClient.mockImplementation(() =>
+      Promise.resolve({ users: { getUser: mockGetUser } })
+    )
   })
 
   it("returns 'An organizer' for non-user principal", async () => {
@@ -67,13 +64,13 @@ describe("resolveAdderName", () => {
     const client = { users: { getUser } } as unknown as ClerkClient
     await resolveAdderName({ kind: "user", userId: "u1" }, client)
     expect(getUser).toHaveBeenCalledWith("u1")
-    expect(mockClerkClientFactory).not.toHaveBeenCalled()
+    expect(mockClerkClient).not.toHaveBeenCalled()
   })
 
   it("instantiates clerkClient when no client is provided", async () => {
     mockGetUser.mockResolvedValueOnce({ firstName: "Sam", lastName: "Smith" })
     const result = await resolveAdderName({ kind: "user", userId: "u1" })
     expect(result).toBe("Sam Smith")
-    expect(mockClerkClientFactory).toHaveBeenCalled()
+    expect(mockClerkClient).toHaveBeenCalled()
   })
 })

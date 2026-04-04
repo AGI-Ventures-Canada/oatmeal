@@ -28,7 +28,9 @@ export const getManageHackathon = cache(
       return { ok: false, reason: "not_found" }
     }
 
-    const isOrganizer = orgId !== null && hackathon.organizer.clerk_org_id === orgId
+    const isOrganizer =
+      (orgId !== null && hackathon.organizer.clerk_org_id === orgId) ||
+      (orgId === null && hackathon.organizer.clerk_user_id === userId)
 
     if (!isOrganizer) {
       return { ok: false, reason: "not_organizer" }

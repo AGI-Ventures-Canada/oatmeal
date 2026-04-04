@@ -24,6 +24,7 @@ export async function runCriteriaList(
   console.log(
     formatTable(data.criteria, [
       { key: "name", label: "Name" },
+      { key: "category", label: "Category" },
       { key: "maxScore", label: "Max Score" },
       { key: "weight", label: "Weight" },
       { key: "description", label: "Description" },

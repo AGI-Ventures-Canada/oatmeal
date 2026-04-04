@@ -184,6 +184,20 @@ export default async function Page(props: PageProps<"/blog/[slug]">) {
 
 ## Development Rules
 
+### New Features Require Plan Mode and Interview
+
+**When the user asks to build a new feature, ALWAYS follow this process before writing any code:**
+
+1. **Enter plan mode first.** Do not start implementation until a plan is agreed upon.
+2. **Conduct an interview to clarify requirements.** Ask questions to understand:
+   - What the feature should do from the user's perspective
+   - Expected behavior, edge cases, and constraints
+   - How it fits with existing functionality
+   - Any UI/UX preferences or specific implementation details
+   - Priority and scope — what's in v1 vs. later
+
+Only proceed to implementation after the user has confirmed the plan. This applies to net-new features, not bug fixes, refactors, or small tweaks to existing behavior.
+
 ### Pages Must Be Server-Side
 
 All page components in `app/` must be server-side rendered. Never use `"use client"` in page files. Extract client-side functionality into separate client components.
@@ -628,13 +642,24 @@ refactor: extract payment logic into service
 
 ### Proactive Code Review
 
-**After completing any non-trivial change, run the review skill before considering the task done:**
+**CRITICAL: Before every push, run a local code review and fix all findings.** This is mandatory, not optional — do not push code that hasn't been reviewed.
 
-```bash
-/review-pr
-```
+1. Run the `code-reviewer` agent against the branch diff (`git diff origin/staging...HEAD`)
+2. Fix all critical and important issues found
+3. Re-run affected tests to verify fixes
+4. Only then proceed with `git push`
 
-This catches style violations, shadcn primitive misuse, dead code, and other issues before they land in a PR.
+Focus areas: security (auth bypasses, missing ownership checks), missing validation (body schemas, input sanitization), logic bugs (race conditions, regressions from refactors), type safety (unsafe casts, `as unknown`), and dead/duplicate code.
+
+This catches real production bugs — not just style issues. Skipping this step has let security holes, functional regressions, and data integrity issues slip through.
+
+### Address All PR Review Warnings
+
+**All warnings from PR reviewers (automated or human) must be resolved before merging.** Do not treat warnings as optional — they indicate real issues that will compound if left unaddressed.
+
+- **Warnings**: Must be fixed or refactored. If a warning is genuinely inapplicable, reply on the PR explaining why — don't silently ignore it.
+- **Suggestions**: Evaluate and apply if they improve the code. If skipping, have a concrete reason (not "it works fine as-is").
+- **Dead code, unused parameters, stale comments**: Fix immediately — these are easy wins that reviewers shouldn't have to flag twice.
 
 ### Address All PR Review Warnings
 
@@ -657,8 +682,12 @@ Beyond the standard Clerk/Supabase keys, these secrets must be in `.env.local` f
 | `API_KEY_SECRET` | Hashes API keys before storing in the database | `openssl rand -hex 32` |
 | `ENCRYPTION_KEY` | Encrypts API keys in CLI auth sessions (must be exactly 64 hex chars / 32 bytes) | `openssl rand -hex 32` |
 | `NEXT_PUBLIC_POSTHOG_KEY` | PostHog project API key for analytics (Vercel production only) | PostHog dashboard |
+| `SCENARIO_ORG_ID` | Clerk org ID used as the tenant when running admin test scenarios. **Required** to use `/admin/scenarios`. | Clerk Dashboard → Organizations → copy org ID |
+| `SCENARIO_DEV_USER_ID` | Clerk user ID of the "organizer" persona in test scenarios. **Required** to use `/admin/scenarios` and the dev toolbar. | `bun run scripts/provision-test-users.ts` writes this to `.env.local` |
 
 Without `ENCRYPTION_KEY`, CLI login (`hackathon login`) will fail with "Internal server error" because `completeCliAuthSession` calls `encryptToken()` which requires it.
+
+Without `SCENARIO_ORG_ID`, running any scenario via the admin UI or API will throw `"SCENARIO_ORG_ID environment variable is required to run scenarios"`. The value must be a valid Clerk org ID that exists in your Clerk instance — the fallback ID in older code referred to the original dev environment's org and will not exist in a freshly provisioned Clerk app.
 
 PostHog analytics is **production only** — do NOT set `NEXT_PUBLIC_POSTHOG_KEY` in `.env.local`. Set it in Vercel for Production only. CLI usage is tracked server-side via the `User-Agent: hackathon-cli/<version>` header — no PostHog key needed on the client.
 

@@ -161,4 +161,19 @@
   background: hsl(var(--muted-foreground) / 0.4);
 }
 
+/* ReactFlow handle styling — larger, visible connection points */
+.react-flow__handle {
+  width: 16px !important;
+  height: 16px !important;
+  background: var(--primary) !important;
+  border: 3px solid var(--background) !important;
+  box-shadow: 0 0 0 2px var(--primary), 0 0 0 6px color-mix(in oklch, var(--primary) 15%, transparent) !important;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.3);
+  box-shadow: 0 0 0 3px var(--primary), 0 0 0 8px color-mix(in oklch, var(--primary) 25%, transparent) !important;
+}
+
 

@@ -102,6 +102,19 @@ export default async function EventPage({ params }: PageProps) {
     }
   }
 
+  if (userId && isOrganizer) {
+    const { getRegistrationInfo } = await import("@/lib/services/hackathons")
+    const registrationInfo = await getRegistrationInfo(hackathon.id, userId)
+    if (registrationInfo.participantRole === "judge") {
+      participantRole = "judge"
+      const { getJudgeAssignments } = await import("@/lib/services/judging")
+      judgeAssignments = await getJudgeAssignments(hackathon.id, userId)
+      if (hackathon.anonymous_judging) {
+        judgeAssignments = judgeAssignments.map((a) => ({ ...a, teamName: null }))
+      }
+    }
+  }
+
   const { getHackathonSubmissions } = await import("@/lib/services/submissions")
   const [rawSubmissions, scheduleItems, publishedAnnouncements] = await Promise.all([
     getHackathonSubmissions(hackathon.id),
@@ -152,6 +165,7 @@ export default async function EventPage({ params }: PageProps) {
         publicResults={publicResults}
         scheduleItems={scheduleItems}
         announcements={publishedAnnouncements}
+        currentUserId={userId}
       />
     </div>
   )

@@ -6,7 +6,6 @@ import { listJobs, getJobById } from "@/lib/services/jobs"
 import { logAudit } from "@/lib/services/audit"
 import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
 import { dashboardJudgingRoutes } from "./dashboard-judging"
-import { dashboardPrizesRoutes } from "./dashboard-prizes"
 import { dashboardResultsRoutes } from "./dashboard-results"
 import { dashboardJudgeDisplayRoutes } from "./dashboard-judge-display"
 import { getEffectiveStatus } from "@/lib/utils/timeline"
@@ -1075,54 +1074,84 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       const isStatusChange = body.status !== undefined
 
       let previousStatus: string | undefined
+      let currentHackathon: import("@/lib/db/hackathon-types").Hackathon | undefined
       if (hasDateUpdate || isStatusChange) {
-        const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
-        const current = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
-        if (current) {
-          previousStatus = current.status
+        const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+        const check = await checkHackathonOrganizer(params.id, principal.tenantId)
+        if (check.status === "not_found") {
+          return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          })
+        }
+        if (check.status === "not_authorized") {
+          return new Response(JSON.stringify({ error: "Not authorized" }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          })
+        }
+        currentHackathon = check.hackathon
+        previousStatus = currentHackathon.status
 
-          if (hasDateUpdate) {
-            const { validateTimelineDates } = await import("@/lib/utils/timeline")
-            const dateError = validateTimelineDates({
-              registrationOpensAt: body.registrationOpensAt !== undefined ? body.registrationOpensAt : current.registration_opens_at,
-              registrationClosesAt: body.registrationClosesAt !== undefined ? body.registrationClosesAt : current.registration_closes_at,
-              startsAt: body.startsAt !== undefined ? body.startsAt : current.starts_at,
-              endsAt: body.endsAt !== undefined ? body.endsAt : current.ends_at,
+        const isTransition = body.status !== undefined && body.status !== previousStatus
+        if (hasDateUpdate && !isTransition) {
+          const { validateTimelineDates } = await import("@/lib/utils/timeline")
+          const dateError = validateTimelineDates({
+            registrationOpensAt: body.registrationOpensAt !== undefined ? body.registrationOpensAt : currentHackathon.registration_opens_at,
+            registrationClosesAt: body.registrationClosesAt !== undefined ? body.registrationClosesAt : currentHackathon.registration_closes_at,
+            startsAt: body.startsAt !== undefined ? body.startsAt : currentHackathon.starts_at,
+            endsAt: body.endsAt !== undefined ? body.endsAt : currentHackathon.ends_at,
+          })
+          if (dateError) {
+            return new Response(JSON.stringify({ error: dateError }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
             })
-            if (dateError) {
-              return new Response(JSON.stringify({ error: dateError }), {
-                status: 400,
-                headers: { "Content-Type": "application/json" },
-              })
-            }
           }
         }
       }
 
-      const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
-      const hackathon = await updateHackathonSettings(params.id, principal.tenantId, {
-        bannerUrl: body.bannerUrl,
-        name: body.name,
-        description: body.description,
-        rules: body.rules,
-        startsAt: body.startsAt,
-        endsAt: body.endsAt,
-        registrationOpensAt: body.registrationOpensAt,
-        registrationClosesAt: body.registrationClosesAt,
-        status: body.status as "draft" | "published" | "registration_open" | "active" | "judging" | "completed" | "archived" | undefined,
-        anonymousJudging: body.anonymousJudging,
-        judgingMode: body.judgingMode as "points" | "subjective" | undefined,
-        locationType: body.locationType as "in_person" | "virtual" | null | undefined,
-        locationName: body.locationName,
-        locationUrl: normalizeOptionalUrl(body.locationUrl),
-        locationLatitude: body.locationLatitude,
-        locationLongitude: body.locationLongitude,
-        requireLocationVerification: body.requireLocationVerification,
-        maxParticipants: body.maxParticipants,
-        minTeamSize: body.minTeamSize,
-        maxTeamSize: body.maxTeamSize,
-        allowSolo: body.allowSolo,
-      })
+      const hasStatusTransition = previousStatus && body.status && body.status !== previousStatus
+      const hasOtherFields = body.bannerUrl !== undefined || body.name !== undefined ||
+        body.description !== undefined || body.rules !== undefined ||
+        body.startsAt !== undefined || body.endsAt !== undefined ||
+        body.registrationOpensAt !== undefined || body.registrationClosesAt !== undefined ||
+        body.anonymousJudging !== undefined || body.judgingMode !== undefined ||
+        body.locationType !== undefined || body.locationName !== undefined ||
+        body.locationUrl !== undefined || body.locationLatitude !== undefined ||
+        body.locationLongitude !== undefined || body.requireLocationVerification !== undefined ||
+        body.maxParticipants !== undefined || body.minTeamSize !== undefined ||
+        body.maxTeamSize !== undefined || body.allowSolo !== undefined
+
+      let hackathon: import("@/lib/db/hackathon-types").Hackathon | null
+      if (hasStatusTransition && !hasOtherFields) {
+        hackathon = currentHackathon!
+      } else {
+        const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
+        hackathon = await updateHackathonSettings(params.id, principal.tenantId, {
+          bannerUrl: body.bannerUrl,
+          name: body.name,
+          description: body.description,
+          rules: body.rules,
+          startsAt: body.startsAt,
+          endsAt: body.endsAt,
+          registrationOpensAt: body.registrationOpensAt,
+          registrationClosesAt: body.registrationClosesAt,
+          status: hasStatusTransition ? undefined : body.status as "draft" | "published" | "registration_open" | "active" | "judging" | "completed" | "archived" | undefined,
+          anonymousJudging: body.anonymousJudging,
+          judgingMode: body.judgingMode as "points" | "subjective" | "rubric" | undefined,
+          locationType: body.locationType as "in_person" | "virtual" | null | undefined,
+          locationName: body.locationName,
+          locationUrl: normalizeOptionalUrl(body.locationUrl),
+          locationLatitude: body.locationLatitude,
+          locationLongitude: body.locationLongitude,
+          requireLocationVerification: body.requireLocationVerification,
+          maxParticipants: body.maxParticipants,
+          minTeamSize: body.minTeamSize,
+          maxTeamSize: body.maxTeamSize,
+          allowSolo: body.allowSolo,
+        })
+      }
 
       if (!hackathon) {
         return new Response(JSON.stringify({ error: "Hackathon not found" }), {
@@ -1131,48 +1160,131 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         })
       }
 
+      if (hasStatusTransition) {
+        const { executeTransition } = await import("@/lib/services/lifecycle")
+        const triggeredBy = principal.kind === "user" ? principal.userId : principal.keyId
+        const transitionResult = await executeTransition({
+          hackathonId: params.id,
+          tenantId: principal.tenantId,
+          fromStatus: previousStatus as import("@/lib/db/hackathon-types").HackathonStatus,
+          toStatus: body.status as import("@/lib/db/hackathon-types").HackathonStatus,
+          trigger: "manual",
+          triggeredBy,
+        })
+
+        if (!transitionResult.success) {
+          return new Response(
+            JSON.stringify({ error: transitionResult.error }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          )
+        }
+
+        if (previousStatus === "draft" && body.status !== "draft") {
+          const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
+          const inviterName = await resolveAdderName(principal)
+          const { sendPendingJudgeInvitationEmails } = await import("@/lib/services/judge-invitations")
+          sendPendingJudgeInvitationEmails(hackathon.id, hackathon.name, inviterName)
+            .then(({ sent, total, failedEmails }) => {
+              if (total === 0) return
+              if (failedEmails.length > 0) {
+                console.error(
+                  `Judge invitation emails: ${sent}/${total} sent for hackathon ${hackathon.id}. Failed: ${failedEmails.join(", ")}. These invitations remain with emailed_at IS NULL and will not be automatically retried.`
+                )
+              }
+            })
+            .catch((err) => {
+              console.error(`Failed to send pending judge invitation emails for hackathon ${hackathon.id}:`, err)
+            })
+          const { start } = await import("workflow/api")
+          const { sendJudgeNotificationsWorkflow } = await import(
+            "@/lib/workflows/judge-notifications"
+          )
+          start(sendJudgeNotificationsWorkflow, [
+            {
+              hackathonId: hackathon.id,
+              hackathonName: hackathon.name,
+              hackathonSlug: hackathon.slug,
+            },
+          ]).catch(async (err) => {
+            console.error("Failed to start judge notifications workflow, falling back to direct send:", err)
+            const { fetchPendingNotifications, sendJudgeNotification } = await import(
+              "@/lib/workflows/judge-notifications/steps"
+            )
+            const notifications = await fetchPendingNotifications(hackathon.id).catch((fetchErr) => {
+              console.error(`Judge notification fallback: failed to fetch pending notifications for hackathon ${hackathon.id}:`, fetchErr)
+              return [] as Awaited<ReturnType<typeof fetchPendingNotifications>>
+            })
+            const failedIds: string[] = []
+            for (const n of notifications) {
+              try {
+                await sendJudgeNotification({
+                  notification: n,
+                  hackathonName: hackathon.name,
+                  hackathonSlug: hackathon.slug,
+                })
+              } catch {
+                failedIds.push(n.id)
+              }
+            }
+            if (failedIds.length > 0) {
+              console.error(
+                `Judge notification fallback: ${failedIds.length} notification(s) failed to send and remain stuck (ids: ${failedIds.join(", ")}). These will not be automatically retried.`
+              )
+            }
+          })
+        }
+      }
+
       await logAudit({
         principal,
-        action: "hackathon.updated",
+        action: hasStatusTransition ? "hackathon.status_transition" : "hackathon.updated",
         resourceType: "hackathon",
         resourceId: params.id,
+        metadata: hasStatusTransition ? { fromStatus: previousStatus, toStatus: body.status } : undefined,
       })
 
-      const { triggerWebhooks } = await import("@/lib/services/webhooks")
-      triggerWebhooks(principal.tenantId, "hackathon.updated", {
-        event: "hackathon.updated",
-        timestamp: new Date().toISOString(),
-        data: { hackathonId: hackathon.id },
-      }).catch(console.error)
+      if (!hasStatusTransition) {
+        const { triggerWebhooks } = await import("@/lib/services/webhooks")
+        triggerWebhooks(principal.tenantId, "hackathon.updated", {
+          event: "hackathon.updated",
+          timestamp: new Date().toISOString(),
+          data: { hackathonId: hackathon.id },
+        }).catch(console.error)
+      }
 
-      if (previousStatus === "draft" && body.status && body.status !== "draft") {
-        const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
-        const inviterName = await resolveAdderName(principal)
-        const { sendPendingJudgeInvitationEmails } = await import("@/lib/services/judge-invitations")
-        sendPendingJudgeInvitationEmails(hackathon.id, hackathon.name, inviterName).catch(console.error)
+      const updatedHackathon = hasStatusTransition
+        ? (await import("@/lib/services/public-hackathons")).getHackathonByIdForOrganizer(params.id, principal.tenantId)
+        : hackathon
+
+      const h = hasStatusTransition ? await updatedHackathon : hackathon
+      if (!h) {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
       }
 
       return {
-        id: hackathon.id,
-        name: hackathon.name,
-        slug: hackathon.slug,
-        description: hackathon.description,
-        rules: hackathon.rules,
-        bannerUrl: hackathon.banner_url,
-        status: getEffectiveStatus(hackathon),
-        startsAt: hackathon.starts_at,
-        endsAt: hackathon.ends_at,
-        registrationOpensAt: hackathon.registration_opens_at,
-        registrationClosesAt: hackathon.registration_closes_at,
-        maxParticipants: hackathon.max_participants,
-        minTeamSize: hackathon.min_team_size,
-        maxTeamSize: hackathon.max_team_size,
-        allowSolo: hackathon.allow_solo,
-        anonymousJudging: hackathon.anonymous_judging,
-        judgingMode: hackathon.judging_mode,
-        resultsPublishedAt: hackathon.results_published_at,
-        createdAt: hackathon.created_at,
-        updatedAt: hackathon.updated_at,
+        id: h.id,
+        name: h.name,
+        slug: h.slug,
+        description: h.description,
+        rules: h.rules,
+        bannerUrl: h.banner_url,
+        status: getEffectiveStatus(h),
+        startsAt: h.starts_at,
+        endsAt: h.ends_at,
+        registrationOpensAt: h.registration_opens_at,
+        registrationClosesAt: h.registration_closes_at,
+        maxParticipants: h.max_participants,
+        minTeamSize: h.min_team_size,
+        maxTeamSize: h.max_team_size,
+        allowSolo: h.allow_solo,
+        anonymousJudging: h.anonymous_judging,
+        judgingMode: h.judging_mode,
+        resultsPublishedAt: h.results_published_at,
+        createdAt: h.created_at,
+        updatedAt: h.updated_at,
       }
     },
     {
@@ -1199,7 +1311,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
           t.Literal("archived"),
         ])),
         anonymousJudging: t.Optional(t.Boolean()),
-        judgingMode: t.Optional(t.Union([t.Literal("points"), t.Literal("subjective")])),
+        judgingMode: t.Optional(t.Union([t.Literal("points"), t.Literal("subjective"), t.Literal("rubric")])),
         locationType: t.Optional(t.Union([t.Literal("in_person"), t.Literal("virtual"), t.Null()])),
         locationName: t.Optional(t.Union([t.String(), t.Null()])),
         locationUrl: t.Optional(t.Union([t.String(), t.Null()])),
@@ -2002,7 +2114,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       const { createTeamInvitation, getTeamWithHackathon } = await import(
         "@/lib/services/team-invitations"
       )
-      const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
 
       const result = await createTeamInvitation({
         teamId: params.teamId,
@@ -2018,19 +2129,24 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         })
       }
 
-      let emailSent = false
       const teamInfo = await getTeamWithHackathon(params.teamId)
 
       if (teamInfo) {
-        const emailResult = await sendTeamInvitationEmail({
+        const emailInput = {
           to: body.email,
           teamName: teamInfo.name,
           hackathonName: teamInfo.hackathon.name,
           inviterName: body.inviterName || "A team captain",
           inviteToken: result.invitation.token,
           expiresAt: result.invitation.expires_at,
+        }
+        const { start } = await import("workflow/api")
+        const { sendTeamInvitationWorkflow } = await import("@/lib/workflows/team-invitations")
+        start(sendTeamInvitationWorkflow, [emailInput]).catch(async (err) => {
+          console.error("Failed to start team invitation workflow, falling back to direct send:", err)
+          const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
+          sendTeamInvitationEmail(emailInput).catch(console.error)
         })
-        emailSent = emailResult.success
       }
 
       await logAudit({
@@ -2045,7 +2161,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         id: result.invitation.id,
         email: result.invitation.email,
         expiresAt: result.invitation.expires_at,
-        emailSent,
       }
     },
     {
@@ -2136,6 +2251,5 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     },
   })
   .use(dashboardJudgingRoutes)
-  .use(dashboardPrizesRoutes)
   .use(dashboardResultsRoutes)
   .use(dashboardJudgeDisplayRoutes)

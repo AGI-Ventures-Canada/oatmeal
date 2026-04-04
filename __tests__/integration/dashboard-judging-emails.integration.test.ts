@@ -32,7 +32,7 @@ mock.module("@/lib/services/judging", () => ({
   getAssignmentDetail: mock(() => Promise.resolve(null)),
   submitScores: mock(() => Promise.resolve({ success: false, error: "", code: "" })),
   saveNotes: mock(() => Promise.resolve(false)),
-  getJudgingSetupStatus: mock(() => Promise.resolve({ judgeCount: 0, hasUnassignedSubmissions: false })),
+  getJudgingSetupStatus: mock(() => Promise.resolve({ hasCriteria: false, allCriteriaHaveLevels: true, judgeCount: 0, hasSubmissions: false, hasUnassignedSubmissions: false, isReady: false })),
 }))
 
 const mockCreateJudgeInvitation = mock(() =>
@@ -47,10 +47,15 @@ const mockCreateJudgeInvitation = mock(() =>
   })
 )
 
+const mockHasPendingJudgeEntry = mock(() => Promise.resolve(false))
+
 mock.module("@/lib/services/judge-invitations", () => ({
   createJudgeInvitation: mockCreateJudgeInvitation,
   listJudgeInvitations: mock(() => Promise.resolve([])),
   cancelJudgeInvitation: mock(() => Promise.resolve({ success: true })),
+  hasPendingJudgeInvitation: mock(() => Promise.resolve(false)),
+  hasPendingJudgeEntry: mockHasPendingJudgeEntry,
+  createJudgePendingNotification: mock(() => Promise.resolve()),
 }))
 
 const mockSendJudgeAddedNotification = mock(() => Promise.resolve({ success: true }))
@@ -107,6 +112,11 @@ mock.module("@/lib/auth/principal", () => {
       }
       return principal
     },
+    isAdminEnabled: () => true,
+    requireAdmin: (principal: { kind: string }) => {
+      if (principal.kind !== "admin") throw new AuthError("Forbidden", 403)
+    },
+    requireAdminScopes: () => {},
     AuthError,
   }
 })
@@ -164,8 +174,10 @@ describe("POST /hackathons/:id/judging/judges - email notifications", () => {
     mockGetUser.mockClear()
     mockGetUserList.mockClear()
     mockLogAudit.mockClear()
+    mockHasPendingJudgeEntry.mockClear()
 
     mockResolvePrincipal.mockResolvedValue(mockUserPrincipal)
+    mockHasPendingJudgeEntry.mockResolvedValue(false)
     mockAddJudge.mockResolvedValue({ success: true, participant: { id: "j1", clerkUserId: "judge_123" } })
     mockGetUserList.mockResolvedValue({ data: [] })
     mockGetUser.mockResolvedValue({
@@ -301,6 +313,31 @@ describe("POST /hackathons/:id/judging/judges - email notifications", () => {
 
       expect(data.invited).toBe(true)
       expect(mockSendJudgeInvitationEmail).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("already_invited guard", () => {
+    it("returns 400 already_invited when clerkUserId path finds a pending invitation", async () => {
+      mockHasPendingJudgeEntry.mockResolvedValue(true)
+
+      const res = await postAddJudge({ clerkUserId: "judge_123" })
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.code).toBe("already_pending")
+      expect(mockAddJudge).not.toHaveBeenCalled()
+    })
+
+    it("returns 400 already_invited when email path finds a pending invitation for existing user", async () => {
+      mockGetUserList.mockResolvedValue({ data: [{ id: "found_user_123" }] })
+      mockHasPendingJudgeEntry.mockResolvedValue(true)
+
+      const res = await postAddJudge({ email: "existing@example.com" })
+      const data = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(data.code).toBe("already_pending")
+      expect(mockAddJudge).not.toHaveBeenCalled()
     })
   })
 })

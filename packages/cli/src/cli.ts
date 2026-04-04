@@ -104,20 +104,37 @@ const BANNER = `
     ${pc.dim("(alias: hackathons)")}
 
   ${pc.dim("JUDGING")}
-    judging criteria list <id>              List criteria
-    judging criteria create <id>            Create criteria
-    judging criteria update <id> <cid>      Update criteria
-    judging criteria delete <id> <cid>      Delete criteria
-    judging judges list <id>                List judges
-    judging judges add <id>                 Add a judge
-    judging judges remove <id> <pid>        Remove a judge
-    judging assignments list <id>           List assignments
-    judging assignments create <id>         Create assignment
-    judging assignments delete <id> <aid>   Delete assignment
-    judging auto-assign <id>                Auto-assign judges
-    judging invitations list <id>           List invitations
-    judging invitations cancel <id> <iid>   Cancel invitation
-    judging pick-results <id>               View pick results
+    judging criteria list <id>                           List criteria
+    judging criteria create <id>                         Create criteria
+    judging criteria update <id> <cid>                   Update criteria
+    judging criteria delete <id> <cid>                   Delete criteria
+    judging levels list --hackathon-id <id> --criteria-id <cid>        List rubric levels
+    judging levels add --hackathon-id <id> --criteria-id <cid>         Add a rubric level
+    judging levels update --hackathon-id <id> --criteria-id <cid>      Update a rubric level
+    judging levels delete --hackathon-id <id> --criteria-id <cid>      Delete a rubric level
+    judging judges list <id>                             List judges
+    judging judges add <id>                              Add a judge
+    judging judges remove <id> <pid>                     Remove a judge
+    judging assignments list <id>                        List assignments
+    judging assignments create <id>                      Create assignment
+    judging assignments delete <id> <aid>                Delete assignment
+    judging auto-assign <id>                             Auto-assign judges
+    judging invitations list <id>                        List invitations
+    judging invitations cancel <id> <iid>                Cancel invitation
+    judging track-assign <id>                            Assign judge to track
+    judging track-unassign <id>                          Remove judge from track
+    judging pick-results <id>                            View pick results
+
+  ${pc.dim("PRIZE TRACKS")}
+    tracks list <id>                                     List prize tracks
+    tracks get <id> <tid>                                Get track details
+    tracks create <id>                                   Create a track
+    tracks update <id> <tid>                             Update a track
+    tracks delete <id> <tid>                             Delete a track
+    tracks buckets <id> <tid> <rid>                      Replace bucket definitions
+    tracks update-round <id> <tid> <rid>                 Update a round
+    tracks activate-round <id> <tid> <rid>               Activate a round
+    tracks calculate-results <id> <tid> <rid>            Calculate round results
 
   ${pc.dim("PRIZES")}
     prizes list <id>                         List prizes
@@ -159,15 +176,6 @@ const BANNER = `
     schedules get <id>         Get schedule details
     schedules update <id>      Update a schedule
     schedules delete <id>      Delete a schedule
-
-  ${pc.dim("ADMIN (requires API key with admin:read, admin:write, admin:scenarios scopes)")}
-    admin stats                              Platform-wide statistics
-    admin hackathons list                    List all hackathons across tenants
-    admin hackathons get <id>                Get hackathon details
-    admin hackathons update <id>             Update any hackathon field
-    admin hackathons delete <id>             Delete a hackathon (--yes auto-confirms name, skips interactive prompt)
-    admin scenarios list                     List available test scenarios
-    admin scenarios run <name>               Run a test scenario
 
   ${pc.dim("GLOBAL OPTIONS")}
     --json           Output as JSON
@@ -332,6 +340,51 @@ async function main() {
             }
             break
 
+          case "levels": {
+            const levelArgs = rest.slice(3).concat(flags.json ? ["--json"] : []).concat(flags.yes ? ["--yes"] : [])
+
+            const parseLevelFlags = (a: string[]) => {
+              let hackathonId = ""
+              let criteriaId = ""
+              let levelId = ""
+              for (let i = 0; i < a.length; i++) {
+                if (a[i] === "--hackathon-id") hackathonId = a[++i]
+                else if (a[i] === "--criteria-id") criteriaId = a[++i]
+                else if (a[i] === "--level-id") levelId = a[++i]
+              }
+              return { hackathonId, criteriaId, levelId }
+            }
+
+            const levelFlags = parseLevelFlags(levelArgs)
+
+            switch (sub2) {
+              case "list": {
+                const { runLevelsList } = await import("./commands/judging/levels-list.js")
+                await runLevelsList(client, levelFlags.hackathonId, levelFlags.criteriaId, { json: flags.json })
+                break
+              }
+              case "add": {
+                const { runLevelsAdd } = await import("./commands/judging/levels-add.js")
+                await runLevelsAdd(client, levelFlags.hackathonId, levelFlags.criteriaId, levelArgs)
+                break
+              }
+              case "update": {
+                const { runLevelsUpdate } = await import("./commands/judging/levels-update.js")
+                await runLevelsUpdate(client, levelFlags.hackathonId, levelFlags.criteriaId, levelFlags.levelId, levelArgs)
+                break
+              }
+              case "delete": {
+                const { runLevelsDelete } = await import("./commands/judging/levels-delete.js")
+                await runLevelsDelete(client, levelFlags.hackathonId, levelFlags.criteriaId, levelFlags.levelId, { yes: flags.yes, json: flags.json })
+                break
+              }
+              default:
+                console.error(`Unknown judging levels command: ${sub2}`)
+                process.exit(1)
+            }
+            break
+          }
+
           case "judges":
             switch (sub2) {
               case "list": {
@@ -402,6 +455,18 @@ async function main() {
             }
             break
 
+          case "track-assign": {
+            const { runTrackAssign } = await import("./commands/judging/track-assign.js")
+            await runTrackAssign(client, hackathonId, rest.slice(3).concat(flags.json ? ["--json"] : []))
+            break
+          }
+
+          case "track-unassign": {
+            const { runTrackUnassign } = await import("./commands/judging/track-unassign.js")
+            await runTrackUnassign(client, hackathonId, rest.slice(3).concat(flags.json ? ["--json"] : []).concat(flags.yes ? ["--yes"] : []))
+            break
+          }
+
           case "pick-results": {
             const { runPickResults } = await import("./commands/judging/pick-results.js")
             await runPickResults(client, hackathonId, { json: flags.json })
@@ -410,6 +475,61 @@ async function main() {
 
           default:
             console.error(`Unknown judging command: ${sub}`)
+            process.exit(1)
+        }
+        break
+      }
+
+      case "tracks": {
+        const client = createAuthenticatedClient(flags)
+        switch (sub) {
+          case "list": {
+            const { runTracksList } = await import("./commands/tracks/list.js")
+            await runTracksList(client, rest[2], { json: flags.json })
+            break
+          }
+          case "get": {
+            const { runTracksGet } = await import("./commands/tracks/get.js")
+            await runTracksGet(client, rest[2], rest[3], { json: flags.json })
+            break
+          }
+          case "create": {
+            const { runTracksCreate } = await import("./commands/tracks/create.js")
+            await runTracksCreate(client, rest[2], rest.slice(3).concat(flags.json ? ["--json"] : []))
+            break
+          }
+          case "update": {
+            const { runTracksUpdate } = await import("./commands/tracks/update.js")
+            await runTracksUpdate(client, rest[2], rest[3], rest.slice(4).concat(flags.json ? ["--json"] : []))
+            break
+          }
+          case "delete": {
+            const { runTracksDelete } = await import("./commands/tracks/delete.js")
+            await runTracksDelete(client, rest[2], rest[3], { yes: flags.yes })
+            break
+          }
+          case "buckets": {
+            const { runTracksBuckets } = await import("./commands/tracks/buckets.js")
+            await runTracksBuckets(client, rest[2], rest[3], rest[4], rest.slice(5).concat(flags.json ? ["--json"] : []))
+            break
+          }
+          case "update-round": {
+            const { runTracksUpdateRound } = await import("./commands/tracks/update-round.js")
+            await runTracksUpdateRound(client, rest[2], rest[3], rest[4], rest.slice(5).concat(flags.json ? ["--json"] : []))
+            break
+          }
+          case "activate-round": {
+            const { runTracksActivateRound } = await import("./commands/tracks/activate-round.js")
+            await runTracksActivateRound(client, rest[2], rest[3], rest[4], { json: flags.json })
+            break
+          }
+          case "calculate-results": {
+            const { runTracksCalculateResults } = await import("./commands/tracks/calculate-results.js")
+            await runTracksCalculateResults(client, rest[2], rest[3], rest[4], { json: flags.json })
+            break
+          }
+          default:
+            console.error(`Unknown tracks command: ${sub}. Run "hackathon tracks --help" for usage.`)
             process.exit(1)
         }
         break
@@ -615,65 +735,6 @@ async function main() {
           }
           default:
             console.error(`Unknown schedules command: ${sub}`)
-            process.exit(1)
-        }
-        break
-      }
-
-      case "admin": {
-        const client = createAuthenticatedClient(flags)
-        switch (sub) {
-          case "stats": {
-            const { runAdminStats } = await import("./commands/admin/stats.js")
-            await runAdminStats(client, { json: flags.json })
-            break
-          }
-          case "hackathons":
-            switch (sub2) {
-              case "list": {
-                const { runAdminHackathonsList } = await import("./commands/admin/hackathons-list.js")
-                await runAdminHackathonsList(client, rest.slice(3), { json: flags.json })
-                break
-              }
-              case "get": {
-                const { runAdminHackathonsGet } = await import("./commands/admin/hackathons-get.js")
-                await runAdminHackathonsGet(client, rest[3], { json: flags.json })
-                break
-              }
-              case "update": {
-                const { runAdminHackathonsUpdate } = await import("./commands/admin/hackathons-update.js")
-                await runAdminHackathonsUpdate(client, rest[3], rest.slice(4), { json: flags.json })
-                break
-              }
-              case "delete": {
-                const { runAdminHackathonsDelete } = await import("./commands/admin/hackathons-delete.js")
-                await runAdminHackathonsDelete(client, rest[3], { yes: flags.yes })
-                break
-              }
-              default:
-                console.error(`Unknown admin hackathons command: ${sub2}`)
-                process.exit(1)
-            }
-            break
-          case "scenarios":
-            switch (sub2) {
-              case "list": {
-                const { runAdminScenariosList } = await import("./commands/admin/scenarios-list.js")
-                await runAdminScenariosList(client, { json: flags.json })
-                break
-              }
-              case "run": {
-                const { runAdminScenariosRun } = await import("./commands/admin/scenarios-run.js")
-                await runAdminScenariosRun(client, rest[3], rest.slice(4), { json: flags.json })
-                break
-              }
-              default:
-                console.error(`Unknown admin scenarios command: ${sub2}`)
-                process.exit(1)
-            }
-            break
-          default:
-            console.error(`Unknown admin command: ${sub}. Run "hackathon admin --help" for usage.`)
             process.exit(1)
         }
         break

@@ -3,7 +3,7 @@ title: Getting Started
 description: Set up authentication and make your first API call.
 ---
 
-The Oatmeal platform exposes a REST API. All requests use standard `fetch()` with JSON payloads and API key authentication. For a comprehensive overview of all authentication methods, see the [Authentication](/docs/authentication) guide.
+The Oatmeal platform exposes a REST API that you can call with `curl`, the [CLI](/docs/cli), or any HTTP client. For a comprehensive overview of all authentication methods, see the [Authentication](/docs/authentication) guide.
 
 ## Get Your API Key
 
@@ -15,18 +15,18 @@ Never expose your API key in client-side code. Use environment variables and ser
 
 ## Environment Variables
 
-Store your API key and base URL in an environment variable:
+Store your API key and base URL as shell variables:
 
-```bash title=".env.local"
-OATMEAL_API_KEY=sk_live_...
-OATMEAL_BASE_URL=https://your-app.com
+```bash title="Setup"
+export BASE_URL="https://your-app.com"   # or http://localhost:3000 for local dev
+export API_KEY="sk_live_your_key_here"
 ```
 
 ## Authentication
 
 All API requests require an `Authorization` header with your API key:
 
-```typescript title="HTTP Header"
+```bash title="Authorization header"
 Authorization: Bearer sk_live_your_api_key_here
 ```
 
@@ -34,23 +34,16 @@ Authorization: Bearer sk_live_your_api_key_here
 
 Test your API key with the `whoami` endpoint:
 
-```typescript title="verify.ts"
-const res = await fetch(`${process.env.OATMEAL_BASE_URL}/api/v1/whoami`, {
-  headers: {
-    "Authorization": `Bearer ${process.env.OATMEAL_API_KEY}`,
-  },
-})
-
-if (!res.ok) {
-  console.error("Authentication failed:", res.status)
-  process.exit(1)
-}
-
-const data = await res.json()
-console.log("Connected as tenant:", data.tenantId)
-console.log("Key ID:", data.keyId)
-console.log("Scopes:", data.scopes)
+```bash title="Verify your API key"
+curl -s "$BASE_URL/api/v1/whoami" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon whoami
+```
+</Callout>
 
 ### Response
 
@@ -64,28 +57,25 @@ console.log("Scopes:", data.scopes)
 
 ## Error Handling
 
-API errors return JSON with an `error` field. Use standard `fetch()` error handling:
+Non-200 responses return JSON with an `error` field and an optional `code`:
 
-```typescript title="api-helper.ts"
-async function apiCall(path: string, options?: RequestInit) {
-  const res = await fetch(`${process.env.OATMEAL_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Authorization": `Bearer ${process.env.OATMEAL_API_KEY}`,
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-  })
-
-  const data = await res.json()
-
-  if (!res.ok) {
-    throw new Error(`API error ${res.status}: ${data.error}`)
-  }
-
-  return data
+```json title="error.json"
+{
+  "error": "Hackathon not found",
+  "code": "not_found"
 }
 ```
+
+Common HTTP status codes:
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Bad request — invalid or missing fields |
+| `401` | Unauthorized — missing or invalid API key |
+| `403` | Forbidden — key lacks the required scope |
+| `404` | Not found |
+| `409` | Conflict — duplicate or invalid state transition |
+| `429` | Rate limited — slow down |
 
 ## API Namespaces
 

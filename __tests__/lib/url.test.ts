@@ -3,6 +3,7 @@ import {
   normalizeOptionalUrl,
   normalizeUrl,
   normalizeUrlFieldValue,
+  safeRedirectUrl,
   urlInputProps,
 } from "@/lib/utils/url"
 
@@ -64,6 +65,33 @@ describe("normalizeOptionalUrl", () => {
   it("preserves null and undefined", () => {
     expect(normalizeOptionalUrl(null)).toBeNull()
     expect(normalizeOptionalUrl(undefined)).toBeUndefined()
+  })
+})
+
+describe("safeRedirectUrl", () => {
+  it("returns relative paths as-is", () => {
+    expect(safeRedirectUrl("/home")).toBe("/home")
+    expect(safeRedirectUrl("/event/abc")).toBe("/event/abc")
+    expect(safeRedirectUrl("/hackathons/123?tab=team")).toBe("/hackathons/123?tab=team")
+  })
+
+  it("rejects absolute URLs", () => {
+    expect(safeRedirectUrl("https://evil.com")).toBe("/home")
+    expect(safeRedirectUrl("http://evil.com/steal")).toBe("/home")
+  })
+
+  it("rejects protocol-relative URLs", () => {
+    expect(safeRedirectUrl("//evil.com")).toBe("/home")
+  })
+
+  it("returns fallback for undefined or empty", () => {
+    expect(safeRedirectUrl(undefined)).toBe("/home")
+    expect(safeRedirectUrl("")).toBe("/home")
+  })
+
+  it("uses a custom fallback when provided", () => {
+    expect(safeRedirectUrl(undefined, "/dashboard")).toBe("/dashboard")
+    expect(safeRedirectUrl("https://evil.com", "/dashboard")).toBe("/dashboard")
   })
 })
 

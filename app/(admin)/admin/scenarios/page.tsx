@@ -1,23 +1,28 @@
-import { listScenarios } from "@/lib/services/admin-scenarios"
+import { listScenarios, getActiveScenarios } from "@/lib/services/admin-scenarios"
 import { ScenarioRunner } from "./runner"
 
-export default function AdminScenariosPage() {
-  const isDeployedEnv = process.env.NODE_ENV === "production" || !!process.env.VERCEL_ENV
-
-  if (isDeployedEnv) {
+export default async function AdminScenariosPage() {
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Test Scenarios</h1>
           <p className="text-sm text-muted-foreground">
-            Scenarios are only available in local development.
+            Scenarios are only available in local development and staging.
           </p>
         </div>
       </div>
     )
   }
 
-  const scenarios = listScenarios()
+  const [scenarios, activeScenarios] = await Promise.all([
+    listScenarios(),
+    getActiveScenarios(),
+  ])
+
+  const activeByName = Object.fromEntries(
+    activeScenarios.map((s) => [s.scenarioName, s])
+  )
 
   return (
     <div className="space-y-6">
@@ -30,7 +35,11 @@ export default function AdminScenariosPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {scenarios.map((scenario) => (
-          <ScenarioRunner key={scenario.name} scenario={scenario} disabled={false} />
+          <ScenarioRunner
+            key={scenario.name}
+            scenario={scenario}
+            existingRun={activeByName[scenario.name] ?? null}
+          />
         ))}
       </div>
     </div>

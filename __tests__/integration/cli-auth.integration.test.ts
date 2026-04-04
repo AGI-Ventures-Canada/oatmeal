@@ -15,6 +15,7 @@ const mockPollCliAuthSession = mock(() =>
 mock.module("@/lib/services/cli-auth", () => ({
   createCliAuthSession: mockCreateCliAuthSession,
   pollCliAuthSession: mockPollCliAuthSession,
+  completeCliAuthSession: mock(() => Promise.resolve({ success: true })),
 }))
 
 mock.module("@/lib/services/rate-limit", () => ({

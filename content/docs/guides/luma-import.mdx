@@ -16,14 +16,12 @@ The import flow has two steps:
 
 Use the Luma event slug (the part after `lu.ma/` in the event URL) to extract event details.
 
-```typescript title="extract.ts"
-const res = await fetch(`${BASE_URL}/api/public/import/luma`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ slug: "ai-hackathon-toronto-2026" }),
-})
-
-const eventData = await res.json()
+```bash title="Extract event data from Luma"
+curl -s -X POST "$BASE_URL/api/public/import/luma" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "slug": "ai-hackathon-toronto-2026"
+  }' | jq .
 ```
 
 The extract endpoint is public and doesn't require authentication. It returns the event's:
@@ -36,23 +34,24 @@ The extract endpoint is public and doesn't require authentication. It returns th
 
 ## Step 2: Review and Create
 
-Review the extracted data, make any modifications, then create the hackathon.
+Review the extracted data, make any modifications, then create the hackathon. Pass the fields from the extract response along with any overrides:
 
-```typescript title="create.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/import/luma`, {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    ...eventData,
-    locationType: "in_person",
-  }),
-})
-
-const { id, name, slug } = await res.json()
-console.log(`Created: ${name} → /e/${slug}`)
+```bash title="Create hackathon from extracted data"
+curl -s -X POST "$BASE_URL/api/dashboard/import/luma" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "AI Hackathon Toronto 2026",
+    "description": "Build the future of AI in Toronto",
+    "slug": "ai-hackathon-toronto-2026",
+    "startDate": "2026-05-15T08:30:00Z",
+    "endDate": "2026-05-16T17:00:00Z",
+    "location": "Toronto, ON",
+    "locationType": "in_person",
+    "bannerUrl": "https://images.lumacdn.com/...",
+    "sponsors": [],
+    "prizes": []
+  }' | jq .
 ```
 
 The create endpoint automatically:

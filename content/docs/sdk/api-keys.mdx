@@ -1,9 +1,9 @@
 ---
 title: API Keys
-description: Create, list, and revoke API keys for programmatic access via the REST API.
+description: Manage API keys for programmatic access to the Oatmeal platform.
 ---
 
-The API Keys endpoints let you manage programmatic access credentials. Keys are scoped with specific permissions and can be revoked at any time.
+API keys are managed from the dashboard at **Settings > API Keys**, or via the CLI with `hackathon login`.
 
 ## Endpoints
 
@@ -14,7 +14,7 @@ The API Keys endpoints let you manage programmatic access credentials. Keys are 
 | `POST` | `/api/dashboard/keys/:id/revoke` | Revoke an API key |
 
 <Callout type="info">
-API key management endpoints require a Clerk session — they cannot be accessed with an API key. This prevents keys from creating or revoking other keys.
+API key management endpoints require a Clerk session — they cannot be accessed with an API key. This prevents keys from creating or revoking other keys. Use the dashboard or CLI to manage keys.
 </Callout>
 
 ## Key Format
@@ -38,18 +38,7 @@ API keys use the format `sk_live_` followed by a random string. The full key is 
 
 `GET /api/dashboard/keys` — requires Clerk session with `keys:read` scope.
 
-```typescript title="list-keys.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/keys`, {
-  credentials: "include",
-})
-
-const { keys } = await res.json()
-
-for (const k of keys) {
-  const status = k.revokedAt ? "revoked" : "active"
-  console.log(`${k.name} (${k.prefix}...) [${status}] - ${k.scopes.join(", ")}`)
-}
-```
+List all API keys for your organization from the dashboard at **Settings > API Keys**.
 
 ### Response
 
@@ -73,26 +62,11 @@ for (const k of keys) {
 
 `POST /api/dashboard/keys` — requires Clerk session with `keys:write` scope.
 
+Create a new API key from the dashboard at **Settings > API Keys**.
+
 <Callout type="warn">
-The full API key is returned only once in the response. Store it securely — it cannot be retrieved again.
+The full API key is returned only once at creation. Store it securely — it cannot be retrieved again.
 </Callout>
-
-```typescript title="create-key.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/keys`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  credentials: "include",
-  body: JSON.stringify({
-    name: "CI/CD Pipeline",
-    scopes: ["hackathons:read", "hackathons:write", "webhooks:write"],
-  }),
-})
-
-const { key, id, prefix, scopes } = await res.json()
-console.log("Save this key:", key)
-console.log("Key ID:", id)
-console.log("Prefix:", prefix)
-```
 
 ### Request Body
 
@@ -118,11 +92,8 @@ console.log("Prefix:", prefix)
 
 `POST /api/dashboard/keys/:id/revoke` — requires Clerk session with `keys:write` scope.
 
-Revoked keys immediately stop working. This action cannot be undone.
+Revoke a key from the dashboard at **Settings > API Keys**. Revoked keys immediately stop working. This action cannot be undone.
 
-```typescript title="revoke-key.ts"
-await fetch(`${BASE_URL}/api/dashboard/keys/${keyId}/revoke`, {
-  method: "POST",
-  credentials: "include",
-})
-```
+<Callout type="info">
+**CLI:** `hackathon login` authenticates the CLI and creates a session without managing API keys directly.
+</Callout>

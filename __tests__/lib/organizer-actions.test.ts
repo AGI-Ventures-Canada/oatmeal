@@ -10,8 +10,7 @@ function makeInput(overrides: Partial<Parameters<typeof getOrganizerActionItems>
     participantCount: 0,
     teamCount: 0,
     judgingProgress: { totalAssignments: 0, completedAssignments: 0 },
-    judgingSetupStatus: { judgeCount: 0, hasUnassignedSubmissions: false },
-    criteriaCount: 0,
+    judgeCount: 0,
     prizeCount: 0,
     judgeDisplayCount: 0,
     mentorQueue: { open: 0 },
@@ -37,7 +36,6 @@ describe("getOrganizerActionItems", () => {
       expect(ids).toContain("no-description")
       expect(ids).toContain("no-dates")
       expect(ids).toContain("no-reg-dates")
-      expect(ids).toContain("no-criteria")
       expect(ids).toContain("no-prizes")
       expect(ids).toContain("no-judges")
       expect(ids).toContain("no-banner")
@@ -51,7 +49,6 @@ describe("getOrganizerActionItems", () => {
         endsAt: "2026-05-02T00:00:00Z",
         registrationOpensAt: "2026-04-01T00:00:00Z",
         registrationClosesAt: "2026-04-30T00:00:00Z",
-        criteriaCount: 3,
         prizeCount: 2,
         judgeDisplayCount: 5,
       }))
@@ -64,42 +61,39 @@ describe("getOrganizerActionItems", () => {
       const dateItem = items.find((i) => i.id === "no-dates")
 
       expect(dateItem?.severity).toBe("urgent")
+      expect(dateItem?.hint).toBe("Required before you can publish")
+    })
+
+    it("includes hint text on all draft action items", () => {
+      const items = getOrganizerActionItems(makeInput())
+      for (const item of items) {
+        expect(typeof item.hint).toBe("string")
+        expect(item.hint!.length).toBeGreaterThan(0)
+      }
     })
 
     it("links action items to correct tabs", () => {
       const items = getOrganizerActionItems(makeInput())
 
       expect(items.find((i) => i.id === "no-description")?.tab).toBe("edit")
-      expect(items.find((i) => i.id === "no-criteria")?.tab).toBe("judges")
-      expect(items.find((i) => i.id === "no-criteria")?.subtab).toBe("criteria")
-      expect(items.find((i) => i.id === "no-prizes")?.tab).toBe("prizes")
+      expect(items.find((i) => i.id === "no-prizes")?.tab).toBe("judging")
+      expect(items.find((i) => i.id === "no-judges")?.tab).toBe("judging")
     })
   })
 
   describe("published status", () => {
-    it("warns about zero registrations", () => {
+    it("warns about zero registrations with hint", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "published",
         participantCount: 0,
-        criteriaCount: 3,
         judgeDisplayCount: 2,
         prizeCount: 1,
       }))
-      const ids = items.map((i) => i.id)
+      const item = items.find((i) => i.id === "no-registrations")
 
-      expect(ids).toContain("no-registrations")
-    })
-
-    it("warns about missing criteria", () => {
-      const items = getOrganizerActionItems(makeInput({
-        status: "published",
-        participantCount: 10,
-        criteriaCount: 0,
-      }))
-      const critItem = items.find((i) => i.id === "no-criteria")
-
-      expect(critItem).toBeDefined()
-      expect(critItem?.severity).toBe("urgent")
+      expect(item).toBeDefined()
+      expect(item?.hint).toBe("Share the event link or invite captains by email")
+      expect(item?.tab).toBe("teams")
     })
 
     it("shows starting soon when event starts within 24 hours", () => {
@@ -107,7 +101,6 @@ describe("getOrganizerActionItems", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "published",
         participantCount: 10,
-        criteriaCount: 3,
         judgeDisplayCount: 2,
         prizeCount: 1,
         startsAt: soon,
@@ -121,7 +114,6 @@ describe("getOrganizerActionItems", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "published",
         participantCount: 10,
-        criteriaCount: 3,
         judgeDisplayCount: 2,
         prizeCount: 1,
         startsAt: far,
@@ -132,26 +124,25 @@ describe("getOrganizerActionItems", () => {
   })
 
   describe("active status", () => {
-    it("flags unreleased challenge as urgent", () => {
+    it("flags unreleased challenge as urgent with hint", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "active",
         challengeReleased: false,
-        criteriaCount: 3,
-        judgingSetupStatus: { judgeCount: 2, hasUnassignedSubmissions: false },
+        judgeCount: 2,
       }))
 
       const item = items.find((i) => i.id === "challenge-not-released")
       expect(item).toBeDefined()
       expect(item?.severity).toBe("urgent")
       expect(item?.tab).toBe("event")
+      expect(item?.hint).toBe("Participants can't see what to build yet")
     })
 
     it("shows pending mentor requests", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "active",
         challengeReleased: true,
-        criteriaCount: 3,
-        judgingSetupStatus: { judgeCount: 2, hasUnassignedSubmissions: false },
+        judgeCount: 2,
         mentorQueue: { open: 3 },
       }))
 
@@ -164,8 +155,7 @@ describe("getOrganizerActionItems", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "active",
         challengeReleased: true,
-        criteriaCount: 3,
-        judgingSetupStatus: { judgeCount: 5, hasUnassignedSubmissions: false },
+        judgeCount: 5,
         mentorQueue: { open: 0 },
         submissionCount: 10,
       }))
@@ -175,21 +165,10 @@ describe("getOrganizerActionItems", () => {
   })
 
   describe("judging status", () => {
-    it("flags unassigned submissions", () => {
-      const items = getOrganizerActionItems(makeInput({
-        status: "judging",
-        judgingSetupStatus: { judgeCount: 3, hasUnassignedSubmissions: true },
-        judgingProgress: { totalAssignments: 10, completedAssignments: 0 },
-      }))
-      const ids = items.map((i) => i.id)
-
-      expect(ids).toContain("unassigned-submissions")
-    })
-
     it("shows judging progress percentage", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "judging",
-        judgingSetupStatus: { judgeCount: 3, hasUnassignedSubmissions: false },
+        judgeCount: 3,
         judgingProgress: { totalAssignments: 20, completedAssignments: 12 },
       }))
 
@@ -202,7 +181,7 @@ describe("getOrganizerActionItems", () => {
     it("marks low judging progress as warning", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "judging",
-        judgingSetupStatus: { judgeCount: 3, hasUnassignedSubmissions: false },
+        judgeCount: 3,
         judgingProgress: { totalAssignments: 20, completedAssignments: 5 },
       }))
 
@@ -212,7 +191,7 @@ describe("getOrganizerActionItems", () => {
   })
 
   describe("completed status", () => {
-    it("flags unpublished results as urgent", () => {
+    it("flags unpublished results as urgent with hint", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "completed",
         resultsPublishedAt: null,
@@ -221,9 +200,10 @@ describe("getOrganizerActionItems", () => {
       const item = items.find((i) => i.id === "results-not-published")
       expect(item).toBeDefined()
       expect(item?.severity).toBe("urgent")
+      expect(item?.hint).toBe("Review scores and publish")
     })
 
-    it("flags unsent winner emails", () => {
+    it("flags unsent winner emails with hint", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "completed",
         resultsPublishedAt: "2026-04-01T00:00:00Z",
@@ -233,6 +213,7 @@ describe("getOrganizerActionItems", () => {
       const item = items.find((i) => i.id === "winner-emails-not-sent")
       expect(item).toBeDefined()
       expect(item?.severity).toBe("warning")
+      expect(item?.hint).toBe("Let winners know they've been selected")
     })
 
     it("returns empty when everything is done", () => {

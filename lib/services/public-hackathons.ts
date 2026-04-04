@@ -7,7 +7,7 @@ import { getEffectiveStatus } from "@/lib/utils/timeline"
 import { sortByStatusPriority } from "@/lib/utils/sort-hackathons"
 
 export type PublicHackathon = Hackathon & {
-  organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark" | "clerk_org_id">
+  organizer: Pick<TenantProfile, "id" | "name" | "slug" | "logo_url" | "logo_url_dark" | "clerk_org_id" | "clerk_user_id">
   sponsors: (HackathonSponsor & {
     tenant?: Pick<
       TenantProfile,
@@ -45,7 +45,7 @@ export async function getPublicHackathon(
     .from("hackathons")
     .select(`
       *,
-      organizer:tenants!tenant_id(id, name, slug, logo_url, logo_url_dark, clerk_org_id)
+      organizer:tenants!tenant_id(id, name, slug, logo_url, logo_url_dark, clerk_org_id, clerk_user_id)
     `)
     .eq("slug", slug)
 

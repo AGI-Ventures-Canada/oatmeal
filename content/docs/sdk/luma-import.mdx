@@ -20,19 +20,10 @@ The extract endpoint is public. The create endpoint requires an API key with `ha
 
 Extracts event metadata, sponsors, and prizes from a Luma event page.
 
-```typescript title="extract-luma.ts"
-const res = await fetch(`${BASE_URL}/api/public/import/luma`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    slug: "ai-hackathon-toronto-2026",
-  }),
-})
-
-const eventData = await res.json()
-console.log("Event:", eventData.name)
-console.log("Starts:", eventData.startsAt)
-console.log("Sponsors:", eventData.sponsors?.length ?? 0)
+```bash title="Extract event data from Luma"
+curl -s -X POST "$BASE_URL/api/public/import/luma" \
+  -H "Content-Type: application/json" \
+  -d '{"slug": "ai-hackathon-toronto-2026"}' | jq .
 ```
 
 ### Request Body
@@ -51,31 +42,21 @@ The response contains the extracted event data which can be reviewed and modifie
 
 Creates a new hackathon using the extracted (and optionally modified) event data. This endpoint also downloads and uploads the banner image if an `imageUrl` is provided.
 
-```typescript title="create-from-luma.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/import/luma`, {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    name: eventData.name,
-    description: eventData.description,
-    startsAt: eventData.startsAt,
-    endsAt: eventData.endsAt,
-    registrationOpensAt: eventData.registrationOpensAt,
-    registrationClosesAt: eventData.registrationClosesAt,
-    locationType: "in_person",
-    locationName: eventData.locationName,
-    imageUrl: eventData.imageUrl,
-    rules: eventData.rules,
-    sponsors: eventData.sponsors,
-    prizes: eventData.prizes,
-  }),
-})
-
-const { id, name, slug } = await res.json()
-console.log(`Created hackathon: ${name} (${slug})`)
+```bash title="Create hackathon from extracted Luma data"
+curl -s -X POST "$BASE_URL/api/dashboard/import/luma" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "AI Hackathon Toronto 2026",
+    "description": "Build the future of AI",
+    "startsAt": "2026-06-01T09:00:00Z",
+    "endsAt": "2026-06-02T17:00:00Z",
+    "locationType": "in_person",
+    "locationName": "MaRS Discovery District",
+    "imageUrl": "https://images.lumacdn.com/event-covers/abc.jpg",
+    "sponsors": [{"name": "Acme Corp", "tier": "gold"}],
+    "prizes": [{"name": "Best Overall", "value": "5000"}]
+  }' | jq .
 ```
 
 ### Request Body
@@ -108,43 +89,34 @@ console.log(`Created hackathon: ${name} (${slug})`)
 
 ## Full Example
 
-```typescript title="full-example.ts"
-const API_KEY = process.env.OATMEAL_API_KEY!
-const BASE_URL = process.env.OATMEAL_BASE_URL!
+```bash title="Extract from Luma and create a hackathon"
+#!/usr/bin/env bash
+set -euo pipefail
 
-async function importFromLuma(lumaSlug: string) {
-  const extractRes = await fetch(`${BASE_URL}/api/public/import/luma`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ slug: lumaSlug }),
-  })
+LUMA_SLUG="ai-hackathon-toronto-2026"
 
-  if (!extractRes.ok) {
-    throw new Error("Failed to extract Luma event")
-  }
+# Step 1: Extract event data
+EVENT_DATA=$(curl -s -X POST "$BASE_URL/api/public/import/luma" \
+  -H "Content-Type: application/json" \
+  -d "{\"slug\": \"$LUMA_SLUG\"}")
 
-  const eventData = await extractRes.json()
+echo "Extracted: $(echo "$EVENT_DATA" | jq -r '.name')"
+echo "  Location: $(echo "$EVENT_DATA" | jq -r '.locationName')"
+echo "  Sponsors: $(echo "$EVENT_DATA" | jq '.sponsors | length')"
+echo "  Prizes: $(echo "$EVENT_DATA" | jq '.prizes | length')"
 
-  console.log(`Importing: ${eventData.name}`)
-  console.log(`  Location: ${eventData.locationName}`)
-  console.log(`  Sponsors: ${eventData.sponsors?.length ?? 0}`)
-  console.log(`  Prizes: ${eventData.prizes?.length ?? 0}`)
+# Step 2: Create hackathon from extracted data
+RESULT=$(curl -s -X POST "$BASE_URL/api/dashboard/import/luma" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "$EVENT_DATA")
 
-  const createRes = await fetch(`${BASE_URL}/api/dashboard/import/luma`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(eventData),
-  })
-
-  if (!createRes.ok) {
-    const err = await createRes.json()
-    throw new Error(`Import failed: ${err.error}`)
-  }
-
-  const { id, slug } = await createRes.json()
-  console.log(`\nCreated hackathon: ${slug} (${id})`)
-}
+echo ""
+echo "Created hackathon: $(echo "$RESULT" | jq -r '.slug') ($(echo "$RESULT" | jq -r '.id'))"
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon events create --from-luma ai-hackathon-toronto-2026
+```
+</Callout>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -34,17 +34,20 @@ import {
   Check,
   EyeOff,
   Globe,
+  Zap,
   Lock,
   Trophy,
   Loader2,
   AlertTriangle,
 } from "lucide-react"
 import type { HackathonStatus, HackathonPhase } from "@/lib/db/hackathon-types"
+import type { DevStatusDetail } from "@/components/dev-tool/events"
 
 const phases = [
   { key: "draft" as const, label: "Draft", icon: EyeOff },
-  { key: "published" as const, label: "Go Live", icon: Globe },
-  { key: "judging" as const, label: "Closed for submissions", icon: Lock },
+  { key: "published" as const, label: "Published", icon: Globe },
+  { key: "active" as const, label: "Live", icon: Zap },
+  { key: "judging" as const, label: "Judging", icon: Lock },
   { key: "completed" as const, label: "Completed", icon: Trophy },
 ] as const
 
@@ -52,27 +55,45 @@ type PhaseKey = (typeof phases)[number]["key"]
 
 const confirmations: Record<string, { title: string; description: string }> = {
   "draft→published": {
-    title: "Go live with hackathon?",
+    title: "Publish hackathon?",
     description:
-      "Your hackathon will become visible on the browse page and open for registration.",
+      "Your hackathon will become visible and open for registration.",
   },
-  "published→judging": {
+  "published→active": {
+    title: "Start hackathon?",
+    description:
+      "The hackathon will go live and participants can start building.",
+  },
+  "active→judging": {
     title: "Close submissions?",
     description:
-      "Submissions will close and the judging phase will begin. Make sure your judges and criteria are configured.",
+      "Submissions will close and the judging phase will begin.",
   },
   "judging→completed": {
     title: "Complete the event?",
     description:
-      "Judging will close and results will be published on the event page. Participants will be notified of the winner.",
+      "Judging will close and results will be published. Participants will be notified.",
   },
   "published→draft": {
     title: "Take offline?",
-    description: "Your hackathon will be hidden from the browse page.",
+    description: "Your hackathon will be hidden from the browse page and registration will close.",
+  },
+  "active→draft": {
+    title: "Take offline?",
+    description:
+      "The hackathon will be taken offline and hidden from the browse page.",
+  },
+  "active→published": {
+    title: "Revert to published?",
+    description: "The hackathon will revert to the published phase.",
+  },
+  "judging→active": {
+    title: "Reopen submissions?",
+    description: "This will reopen the hackathon for submissions.",
   },
   "judging→published": {
     title: "Revert to published?",
-    description: "This will reopen the hackathon for submissions.",
+    description: "The hackathon will revert to the published phase.",
   },
   "judging→draft": {
     title: "Revert to draft?",
@@ -83,10 +104,15 @@ const confirmations: Record<string, { title: string; description: string }> = {
     title: "Revert to judging?",
     description: "This will reopen the judging phase.",
   },
+  "completed→active": {
+    title: "Reopen submissions?",
+    description:
+      "Results will be unpublished and the hackathon will reopen for submissions.",
+  },
   "completed→published": {
     title: "Revert to published?",
     description:
-      "Results will be unpublished and the hackathon will reopen for submissions.",
+      "Results will be unpublished and the hackathon will revert to the published phase.",
   },
   "completed→draft": {
     title: "Revert to draft?",
@@ -101,13 +127,14 @@ function resolvePhaseIndex(status: HackathonStatus): number {
       return 0
     case "published":
     case "registration_open":
-    case "active":
       return 1
-    case "judging":
+    case "active":
       return 2
+    case "judging":
+      return 3
     case "completed":
     case "archived":
-      return 3
+      return 4
     default:
       return 0
   }
@@ -176,11 +203,33 @@ export function LifecycleStepper({
   const [currentStatus, setCurrentStatus] = useState(status)
   const [updating, setUpdating] = useState(false)
   const [pendingTarget, setPendingTarget] = useState<PhaseKey | null>(null)
+  const devOverrideUntil = useRef(0)
+
+  useEffect(() => {
+    if (Date.now() < devOverrideUntil.current) return
+    setCurrentStatus(status)
+  }, [status])
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<DevStatusDetail>).detail
+      if (detail?.status) {
+        devOverrideUntil.current = Date.now() + 30_000
+        setCurrentStatus(detail.status as HackathonStatus)
+      } else {
+        router.refresh()
+      }
+    }
+    document.addEventListener("dev-status-changed", handler)
+    return () => document.removeEventListener("dev-status-changed", handler)
+  }, [router])
 
   const currentIndex = resolvePhaseIndex(currentStatus)
 
   async function commitStatusChange(newStatus: PhaseKey) {
     const now = new Date().toISOString()
+    const dbStatus = newStatus === "published" ? "registration_open" : newStatus
 
     setUpdating(true)
     try {
@@ -209,7 +258,7 @@ export function LifecycleStepper({
           {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: newStatus }),
+            body: JSON.stringify({ status: dbStatus }),
           },
         )
         if (!res.ok) throw new Error("Failed to update status")
@@ -221,6 +270,7 @@ export function LifecycleStepper({
       if (
         phases[currentIndex]?.key === "completed" &&
         (newStatus === "judging" ||
+          newStatus === "active" ||
           newStatus === "published" ||
           newStatus === "draft")
       ) {
@@ -232,7 +282,7 @@ export function LifecycleStepper({
         )
       }
 
-      const body: Record<string, unknown> = { status: newStatus }
+      const body: Record<string, unknown> = { status: dbStatus }
       if (newStatus === "judging") {
         if (!endsAt || new Date(endsAt) > new Date()) body.endsAt = now
         if (
@@ -277,20 +327,19 @@ export function LifecycleStepper({
     if (distance === 1) {
       if (currentKey === "draft" && phaseKey === "published")
         return {
-          title: "Go Live",
-          description: "Make the event open for registrations",
-          buttonText: "Go Live",
+          title: "Publish",
+          description: "Make the event visible and open for registration",
+          buttonText: "Publish",
           onClick: () => requestTransition("published"),
         }
-      if (currentKey === "published" && phaseKey === "judging") {
-        if (judgingSetupStatus?.hasUnassignedSubmissions)
-          return {
-            title: "Assign Submissions",
-            description: "Some submissions don't have judges assigned yet",
-            buttonText: "Assign Submissions",
-            onClick: () =>
-              router.push(`/e/${hackathonSlug}/manage?tab=judges&jtab=assignments`),
-          }
+      if (currentKey === "published" && phaseKey === "active")
+        return {
+          title: "Start Hackathon",
+          description: "Start the hackathon and let participants begin building",
+          buttonText: "Start Hackathon",
+          onClick: () => requestTransition("active"),
+        }
+      if (currentKey === "active" && phaseKey === "judging") {
         return {
           title: "Start Judging",
           description: "Close submissions and begin judging",
@@ -318,10 +367,17 @@ export function LifecycleStepper({
         }
       if (phaseKey === "published")
         return {
+          title: "Revert to Published",
+          description: "Revert to published with registration open",
+          buttonText: "Revert",
+          onClick: () => requestTransition("published"),
+        }
+      if (phaseKey === "active")
+        return {
           title: "Reopen Submissions",
           description: "Reopen the hackathon for new submissions",
           buttonText: "Reopen",
-          onClick: () => requestTransition("published"),
+          onClick: () => requestTransition("active"),
         }
       if (phaseKey === "judging")
         return {
@@ -359,7 +415,6 @@ export function LifecycleStepper({
     sponsorCount === 0 && "No sponsors",
     judgeDisplayCount === 0 && "No judges added",
     prizeCount === 0 && "No prizes defined",
-    criteriaCount === 0 && "No judging criteria defined",
   ].filter(Boolean) as string[]
 
   return (
@@ -407,7 +462,7 @@ export function LifecycleStepper({
                     )}
                   >
                     {isCompleted ? (
-                      phase.key === "draft" && currentIndex === 1 ? (
+                      phase.key === "draft" ? (
                         <EyeOff className="size-3.5" />
                       ) : (
                         <Check className="size-3.5" strokeWidth={2.5} />
@@ -424,11 +479,7 @@ export function LifecycleStepper({
                       isFuture && "text-muted-foreground",
                     )}
                   >
-                    {isCurrent && phase.key === "published"
-                      ? "Live"
-                      : phase.key === "draft" && currentIndex === 1
-                        ? "Take Offline"
-                        : phase.label}
+                    {phase.label}
                   </span>
                 </button>
               )

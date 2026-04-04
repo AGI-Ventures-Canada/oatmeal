@@ -89,7 +89,7 @@ export function PrizesManager({
   const [success, setSuccess] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [assigningPrizeId, setAssigningPrizeId] = useState<string | null>(null)
-  const [selectedSubmission, setSelectedSubmission] = useState<string>("")
+  const [selectedSubmissions, setSelectedSubmissions] = useState<Record<string, string>>({})
 
   function openCreate() {
     setEditingId(null)
@@ -187,7 +187,8 @@ export function PrizesManager({
   }
 
   async function handleAssignPrize(prizeId: string) {
-    if (!selectedSubmission) return
+    const selected = selectedSubmissions[prizeId]
+    if (!selected) return
     setAssigningPrizeId(prizeId)
     try {
       const res = await fetch(
@@ -195,26 +196,30 @@ export function PrizesManager({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ submissionId: selectedSubmission }),
+          body: JSON.stringify({ submissionId: selected }),
         }
       )
       if (!res.ok) throw new Error("Failed to assign")
       const data = await res.json()
       const prize = prizes.find((p) => p.id === prizeId)
-      const sub = submissions.find((s) => s.id === selectedSubmission)
+      const sub = submissions.find((s) => s.id === selected)
       setAssignments((prev) => [
         ...prev,
         {
           id: data.id,
           prizeId,
           prizeName: prize?.name ?? "",
-          submissionId: selectedSubmission,
+          submissionId: selected,
           submissionTitle: sub?.title ?? "",
           teamName: null,
           assignedAt: new Date().toISOString(),
         },
       ])
-      setSelectedSubmission("")
+      setSelectedSubmissions((prev) => {
+        const next = { ...prev }
+        delete next[prizeId]
+        return next
+      })
     } catch {
       setError("Failed to assign prize")
     } finally {
@@ -424,7 +429,7 @@ export function PrizesManager({
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <Select value={selectedSubmission} onValueChange={setSelectedSubmission}>
+                    <Select value={selectedSubmissions[p.id] ?? ""} onValueChange={(v) => setSelectedSubmissions((prev) => ({ ...prev, [p.id]: v }))}>
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Select submission..." />
                       </SelectTrigger>
@@ -439,7 +444,7 @@ export function PrizesManager({
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={!selectedSubmission || assigningPrizeId === p.id}
+                      disabled={!selectedSubmissions[p.id] || assigningPrizeId === p.id}
                       onClick={() => handleAssignPrize(p.id)}
                     >
                       {assigningPrizeId === p.id ? (

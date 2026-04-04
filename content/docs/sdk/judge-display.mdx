@@ -39,45 +39,38 @@ interface JudgeDisplay {
 
 `GET /api/dashboard/hackathons/:id/judges/display` — requires `hackathons:read` scope.
 
-```typescript title="list-judge-display.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { judges } = await res.json()
-
-for (const j of judges) {
-  console.log(`${j.name} — ${j.title ?? ""} at ${j.organization ?? ""}`)
-}
+```bash title="List judge profiles"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judge-display list $HACKATHON_ID
+```
+</Callout>
 
 ## Create a Judge Profile
 
 `POST /api/dashboard/hackathons/:id/judges/display` — requires `hackathons:write` scope.
 
-```typescript title="create-judge-display.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: "Dr. Sarah Chen",
-      title: "CTO",
-      organization: "Anthropic",
-      email: "sarah@example.com",
-    }),
-  }
-)
-
-const { id, name } = await res.json()
+```bash title="Create a judge profile"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Dr. Sarah Chen",
+    "title": "CTO",
+    "organization": "Anthropic",
+    "email": "sarah@example.com"
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judge-display create $HACKATHON_ID
+```
+</Callout>
 
 ### Request Body
 
@@ -96,56 +89,55 @@ const { id, name } = await res.json()
 
 `PATCH /api/dashboard/hackathons/:id/judges/display/:judgeId` — requires `hackathons:write` scope.
 
-```typescript title="update-judge-display.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display/${judgeId}`,
-  {
-    method: "PATCH",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      title: "VP of Engineering",
-      organization: "Anthropic",
-    }),
-  }
-)
+```bash title="Update a judge profile"
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display/$JUDGE_ID" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "VP of Engineering",
+    "organization": "Anthropic"
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judge-display update $HACKATHON_ID
+```
+</Callout>
 
 ## Delete a Judge Profile
 
 `DELETE /api/dashboard/hackathons/:id/judges/display/:judgeId` — requires `hackathons:write` scope.
 
-```typescript title="delete-judge-display.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display/${judgeId}`,
-  {
-    method: "DELETE",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
+```bash title="Delete a judge profile"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display/$JUDGE_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judge-display delete $HACKATHON_ID
+```
+</Callout>
 
 ## Reorder Judge Profiles
 
 `POST /api/dashboard/hackathons/:id/judges/display/reorder` — requires `hackathons:write` scope.
 
-```typescript title="reorder-judges.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display/reorder`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      orderedIds: ["judge_001", "judge_002", "judge_003"],
-    }),
-  }
-)
+```bash title="Reorder judge profiles"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display/reorder" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orderedIds": ["judge_001", "judge_002", "judge_003"]
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judge-display reorder $HACKATHON_ID
+```
+</Callout>
 
 ## Upload Headshot
 
@@ -153,33 +145,17 @@ await fetch(
 
 Accepts PNG, JPEG, or WebP files up to 5MB.
 
-```typescript title="upload-headshot.ts"
-const formData = new FormData()
-formData.append("file", headshotFile)
-
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display/${judgeId}/headshot`,
-  {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-    body: formData,
-  }
-)
-
-const { headshotUrl } = await res.json()
-console.log("Headshot uploaded:", headshotUrl)
+```bash title="Upload headshot"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display/$JUDGE_ID/headshot" \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@headshot.jpg" | jq .
 ```
 
 ## Remove Headshot
 
 `DELETE /api/dashboard/hackathons/:id/judges/display/:judgeId/headshot` — requires `hackathons:write` scope.
 
-```typescript title="delete-headshot.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judges/display/${judgeId}/headshot`,
-  {
-    method: "DELETE",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
+```bash title="Remove headshot"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judges/display/$JUDGE_ID/headshot" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```

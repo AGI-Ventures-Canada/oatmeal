@@ -54,28 +54,18 @@ Create keys with the minimum scopes needed:
 
 Pass the API key in the `Authorization` header:
 
-```typescript title="usage.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/hackathons`, {
-  headers: {
-    "Authorization": `Bearer ${process.env.OATMEAL_API_KEY}`,
-  },
-})
+```bash title="List your hackathons"
+curl -s "$BASE_URL/api/dashboard/hackathons" \
+  -H "Authorization: Bearer $OATMEAL_API_KEY" | jq .
 ```
 
 ### Verify Your Key
 
 Test that your key works with the `whoami` endpoint:
 
-```typescript title="verify.ts"
-const res = await fetch(`${BASE_URL}/api/v1/whoami`, {
-  headers: {
-    "Authorization": `Bearer ${process.env.OATMEAL_API_KEY}`,
-  },
-})
-
-const { tenantId, keyId, scopes } = await res.json()
-console.log(`Organization: ${tenantId}`)
-console.log(`Scopes: ${scopes.join(", ")}`)
+```bash title="Verify your API key"
+curl -s "$BASE_URL/api/v1/whoami" \
+  -H "Authorization: Bearer $OATMEAL_API_KEY" | jq .
 ```
 
 ## Environment Variables
@@ -93,14 +83,7 @@ Never commit API keys to version control. Add `.env.local` to your `.gitignore`.
 
 ## Revoking a Key
 
-Revoke a key immediately if it's compromised or no longer needed:
-
-```typescript title="revoke.ts"
-await fetch(`${BASE_URL}/api/dashboard/keys/${keyId}/revoke`, {
-  method: "POST",
-  credentials: "include",
-})
-```
+Revoke a key immediately if it's compromised or no longer needed. Revoke keys from the dashboard at **Settings > API Keys**, or create a new key and revoke the old one.
 
 Revoked keys stop working immediately. This action cannot be undone — create a new key if needed.
 

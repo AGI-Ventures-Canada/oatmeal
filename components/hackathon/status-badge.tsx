@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Globe, EyeOff, Gavel, CheckCircle2, ChevronDown, Loader2, Check } from "lucide-react"
+import { Globe, Users, Zap, EyeOff, Gavel, CheckCircle2, Archive, ChevronDown, Loader2, Check } from "lucide-react"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 
 interface StatusBadgeProps {
@@ -17,14 +17,17 @@ interface StatusBadgeProps {
   status: HackathonStatus
 }
 
-const statusConfig: Record<string, { icon: typeof Globe; label: string; description: string }> = {
+const statusConfig: Record<string, { icon: typeof EyeOff; label: string; description: string }> = {
   draft: { icon: EyeOff, label: "Draft", description: "Only you can see this" },
-  published: { icon: Globe, label: "Published", description: "Visible on browse page" },
+  published: { icon: Globe, label: "Published", description: "Visible on browse page, registration not open" },
+  registration_open: { icon: Users, label: "Registration Open", description: "Open for participants to register" },
+  active: { icon: Zap, label: "Live", description: "Hackathon is actively running" },
   judging: { icon: Gavel, label: "Judging", description: "Judges are scoring submissions" },
   completed: { icon: CheckCircle2, label: "Completed", description: "Results published" },
+  archived: { icon: Archive, label: "Archived", description: "Hackathon has been archived" },
 }
 
-const allowedTransitions: HackathonStatus[] = ["draft", "published", "judging", "completed"]
+const allowedTransitions: HackathonStatus[] = ["draft", "published", "registration_open", "active", "judging", "completed"]
 
 export function StatusBadge({ hackathonId, status }: StatusBadgeProps) {
   const router = useRouter()

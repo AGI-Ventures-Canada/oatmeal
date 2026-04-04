@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useUser } from "@clerk/nextjs"
 import { EditProvider, useEdit, SECTION_ORDER } from "./edit-context"
 import { EditableSection } from "./editable-section"
 import { FloatingActionBar } from "./floating-action-bar"
@@ -52,6 +51,7 @@ interface HackathonPreviewClientProps {
   publicResults?: PublicResultWithDetails[]
   scheduleItems?: ScheduleItem[]
   announcements?: Announcement[]
+  currentUserId?: string | null
   onFormSave?: (data: Record<string, unknown>) => Promise<boolean>
   onBannerChange?: (imageUrl: string | null) => void | Promise<void>
   onAuthRequired?: () => void
@@ -70,12 +70,12 @@ function HackathonPreviewContent({
   publicResults = [],
   scheduleItems = [],
   announcements = [],
+  currentUserId = null,
   onFormSave,
   onBannerChange,
   onAuthRequired,
 }: Omit<HackathonPreviewClientProps, "isEditable">) {
   const { isEditable, editMode, activeSection, openSection, closeDrawer } = useEdit()
-  const { user } = useUser()
   const router = useRouter()
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [isRegistered, setIsRegistered] = useState(initialIsRegistered)
@@ -172,9 +172,9 @@ function HackathonPreviewContent({
           </div>
           <div className="space-y-0.5">
             {teamInfo.members.map((member) => {
-              const isCurrentUser = member.clerkUserId === user?.id
+              const isCurrentUser = member.clerkUserId === currentUserId
               const displayName = isCurrentUser
-                ? (user?.fullName || user?.firstName || member.displayName || "You")
+                ? (member.displayName || "You")
                 : (member.displayName || "Teammate")
               const initials = displayName[0]?.toUpperCase() ?? "?"
               return (
@@ -582,6 +582,7 @@ function HackathonPreviewContent({
       isRegistered={isRegistered}
       hideRegistrationButton={isJudge}
       isOrganizer={isEditable && !editMode}
+      isJudge={isJudge}
       hackathonSlug={hackathon.slug}
       statusSlot={(isEditable && editMode) ? undefined : statusSlot}
       bannerSlot={bannerEditSlot}
@@ -632,6 +633,7 @@ export function HackathonPreviewClient({
   publicResults,
   scheduleItems,
   announcements,
+  currentUserId,
   onFormSave,
   onBannerChange,
   onAuthRequired,
@@ -651,6 +653,7 @@ export function HackathonPreviewClient({
         publicResults={publicResults}
         scheduleItems={scheduleItems}
         announcements={announcements}
+        currentUserId={currentUserId}
         onFormSave={onFormSave}
         onBannerChange={onBannerChange}
         onAuthRequired={onAuthRequired}

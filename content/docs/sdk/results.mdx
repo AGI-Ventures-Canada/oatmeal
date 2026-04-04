@@ -52,18 +52,16 @@ interface Result {
 
 Aggregates judge scores (points mode) or judge picks (subjective mode) and generates rankings. Run this after judging is complete.
 
-```typescript title="calculate-results.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/calculate`,
-  {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { success, count } = await res.json()
-console.log(`Calculated rankings for ${count} submissions`)
+```bash title="Calculate results"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results/calculate" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon results calculate --hackathon "$HACKATHON_ID"
+```
+</Callout>
 
 ### Response
 
@@ -84,22 +82,16 @@ You can recalculate results at any time. New calculations replace previous resul
 
 Returns the full leaderboard with scores, regardless of publication status.
 
-```typescript title="get-results.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { results, isPublished } = await res.json()
-console.log("Published:", isPublished)
-
-for (const r of results) {
-  const prizes = r.prizes.map((p) => p.name).join(", ")
-  console.log(`#${r.rank} ${r.submissionTitle} (${r.totalScore} pts) ${prizes}`)
-}
+```bash title="Get results as organizer"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon results get --hackathon "$HACKATHON_ID" --json
+```
+</Callout>
 
 ### Response
 
@@ -139,18 +131,16 @@ Makes results visible on the public hackathon page. This also:
 - Sends winner notification emails
 - Triggers `results.published` webhooks
 
-```typescript title="publish-results.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/publish`,
-  {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { success } = await res.json()
-console.log("Results published!")
+```bash title="Publish results"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results/publish" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon results publish --hackathon "$HACKATHON_ID"
+```
+</Callout>
 
 <Callout type="warn">
 Publishing triggers winner emails and webhooks. Make sure results are finalized before publishing.
@@ -162,15 +152,16 @@ Publishing triggers winner emails and webhooks. Make sure results are finalized 
 
 Hides results from the public page and reverts the hackathon status to `"judging"`.
 
-```typescript title="unpublish-results.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/unpublish`,
-  {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
+```bash title="Unpublish results"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results/unpublish" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon results unpublish --hackathon "$HACKATHON_ID"
+```
+</Callout>
 
 ## Get Published Results (Public)
 
@@ -178,21 +169,8 @@ await fetch(
 
 Returns the public leaderboard. Returns `404` if results are not yet published.
 
-```typescript title="public-results.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/results`
-)
-
-if (res.status === 404) {
-  console.log("Results not yet published")
-} else {
-  const { results } = await res.json()
-
-  for (const r of results) {
-    const prizes = r.prizes.map((p) => p.name).join(", ")
-    console.log(`#${r.rank} ${r.submissionTitle} - ${r.teamName} ${prizes}`)
-  }
-}
+```bash title="Browse published results"
+curl -s "$BASE_URL/api/public/hackathons/ai-innovation-2026/results" | jq .
 ```
 
 ### Response
@@ -220,44 +198,27 @@ if (res.status === 404) {
 
 ## Full Example
 
-```typescript title="full-example.ts"
-const API_KEY = process.env.OATMEAL_API_KEY!
-const BASE_URL = process.env.OATMEAL_BASE_URL!
+```bash title="Calculate, preview, and publish results"
+#!/usr/bin/env bash
+set -euo pipefail
 
-async function finalizeHackathon(hackathonId: string) {
-  const calcRes = await fetch(
-    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/calculate`,
-    {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${API_KEY}` },
-    }
-  )
+# Calculate results
+echo "Calculating results..."
+CALC=$(curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results/calculate" \
+  -H "Authorization: Bearer $API_KEY")
+COUNT=$(echo "$CALC" | jq -r '.count')
+echo "Ranked $COUNT submissions"
 
-  const { count } = await calcRes.json()
-  console.log(`Ranked ${count} submissions`)
+# Preview the leaderboard
+echo -e "\nLeaderboard preview:"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results" \
+  -H "Authorization: Bearer $API_KEY" \
+  | jq -r '.results[:5][] | "  #\(.rank) \(.submissionTitle) (\(.totalScore) pts)"'
 
-  const resultsRes = await fetch(
-    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results`,
-    {
-      headers: { "Authorization": `Bearer ${API_KEY}` },
-    }
-  )
+# Publish
+echo -e "\nPublishing results..."
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results/publish" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 
-  const { results } = await resultsRes.json()
-
-  console.log("\nLeaderboard preview:")
-  for (const r of results.slice(0, 5)) {
-    console.log(`  #${r.rank} ${r.submissionTitle} (${r.totalScore} pts)`)
-  }
-
-  await fetch(
-    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/publish`,
-    {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${API_KEY}` },
-    }
-  )
-
-  console.log("\nResults published!")
-}
+echo "Results published!"
 ```

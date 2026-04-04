@@ -14,15 +14,11 @@ Oatmeal supports two distinct judging modes. Choose the right one when setting u
 
 Set the mode via the [Hackathons API](/docs/sdk/hackathons):
 
-```typescript title="set-judging-mode.ts"
-await fetch(`${BASE_URL}/api/dashboard/hackathons/${id}/settings`, {
-  method: "PATCH",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({ judgingMode: "points" }),
-})
+```bash title="Set judging mode"
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/settings" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"judgingMode": "points"}' | jq .
 ```
 
 ## Points-Based Judging
@@ -31,67 +27,25 @@ Judges evaluate each assigned submission against a set of criteria with numeric 
 
 ### Setup
 
-1. **Define criteria** — Create judging criteria with names, max scores, and weights
+1. **Define criteria** — Create judging criteria with names, max scores, and weights. Repeat the call for each criterion:
 
-```typescript title="setup-criteria.ts"
-const criteria = [
-  { name: "Technical Innovation", maxScore: 10, weight: 1.5 },
-  { name: "Design & UX", maxScore: 10, weight: 1.0 },
-  { name: "Completeness", maxScore: 10, weight: 1.0 },
-  { name: "Presentation", maxScore: 10, weight: 0.5 },
-]
-
-for (const c of criteria) {
-  await fetch(
-    `${BASE_URL}/api/dashboard/hackathons/${id}/judging/criteria`,
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(c),
-    }
-  )
-}
+```bash title="Add a judging criterion"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/criteria" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Technical Innovation", "maxScore": 10, "weight": 1.5}' | jq .
 ```
 
 2. **Add judges** and **auto-assign submissions**
 
-```typescript title="assign-judges.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${id}/judging/auto-assign`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ submissionsPerJudge: 5 }),
-  }
-)
+```bash title="Auto-assign submissions to judges"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/auto-assign" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"submissionsPerJudge": 5}' | jq .
 ```
 
-3. **Judges score** via the scoring endpoint
-
-```typescript title="judge-scores.ts"
-await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/judging/assignments/${assignmentId}/scores`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-      scores: [
-        { criteriaId: "crit_001", score: 9 },
-        { criteriaId: "crit_002", score: 7 },
-        { criteriaId: "crit_003", score: 8 },
-        { criteriaId: "crit_004", score: 6 },
-      ],
-    }),
-  }
-)
-```
+3. **Judges score** through the web interface at `/e/{slug}/judge`. Each judge sees their assigned submissions and scores them against the criteria you defined.
 
 ### How Scoring Works
 
@@ -116,60 +70,22 @@ Judges pick their favorite submissions for each prize category. Results are dete
 
 ### Setup
 
-1. **Define prizes** — Each prize becomes a category judges vote on
+1. **Define prizes** — Each prize becomes a category judges vote on. Repeat the call for each prize:
 
-```typescript title="setup-prizes.ts"
-const prizes = [
-  { name: "Best Overall", type: "favorite" },
-  { name: "Most Creative", type: "favorite" },
-  { name: "Best Technical", type: "favorite" },
-]
-
-for (const p of prizes) {
-  await fetch(
-    `${BASE_URL}/api/dashboard/hackathons/${id}/prizes`,
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(p),
-    }
-  )
-}
+```bash title="Add a prize category"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Best Overall", "type": "favorite"}' | jq .
 ```
 
-2. **Judges pick favorites** for each prize
-
-```typescript title="judge-picks.ts"
-await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/judging/picks`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-      prizeId: "prize_001",
-      submissionId: "sub_xyz456",
-      rank: 1,
-      reason: "Most polished end-to-end experience",
-    }),
-  }
-)
-```
+2. **Judges pick favorites** through the web interface at `/e/{slug}/judge`. Each judge selects their top choice for each prize category.
 
 3. **View aggregated results** as the organizer
 
-```typescript title="view-pick-results.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${id}/judging/pick-results`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { results } = await res.json()
+```bash title="View pick results"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/pick-results" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 ### When to Use Subjective
@@ -183,15 +99,11 @@ const { results } = await res.json()
 
 Both modes support anonymous judging. When enabled, team names are hidden from judges so they evaluate submissions purely on merit.
 
-```typescript title="enable-anonymous.ts"
-await fetch(`${BASE_URL}/api/dashboard/hackathons/${id}/settings`, {
-  method: "PATCH",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({ anonymousJudging: true }),
-})
+```bash title="Enable anonymous judging"
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/settings" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"anonymousJudging": true}' | jq .
 ```
 
 ## Best Practices

@@ -43,7 +43,14 @@ mock.module("@/lib/services/public-hackathons", () => ({
   deleteHackathon: mockDeleteHackathon,
 }))
 
-const mockSendPendingJudgeInvitationEmails = mock(() => Promise.resolve({ sent: 2 }))
+const mockExecuteTransition = mock(() =>
+  Promise.resolve({ success: true, hackathon: { id: "h1" } })
+)
+mock.module("@/lib/services/lifecycle", () => ({
+  executeTransition: mockExecuteTransition,
+}))
+
+const mockSendPendingJudgeInvitationEmails = mock(() => Promise.resolve({ sent: 2, total: 2, failedEmails: [] }))
 
 mock.module("@/lib/services/judge-invitations", () => ({
   sendPendingJudgeInvitationEmails: mockSendPendingJudgeInvitationEmails,
@@ -59,6 +66,19 @@ mock.module("@/lib/services/audit", () => ({
 const mockTriggerWebhooks = mock(() => Promise.resolve())
 mock.module("@/lib/services/webhooks", () => ({
   triggerWebhooks: mockTriggerWebhooks,
+}))
+
+const mockWorkflowStart = mock(() => Promise.resolve({ runId: "run_1" }))
+mock.module("workflow/api", () => ({ start: mockWorkflowStart }))
+mock.module("@/lib/workflows/judge-notifications", () => ({
+  sendJudgeNotificationsWorkflow: mock(() => Promise.resolve()),
+}))
+
+const mockFetchPendingNotifications = mock(() => Promise.resolve([]))
+const mockSendJudgeNotification = mock(() => Promise.resolve())
+mock.module("@/lib/workflows/judge-notifications/steps", () => ({
+  fetchPendingNotifications: mockFetchPendingNotifications,
+  sendJudgeNotification: mockSendJudgeNotification,
 }))
 
 const mockGetUser = mock(() =>
@@ -124,6 +144,11 @@ mock.module("@/lib/auth/principal", () => {
       }
       return principal
     },
+    isAdminEnabled: () => true,
+    requireAdmin: (principal: { kind: string }) => {
+      if (principal.kind !== "admin") throw new AuthError("Forbidden", 403)
+    },
+    requireAdminScopes: () => {},
     AuthError,
   }
 })
@@ -197,28 +222,38 @@ const mockHackathonResponse = {
 describe("PATCH /api/dashboard/hackathons/:id/settings - status change emails", () => {
   beforeEach(() => {
     mockResolvePrincipal.mockClear()
+    mockCheckHackathonOrganizer.mockClear()
     mockGetHackathonByIdForOrganizer.mockClear()
     mockUpdateHackathonSettings.mockClear()
+    mockExecuteTransition.mockClear()
     mockSendPendingJudgeInvitationEmails.mockClear()
     mockLogAudit.mockClear()
     mockTriggerWebhooks.mockClear()
     mockGetUser.mockClear()
+    mockWorkflowStart.mockClear()
+    mockFetchPendingNotifications.mockClear()
+    mockSendJudgeNotification.mockClear()
 
     mockResolvePrincipal.mockResolvedValue(mockUserPrincipal)
+    mockExecuteTransition.mockResolvedValue({ success: true, hackathon: { id: "h1" } })
+    mockWorkflowStart.mockResolvedValue({ runId: "run_1" })
+    mockFetchPendingNotifications.mockResolvedValue([])
   })
 
   it("sends pending invitation emails when transitioning from draft to published", async () => {
-    mockGetHackathonByIdForOrganizer.mockResolvedValue({
-      id: "h1", status: "draft",
-      registration_opens_at: null, registration_closes_at: null, starts_at: null, ends_at: null,
+    mockCheckHackathonOrganizer.mockResolvedValue({
+      status: "ok",
+      hackathon: { ...mockHackathonResponse, status: "draft" },
     })
-    mockUpdateHackathonSettings.mockResolvedValue({ ...mockHackathonResponse, status: "published" })
+    mockGetHackathonByIdForOrganizer.mockResolvedValue({ ...mockHackathonResponse, status: "published" })
 
     const res = await patchSettings({ status: "published" })
     expect(res.status).toBe(200)
 
     await Promise.resolve()
 
+    expect(mockUpdateHackathonSettings).not.toHaveBeenCalled()
+    expect(mockExecuteTransition).toHaveBeenCalledTimes(1)
     expect(mockSendPendingJudgeInvitationEmails).toHaveBeenCalledTimes(1)
     expect(mockSendPendingJudgeInvitationEmails).toHaveBeenCalledWith(
       "h1",
@@ -228,9 +263,9 @@ describe("PATCH /api/dashboard/hackathons/:id/settings - status change emails", 
   })
 
   it("does not send pending invitation emails when status stays draft", async () => {
-    mockGetHackathonByIdForOrganizer.mockResolvedValue({
-      id: "h1", status: "draft",
-      registration_opens_at: null, registration_closes_at: null, starts_at: null, ends_at: null,
+    mockCheckHackathonOrganizer.mockResolvedValue({
+      status: "ok",
+      hackathon: { ...mockHackathonResponse, status: "draft" },
     })
     mockUpdateHackathonSettings.mockResolvedValue({ ...mockHackathonResponse, status: "draft" })
 
@@ -243,11 +278,11 @@ describe("PATCH /api/dashboard/hackathons/:id/settings - status change emails", 
   })
 
   it("does not send pending invitation emails when previous status was not draft", async () => {
-    mockGetHackathonByIdForOrganizer.mockResolvedValue({
-      id: "h1", status: "published",
-      registration_opens_at: null, registration_closes_at: null, starts_at: null, ends_at: null,
+    mockCheckHackathonOrganizer.mockResolvedValue({
+      status: "ok",
+      hackathon: { ...mockHackathonResponse, status: "published" },
     })
-    mockUpdateHackathonSettings.mockResolvedValue({ ...mockHackathonResponse, status: "active" })
+    mockGetHackathonByIdForOrganizer.mockResolvedValue({ ...mockHackathonResponse, status: "active" })
 
     const res = await patchSettings({ status: "active" })
     expect(res.status).toBe(200)
@@ -268,15 +303,77 @@ describe("PATCH /api/dashboard/hackathons/:id/settings - status change emails", 
     expect(mockSendPendingJudgeInvitationEmails).not.toHaveBeenCalled()
   })
 
-  it("does not send pending invitation emails when getHackathonByIdForOrganizer returns null", async () => {
-    mockGetHackathonByIdForOrganizer.mockResolvedValue(null)
-    mockUpdateHackathonSettings.mockResolvedValue({ ...mockHackathonResponse, status: "published" })
+  it("returns 404 early when hackathon not found", async () => {
+    mockCheckHackathonOrganizer.mockResolvedValue({ status: "not_found" })
+
+    const res = await patchSettings({ status: "published" })
+    expect(res.status).toBe(404)
+
+    expect(mockUpdateHackathonSettings).not.toHaveBeenCalled()
+    expect(mockExecuteTransition).not.toHaveBeenCalled()
+    expect(mockSendPendingJudgeInvitationEmails).not.toHaveBeenCalled()
+  })
+
+  it("returns 403 when tenant does not match", async () => {
+    mockCheckHackathonOrganizer.mockResolvedValue({ status: "not_authorized" })
+
+    const res = await patchSettings({ status: "published" })
+    expect(res.status).toBe(403)
+
+    expect(mockUpdateHackathonSettings).not.toHaveBeenCalled()
+    expect(mockExecuteTransition).not.toHaveBeenCalled()
+  })
+
+  it("status-only transition skips updateHackathonSettings", async () => {
+    mockCheckHackathonOrganizer.mockResolvedValue({
+      status: "ok",
+      hackathon: { ...mockHackathonResponse, status: "active" },
+    })
+    mockGetHackathonByIdForOrganizer.mockResolvedValue({ ...mockHackathonResponse, status: "judging" })
+
+    const res = await patchSettings({ status: "judging" })
+    expect(res.status).toBe(200)
+
+    expect(mockUpdateHackathonSettings).not.toHaveBeenCalled()
+    expect(mockExecuteTransition).toHaveBeenCalledTimes(1)
+  })
+
+  it("falls back to direct send when judge notifications workflow start() fails", async () => {
+    mockCheckHackathonOrganizer.mockResolvedValue({
+      status: "ok",
+      hackathon: { ...mockHackathonResponse, status: "draft" },
+    })
+    mockGetHackathonByIdForOrganizer.mockResolvedValue({ ...mockHackathonResponse, status: "published" })
+    mockWorkflowStart.mockRejectedValue(new Error("workflow engine unavailable"))
+
+    const pendingNotification = {
+      id: "notif1",
+      hackathon_id: "h1",
+      participant_id: "participant1",
+      email: "judge@example.com",
+      added_by_name: "Jane Doe",
+      sent_at: null,
+      created_at: "2026-01-01T00:00:00Z",
+    }
+    mockFetchPendingNotifications.mockResolvedValue([pendingNotification])
+
+    const notificationSent = new Promise<void>((resolve) => {
+      mockSendJudgeNotification.mockImplementation(() => {
+        resolve()
+        return Promise.resolve()
+      })
+    })
 
     const res = await patchSettings({ status: "published" })
     expect(res.status).toBe(200)
 
-    await Promise.resolve()
+    await notificationSent
 
-    expect(mockSendPendingJudgeInvitationEmails).not.toHaveBeenCalled()
+    expect(mockFetchPendingNotifications).toHaveBeenCalledWith("h1")
+    expect(mockSendJudgeNotification).toHaveBeenCalledWith({
+      notification: pendingNotification,
+      hackathonName: "Test Hackathon",
+      hackathonSlug: "test-hackathon",
+    })
   })
 })
