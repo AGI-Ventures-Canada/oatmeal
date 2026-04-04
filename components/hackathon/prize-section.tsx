@@ -23,7 +23,7 @@ export function PrizeSection({ prizes, hackathonSlug, hackathonStatus }: PrizeSe
     return null
   }
 
-  const hasCrowdPrize = prizes.some((p) => p.type === "crowd")
+  const hasCrowdPrize = prizes.some((p) => p.judging_style === "crowd_vote" || p.type === "crowd")
   const showVotingCta =
     hasCrowdPrize &&
     hackathonSlug &&
@@ -42,6 +42,7 @@ export function PrizeSection({ prizes, hackathonSlug, hackathonStatus }: PrizeSe
               description={prize.description}
               value={prize.display_value ?? prize.value}
               type={prize.type}
+              judgingStyle={prize.judging_style}
               winner={prize.winner}
               hackathonSlug={hackathonSlug}
               hackathonStatus={hackathonStatus}

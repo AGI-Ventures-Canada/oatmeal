@@ -1,13 +1,11 @@
 ---
 title: Submissions API
-description: Create, update, and browse project submissions via the REST API.
+description: Export and browse project submissions via the REST API.
 ---
 
-The Submissions API lets participants submit projects, upload screenshots, and browse all submissions for a hackathon.
+Participants submit projects through the web interface. As an organizer, use the public API to export submission data for reporting or CRM sync.
 
 ## Endpoints
-
-All submission endpoints use the public namespace with hackathon slugs. Most require a Clerk session (browser-based auth) since submissions are created by participants, not API key holders.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -19,7 +17,7 @@ All submission endpoints use the public namespace with hackathon slugs. Most req
 | `DELETE` | `/api/public/hackathons/:slug/submissions/screenshot` | Remove screenshot |
 
 <Callout type="info">
-Submission endpoints live on `/api/public/` (not `/api/dashboard/`) because participants — not organizers — create submissions. These endpoints require a Clerk session, not an API key.
+Most submission endpoints require a Clerk session because they are participant actions performed through the web UI. The public `GET` endpoint for listing submissions requires no authentication and is the primary way to export data.
 </Callout>
 
 ## Response Types
@@ -54,111 +52,14 @@ interface PublicSubmission {
 }
 ```
 
-## Create a Submission
-
-`POST /api/public/hackathons/:slug/submissions` — requires Clerk session.
-
-You must be registered for the hackathon before submitting. Each participant or team can only submit once.
-
-```typescript title="create-submission.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/submissions`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-      title: "AI Code Review Bot",
-      description: "An AI-powered tool that reviews pull requests",
-      githubUrl: "https://github.com/team/ai-review-bot",
-      liveAppUrl: "https://ai-review-bot.vercel.app",
-    }),
-  }
-)
-
-const { submissionId } = await res.json()
-console.log("Submitted:", submissionId)
-```
-
-### Request Body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `title` | `string` | Yes | Project title (1-100 characters) |
-| `description` | `string` | Yes | Short description (1-280 characters) |
-| `githubUrl` | `string` | Yes | GitHub repository URL (must be from github.com) |
-| `liveAppUrl` | `string` | No | Live demo URL |
-
-### Response
-
-```json title="response.json"
-{
-  "success": true,
-  "submissionId": "sub_xyz456"
-}
-```
-
-### Error Codes
-
-| Status | Code | Description |
-|--------|------|-------------|
-| 401 | `not_authenticated` | Sign in required |
-| 403 | `not_registered` | Must register before submitting |
-| 400 | `submissions_closed` | Submissions are not currently open |
-| 400 | `invalid_github_url` | GitHub URL must be from github.com |
-| 409 | `already_submitted` | You have already submitted a project |
-
-## Update Your Submission
-
-`PATCH /api/public/hackathons/:slug/submissions` — requires Clerk session.
-
-All fields are optional. Only include the fields you want to change.
-
-```typescript title="update-submission.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/submissions`,
-  {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-      title: "AI Code Review Bot v2",
-      description: "An improved AI-powered PR review tool with auto-fix",
-      liveAppUrl: "https://ai-review-bot-v2.vercel.app",
-    }),
-  }
-)
-
-const { success, submissionId } = await res.json()
-```
-
-### Request Body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `title` | `string` | No | Project title (1-100 characters) |
-| `description` | `string` | No | Short description (1-280 characters) |
-| `githubUrl` | `string` | No | GitHub repository URL |
-| `liveAppUrl` | `string \| null` | No | Live demo URL (null to remove) |
-
 ## List All Submissions
 
 `GET /api/public/hackathons/:slug/submissions` — no authentication required.
 
 Returns all submissions for a hackathon, including the team or participant name as `submitter`.
 
-```typescript title="list-submissions.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/submissions`
-)
-
-const { submissions } = await res.json()
-
-for (const sub of submissions) {
-  console.log(`${sub.title} by ${sub.submitter}`)
-  console.log(`  GitHub: ${sub.githubUrl}`)
-  if (sub.liveAppUrl) console.log(`  Demo: ${sub.liveAppUrl}`)
-}
+```bash title="List all submissions"
+curl -s "$BASE_URL/api/public/hackathons/ai-innovation-2026/submissions" | jq .
 ```
 
 ### Response
@@ -182,27 +83,51 @@ for (const sub of submissions) {
 }
 ```
 
+## Create a Submission
+
+`POST /api/public/hackathons/:slug/submissions` — requires Clerk session.
+
+This is a participant action. Participants create submissions through the hackathon event page after registering. Each participant or team can only submit once.
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `title` | `string` | Yes | Project title (1-100 characters) |
+| `description` | `string` | Yes | Short description (1-280 characters) |
+| `githubUrl` | `string` | Yes | GitHub repository URL (must be from github.com) |
+| `liveAppUrl` | `string` | No | Live demo URL |
+
+### Error Codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `not_authenticated` | Sign in required |
+| 403 | `not_registered` | Must register before submitting |
+| 400 | `submissions_closed` | Submissions are not currently open |
+| 400 | `invalid_github_url` | GitHub URL must be from github.com |
+| 409 | `already_submitted` | You have already submitted a project |
+
+## Update Your Submission
+
+`PATCH /api/public/hackathons/:slug/submissions` — requires Clerk session.
+
+This is a participant action. Participants update their submissions through the web interface. All fields are optional — only the fields included in the request body are changed.
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `title` | `string` | No | Project title (1-100 characters) |
+| `description` | `string` | No | Short description (1-280 characters) |
+| `githubUrl` | `string` | No | GitHub repository URL |
+| `liveAppUrl` | `string \| null` | No | Live demo URL (null to remove) |
+
 ## Get Your Submission
 
 `GET /api/public/hackathons/:slug/submissions/me` — optional Clerk session.
 
-Returns your submission if one exists, or `null` if not authenticated or no submission found.
-
-```typescript title="get-my-submission.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/submissions/me`,
-  { credentials: "include" }
-)
-
-const { submission } = await res.json()
-
-if (submission) {
-  console.log("Your submission:", submission.title)
-  console.log("Status:", submission.status)
-} else {
-  console.log("No submission yet")
-}
-```
+This is a participant action. Returns the authenticated user's submission if one exists, or `null` if not authenticated or no submission found. Participants view their own submission status through the event page.
 
 ### Response
 
@@ -226,24 +151,7 @@ if (submission) {
 
 `POST /api/public/hackathons/:slug/submissions/screenshot` — requires Clerk session.
 
-Accepts PNG, JPEG, or WebP images up to 10MB. You must have an existing submission before uploading a screenshot.
-
-```typescript title="upload-screenshot.ts"
-const formData = new FormData()
-formData.append("file", screenshotFile)
-
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/submissions/screenshot`,
-  {
-    method: "POST",
-    credentials: "include",
-    body: formData,
-  }
-)
-
-const { screenshotUrl } = await res.json()
-console.log("Screenshot uploaded:", screenshotUrl)
-```
+This is a participant action. Participants upload a screenshot through the submission form on the event page. Accepts PNG, JPEG, or WebP images up to 10MB.
 
 ### Response
 
@@ -258,56 +166,16 @@ console.log("Screenshot uploaded:", screenshotUrl)
 
 `DELETE /api/public/hackathons/:slug/submissions/screenshot` — requires Clerk session.
 
-```typescript title="delete-screenshot.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/submissions/screenshot`,
-  {
-    method: "DELETE",
-    credentials: "include",
-  }
-)
-
-const { success } = await res.json()
-```
+This is a participant action. Participants remove a screenshot through the submission form on the event page.
 
 ## Full Example
 
-```typescript title="full-example.ts"
-async function submitProject(hackathonSlug: string) {
-  const createRes = await fetch(
-    `${BASE_URL}/api/public/hackathons/${hackathonSlug}/submissions`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        title: "Smart Budget Tracker",
-        description: "AI-powered expense categorization and budget insights",
-        githubUrl: "https://github.com/team/budget-tracker",
-        liveAppUrl: "https://budget-tracker.app",
-      }),
-    }
-  )
+Export all submissions for a hackathon to a JSON file:
 
-  if (!createRes.ok) {
-    const err = await createRes.json()
-    throw new Error(`Submission failed: ${err.error} (${err.code})`)
-  }
-
-  const { submissionId } = await createRes.json()
-
-  const formData = new FormData()
-  formData.append("file", screenshotFile)
-
-  await fetch(
-    `${BASE_URL}/api/public/hackathons/${hackathonSlug}/submissions/screenshot`,
-    {
-      method: "POST",
-      credentials: "include",
-      body: formData,
-    }
-  )
-
-  console.log(`Project ${submissionId} submitted with screenshot`)
-}
+```bash title="Export submissions"
+curl -s "$BASE_URL/api/public/hackathons/ai-innovation-2026/submissions" | jq '.submissions' > submissions.json
 ```
+
+<Callout type="info">
+**CLI:** `hackathon browse submissions ai-innovation-2026 --json`
+</Callout>

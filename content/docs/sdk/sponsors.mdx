@@ -54,44 +54,24 @@ interface Sponsor {
 
 `GET /api/dashboard/hackathons/:id/sponsors` — requires `hackathons:read` scope.
 
-```typescript title="list-sponsors.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { sponsors } = await res.json()
-
-for (const s of sponsors) {
-  console.log(`${s.name} (${s.tier ?? "no tier"})`)
-}
+```bash title="List sponsors"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 ## Add a Sponsor
 
 `POST /api/dashboard/hackathons/:id/sponsors` — requires `hackathons:write` scope.
 
-```typescript title="add-sponsor.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: "Anthropic",
-      tier: "gold",
-      websiteUrl: "https://anthropic.com",
-    }),
-  }
-)
-
-const { id, name, tier } = await res.json()
-console.log(`Added ${name} as ${tier} sponsor`)
+```bash title="Add a sponsor"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Anthropic",
+    "tier": "gold",
+    "websiteUrl": "https://anthropic.com"
+  }' | jq .
 ```
 
 ### Request Body
@@ -109,52 +89,35 @@ console.log(`Added ${name} as ${tier} sponsor`)
 
 `PATCH /api/dashboard/hackathons/:id/sponsors/:sponsorId` — requires `hackathons:write` scope.
 
-```typescript title="update-sponsor.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
-  {
-    method: "PATCH",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ tier: "title" }),
-  }
-)
+```bash title="Update a sponsor"
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/$SPONSOR_ID" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tier": "title"
+  }' | jq .
 ```
 
 ## Remove a Sponsor
 
 `DELETE /api/dashboard/hackathons/:id/sponsors/:sponsorId` — requires `hackathons:write` scope.
 
-```typescript title="remove-sponsor.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
-  {
-    method: "DELETE",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
+```bash title="Remove a sponsor"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/$SPONSOR_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 ## Reorder Sponsors
 
 `PATCH /api/dashboard/hackathons/:id/sponsors/reorder` — requires `hackathons:write` scope.
 
-```typescript title="reorder-sponsors.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/reorder`,
-  {
-    method: "PATCH",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      sponsorIds: ["sp_001", "sp_002", "sp_003"],
-    }),
-  }
-)
+```bash title="Reorder sponsors"
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/reorder" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sponsorIds": ["sp_001", "sp_002", "sp_003"]
+  }' | jq .
 ```
 
 ### Request Body
@@ -169,22 +132,11 @@ await fetch(
 
 Accepts PNG, JPEG, WebP, or SVG files up to 5MB. Supports light and dark variants.
 
-```typescript title="upload-sponsor-logo.ts"
-const formData = new FormData()
-formData.append("file", logoFile)
-formData.append("variant", "light")
-
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}/logo`,
-  {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-    body: formData,
-  }
-)
-
-const { url } = await res.json()
-console.log("Logo uploaded:", url)
+```bash title="Upload sponsor logo"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/$SPONSOR_ID/logo" \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@logo.png" \
+  -F "variant=light" | jq .
 ```
 
 ### Request Body (FormData)
@@ -198,60 +150,59 @@ console.log("Logo uploaded:", url)
 
 `DELETE /api/dashboard/hackathons/:id/sponsors/:sponsorId/logo` — requires `hackathons:write` scope.
 
-```typescript title="delete-sponsor-logo.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}/logo?variant=light`,
-  {
-    method: "DELETE",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
+```bash title="Delete sponsor logo"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/$SPONSOR_ID/logo?variant=light" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 ## Full Example
 
-```typescript title="full-example.ts"
-const API_KEY = process.env.OATMEAL_API_KEY!
-const BASE_URL = process.env.OATMEAL_BASE_URL!
+```bash title="Add sponsors and set display order"
+#!/usr/bin/env bash
+set -euo pipefail
 
-async function setupSponsors(hackathonId: string) {
-  const sponsors = [
-    { name: "Anthropic", tier: "title", websiteUrl: "https://anthropic.com" },
-    { name: "Vercel", tier: "gold", websiteUrl: "https://vercel.com" },
-    { name: "Supabase", tier: "gold", websiteUrl: "https://supabase.com" },
-    { name: "Clerk", tier: "silver", websiteUrl: "https://clerk.com" },
-  ]
+SP_1=$(curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Anthropic",
+    "tier": "title",
+    "websiteUrl": "https://anthropic.com"
+  }' | jq -r '.id')
 
-  const ids: string[] = []
+SP_2=$(curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Vercel",
+    "tier": "gold",
+    "websiteUrl": "https://vercel.com"
+  }' | jq -r '.id')
 
-  for (const sponsor of sponsors) {
-    const res = await fetch(
-      `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(sponsor),
-      }
-    )
-    const { id } = await res.json()
-    ids.push(id)
-  }
+SP_3=$(curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Supabase",
+    "tier": "gold",
+    "websiteUrl": "https://supabase.com"
+  }' | jq -r '.id')
 
-  await fetch(
-    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/reorder`,
-    {
-      method: "PATCH",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ sponsorIds: ids }),
-    }
-  )
+SP_4=$(curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Clerk",
+    "tier": "silver",
+    "websiteUrl": "https://clerk.com"
+  }' | jq -r '.id')
 
-  console.log(`Added and ordered ${ids.length} sponsors`)
-}
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/reorder" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"sponsorIds\": [\"$SP_1\", \"$SP_2\", \"$SP_3\", \"$SP_4\"]
+  }" | jq .
+
+echo "Added and ordered 4 sponsors"
 ```

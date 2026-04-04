@@ -90,45 +90,38 @@ interface JudgingProgress {
 
 `GET /api/dashboard/hackathons/:id/judging/criteria` — requires `hackathons:read` scope.
 
-```typescript title="list-criteria.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/criteria`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { criteria } = await res.json()
-
-for (const c of criteria) {
-  console.log(`${c.name}: max ${c.maxScore}, weight ${c.weight}`)
-}
+```bash title="List all judging criteria"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/criteria" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging criteria list $HACKATHON_ID
+```
+</Callout>
 
 ### Create Criteria
 
 `POST /api/dashboard/hackathons/:id/judging/criteria` — requires `hackathons:write` scope.
 
-```typescript title="create-criteria.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/criteria`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: "Technical Innovation",
-      description: "Novel use of technology or creative problem-solving",
-      maxScore: 10,
-      weight: 1.5,
-    }),
-  }
-)
-
-const { id, name, maxScore, weight } = await res.json()
+```bash title="Create a judging criteria"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/criteria" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Technical Innovation",
+    "description": "Novel use of technology or creative problem-solving",
+    "maxScore": 10,
+    "weight": 1.5
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging criteria create $HACKATHON_ID
+```
+</Callout>
 
 #### Request Body
 
@@ -144,33 +137,33 @@ const { id, name, maxScore, weight } = await res.json()
 
 `PATCH /api/dashboard/hackathons/:id/judging/criteria/:criteriaId` — requires `hackathons:write` scope.
 
-```typescript title="update-criteria.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/criteria/${criteriaId}`,
-  {
-    method: "PATCH",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ weight: 2.0 }),
-  }
-)
+```bash title="Update a criteria's weight"
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/criteria/$CRITERIA_ID" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"weight": 2.0}' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging criteria update $HACKATHON_ID
+```
+</Callout>
 
 ### Delete Criteria
 
 `DELETE /api/dashboard/hackathons/:id/judging/criteria/:criteriaId` — requires `hackathons:write` scope.
 
-```typescript title="delete-criteria.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/criteria/${criteriaId}`,
-  {
-    method: "DELETE",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
+```bash title="Delete a criteria"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/criteria/$CRITERIA_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging criteria delete $HACKATHON_ID
+```
+</Callout>
 
 ---
 
@@ -182,20 +175,16 @@ await fetch(
 
 Returns judges with their assignment progress.
 
-```typescript title="list-judges.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/judges`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { judges } = await res.json()
-
-for (const j of judges) {
-  console.log(`${j.displayName}: ${j.completedCount}/${j.assignmentCount} scored`)
-}
+```bash title="List all judges with progress"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/judges" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging judges list $HACKATHON_ID
+```
+</Callout>
 
 ### Add a Judge
 
@@ -203,27 +192,20 @@ for (const j of judges) {
 
 Provide either `clerkUserId` or `email`. If the user isn't found by email, a judge invitation is sent instead.
 
-```typescript title="add-judge.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/judges`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email: "judge@example.com" }),
-  }
-)
-
-const data = await res.json()
-
-if ("invited" in data) {
-  console.log("Invitation sent:", data.invitationId)
-} else {
-  console.log("Judge added:", data.participantId)
-}
+```bash title="Add a judge by email"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/judges" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "judge@example.com"}' | jq .
 ```
+
+The response includes either `participantId` (judge added immediately) or `invitationId` (invitation sent because the user was not found).
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging judges add $HACKATHON_ID
+```
+</Callout>
 
 #### Request Body
 
@@ -238,20 +220,18 @@ One of `clerkUserId` or `email` is required.
 
 `DELETE /api/dashboard/hackathons/:id/judging/judges/:participantId` — requires `hackathons:write` scope.
 
-```typescript title="remove-judge.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/judges/${participantId}`,
-  {
-    method: "DELETE",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { success, resultsStale } = await res.json()
-if (resultsStale) {
-  console.log("Results need recalculation after removing this judge")
-}
+```bash title="Remove a judge"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/judges/$PARTICIPANT_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+The response includes a `resultsStale` boolean — if `true`, results need recalculation after removing this judge.
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging judges remove $HACKATHON_ID
+```
+</Callout>
 
 ---
 
@@ -263,40 +243,36 @@ if (resultsStale) {
 
 Returns all assignments with progress statistics.
 
-```typescript title="list-assignments.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/assignments`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { assignments, progress } = await res.json()
-console.log(`${progress.completedAssignments}/${progress.totalAssignments} complete`)
+```bash title="List all assignments with progress"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/assignments" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging assignments list $HACKATHON_ID
+```
+</Callout>
 
 ### Create Assignment
 
 `POST /api/dashboard/hackathons/:id/judging/assignments` — requires `hackathons:write` scope.
 
-```typescript title="create-assignment.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/assignments`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      judgeParticipantId: "part_judge1",
-      submissionId: "sub_xyz456",
-    }),
-  }
-)
-
-const { id } = await res.json()
+```bash title="Assign a judge to a submission"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/assignments" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "judgeParticipantId": "part_judge1",
+    "submissionId": "sub_xyz456"
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging assignments create $HACKATHON_ID
+```
+</Callout>
 
 <Callout type="info">
 A judge cannot be assigned to their own team's submission. The API returns an error with code `conflict_of_interest` if this is attempted.
@@ -308,22 +284,18 @@ A judge cannot be assigned to their own team's submission. The API returns an er
 
 Distributes submissions evenly across all judges, avoiding conflicts of interest.
 
-```typescript title="auto-assign.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/auto-assign`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ submissionsPerJudge: 5 }),
-  }
-)
-
-const { assignedCount } = await res.json()
-console.log(`Created ${assignedCount} assignments`)
+```bash title="Auto-assign judges to submissions"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/auto-assign" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"submissionsPerJudge": 5}' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging auto-assign $HACKATHON_ID
+```
+</Callout>
 
 #### Request Body
 
@@ -341,19 +313,7 @@ These endpoints are used by judges to view and score their assignments.
 
 `GET /api/public/hackathons/:slug/judging/assignments` — requires Clerk session.
 
-```typescript title="my-assignments.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/judging/assignments`,
-  { credentials: "include" }
-)
-
-const { assignments } = await res.json()
-
-for (const a of assignments) {
-  const status = a.isComplete ? "scored" : "pending"
-  console.log(`${a.submissionTitle} [${status}]`)
-}
-```
+Judges view their assignments through the web interface at `/e/{slug}/judge`. Organizers can monitor assignment progress for all judges via the dashboard `GET /assignments` endpoint shown above.
 
 When anonymous judging is enabled, `teamName` is `null`.
 
@@ -361,47 +321,13 @@ When anonymous judging is enabled, `teamName` is `null`.
 
 `GET /api/public/hackathons/:slug/judging/assignments/:assignmentId` — requires Clerk session.
 
-Returns the submission details along with judging criteria and any existing scores.
-
-```typescript title="assignment-detail.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/judging/assignments/${assignmentId}`,
-  { credentials: "include" }
-)
-
-const detail = await res.json()
-
-for (const c of detail.criteria) {
-  console.log(`${c.name} (max ${c.maxScore}): ${c.currentScore ?? "not scored"}`)
-}
-```
+Returns the submission details along with judging criteria and any existing scores. This endpoint is used by the judge web interface at `/e/{slug}/judge` and is not available via API key.
 
 ### Submit Scores
 
 `POST /api/public/hackathons/:slug/judging/assignments/:assignmentId/scores` — requires Clerk session.
 
-Hackathon must be in `judging` or `active` status.
-
-```typescript title="submit-scores.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/judging/assignments/${assignmentId}/scores`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-      scores: [
-        { criteriaId: "crit_001", score: 8 },
-        { criteriaId: "crit_002", score: 9 },
-        { criteriaId: "crit_003", score: 7 },
-      ],
-      notes: "Strong technical execution, clean UI",
-    }),
-  }
-)
-
-const { success } = await res.json()
-```
+Hackathon must be in `judging` or `active` status. Judges submit scores through the web interface at `/e/{slug}/judge` — this action is only available through the browser.
 
 #### Request Body
 
@@ -416,19 +342,7 @@ Each `score` must be between 0 and the criteria's `maxScore`.
 
 `PATCH /api/public/hackathons/:slug/judging/assignments/:assignmentId/notes` — requires Clerk session.
 
-```typescript title="save-notes.ts"
-await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/judging/assignments/${assignmentId}/notes`,
-  {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-      notes: "Revisit the demo video before final scoring",
-    }),
-  }
-)
-```
+Judges save private notes through the web interface at `/e/{slug}/judge` — this action is only available through the browser.
 
 ---
 
@@ -440,43 +354,13 @@ When `judgingMode` is `"subjective"`, judges pick their favorites for each prize
 
 `GET /api/public/hackathons/:slug/judging/picks` — requires Clerk session.
 
-```typescript title="my-picks.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/judging/picks`,
-  { credentials: "include" }
-)
-
-const { picks } = await res.json()
-
-for (const pick of picks) {
-  console.log(`Prize ${pick.prize_id}: Submission ${pick.submission_id} (rank ${pick.rank})`)
-}
-```
+Judges view their picks through the web interface at `/e/{slug}/judge`. Organizers can monitor pick tallies via the dashboard `GET /pick-results` endpoint shown below.
 
 ### Create or Update a Pick
 
 `POST /api/public/hackathons/:slug/judging/picks` — requires Clerk session.
 
-Upserts a pick — one pick per judge per prize per submission.
-
-```typescript title="create-pick.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/judging/picks`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-      prizeId: "prize_001",
-      submissionId: "sub_xyz456",
-      rank: 1,
-      reason: "Most innovative use of AI in accessibility",
-    }),
-  }
-)
-
-const { id } = await res.json()
-```
+Upserts a pick — one pick per judge per prize per submission. Judges create and update picks through the web interface at `/e/{slug}/judge` — this action is only available through the browser.
 
 #### Request Body
 
@@ -491,15 +375,7 @@ const { id } = await res.json()
 
 `DELETE /api/public/hackathons/:slug/judging/picks/:prizeId/:submissionId` — requires Clerk session.
 
-```typescript title="remove-pick.ts"
-await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/judging/picks/${prizeId}/${submissionId}`,
-  {
-    method: "DELETE",
-    credentials: "include",
-  }
-)
-```
+Judges remove picks through the web interface at `/e/{slug}/judge` — this action is only available through the browser.
 
 ### Get Pick Results (Organizer)
 
@@ -507,16 +383,16 @@ await fetch(
 
 Returns tallied pick counts per prize, aggregated across all judges.
 
-```typescript title="pick-results.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/pick-results`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { results } = await res.json()
+```bash title="Get aggregated pick results"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/pick-results" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging pick-results $HACKATHON_ID
+```
+</Callout>
 
 ---
 
@@ -526,31 +402,28 @@ const { results } = await res.json()
 
 `GET /api/dashboard/hackathons/:id/judging/invitations` — requires `hackathons:read` scope.
 
-```typescript title="list-judge-invitations.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/invitations`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { invitations } = await res.json()
-
-for (const inv of invitations) {
-  console.log(`${inv.email}: ${inv.status}`)
-}
+```bash title="List pending judge invitations"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/invitations" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging invitations list $HACKATHON_ID
+```
+</Callout>
 
 ### Cancel Invitation
 
 `DELETE /api/dashboard/hackathons/:id/judging/invitations/:invitationId` — requires `hackathons:write` scope.
 
-```typescript title="cancel-judge-invitation.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/invitations/${invitationId}`,
-  {
-    method: "DELETE",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
+```bash title="Cancel a judge invitation"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/invitations/$INVITATION_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon judging invitations cancel $HACKATHON_ID
+```
+</Callout>

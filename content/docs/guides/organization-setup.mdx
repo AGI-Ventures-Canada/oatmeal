@@ -17,20 +17,16 @@ Your organization profile includes:
 
 Update your organization details via the API:
 
-```typescript title="setup-profile.ts"
-await fetch(`${BASE_URL}/api/dashboard/org-profile`, {
-  method: "PATCH",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    name: "AGI Ventures Canada",
-    slug: "agi-ventures",
-    description: "Building the future of hackathons in Canada",
-    websiteUrl: "https://agiventures.ca",
-  }),
-})
+```bash title="Update organization profile"
+curl -s -X PATCH "$BASE_URL/api/dashboard/org-profile" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "AGI Ventures Canada",
+    "slug": "agi-ventures",
+    "description": "Building the future of hackathons in Canada",
+    "websiteUrl": "https://agiventures.ca"
+  }' | jq .
 ```
 
 ## Choosing a Slug
@@ -40,57 +36,33 @@ The slug determines your public URL (`/o/{slug}`) and appears in various places 
 - Lowercase letters, numbers, and hyphens only
 - Unique across all organizations
 
-Check availability before setting:
-
-```typescript title="check-slug.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/organizations/slug-available?slug=agi-ventures`,
-  { credentials: "include" }
-)
-
-const { available } = await res.json()
-if (available) {
-  console.log("Slug is available!")
-}
-```
-
-<Callout type="info">
-Slug availability check requires a Clerk session. This endpoint is not accessible via API key.
-</Callout>
+Check slug availability from the dashboard at **Settings > Organization**. The availability check requires a browser session and is not accessible via API key.
 
 ## Uploading Logos
 
 Upload separate logos for light and dark themes to ensure proper display across user preferences:
 
-```typescript title="upload-logos.ts"
-async function uploadLogo(file: File, variant: "light" | "dark") {
-  const formData = new FormData()
-  formData.append("file", file)
-  formData.append("variant", variant)
+```bash title="Upload light logo"
+curl -s -X POST "$BASE_URL/api/dashboard/upload-logo" \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@logo-light.png" \
+  -F "variant=light" | jq .
+```
 
-  const res = await fetch(`${BASE_URL}/api/dashboard/upload-logo`, {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-    body: formData,
-  })
-
-  const { url } = await res.json()
-  console.log(`${variant} logo:`, url)
-}
-
-await uploadLogo(lightLogoFile, "light")
-await uploadLogo(darkLogoFile, "dark")
+```bash title="Upload dark logo"
+curl -s -X POST "$BASE_URL/api/dashboard/upload-logo" \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@logo-dark.png" \
+  -F "variant=dark" | jq .
 ```
 
 Accepted formats: PNG, JPEG, WebP, SVG (max 30MB).
 
 To remove a logo:
 
-```typescript title="delete-logo.ts"
-await fetch(`${BASE_URL}/api/dashboard/logo/dark`, {
-  method: "DELETE",
-  headers: { "Authorization": `Bearer ${API_KEY}` },
-})
+```bash title="Delete dark logo"
+curl -s -X DELETE "$BASE_URL/api/dashboard/logo/dark" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 ## Public Organization Page
@@ -100,13 +72,8 @@ Once your profile is set up, your public page at `/o/{slug}` automatically shows
 - All hackathons you've organized
 - All hackathons you've sponsored
 
-```typescript title="view-public.ts"
-const res = await fetch(`${BASE_URL}/api/public/orgs/agi-ventures`)
-
-const org = await res.json()
-console.log(`${org.name}`)
-console.log(`Organized: ${org.organizedHackathons.length} hackathons`)
-console.log(`Sponsored: ${org.sponsoredHackathons.length} hackathons`)
+```bash title="Fetch public organization profile"
+curl -s "$BASE_URL/api/public/orgs/agi-ventures" | jq .
 ```
 
 ## Best Practices

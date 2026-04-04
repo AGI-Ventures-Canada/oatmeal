@@ -11,12 +11,9 @@ The Oatmeal API supports two authentication methods across three namespaces. Thi
 
 API keys provide programmatic access for server-side integrations, CI/CD pipelines, and CLI usage. Keys use the format `sk_live_...` and are passed via the `Authorization` header.
 
-```typescript title="api-key-auth.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/hackathons`, {
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-  },
-})
+```bash title="API key authentication"
+curl -s "$BASE_URL/api/dashboard/hackathons" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 API keys are:
@@ -29,17 +26,11 @@ API keys are:
 
 Clerk sessions provide user-level authentication for browser-based interactions. They identify the logged-in user and their organization membership.
 
-```typescript title="clerk-session-auth.ts"
-const res = await fetch(`${BASE_URL}/api/public/hackathons/my-hack/register`, {
-  method: "POST",
-  credentials: "include",
-})
-```
-
 Clerk sessions are:
 - Automatically managed by the Clerk SDK in the browser
 - Required for participant actions (registration, submissions, voting)
 - Used to identify the user for per-user actions like "get my submission"
+- Not accessible via `curl` or API keys — these actions happen through the web interface
 
 ## API Namespaces
 

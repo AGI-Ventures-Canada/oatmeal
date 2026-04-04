@@ -2,19 +2,10 @@ import { supabase as getSupabase } from "@/lib/db/client"
 import type { HackathonStatus } from "@/lib/db/hackathon-types"
 import { getOrCreateTenant } from "@/lib/services/tenants"
 import { getSeedUserIds, findPersonaByUserId, getPersonaUserId } from "@/lib/dev/test-personas"
-
-const AVAILABLE_SCENARIOS = [
-  { name: "pre-registration", description: "Hackathon not yet open for registration (opens tomorrow)" },
-  { name: "registered-no-team", description: "Dev user registered, no team yet, registration open" },
-  { name: "team-formed", description: "Dev user is captain with 2 members + 1 pending invite" },
-  { name: "submitted", description: "Dev user's team has a submitted project, hackathon ends in 2 days" },
-  { name: "judging", description: "5 teams with submissions, 3 judges assigned, no scores yet" },
-  { name: "judging-in-progress", description: "Same as judging but ~60% of assignments scored" },
-  { name: "results-ready", description: "All submissions scored, results calculated, 3 prizes defined" },
-] as const
+import { SCENARIOS } from "@/lib/dev/scenarios"
 
 export function listScenarios() {
-  return AVAILABLE_SCENARIOS
+  return SCENARIOS.map((s) => ({ name: s.name, label: s.label, description: s.description }))
 }
 
 function getSeedUsers(): string[] {
@@ -29,7 +20,7 @@ function getSeedUsers(): string[] {
   ]
 }
 
-async function resolveScenarioTenant(overrideTenantId?: string): Promise<string> {
+async function resolveScenarioTenant(overrideTenantId?: string, principalOrgId?: string | null): Promise<string> {
   if (overrideTenantId) {
     const db = getSupabase()
     const { data: existing } = await db
@@ -44,9 +35,9 @@ async function resolveScenarioTenant(overrideTenantId?: string): Promise<string>
     return overrideTenantId
   }
 
-  const orgId = process.env.SCENARIO_ORG_ID
+  const orgId = principalOrgId || process.env.SCENARIO_ORG_ID
   if (!orgId) {
-    throw new Error("SCENARIO_ORG_ID environment variable is required to run scenarios")
+    throw new Error("SCENARIO_ORG_ID environment variable is required to run scenarios (or sign in with an active org)")
   }
 
   const tenant = await getOrCreateTenant(orgId, "Test Organizer")
@@ -219,9 +210,9 @@ async function addJudgingCriteria(hackathonId: string): Promise<string[]> {
   return ids
 }
 
-const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathonId: string; slug: string; tenantId: string }>> = {
-  "pre-registration": async (overrideTenantId) => {
-    const tenantId = await resolveScenarioTenant(overrideTenantId)
+const scenarioRunners: Record<string, (tenantId?: string, principalOrgId?: string | null) => Promise<{ hackathonId: string; slug: string; tenantId: string }>> = {
+  "pre-registration": async (overrideTenantId, principalOrgId) => {
+    const tenantId = await resolveScenarioTenant(overrideTenantId, principalOrgId)
     const now = new Date()
     const slug = uniqueSlug("test-pre-registration")
     const hackathonId = await createTestHackathon({
@@ -237,8 +228,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
     return { hackathonId, slug, tenantId }
   },
 
-  "registered-no-team": async (overrideTenantId) => {
-    const tenantId = await resolveScenarioTenant(overrideTenantId)
+  "registered-no-team": async (overrideTenantId, principalOrgId) => {
+    const tenantId = await resolveScenarioTenant(overrideTenantId, principalOrgId)
     const now = new Date()
     const slug = uniqueSlug("test-registered-no-team")
     const hackathonId = await createTestHackathon({
@@ -254,8 +245,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
     return { hackathonId, slug, tenantId }
   },
 
-  "team-formed": async (overrideTenantId) => {
-    const tenantId = await resolveScenarioTenant(overrideTenantId)
+  "team-formed": async (overrideTenantId, principalOrgId) => {
+    const tenantId = await resolveScenarioTenant(overrideTenantId, principalOrgId)
     const now = new Date()
     const slug = uniqueSlug("test-team-formed")
     const hackathonId = await createTestHackathon({
@@ -271,8 +262,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
     return { hackathonId, slug, tenantId }
   },
 
-  "submitted": async (overrideTenantId) => {
-    const tenantId = await resolveScenarioTenant(overrideTenantId)
+  "submitted": async (overrideTenantId, principalOrgId) => {
+    const tenantId = await resolveScenarioTenant(overrideTenantId, principalOrgId)
     const now = new Date()
     const slug = uniqueSlug("test-submitted")
     const hackathonId = await createTestHackathon({
@@ -290,8 +281,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
     return { hackathonId, slug, tenantId }
   },
 
-  "judging": async (overrideTenantId) => {
-    const tenantId = await resolveScenarioTenant(overrideTenantId)
+  "judging": async (overrideTenantId, principalOrgId) => {
+    const tenantId = await resolveScenarioTenant(overrideTenantId, principalOrgId)
     const db = getSupabase()
     const now = new Date()
     const slug = uniqueSlug("test-judging")
@@ -350,8 +341,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
     return { hackathonId, slug, tenantId }
   },
 
-  "judging-in-progress": async (overrideTenantId) => {
-    const result = await scenarioRunners["judging"](overrideTenantId)
+  "judging-in-progress": async (overrideTenantId, principalOrgId) => {
+    const result = await scenarioRunners["judging"](overrideTenantId, principalOrgId)
     const db = getSupabase()
     const slug = uniqueSlug("test-judging-in-progress")
 
@@ -388,8 +379,8 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
     return { hackathonId: result.hackathonId, slug, tenantId: result.tenantId }
   },
 
-  "results-ready": async (overrideTenantId) => {
-    const result = await scenarioRunners["judging"](overrideTenantId)
+  "results-ready": async (overrideTenantId, principalOrgId) => {
+    const result = await scenarioRunners["judging"](overrideTenantId, principalOrgId)
     const db = getSupabase()
     const slug = uniqueSlug("test-results-ready")
 
@@ -459,7 +450,7 @@ export async function getActiveScenarios(): Promise<ActiveScenario[]> {
 
   const results: ActiveScenario[] = []
 
-  for (const scenario of AVAILABLE_SCENARIOS) {
+  for (const scenario of SCENARIOS) {
     const prefix = `test-${scenario.name}-`
     const match = data.find((h) => {
       if (!h.slug.startsWith(prefix)) return false
@@ -495,18 +486,18 @@ async function clearScenario(name: string): Promise<void> {
   }
 }
 
-export async function runScenario(name: string, tenantId?: string): Promise<{ hackathonId: string; slug: string; tenantId: string }> {
+export async function runScenario(name: string, tenantId?: string, principalOrgId?: string | null): Promise<{ hackathonId: string; slug: string; tenantId: string }> {
   if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
     throw new Error("Test scenarios can only be run in local development or staging")
   }
 
   const runner = scenarioRunners[name]
   if (!runner) {
-    throw new Error(`Unknown scenario: ${name}. Available: ${AVAILABLE_SCENARIOS.map(s => s.name).join(", ")}`)
+    throw new Error(`Unknown scenario: ${name}. Available: ${SCENARIOS.map(s => s.name).join(", ")}`)
   }
 
   await clearScenario(name)
-  return runner(tenantId)
+  return runner(tenantId, principalOrgId)
 }
 
 export type RoleCard = {

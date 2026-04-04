@@ -16,6 +16,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Table,
   TableBody,
   TableCell,
@@ -37,6 +44,12 @@ type ResultEntry = {
   judgeCount: number
   publishedAt: string | null
   prizes: { id: string; name: string; value: string | null }[]
+  prizeTrackId?: string | null
+}
+
+type TrackInfo = {
+  id: string
+  name: string
 }
 
 interface ResultsDashboardProps {
@@ -44,13 +57,17 @@ interface ResultsDashboardProps {
   initialResults: ResultEntry[]
   isPublished: boolean
   incompleteAssignments: number
+  tracks?: TrackInfo[]
 }
+
+const ALL_TRACKS = "__all__"
 
 export function ResultsDashboard({
   hackathonId,
   initialResults,
   isPublished: initialIsPublished,
   incompleteAssignments,
+  tracks = [],
 }: ResultsDashboardProps) {
   const router = useRouter()
   const [results, setResults] = useState<ResultEntry[]>(initialResults)
@@ -58,6 +75,13 @@ export function ResultsDashboard({
   const [calculating, setCalculating] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedTrack, setSelectedTrack] = useState(ALL_TRACKS)
+
+  const filteredResults = selectedTrack === ALL_TRACKS
+    ? results
+    : results.filter((r) => r.prizeTrackId === selectedTrack)
+
+  const hasTrackData = tracks.length > 0 && results.some((r) => r.prizeTrackId)
 
   async function handleCalculate() {
     setCalculating(true)
@@ -239,11 +263,40 @@ export function ResultsDashboard({
         <Badge variant="default">Published</Badge>
       )}
 
+      {hasTrackData && (
+        <div className="flex items-center gap-2">
+          <Select value={selectedTrack} onValueChange={setSelectedTrack}>
+            <SelectTrigger className="w-full sm:w-64">
+              <SelectValue placeholder="Filter by track" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_TRACKS}>All tracks</SelectItem>
+              {tracks.map((track) => (
+                <SelectItem key={track.id} value={track.id}>
+                  {track.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedTrack !== ALL_TRACKS && (
+            <span className="text-sm text-muted-foreground">
+              {filteredResults.length} result{filteredResults.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+      )}
+
       {results.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
           <Trophy className="mx-auto size-8 text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground">
             No results yet. Calculate results after judges have submitted their scores.
+          </p>
+        </div>
+      ) : filteredResults.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            No results for this track yet.
           </p>
         </div>
       ) : (
@@ -254,23 +307,31 @@ export function ResultsDashboard({
                 <TableHead className="w-[60px]">Rank</TableHead>
                 <TableHead>Submission</TableHead>
                 <TableHead>Team</TableHead>
+                {hasTrackData && selectedTrack === ALL_TRACKS && (
+                  <TableHead>Track</TableHead>
+                )}
                 <TableHead className="text-right">Weighted Score</TableHead>
                 <TableHead className="text-right">Judges</TableHead>
                 <TableHead>Prizes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {results.map((r) => (
+              {filteredResults.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-bold text-lg">
                     #{r.rank}
                   </TableCell>
                   <TableCell className="font-medium">{r.submissionTitle}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {r.teamName || "—"}
+                    {r.teamName || "\u2014"}
                   </TableCell>
+                  {hasTrackData && selectedTrack === ALL_TRACKS && (
+                    <TableCell className="text-muted-foreground">
+                      {tracks.find((t) => t.id === r.prizeTrackId)?.name || "\u2014"}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right font-mono">
-                    {r.weightedScore !== null ? Number(r.weightedScore).toFixed(2) : "—"}
+                    {r.weightedScore !== null ? Number(r.weightedScore).toFixed(2) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-right">{r.judgeCount}</TableCell>
                   <TableCell>

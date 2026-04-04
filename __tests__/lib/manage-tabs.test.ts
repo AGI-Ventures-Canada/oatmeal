@@ -1,8 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import {
   VALID_TABS,
-  VALID_JTABS,
-  VALID_PTABS,
   VALID_ETABS,
   DEFAULT_TAB,
   resolveTab,
@@ -16,27 +14,14 @@ describe("VALID_TABS", () => {
     expect(VALID_TABS).toContain("teams")
     expect(VALID_TABS).toContain("rooms")
     expect(VALID_TABS).toContain("submissions")
-    expect(VALID_TABS).toContain("judges")
-    expect(VALID_TABS).toContain("prizes")
+    expect(VALID_TABS).toContain("judging")
     expect(VALID_TABS).toContain("event")
     expect(VALID_TABS).toHaveLength(8)
   })
-})
 
-describe("VALID_JTABS", () => {
-  it("contains criteria, assignments, progress", () => {
-    expect(VALID_JTABS).toContain("criteria")
-    expect(VALID_JTABS).toContain("assignments")
-    expect(VALID_JTABS).toContain("progress")
-    expect(VALID_JTABS).toHaveLength(3)
-  })
-})
-
-describe("VALID_PTABS", () => {
-  it("contains prizes and results", () => {
-    expect(VALID_PTABS).toContain("prizes")
-    expect(VALID_PTABS).toContain("results")
-    expect(VALID_PTABS).toHaveLength(2)
+  it("does not contain old judges or prizes tabs", () => {
+    expect(VALID_TABS).not.toContain("judges")
+    expect(VALID_TABS).not.toContain("prizes")
   })
 })
 
@@ -60,7 +45,7 @@ describe("DEFAULT_TAB", () => {
 
 describe("resolveTab", () => {
   it("returns the tab if it is valid", () => {
-    expect(resolveTab("judges", VALID_TABS, "edit")).toBe("judges")
+    expect(resolveTab("judging", VALID_TABS, "edit")).toBe("judging")
   })
 
   it("returns fallback for an invalid tab", () => {
@@ -74,48 +59,20 @@ describe("resolveTab", () => {
   it("returns fallback when tab is empty string", () => {
     expect(resolveTab("", VALID_TABS, "edit")).toBe("edit")
   })
+
+  it("redirects old judges tab to judging", () => {
+    expect(resolveTab("judges", VALID_TABS, "overview")).toBe("judging")
+  })
+
+  it("redirects old prizes tab to judging", () => {
+    expect(resolveTab("prizes", VALID_TABS, "overview")).toBe("judging")
+  })
 })
 
 describe("getJudgingRedirectUrl", () => {
-  it("redirects to prizes tab when tab=prizes", () => {
-    expect(getJudgingRedirectUrl("my-hackathon", "prizes")).toBe(
-      "/e/my-hackathon/manage?tab=prizes"
-    )
-  })
-
-  it("redirects to judges tab with jtab=criteria", () => {
-    expect(getJudgingRedirectUrl("my-hackathon", "criteria")).toBe(
-      "/e/my-hackathon/manage?tab=judges&jtab=criteria"
-    )
-  })
-
-  it("redirects to judges tab with jtab=assignments", () => {
-    expect(getJudgingRedirectUrl("my-hackathon", "assignments")).toBe(
-      "/e/my-hackathon/manage?tab=judges&jtab=assignments"
-    )
-  })
-
-  it("redirects to judges tab with jtab=progress", () => {
-    expect(getJudgingRedirectUrl("my-hackathon", "progress")).toBe(
-      "/e/my-hackathon/manage?tab=judges&jtab=progress"
-    )
-  })
-
-  it("redirects to default judges tab when no tab param", () => {
-    expect(getJudgingRedirectUrl("my-hackathon", undefined)).toBe(
-      "/e/my-hackathon/manage?tab=judges"
-    )
-  })
-
-  it("redirects to default judges tab for unrecognized tab", () => {
-    expect(getJudgingRedirectUrl("my-hackathon", "results")).toBe(
-      "/e/my-hackathon/manage?tab=judges"
-    )
-  })
-
-  it("handles slugs with special characters", () => {
-    expect(getJudgingRedirectUrl("hack-2026", "criteria")).toBe(
-      "/e/hack-2026/manage?tab=judges&jtab=criteria"
+  it("always redirects to judging tab", () => {
+    expect(getJudgingRedirectUrl("my-hackathon")).toBe(
+      "/e/my-hackathon/manage?tab=judging"
     )
   })
 })

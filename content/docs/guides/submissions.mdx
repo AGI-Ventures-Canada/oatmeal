@@ -1,161 +1,40 @@
 ---
 title: Submissions
-description: Submit a project, upload screenshots, and manage your submission throughout the hackathon.
+description: Browse and export submission data for your hackathon.
 ---
 
-This guide covers the full submission lifecycle — from registering for a hackathon to submitting your project with screenshots and a live demo link.
+Participants create, update, and upload submissions through the web interface at `/e/{slug}`. As an organizer, you can browse all submissions via the API or CLI.
 
-## Overview
+## How Participants Submit
 
-The submission flow for participants:
+Participants register for your hackathon, build their project, and submit through the event page. They can update their submission at any time before the deadline. No API setup is needed on your end — the web interface handles the full flow including screenshot uploads.
 
-1. **Register** for the hackathon
-2. **Build** your project during the event
-3. **Submit** with a title, description, and GitHub repo
-4. **Upload** a screenshot (optional but recommended)
-5. **Update** your submission before the deadline
-
-## Step 1: Register
-
-You must be registered before you can submit. Registration also creates your team.
-
-```typescript title="register.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/register`,
-  {
-    method: "POST",
-    credentials: "include",
-  }
-)
-
-const { participantId, teamId } = await res.json()
-console.log("Registered! Team:", teamId)
-```
-
-Check if you're already registered:
-
-```typescript title="check-registration.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/registration`,
-  { credentials: "include" }
-)
-
-const { isRegistered, participantCount } = await res.json()
-```
-
-## Step 2: Create Your Submission
-
-Submit your project with the required fields:
-
-```typescript title="submit.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/submissions`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-      title: "AI Code Review Bot",
-      description: "An AI-powered tool that automatically reviews pull requests",
-      githubUrl: "https://github.com/myteam/ai-review-bot",
-      liveAppUrl: "https://ai-review-bot.vercel.app",
-    }),
-  }
-)
-
-const { submissionId } = await res.json()
-```
-
-### Required Fields
+### Submission Fields
 
 | Field | Constraints |
 |-------|-------------|
 | `title` | 1-100 characters |
 | `description` | 1-280 characters |
 | `githubUrl` | Must be a github.com URL |
-
-### Optional Fields
-
-| Field | Description |
-|-------|-------------|
-| `liveAppUrl` | Link to a deployed demo |
-
-## Step 3: Upload a Screenshot
-
-Add a screenshot to make your submission stand out in the gallery:
-
-```typescript title="upload-screenshot.ts"
-const formData = new FormData()
-formData.append("file", screenshotFile)
-
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/submissions/screenshot`,
-  {
-    method: "POST",
-    credentials: "include",
-    body: formData,
-  }
-)
-
-const { screenshotUrl } = await res.json()
-```
-
-Accepted formats: PNG, JPEG, WebP (max 10MB).
-
-## Step 4: Update Before the Deadline
-
-You can update your submission at any time while submissions are open:
-
-```typescript title="update.ts"
-await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/submissions`,
-  {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-      title: "AI Code Review Bot v2",
-      description: "Now with auto-fix suggestions and multi-language support",
-      liveAppUrl: "https://ai-review-bot-v2.vercel.app",
-    }),
-  }
-)
-```
-
-## Checking Your Submission
-
-View your current submission at any time:
-
-```typescript title="check.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/submissions/me`,
-  { credentials: "include" }
-)
-
-const { submission } = await res.json()
-
-if (submission) {
-  console.log(`${submission.title} (${submission.status})`)
-} else {
-  console.log("No submission yet")
-}
-```
+| `liveAppUrl` | Optional — link to a deployed demo |
 
 ## Browsing All Submissions
 
 View all submissions in the gallery (public, no auth required):
 
-```typescript title="browse.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/submissions`
-)
-
-const { submissions } = await res.json()
-
-for (const sub of submissions) {
-  console.log(`${sub.title} by ${sub.submitter}`)
-}
+```bash title="List all submissions"
+curl -s "$BASE_URL/api/public/hackathons/$SLUG/submissions" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon browse submissions $SLUG --json
+```
+</Callout>
+
+## Checking a Submission
+
+Individual participants can check their own submission status at any time through the web interface at `/e/{slug}`. This is a participant-only action and is not available via the API.
 
 ## Common Errors
 

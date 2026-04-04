@@ -41,11 +41,10 @@ describe("LifecycleStepper", () => {
     cleanup()
   })
 
-  it("renders all six phase labels", () => {
+  it("renders all five phase labels", () => {
     render(<LifecycleStepper {...baseProps} />)
     expect(screen.getByText("Draft")).toBeDefined()
     expect(screen.getByText("Published")).toBeDefined()
-    expect(screen.getByText("Registration Open")).toBeDefined()
     expect(screen.getByText("Live")).toBeDefined()
     expect(screen.getByText("Judging")).toBeDefined()
     expect(screen.getByText("Completed")).toBeDefined()
@@ -56,9 +55,9 @@ describe("LifecycleStepper", () => {
     expect(findPhaseNode("Published")).toBeDefined()
   })
 
-  it("renders 'Registration Open' as current node in registration_open status", () => {
+  it("maps registration_open status to Published node", () => {
     render(<LifecycleStepper {...baseProps} status="registration_open" />)
-    expect(findPhaseNode("Registration Open")).toBeDefined()
+    expect(findPhaseNode("Published")).toBeDefined()
   })
 
   it("renders 'Live' as current node in active status", () => {
@@ -158,7 +157,6 @@ describe("LifecycleStepper", () => {
       render(<LifecycleStepper {...baseProps} status="judging" />)
       expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
       expect(findPhaseNode("Published")?.getAttribute("data-slot")).toBe("hover-card-trigger")
-      expect(findPhaseNode("Registration Open")?.getAttribute("data-slot")).toBe("hover-card-trigger")
       expect(findPhaseNode("Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
       expect(findPhaseNode("Completed")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
@@ -167,7 +165,6 @@ describe("LifecycleStepper", () => {
       render(<LifecycleStepper {...baseProps} status="completed" />)
       expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("hover-card-trigger")
       expect(findPhaseNode("Published")?.getAttribute("data-slot")).toBe("hover-card-trigger")
-      expect(findPhaseNode("Registration Open")?.getAttribute("data-slot")).toBe("hover-card-trigger")
       expect(findPhaseNode("Live")?.getAttribute("data-slot")).toBe("hover-card-trigger")
       expect(findPhaseNode("Judging")?.getAttribute("data-slot")).toBe("hover-card-trigger")
     })
@@ -192,7 +189,6 @@ describe("LifecycleStepper", () => {
       render(<LifecycleStepper {...baseProps} status="judging" />)
       expect(findPhaseNode("Draft")?.getAttribute("data-slot")).toBe("popover-trigger")
       expect(findPhaseNode("Published")?.getAttribute("data-slot")).toBe("popover-trigger")
-      expect(findPhaseNode("Registration Open")?.getAttribute("data-slot")).toBe("popover-trigger")
       expect(findPhaseNode("Live")?.getAttribute("data-slot")).toBe("popover-trigger")
       expect(findPhaseNode("Completed")?.getAttribute("data-slot")).toBe("popover-trigger")
     })
@@ -211,15 +207,15 @@ describe("LifecycleStepper", () => {
     it("draft → Published: Publish action", () => {
       render(<LifecycleStepper {...baseProps} />)
       openNode("Published")
-      expect(screen.getByText("Make the event visible on the browse page")).toBeDefined()
+      expect(screen.getByText("Make the event visible and open for registration")).toBeDefined()
       expect(screen.getByRole("button", { name: "Publish" })).toBeDefined()
     })
 
-    it("published → Registration Open: Open for Registration action", () => {
+    it("published → Live: Start Hackathon action", () => {
       render(<LifecycleStepper {...baseProps} status="published" />)
-      openNode("Registration Open")
-      expect(screen.getByText("Allow participants to register for the hackathon")).toBeDefined()
-      expect(screen.getByRole("button", { name: "Open Registration" })).toBeDefined()
+      openNode("Live")
+      expect(screen.getByText("Start the hackathon and let participants begin building")).toBeDefined()
+      expect(screen.getByRole("button", { name: "Start Hackathon" })).toBeDefined()
     })
 
     it("registration_open → Live: Start Hackathon action", () => {
@@ -234,19 +230,6 @@ describe("LifecycleStepper", () => {
       openNode("Judging")
       expect(screen.getByText("Close submissions and begin judging")).toBeDefined()
       expect(screen.getByRole("button", { name: "Start Judging" })).toBeDefined()
-    })
-
-    it("active → Judging: Assign Submissions action when there are unassigned submissions", () => {
-      render(
-        <LifecycleStepper
-          {...baseProps}
-          status="active"
-          judgingSetupStatus={{ judgeCount: 3, hasUnassignedSubmissions: true }}
-        />
-      )
-      openNode("Judging")
-      expect(screen.getByText("Some submissions don't have judges assigned yet")).toBeDefined()
-      expect(screen.getByRole("button", { name: "Assign Submissions" })).toBeDefined()
     })
 
     it("judging → Completed: End Event action", () => {

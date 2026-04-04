@@ -101,6 +101,20 @@ describe("Results Service", () => {
         expect(result.code).toBe("unknown")
       }
     })
+
+    it("routes rubric mode to RPC calculate_results", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: { judging_mode: "rubric" }, error: null })
+      )
+      setMockRpcImplementation(() => ({
+        data: [{ success: true, results_count: 3 }],
+        error: null,
+      }))
+
+      const result = await calculateResults("h1")
+      expect(result.success).toBe(true)
+      if (result.success) expect(result.count).toBe(3)
+    })
   })
 
   describe("getResults", () => {

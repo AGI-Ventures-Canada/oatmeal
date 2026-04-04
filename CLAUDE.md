@@ -184,6 +184,20 @@ export default async function Page(props: PageProps<"/blog/[slug]">) {
 
 ## Development Rules
 
+### New Features Require Plan Mode and Interview
+
+**When the user asks to build a new feature, ALWAYS follow this process before writing any code:**
+
+1. **Enter plan mode first.** Do not start implementation until a plan is agreed upon.
+2. **Conduct an interview to clarify requirements.** Ask questions to understand:
+   - What the feature should do from the user's perspective
+   - Expected behavior, edge cases, and constraints
+   - How it fits with existing functionality
+   - Any UI/UX preferences or specific implementation details
+   - Priority and scope — what's in v1 vs. later
+
+Only proceed to implementation after the user has confirmed the plan. This applies to net-new features, not bug fixes, refactors, or small tweaks to existing behavior.
+
 ### Pages Must Be Server-Side
 
 All page components in `app/` must be server-side rendered. Never use `"use client"` in page files. Extract client-side functionality into separate client components.
@@ -628,13 +642,16 @@ refactor: extract payment logic into service
 
 ### Proactive Code Review
 
-**After completing any non-trivial change, run the review skill before considering the task done:**
+**CRITICAL: Before every push, run a local code review and fix all findings.** This is mandatory, not optional — do not push code that hasn't been reviewed.
 
-```bash
-/review-pr
-```
+1. Run the `code-reviewer` agent against the branch diff (`git diff origin/staging...HEAD`)
+2. Fix all critical and important issues found
+3. Re-run affected tests to verify fixes
+4. Only then proceed with `git push`
 
-This catches style violations, shadcn primitive misuse, dead code, and other issues before they land in a PR.
+Focus areas: security (auth bypasses, missing ownership checks), missing validation (body schemas, input sanitization), logic bugs (race conditions, regressions from refactors), type safety (unsafe casts, `as unknown`), and dead/duplicate code.
+
+This catches real production bugs — not just style issues. Skipping this step has let security holes, functional regressions, and data integrity issues slip through.
 
 ### Address All PR Review Warnings
 

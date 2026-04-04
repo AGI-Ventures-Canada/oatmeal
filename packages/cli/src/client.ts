@@ -30,12 +30,16 @@ export class OatmealClient {
     return this.request<T>(path, { ...options, method: "POST", body })
   }
 
+  async put<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    return this.request<T>(path, { ...options, method: "PUT", body })
+  }
+
   async patch<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
     return this.request<T>(path, { ...options, method: "PATCH", body })
   }
 
-  async delete<T>(path: string, options?: RequestOptions): Promise<T> {
-    return this.request<T>(path, { ...options, method: "DELETE" })
+  async delete<T>(path: string, options?: RequestOptions & { body?: unknown }): Promise<T> {
+    return this.request<T>(path, { ...options, method: "DELETE", body: options?.body })
   }
 
   private async request<T>(path: string, options: RequestOptions = {}): Promise<T> {

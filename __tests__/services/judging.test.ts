@@ -144,6 +144,21 @@ describe("Judging Service", () => {
 
       expect(result).toBeNull()
     })
+
+    it("auto-creates default rubric levels when hackathon is rubric mode", async () => {
+      const chain = createChainableMock({
+        data: { ...mockCriteria, category: "core" },
+        error: null,
+      })
+      setMockFromImplementation(() => chain)
+
+      const result = await createJudgingCriteria("h1", {
+        name: "Innovation",
+        category: "core",
+        hackathonJudgingMode: "rubric",
+      })
+      expect(result).not.toBeNull()
+    })
   })
 
   describe("updateJudgingCriteria", () => {
@@ -1449,6 +1464,59 @@ describe("Judging Service", () => {
 
       expect(result.judgeCount).toBe(2)
       expect(result.hasUnassignedSubmissions).toBe(false)
+    })
+  })
+
+  describe("getJudgingSetupStatus (rubric)", () => {
+    it("returns hasCriteria and allCriteriaHaveLevels", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({ data: [{ id: "c1" }], error: null })
+        }
+        if (callCount === 2) {
+          return createChainableMock({ data: [{ id: "j1" }], error: null })
+        }
+        if (callCount === 3) {
+          return createChainableMock({ data: [{ id: "s1" }], error: null })
+        }
+        if (callCount === 4) {
+          return createChainableMock({ data: [{ submission_id: "s1" }], error: null })
+        }
+        return createChainableMock({ data: [{ criteria_id: "c1" }, { criteria_id: "c1" }, { criteria_id: "c1" }], error: null })
+      })
+
+      const result = await getJudgingSetupStatus("h1", "rubric")
+      expect(result.judgeCount).toBe(1)
+      expect(result.hasCriteria).toBe(true)
+      expect(result.allCriteriaHaveLevels).toBe(true)
+      expect(result.isReady).toBe(true)
+    })
+
+    it("skips rubric level check for points mode", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({ data: [{ id: "c1" }], error: null })
+        }
+        if (callCount === 2) {
+          return createChainableMock({ data: [{ id: "j1" }], error: null })
+        }
+        if (callCount === 3) {
+          return createChainableMock({ data: [{ id: "s1" }], error: null })
+        }
+        if (callCount === 4) {
+          return createChainableMock({ data: [{ submission_id: "s1" }], error: null })
+        }
+        return createChainableMock({ data: [], error: null })
+      })
+
+      const result = await getJudgingSetupStatus("h1", "points")
+      expect(result.hasCriteria).toBe(true)
+      expect(result.allCriteriaHaveLevels).toBe(true)
+      expect(result.isReady).toBe(true)
     })
   })
 })

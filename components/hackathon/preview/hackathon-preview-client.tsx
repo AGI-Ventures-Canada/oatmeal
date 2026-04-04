@@ -582,6 +582,7 @@ function HackathonPreviewContent({
       isRegistered={isRegistered}
       hideRegistrationButton={isJudge}
       isOrganizer={isEditable && !editMode}
+      isJudge={isJudge}
       hackathonSlug={hackathon.slug}
       statusSlot={(isEditable && editMode) ? undefined : statusSlot}
       bannerSlot={bannerEditSlot}

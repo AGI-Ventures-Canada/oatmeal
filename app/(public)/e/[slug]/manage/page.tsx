@@ -4,26 +4,23 @@ import { notFound } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
 import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { getHackathonSubmissions } from "@/lib/services/submissions"
-import { getJudgingProgress, getJudgingSetupStatus, listJudgingCriteria } from "@/lib/services/judging"
-import { listPrizes } from "@/lib/services/prizes"
+import { countJudges, getJudgingProgress, listPrizes } from "@/lib/services/judging"
 import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
 import { getManageOverviewStats } from "@/lib/services/manage-overview"
 import { listAnnouncements } from "@/lib/services/announcements"
 import { listScheduleItems } from "@/lib/services/schedule-items"
 import { getOrganizerActionItems } from "@/lib/utils/organizer-actions"
-import { VALID_TABS, VALID_JTABS, VALID_PTABS, VALID_ETABS, DEFAULT_TAB, resolveTab } from "@/lib/utils/manage-tabs"
+import { VALID_TABS, VALID_ETABS, DEFAULT_TAB, resolveTab } from "@/lib/utils/manage-tabs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
 import { HackathonPageActions } from "@/components/hackathon/hackathon-page-actions"
 import { SubmissionGallery } from "@/components/hackathon/submission-gallery"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
 import { OrganizerOverview } from "@/components/hackathon/organizer-overview"
 import { TimeRemainingBar } from "@/components/hackathon/time-remaining-bar"
-import { DebugStageSwitcher } from "@/components/hackathon/debug-stage-switcher"
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TabCount } from "@/components/ui/tab-count"
 import { TabsUrlSync } from "./_tabs-url-sync"
-import { JudgesTabContent } from "./_judges-tab"
-import { PrizesTabContent } from "./_prizes-tab"
+import { JudgingTabContent } from "./_judging-tab"
 import { EventTabContent } from "./_event-tab"
 import { RoomsTab } from "./_rooms-tab"
 import { TeamsTab } from "./_teams-tab"
@@ -31,7 +28,7 @@ import { ActivityTab } from "./_activity-tab"
 
 type PageProps = {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ tab?: string; jtab?: string; ptab?: string; etab?: string }>
+  searchParams: Promise<{ tab?: string; etab?: string }>
 }
 
 function TabLoadingSkeleton() {
@@ -40,7 +37,7 @@ function TabLoadingSkeleton() {
 
 export default async function ManagePage({ params, searchParams }: PageProps) {
   const { slug } = await params
-  const { tab, jtab, ptab, etab } = await searchParams
+  const { tab, etab } = await searchParams
   const [{ userId }, result] = await Promise.all([auth(), getManageHackathon(slug)])
 
   if (!result.ok) {
@@ -52,20 +49,18 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
   const [
     submissions,
     judgingProgress,
-    judgingSetupStatus,
     prizes,
     judgeDisplayCount,
-    criteria,
+    judgeCount,
     overviewStats,
     announcements,
     scheduleItems,
   ] = await Promise.all([
     getHackathonSubmissions(hackathon.id),
     getJudgingProgress(hackathon.id),
-    getJudgingSetupStatus(hackathon.id),
     listPrizes(hackathon.id),
     countJudgeDisplayProfiles(hackathon.id),
-    listJudgingCriteria(hackathon.id),
+    countJudges(hackathon.id),
     getManageOverviewStats(hackathon.id),
     listAnnouncements(hackathon.id),
     listScheduleItems(hackathon.id),
@@ -73,8 +68,6 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
 
   const submissionCount = submissions.length
   const incompleteAssignments = judgingProgress.totalAssignments - judgingProgress.completedAssignments
-  const isDev = process.env.NODE_ENV === "development"
-
   const actionItems = getOrganizerActionItems({
     status: hackathon.status,
     phase: hackathon.phase,
@@ -82,8 +75,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     participantCount: overviewStats.participantCount,
     teamCount: overviewStats.teamCount,
     judgingProgress,
-    judgingSetupStatus,
-    criteriaCount: criteria.length,
+    judgeCount,
     prizeCount: prizes.length,
     judgeDisplayCount,
     mentorQueue: overviewStats.mentorQueue,
@@ -99,8 +91,6 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
   })
 
   const activeTab = resolveTab(tab, VALID_TABS, DEFAULT_TAB)
-  const activeJtab = resolveTab(jtab, VALID_JTABS, "criteria")
-  const activePtab = resolveTab(ptab, VALID_PTABS, "prizes")
   const activeEtab = resolveTab(etab, VALID_ETABS, "challenge")
 
   const submissionsForSelect = submissions.map((s) => ({ id: s.id, title: s.title }))
@@ -119,17 +109,6 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      {isDev && (
-        <DebugStageSwitcher
-          hackathonId={hackathon.id}
-          currentStatus={hackathon.status}
-          registrationOpensAt={hackathon.registration_opens_at}
-          registrationClosesAt={hackathon.registration_closes_at}
-          startsAt={hackathon.starts_at}
-          endsAt={hackathon.ends_at}
-        />
-      )}
-
       <TabsUrlSync paramKey="tab" value={activeTab} className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
@@ -139,8 +118,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               <TabsTrigger value="teams">Teams</TabsTrigger>
               <TabsTrigger value="rooms">Rooms</TabsTrigger>
               <TabsTrigger value="submissions">Submissions{submissionCount > 0 && <TabCount>{submissionCount}</TabCount>}</TabsTrigger>
-              <TabsTrigger value="judges">Judges</TabsTrigger>
-              <TabsTrigger value="prizes">Prizes</TabsTrigger>
+              <TabsTrigger value="judging">Judging &amp; Prizes{prizes.length > 0 && <TabCount>{prizes.length}</TabCount>}</TabsTrigger>
               <TabsTrigger value="event">Engage</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
@@ -162,7 +140,6 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               status={hackathon.status}
               submissionCount={submissionCount}
               judgingProgress={judgingProgress}
-              judgingSetupStatus={judgingSetupStatus}
               startsAt={hackathon.starts_at}
               endsAt={hackathon.ends_at}
               registrationOpensAt={hackathon.registration_opens_at}
@@ -175,7 +152,6 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               sponsorCount={hackathon.sponsors.length}
               prizeCount={prizes.length}
               judgeDisplayCount={judgeDisplayCount}
-              criteriaCount={criteria.length}
               phase={hackathon.phase}
             />
             <TimeRemainingBar
@@ -208,29 +184,12 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
           </div>
         </TabsContent>
 
-        <TabsContent value="judges" forceMount className="data-[state=inactive]:hidden">
+        <TabsContent value="judging" forceMount className="data-[state=inactive]:hidden">
           <Suspense fallback={<TabLoadingSkeleton />}>
-            <JudgesTabContent
+            <JudgingTabContent
               hackathonId={hackathon.id}
-              activeJtab={activeJtab}
-              criteria={criteria}
-              submissions={submissionsForSelect}
-              judgingMode={hackathon.judging_mode}
-              anonymousJudging={hackathon.anonymous_judging}
-              judgingProgress={judgingProgress}
-            />
-          </Suspense>
-        </TabsContent>
-
-        <TabsContent value="prizes" forceMount className="data-[state=inactive]:hidden">
-          <Suspense fallback={<TabLoadingSkeleton />}>
-            <PrizesTabContent
-              hackathonId={hackathon.id}
-              activePtab={activePtab}
-              prizes={prizes}
               submissions={submissionsForSelect}
               resultsPublishedAt={hackathon.results_published_at}
-              incompleteAssignments={incompleteAssignments}
             />
           </Suspense>
         </TabsContent>

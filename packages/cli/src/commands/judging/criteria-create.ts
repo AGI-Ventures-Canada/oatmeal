@@ -8,6 +8,7 @@ interface CriteriaCreateOptions {
   description?: string
   maxScore?: number
   weight?: number
+  category?: "core" | "bonus"
   json?: boolean
 }
 
@@ -27,6 +28,9 @@ export function parseCriteriaCreateOptions(args: string[]): CriteriaCreateOption
       case "--weight":
         options.weight = parseFloat(args[++i])
         break
+      case "--category":
+        options.category = args[++i] as "core" | "bonus"
+        break
       case "--json":
         options.json = true
         break
@@ -43,8 +47,6 @@ export async function runCriteriaCreate(
   const options = parseCriteriaCreateOptions(args)
 
   let name = options.name
-  let maxScore = options.maxScore
-  let weight = options.weight
 
   if (!name && process.stdout.isTTY) {
     const result = await p.text({ message: "Criteria name:", validate: (v: string) => (v ? undefined : "Required") })
@@ -57,21 +59,11 @@ export async function runCriteriaCreate(
     process.exit(1)
   }
 
-  if (maxScore === undefined && process.stdout.isTTY) {
-    const result = await p.text({ message: "Max score:", initialValue: "10" })
-    if (p.isCancel(result)) return
-    maxScore = parseInt(result, 10)
-  }
+  const category = options.category ?? "core"
 
-  if (maxScore !== undefined && (isNaN(maxScore) || maxScore <= 0)) {
-    console.error("Error: --max-score must be a positive integer")
+  if (category !== "core" && category !== "bonus") {
+    console.error("Error: --category must be 'core' or 'bonus'")
     process.exit(1)
-  }
-
-  if (weight === undefined && process.stdout.isTTY) {
-    const result = await p.text({ message: "Weight:", initialValue: "1" })
-    if (p.isCancel(result)) return
-    weight = parseFloat(result)
   }
 
   const criteria = await client.post<JudgingCriteria>(
@@ -79,8 +71,9 @@ export async function runCriteriaCreate(
     {
       name,
       description: options.description,
-      maxScore: maxScore ?? 10,
-      weight: weight ?? 1,
+      category,
+      ...(options.maxScore !== undefined && { maxScore: options.maxScore }),
+      ...(options.weight !== undefined && { weight: options.weight }),
     }
   )
 

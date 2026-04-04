@@ -8,47 +8,34 @@ export const dashboardJudgingRoutes = new Elysia()
     const principal = await resolvePrincipal(request)
     return { principal }
   })
-  .get("/hackathons/:id/judging/criteria", async ({ principal, params }) => {
+
+  // ============================================================
+  // Prizes (the primary judging unit)
+  // ============================================================
+
+  .get("/hackathons/:id/prizes", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 
     const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
     const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
     if (result.status === "not_found") {
-      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
     }
     if (result.status === "not_authorized") {
-      return new Response(JSON.stringify({ error: "Not authorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
     }
 
-    const { listJudgingCriteria } = await import("@/lib/services/judging")
-    const criteria = await listJudgingCriteria(params.id)
+    const { listPrizes } = await import("@/lib/services/judging")
+    const prizes = await listPrizes(params.id)
 
-    return {
-      criteria: criteria.map((c) => ({
-        id: c.id,
-        name: c.name,
-        description: c.description,
-        maxScore: c.max_score,
-        weight: c.weight,
-        displayOrder: c.display_order,
-        createdAt: c.created_at,
-      })),
-    }
+    return { prizes }
   }, {
-    detail: {
-      summary: "List judging criteria",
-      description: "Lists all judging criteria for a hackathon. Requires hackathons:read scope.",
-    },
+    detail: { summary: "List prizes", description: "Lists all prizes with judging details, progress, and assigned judges." },
   })
+
   .post(
-    "/hackathons/:id/judging/criteria",
+    "/hackathons/:id/prizes",
     async ({ principal, params, body }) => {
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
@@ -56,65 +43,55 @@ export const dashboardJudgingRoutes = new Elysia()
       const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
       if (result.status === "not_found") {
-        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        })
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
       }
       if (result.status === "not_authorized") {
-        return new Response(JSON.stringify({ error: "Not authorized" }), {
-          status: 403,
-          headers: { "Content-Type": "application/json" },
-        })
+        return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
       }
 
-      const { createJudgingCriteria } = await import("@/lib/services/judging")
-      const criteria = await createJudgingCriteria(params.id, {
+      const { createPrize } = await import("@/lib/services/judging")
+      const prize = await createPrize(params.id, {
         name: body.name,
         description: body.description,
-        maxScore: body.maxScore,
-        weight: body.weight,
+        value: body.value,
+        judgingStyle: body.judgingStyle as "bucket_sort" | "gate_check" | "crowd_vote" | "judges_pick",
+        roundId: body.roundId,
+        assignmentMode: body.assignmentMode as "organizer_assigned" | "self_select" | undefined,
+        maxPicks: body.maxPicks,
         displayOrder: body.displayOrder,
       })
 
-      if (!criteria) {
-        return new Response(JSON.stringify({ error: "Failed to create criteria" }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        })
+      if (!prize) {
+        return new Response(JSON.stringify({ error: "Failed to create prize" }), { status: 500, headers: { "Content-Type": "application/json" } })
       }
 
-      await logAudit({
+      logAudit({
         principal,
-        action: "judging_criteria.created",
-        resourceType: "judging_criteria",
-        resourceId: criteria.id,
-        metadata: { hackathonId: params.id },
+        action: "prize.created",
+        resourceType: "prize",
+        resourceId: prize.id,
+        metadata: { name: prize.name, judgingStyle: prize.judging_style },
       })
 
-      return {
-        id: criteria.id,
-        name: criteria.name,
-        maxScore: criteria.max_score,
-        weight: criteria.weight,
-      }
+      return { prize }
     },
     {
-      detail: {
-        summary: "Create judging criteria",
-        description: "Creates a new judging criteria. Requires hackathons:write scope.",
-      },
       body: t.Object({
-        name: t.String({ minLength: 1 }),
-        description: t.Optional(t.Union([t.String(), t.Null()])),
-        maxScore: t.Optional(t.Number({ minimum: 1 })),
-        weight: t.Optional(t.Number({ minimum: 0 })),
-        displayOrder: t.Optional(t.Number()),
+        name: t.String({ description: "Prize name" }),
+        description: t.Optional(t.String({ description: "Prize description" })),
+        value: t.Optional(t.String({ description: "Prize value (e.g. '$5000')" })),
+        judgingStyle: t.String({ description: "bucket_sort | gate_check | crowd_vote | judges_pick" }),
+        roundId: t.Optional(t.String({ description: "Round ID this prize belongs to" })),
+        assignmentMode: t.Optional(t.String({ description: "organizer_assigned | self_select" })),
+        maxPicks: t.Optional(t.Number({ description: "Max picks per judge (for judges_pick)" })),
+        displayOrder: t.Optional(t.Number({ description: "Display order" })),
       }),
+      detail: { summary: "Create prize", description: "Creates a new prize with judging style. Auto-creates bucket definitions for bucket_sort." },
     }
   )
+
   .patch(
-    "/hackathons/:id/judging/criteria/:criteriaId",
+    "/hackathons/:id/prizes/:prizeId",
     async ({ principal, params, body }) => {
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
@@ -122,93 +99,397 @@ export const dashboardJudgingRoutes = new Elysia()
       const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
       if (result.status === "not_found") {
-        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        })
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
       }
       if (result.status === "not_authorized") {
-        return new Response(JSON.stringify({ error: "Not authorized" }), {
-          status: 403,
-          headers: { "Content-Type": "application/json" },
-        })
+        return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
       }
 
-      const { updateJudgingCriteria } = await import("@/lib/services/judging")
-      const criteria = await updateJudgingCriteria(params.criteriaId, params.id, {
+      const { updatePrize } = await import("@/lib/services/judging")
+      const prize = await updatePrize(params.prizeId, params.id, {
         name: body.name,
         description: body.description,
-        maxScore: body.maxScore,
-        weight: body.weight,
+        value: body.value,
+        judgingStyle: body.judgingStyle as import("@/lib/db/hackathon-types").PrizeJudgingStyle | undefined,
+        roundId: body.roundId,
+        assignmentMode: body.assignmentMode as import("@/lib/db/hackathon-types").PrizeAssignmentMode | undefined,
+        maxPicks: body.maxPicks,
         displayOrder: body.displayOrder,
       })
 
-      if (!criteria) {
-        return new Response(JSON.stringify({ error: "Criteria not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        })
+      if (!prize) {
+        return new Response(JSON.stringify({ error: "Prize not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
       }
 
-      return { id: criteria.id, updatedAt: criteria.updated_at }
+      return { prize }
     },
     {
-      detail: {
-        summary: "Update judging criteria",
-        description: "Updates a judging criteria. Requires hackathons:write scope.",
-      },
       body: t.Object({
         name: t.Optional(t.String()),
-        description: t.Optional(t.Union([t.String(), t.Null()])),
-        maxScore: t.Optional(t.Number({ minimum: 1 })),
-        weight: t.Optional(t.Number({ minimum: 0 })),
+        description: t.Optional(t.Nullable(t.String())),
+        value: t.Optional(t.Nullable(t.String())),
+        judgingStyle: t.Optional(t.String()),
+        roundId: t.Optional(t.Nullable(t.String())),
+        assignmentMode: t.Optional(t.String()),
+        maxPicks: t.Optional(t.Number()),
         displayOrder: t.Optional(t.Number()),
       }),
+      detail: { summary: "Update prize", description: "Updates a prize's properties." },
     }
   )
-  .delete("/hackathons/:id/judging/criteria/:criteriaId", async ({ principal, params }) => {
+
+  .delete("/hackathons/:id/prizes/:prizeId", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
     const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
     const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
     if (result.status === "not_found") {
-      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
     }
     if (result.status === "not_authorized") {
-      return new Response(JSON.stringify({ error: "Not authorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
     }
 
-    const { deleteJudgingCriteria } = await import("@/lib/services/judging")
-    const success = await deleteJudgingCriteria(params.criteriaId, params.id)
+    const { deletePrize } = await import("@/lib/services/judging")
+    const deleted = await deletePrize(params.prizeId, params.id)
 
-    if (!success) {
-      return new Response(JSON.stringify({ error: "Criteria not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
+    if (!deleted) {
+      return new Response(JSON.stringify({ error: "Failed to delete prize" }), { status: 500, headers: { "Content-Type": "application/json" } })
     }
 
-    await logAudit({
+    logAudit({
       principal,
-      action: "judging_criteria.deleted",
-      resourceType: "judging_criteria",
-      resourceId: params.criteriaId,
+      action: "prize.deleted",
+      resourceType: "prize",
+      resourceId: params.prizeId,
     })
 
     return { success: true }
   }, {
-    detail: {
-      summary: "Delete judging criteria",
-      description: "Deletes a judging criteria. Requires hackathons:write scope.",
-    },
+    detail: { summary: "Delete prize", description: "Deletes a prize and all its assignments, responses, and results." },
   })
+
+  .get("/hackathons/:id/prizes/:prizeId", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
+
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+    if (result.status === "not_found") {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+    }
+
+    const { getPrizeDetails } = await import("@/lib/services/judging")
+    const prize = await getPrizeDetails(params.prizeId)
+
+    if (!prize) {
+      return new Response(JSON.stringify({ error: "Prize not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+    }
+
+    return { prize }
+  }, {
+    detail: { summary: "Get prize details", description: "Returns full prize details including buckets, judges, and progress." },
+  })
+
+  .post(
+    "/hackathons/:id/prizes/:prizeId/assign-judge",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+      }
+
+      const { assignJudgeToPrize } = await import("@/lib/services/judging")
+      const assigned = await assignJudgeToPrize(params.id, body.judgeParticipantId, params.prizeId)
+
+      return assigned
+    },
+    {
+      body: t.Object({
+        judgeParticipantId: t.String({ description: "Judge participant ID" }),
+      }),
+      detail: { summary: "Assign judge to prize", description: "Assigns a judge to evaluate all submissions for a prize." },
+    }
+  )
+
+  .delete(
+    "/hackathons/:id/prizes/:prizeId/judges/:judgeParticipantId",
+    async ({ principal, params }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+      }
+
+      const { removeJudgeFromPrize } = await import("@/lib/services/judging")
+      const removed = await removeJudgeFromPrize(params.id, params.judgeParticipantId, params.prizeId)
+
+      return removed
+    },
+    {
+      detail: { summary: "Remove judge from prize", description: "Removes a judge from a specific prize." },
+    }
+  )
+
+  .post(
+    "/hackathons/:id/prizes/:prizeId/auto-assign",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+      }
+
+      const { autoAssignJudges } = await import("@/lib/services/judging")
+      const assigned = await autoAssignJudges(params.id, params.prizeId, body.submissionsPerJudge)
+
+      return assigned
+    },
+    {
+      body: t.Object({
+        submissionsPerJudge: t.Number({ description: "Number of submissions each judge should evaluate" }),
+      }),
+      detail: { summary: "Auto-assign judges", description: "Automatically distributes submissions across judges for a prize." },
+    }
+  )
+
+  .post("/hackathons/:id/prizes/:prizeId/calculate-results", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+    if (result.status === "not_found") {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+    }
+
+    const { calculatePrizeResults } = await import("@/lib/services/judging")
+    const calcResult = await calculatePrizeResults(params.id, params.prizeId)
+
+    return calcResult
+  }, {
+    detail: { summary: "Calculate prize results", description: "Calculates and stores ranked results for a prize based on its judging style." },
+  })
+
+  .put(
+    "/hackathons/:id/prizes/:prizeId/buckets",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+      }
+
+      const { replaceBucketDefinitions } = await import("@/lib/services/judging")
+      const buckets = await replaceBucketDefinitions(params.prizeId, body.buckets)
+
+      return { buckets }
+    },
+    {
+      body: t.Object({
+        buckets: t.Array(t.Object({
+          level: t.Number(),
+          label: t.String(),
+          description: t.Optional(t.Nullable(t.String())),
+        })),
+      }),
+      detail: { summary: "Replace bucket definitions", description: "Replaces all bucket definitions for a bucket_sort prize." },
+    }
+  )
+
+  // ============================================================
+  // Rounds (hackathon-level)
+  // ============================================================
+
+  .get("/hackathons/:id/rounds", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
+
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+    if (result.status === "not_found") {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+    }
+
+    const { listRounds } = await import("@/lib/services/judging")
+    const rounds = await listRounds(params.id)
+
+    return { rounds }
+  }, {
+    detail: { summary: "List rounds", description: "Lists all judging rounds for a hackathon." },
+  })
+
+  .post(
+    "/hackathons/:id/rounds",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+      }
+
+      const { createRound } = await import("@/lib/services/judging")
+      const round = await createRound(params.id, body.name)
+
+      if (!round) {
+        return new Response(JSON.stringify({ error: "Failed to create round" }), { status: 500, headers: { "Content-Type": "application/json" } })
+      }
+
+      return { round }
+    },
+    {
+      body: t.Object({
+        name: t.String({ description: "Round name (e.g. 'Preliminary', 'Finals')" }),
+      }),
+      detail: { summary: "Create round", description: "Creates a new judging round." },
+    }
+  )
+
+  .patch(
+    "/hackathons/:id/rounds/:roundId",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+      }
+
+      const { updateRound } = await import("@/lib/services/judging")
+      const updated = await updateRound(params.roundId, body)
+
+      return { success: updated }
+    },
+    {
+      body: t.Object({
+        name: t.Optional(t.String()),
+        status: t.Optional(t.String()),
+      }),
+      detail: { summary: "Update round", description: "Updates a round's name or status." },
+    }
+  )
+
+  .post("/hackathons/:id/rounds/:roundId/activate", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+    if (result.status === "not_found") {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+    }
+
+    const { activateRound } = await import("@/lib/services/judging")
+    const activated = await activateRound(params.roundId, params.id)
+
+    return { success: activated }
+  }, {
+    detail: { summary: "Activate round", description: "Activates a round, deactivating any other active round." },
+  })
+
+  .post("/hackathons/:id/rounds/:roundId/complete", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+    if (result.status === "not_found") {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+    }
+
+    const { completeRound } = await import("@/lib/services/judging")
+    const completed = await completeRound(params.roundId)
+
+    return { success: completed }
+  }, {
+    detail: { summary: "Complete round", description: "Marks a round as complete." },
+  })
+
+  .post(
+    "/hackathons/:id/rounds/:roundId/advance",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
+      }
+
+      const { advanceSubmissions } = await import("@/lib/services/judging")
+      const advanced = await advanceSubmissions(params.roundId, body.toRoundId, body.submissionIds)
+
+      return advanced
+    },
+    {
+      body: t.Object({
+        toRoundId: t.String({ description: "Target round ID" }),
+        submissionIds: t.Array(t.String(), { description: "Submission IDs to advance" }),
+      }),
+      detail: { summary: "Advance submissions", description: "Advances selected submissions to the next round." },
+    }
+  )
+
+  // ============================================================
+  // Judges
+  // ============================================================
+
   .get("/hackathons/:id/judging/user-search", async ({ principal, params, query }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 
@@ -216,50 +497,34 @@ export const dashboardJudgingRoutes = new Elysia()
     const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
     if (result.status === "not_found") {
-      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
     }
     if (result.status === "not_authorized") {
-      return new Response(JSON.stringify({ error: "Not authorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
     }
 
-    const q = (query as Record<string, string>).q?.trim()
-    if (!q || q.length < 2) {
-      return { users: [] }
-    }
+    const q = (query as Record<string, string>).q
+    if (!q || q.length < 2) return { users: [] }
 
-    try {
-      const { clerkClient } = await import("@clerk/nextjs/server")
-      const client = await clerkClient()
-      const users = await client.users.getUserList({ query: q, limit: 10 })
+    const { clerkClient } = await import("@clerk/nextjs/server")
+    const clerk = await clerkClient()
+    const searchResults = await clerk.users.getUserList({
+      query: q,
+      limit: 10,
+    })
 
-      return {
-        users: users.data.map((u) => ({
-          id: u.id,
-          email: u.primaryEmailAddress?.emailAddress ?? null,
-          firstName: u.firstName,
-          lastName: u.lastName,
-          username: u.username,
-          imageUrl: u.imageUrl,
-        })),
-      }
-    } catch {
-      return new Response(JSON.stringify({ error: "Failed to search users" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      })
+    return {
+      users: searchResults.data.map((u) => ({
+        id: u.id,
+        displayName: [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.id,
+        email: u.primaryEmailAddress?.emailAddress ?? null,
+        imageUrl: u.imageUrl ?? null,
+      })),
     }
   }, {
-    detail: {
-      summary: "Search users for judge assignment",
-      description: "Searches Clerk users by name or email for adding as judges. Requires hackathons:read scope.",
-    },
+    detail: { summary: "Search users", description: "Searches Clerk users for judge addition." },
   })
+
   .get("/hackathons/:id/judging/judges", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 
@@ -267,38 +532,20 @@ export const dashboardJudgingRoutes = new Elysia()
     const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
     if (result.status === "not_found") {
-      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
     }
     if (result.status === "not_authorized") {
-      return new Response(JSON.stringify({ error: "Not authorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
     }
 
     const { listJudges } = await import("@/lib/services/judging")
     const judges = await listJudges(params.id)
 
-    return {
-      judges: judges.map((j) => ({
-        participantId: j.participantId,
-        clerkUserId: j.clerkUserId,
-        displayName: j.displayName,
-        email: j.email,
-        imageUrl: j.imageUrl,
-        assignmentCount: j.assignmentCount,
-        completedCount: j.completedCount,
-      })),
-    }
+    return { judges }
   }, {
-    detail: {
-      summary: "List judges",
-      description: "Lists all judges for a hackathon with assignment progress. Requires hackathons:read scope.",
-    },
+    detail: { summary: "List judges", description: "Lists all judges with assignment progress." },
   })
+
   .post(
     "/hackathons/:id/judging/judges",
     async ({ principal, params, body }) => {
@@ -308,16 +555,10 @@ export const dashboardJudgingRoutes = new Elysia()
       const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
       if (result.status === "not_found") {
-        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        })
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
       }
       if (result.status === "not_authorized") {
-        return new Response(JSON.stringify({ error: "Not authorized" }), {
-          status: 403,
-          headers: { "Content-Type": "application/json" },
-        })
+        return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
       }
 
       const typedBody = body as { clerkUserId?: string; email?: string }
@@ -333,29 +574,19 @@ export const dashboardJudgingRoutes = new Elysia()
           const judgeUser = await client.users.getUser(typedBody.clerkUserId)
           judgeEmail = judgeUser.primaryEmailAddress?.emailAddress
         } catch {
-          return new Response(JSON.stringify({ error: "Failed to look up judge info", code: "lookup_failed" }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          })
+          return new Response(JSON.stringify({ error: "Failed to look up judge info", code: "lookup_failed" }), { status: 500, headers: { "Content-Type": "application/json" } })
         }
 
-        // No email → skip guard; addJudge still prevents duplicate participants
         if (judgeEmail) {
           const { hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
           let isPending: boolean
           try {
             isPending = await hasPendingJudgeEntry(params.id, judgeEmail)
           } catch {
-            return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), {
-              status: 500,
-              headers: { "Content-Type": "application/json" },
-            })
+            return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), { status: 500, headers: { "Content-Type": "application/json" } })
           }
           if (isPending) {
-            return new Response(JSON.stringify({ error: "This judge already has a pending invitation or notification", code: "already_pending" }), {
-              status: 400,
-              headers: { "Content-Type": "application/json" },
-            })
+            return new Response(JSON.stringify({ error: "This judge already has a pending invitation or notification", code: "already_pending" }), { status: 400, headers: { "Content-Type": "application/json" } })
           }
         }
 
@@ -363,13 +594,9 @@ export const dashboardJudgingRoutes = new Elysia()
         const addResult = await addJudge(params.id, typedBody.clerkUserId)
 
         if (!addResult.success) {
-          return new Response(JSON.stringify({ error: addResult.error, code: addResult.code }), {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          })
+          return new Response(JSON.stringify({ error: addResult.error, code: addResult.code }), { status: 400, headers: { "Content-Type": "application/json" } })
         }
 
-        let notificationFailed = false
         if (judgeEmail) {
           try {
             if (hackathon.status !== "draft") {
@@ -387,164 +614,132 @@ export const dashboardJudgingRoutes = new Elysia()
               await createJudgePendingNotification(hackathon.id, addResult.participant.id, judgeEmail, addedByName)
             }
           } catch (err) {
-            console.error(`Failed to handle judge notification for ${judgeEmail}:`, err)
-            notificationFailed = true
+            console.error(`Failed to handle judge notification:`, err)
           }
         }
 
-        await logAudit({
+        logAudit({
           principal,
           action: "judge.added",
-          resourceType: "hackathon_participant",
-          resourceId: addResult.participant.id,
-          metadata: { hackathonId: params.id, clerkUserId: typedBody.clerkUserId },
+          resourceType: "hackathon",
+          resourceId: params.id,
+          metadata: { judgeClerkUserId: typedBody.clerkUserId },
         })
 
-        return {
-          participantId: addResult.participant.id,
-          clerkUserId: addResult.participant.clerkUserId,
-          ...(notificationFailed && { notificationFailed: true }),
-        }
+        return { participant: addResult.participant }
       }
 
       if (typedBody.email) {
-        const email = typedBody.email
-
-        try {
-          const users = await client.users.getUserList({ emailAddress: [email] })
-          if (users.data.length > 0) {
-            const { hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
-            let isPending: boolean
-            try {
-              isPending = await hasPendingJudgeEntry(params.id, email)
-            } catch {
-              return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), {
-                status: 500,
-                headers: { "Content-Type": "application/json" },
-              })
-            }
-            if (isPending) {
-              return new Response(JSON.stringify({ error: "This judge already has a pending invitation or notification", code: "already_pending" }), {
-                status: 400,
-                headers: { "Content-Type": "application/json" },
-              })
-            }
-
-            const { addJudge } = await import("@/lib/services/judging")
-            const addResult = await addJudge(params.id, users.data[0].id)
-
-            if (!addResult.success) {
-              return new Response(JSON.stringify({ error: addResult.error, code: addResult.code }), {
-                status: 400,
-                headers: { "Content-Type": "application/json" },
-              })
-            }
-
-            const hackathon = result.hackathon
-            let notificationFailed = false
-            try {
-              const addedByName = await resolveAdderName(principal, client)
-              if (hackathon.status !== "draft") {
-                const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
-                sendJudgeAddedNotification({
-                  to: email,
-                  hackathonName: hackathon.name,
-                  hackathonSlug: hackathon.slug,
-                  addedByName,
-                }).catch(console.error)
-              } else {
-                const { createJudgePendingNotification } = await import("@/lib/services/judge-invitations")
-                try {
-                  await createJudgePendingNotification(hackathon.id, addResult.participant.id, email, addedByName)
-                } catch {
-                  notificationFailed = true
-                }
-              }
-            } catch {
-              notificationFailed = true
-            }
-
-            await logAudit({
-              principal,
-              action: "judge.added",
-              resourceType: "hackathon_participant",
-              resourceId: addResult.participant.id,
-              metadata: { hackathonId: params.id, email },
-            })
-
-            return {
-              participantId: addResult.participant.id,
-              clerkUserId: addResult.participant.clerkUserId,
-              ...(notificationFailed && { notificationFailed: true }),
-            }
-          }
-        } catch {
-          return new Response(JSON.stringify({ error: "Failed to look up user", code: "lookup_failed" }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          })
-        }
-
-        const invitedByUserId = principal.kind === "user" ? principal.userId : "api_key"
-
-        const { createJudgeInvitation } = await import("@/lib/services/judge-invitations")
-        const inviteResult = await createJudgeInvitation({
-          hackathonId: params.id,
-          email,
-          invitedByClerkUserId: invitedByUserId,
-        })
-
-        if (!inviteResult.success) {
-          return new Response(JSON.stringify({ error: inviteResult.error, code: inviteResult.code }), {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          })
-        }
-
         const hackathon = result.hackathon
 
-        if (hackathon.status !== "draft") {
-          const inviterName = await resolveAdderName(principal, client)
-          const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
-          sendJudgeInvitationEmail({
-            to: email,
-            hackathonName: hackathon.name,
-            inviterName,
-            inviteToken: inviteResult.invitation.token,
-            expiresAt: inviteResult.invitation.expires_at,
-          }).catch(console.error)
+        const existingUsers = await client.users.getUserList({ emailAddress: [typedBody.email] })
+        if (existingUsers.data.length > 0) {
+          const existingUser = existingUsers.data[0]
+
+          const { hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
+          let isPending: boolean
+          try {
+            isPending = await hasPendingJudgeEntry(params.id, typedBody.email)
+          } catch {
+            return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), { status: 500, headers: { "Content-Type": "application/json" } })
+          }
+          if (isPending) {
+            return new Response(JSON.stringify({ error: "This email already has a pending invitation or notification", code: "already_pending" }), { status: 400, headers: { "Content-Type": "application/json" } })
+          }
+
+          const { addJudge } = await import("@/lib/services/judging")
+          const addResult = await addJudge(params.id, existingUser.id)
+
+          if (!addResult.success) {
+            return new Response(JSON.stringify({ error: addResult.error, code: addResult.code }), { status: 400, headers: { "Content-Type": "application/json" } })
+          }
+
+          if (hackathon.status !== "draft") {
+            const addedByName = await resolveAdderName(principal, client)
+            const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
+            sendJudgeAddedNotification({
+              to: typedBody.email,
+              hackathonName: hackathon.name,
+              hackathonSlug: hackathon.slug,
+              addedByName,
+            }).catch(console.error)
+          } else {
+            const addedByName = await resolveAdderName(principal, client)
+            const { createJudgePendingNotification } = await import("@/lib/services/judge-invitations")
+            await createJudgePendingNotification(hackathon.id, addResult.participant.id, typedBody.email, addedByName)
+          }
+
+          logAudit({
+            principal,
+            action: "judge.added",
+            resourceType: "hackathon",
+            resourceId: params.id,
+            metadata: { judgeClerkUserId: existingUser.id, email: typedBody.email },
+          })
+
+          return { participant: addResult.participant }
         }
 
-        await logAudit({
-          principal,
-          action: "judge.invited",
-          resourceType: "judge_invitation",
-          resourceId: inviteResult.invitation.id,
-          metadata: { hackathonId: params.id, email },
+        const { createJudgeInvitation, hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
+
+        let isPending: boolean
+        try {
+          isPending = await hasPendingJudgeEntry(params.id, typedBody.email)
+        } catch {
+          return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), { status: 500, headers: { "Content-Type": "application/json" } })
+        }
+        if (isPending) {
+          return new Response(JSON.stringify({ error: "This email already has a pending invitation", code: "already_pending" }), { status: 400, headers: { "Content-Type": "application/json" } })
+        }
+
+        const inviterName = await resolveAdderName(principal, client)
+        const invitedByClerkUserId = principal.kind === "user" ? principal.userId : "api"
+        const invitationResult = await createJudgeInvitation({
+          hackathonId: params.id,
+          email: typedBody.email,
+          invitedByClerkUserId,
         })
 
-        return {
-          invited: true,
-          invitationId: inviteResult.invitation.id,
+        if (!invitationResult.success) {
+          return new Response(JSON.stringify({ error: invitationResult.error, code: invitationResult.code }), { status: 400, headers: { "Content-Type": "application/json" } })
         }
+
+        if (hackathon.status !== "draft") {
+          const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
+          sendJudgeInvitationEmail({
+            to: typedBody.email,
+            hackathonName: hackathon.name,
+            inviterName,
+            inviteToken: invitationResult.invitation.token,
+            expiresAt: invitationResult.invitation.expires_at,
+          }).catch(console.error)
+        } else {
+          const { createJudgePendingNotification } = await import("@/lib/services/judge-invitations")
+          await createJudgePendingNotification(hackathon.id, invitationResult.invitation.id, typedBody.email, inviterName)
+        }
+
+        logAudit({
+          principal,
+          action: "judge.invited",
+          resourceType: "hackathon",
+          resourceId: params.id,
+          metadata: { email: typedBody.email },
+        })
+
+        return { invitation: { id: invitationResult.invitation.id, email: typedBody.email } }
       }
 
-      return new Response(JSON.stringify({ error: "Either clerkUserId or email is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Must provide clerkUserId or email" }), { status: 400, headers: { "Content-Type": "application/json" } })
     },
     {
-      detail: {
-        summary: "Add judge",
-        description: "Adds a judge by Clerk user ID or email. If email user not found, sends an invitation. Requires hackathons:write scope.",
-      },
       body: t.Object({
         clerkUserId: t.Optional(t.String()),
         email: t.Optional(t.String({ format: "email" })),
       }),
+      detail: { summary: "Add judge", description: "Adds a judge by Clerk user ID or invites by email." },
     }
   )
+
   .delete("/hackathons/:id/judging/judges/:participantId", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
@@ -552,264 +747,32 @@ export const dashboardJudgingRoutes = new Elysia()
     const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
     if (result.status === "not_found") {
-      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
     }
     if (result.status === "not_authorized") {
-      return new Response(JSON.stringify({ error: "Not authorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
     }
 
     const { removeJudge } = await import("@/lib/services/judging")
     const removeResult = await removeJudge(params.id, params.participantId)
 
     if (!removeResult.success) {
-      return new Response(JSON.stringify({ error: "Judge not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Failed to remove judge" }), { status: 500, headers: { "Content-Type": "application/json" } })
     }
 
-    await logAudit({
+    logAudit({
       principal,
       action: "judge.removed",
-      resourceType: "hackathon_participant",
-      resourceId: params.participantId,
+      resourceType: "hackathon",
+      resourceId: params.id,
+      metadata: { judgeParticipantId: params.participantId },
     })
 
     return { success: true, resultsStale: removeResult.resultsStale }
   }, {
-    detail: {
-      summary: "Remove judge",
-      description: "Removes a judge from a hackathon. Requires hackathons:write scope.",
-    },
+    detail: { summary: "Remove judge", description: "Removes a judge and all their assignments." },
   })
-  .get("/hackathons/:id/judging/assignments", async ({ principal, params }) => {
-    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 
-    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
-    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
-
-    if (result.status === "not_found") {
-      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-    if (result.status === "not_authorized") {
-      return new Response(JSON.stringify({ error: "Not authorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-
-    const { listJudgeAssignments, getJudgingProgress } = await import("@/lib/services/judging")
-    const [assignments, progress] = await Promise.all([
-      listJudgeAssignments(params.id),
-      getJudgingProgress(params.id),
-    ])
-
-    return {
-      assignments: assignments.map((a) => ({
-        id: a.id,
-        judgeParticipantId: a.judge_participant_id,
-        judgeName: a.judgeName,
-        submissionId: a.submission_id,
-        submissionTitle: a.submissionTitle,
-        isComplete: a.is_complete,
-        assignedAt: a.assigned_at,
-      })),
-      progress,
-    }
-  }, {
-    detail: {
-      summary: "List judging assignments (organizer)",
-      description: "Lists all judge-submission assignments with progress stats. Requires hackathons:read scope.",
-    },
-  })
-  .post(
-    "/hackathons/:id/judging/assignments",
-    async ({ principal, params, body }) => {
-      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
-
-      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
-      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
-
-      if (result.status === "not_found") {
-        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        })
-      }
-      if (result.status === "not_authorized") {
-        return new Response(JSON.stringify({ error: "Not authorized" }), {
-          status: 403,
-          headers: { "Content-Type": "application/json" },
-        })
-      }
-
-      const { assignJudgeToSubmission } = await import("@/lib/services/judging")
-      const assignResult = await assignJudgeToSubmission(
-        params.id,
-        body.judgeParticipantId,
-        body.submissionId
-      )
-
-      if (!assignResult.success) {
-        return new Response(JSON.stringify({ error: assignResult.error, code: assignResult.code }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        })
-      }
-
-      return { id: assignResult.assignment.id }
-    },
-    {
-      detail: {
-        summary: "Create judging assignment",
-        description: "Manually assigns a judge to a submission. Requires hackathons:write scope.",
-      },
-      body: t.Object({
-        judgeParticipantId: t.String(),
-        submissionId: t.String(),
-      }),
-    }
-  )
-  .delete("/hackathons/:id/judging/assignments/:assignmentId", async ({ principal, params }) => {
-    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
-
-    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
-    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
-
-    if (result.status === "not_found") {
-      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-    if (result.status === "not_authorized") {
-      return new Response(JSON.stringify({ error: "Not authorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-
-    const { removeJudgeAssignment } = await import("@/lib/services/judging")
-    const success = await removeJudgeAssignment(params.assignmentId)
-
-    if (!success) {
-      return new Response(JSON.stringify({ error: "Assignment not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-
-    return { success: true }
-  }, {
-    detail: {
-      summary: "Delete judging assignment",
-      description: "Removes a judge-submission assignment. Requires hackathons:write scope.",
-    },
-  })
-  .post(
-    "/hackathons/:id/judging/auto-assign",
-    async ({ principal, params, body }) => {
-      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
-
-      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
-      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
-
-      if (result.status === "not_found") {
-        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        })
-      }
-      if (result.status === "not_authorized") {
-        return new Response(JSON.stringify({ error: "Not authorized" }), {
-          status: 403,
-          headers: { "Content-Type": "application/json" },
-        })
-      }
-
-      const { autoAssignJudges, listJudges, listJudgeAssignments } = await import("@/lib/services/judging")
-      const { assignedCount } = await autoAssignJudges(params.id, body.submissionsPerJudge)
-
-      await logAudit({
-        principal,
-        action: "judging.auto_assigned",
-        resourceType: "hackathon",
-        resourceId: params.id,
-        metadata: { assignedCount, submissionsPerJudge: body.submissionsPerJudge },
-      })
-
-      const [judges, assignmentsRaw] = await Promise.all([
-        listJudges(params.id),
-        listJudgeAssignments(params.id),
-      ])
-
-      const assignments = assignmentsRaw.map((a) => ({
-        id: a.id,
-        judgeParticipantId: a.judge_participant_id,
-        judgeName: a.judgeName,
-        judgeEmail: a.judgeEmail,
-        submissionId: a.submission_id,
-        submissionTitle: a.submissionTitle,
-        isComplete: a.is_complete,
-        assignedAt: a.assigned_at,
-      }))
-
-      return { assignedCount, judges, assignments }
-    },
-    {
-      detail: {
-        summary: "Auto-assign judges",
-        description: "Automatically distributes submissions across judges. Requires hackathons:write scope.",
-      },
-      body: t.Object({
-        submissionsPerJudge: t.Number({ minimum: 1 }),
-      }),
-    }
-  )
-  .get("/hackathons/:id/judging/pick-results", async ({ principal, params }) => {
-    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
-
-    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
-    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
-
-    if (result.status === "not_found") {
-      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-    if (result.status === "not_authorized") {
-      return new Response(JSON.stringify({ error: "Not authorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-
-    const { listPrizes } = await import("@/lib/services/prizes")
-    const prizes = await listPrizes(params.id)
-
-    const { getPickResults } = await import("@/lib/services/judge-picks")
-    const results: Record<string, Awaited<ReturnType<typeof getPickResults>>> = {}
-    for (const prize of prizes) {
-      results[prize.id] = await getPickResults(params.id, prize.id)
-    }
-
-    return { results }
-  }, {
-    detail: {
-      summary: "Get pick results for subjective judging",
-      description: "Returns tallied pick results per prize for subjective judging mode. Requires hackathons:read scope.",
-    },
-  })
   .get("/hackathons/:id/judging/invitations", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
 
@@ -817,36 +780,20 @@ export const dashboardJudgingRoutes = new Elysia()
     const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
     if (result.status === "not_found") {
-      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
     }
     if (result.status === "not_authorized") {
-      return new Response(JSON.stringify({ error: "Not authorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
     }
 
     const { listJudgeInvitations } = await import("@/lib/services/judge-invitations")
-    const invitations = await listJudgeInvitations(params.id, "pending")
+    const invitations = await listJudgeInvitations(params.id)
 
-    return {
-      invitations: invitations.map((inv) => ({
-        id: inv.id,
-        email: inv.email,
-        status: inv.status,
-        expiresAt: inv.expires_at,
-        createdAt: inv.created_at,
-      })),
-    }
+    return { invitations }
   }, {
-    detail: {
-      summary: "List judge invitations",
-      description: "Lists pending judge invitations for a hackathon. Requires hackathons:read scope.",
-    },
+    detail: { summary: "List invitations", description: "Lists pending judge invitations." },
   })
+
   .delete("/hackathons/:id/judging/invitations/:invitationId", async ({ principal, params }) => {
     requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
@@ -854,39 +801,37 @@ export const dashboardJudgingRoutes = new Elysia()
     const result = await checkHackathonOrganizer(params.id, principal.tenantId)
 
     if (result.status === "not_found") {
-      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
     }
     if (result.status === "not_authorized") {
-      return new Response(JSON.stringify({ error: "Not authorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
     }
 
     const { cancelJudgeInvitation } = await import("@/lib/services/judge-invitations")
-    const cancelResult = await cancelJudgeInvitation(params.invitationId, params.id)
+    const result2 = await cancelJudgeInvitation(params.invitationId, params.id)
 
-    if (!cancelResult.success) {
-      return new Response(JSON.stringify({ error: cancelResult.error }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      })
+    return { success: result2.success }
+  }, {
+    detail: { summary: "Cancel invitation", description: "Cancels a pending judge invitation." },
+  })
+
+  .get("/hackathons/:id/judging/progress", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
+
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+    if (result.status === "not_found") {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
     }
 
-    await logAudit({
-      principal,
-      action: "judge_invitation.cancelled",
-      resourceType: "judge_invitation",
-      resourceId: params.invitationId,
-    })
+    const { getJudgingProgress } = await import("@/lib/services/judging")
+    const progress = await getJudgingProgress(params.id)
 
-    return { success: true }
+    return progress
   }, {
-    detail: {
-      summary: "Cancel judge invitation",
-      description: "Cancels a pending judge invitation. Requires hackathons:write scope.",
-    },
+    detail: { summary: "Get judging progress", description: "Returns overall judging completion and per-judge breakdown." },
   })

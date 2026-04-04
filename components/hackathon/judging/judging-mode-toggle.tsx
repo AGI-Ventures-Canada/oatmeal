@@ -71,6 +71,15 @@ export function JudgingModeToggle({
               </span>
             </Label>
           </div>
+          <div className="flex items-start gap-3 mt-4">
+            <RadioGroupItem value="rubric" id="mode-rubric" className="mt-1" />
+            <Label htmlFor="mode-rubric" className="flex flex-col gap-1 cursor-pointer">
+              <span className="font-medium">Rubric</span>
+              <span className="text-sm text-muted-foreground font-normal">
+                Judges select from defined levels per criterion (e.g., &apos;Meets Expectations&apos;)
+              </span>
+            </Label>
+          </div>
         </RadioGroup>
       </CardContent>
     </Card>
