@@ -58,7 +58,7 @@ export const clerkMock = {
   }),
   useOrganizationList: () => ({
     userMemberships: { data: clerkState.memberships },
-    setActive: clerkState.setActive,
+    setActive: clerkState.setOrgActive ?? clerkState.setActive,
     createOrganization: clerkState.createOrganization,
   }),
   useSignIn: () => ({

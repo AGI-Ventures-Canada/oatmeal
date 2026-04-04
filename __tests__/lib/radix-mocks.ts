@@ -45,7 +45,7 @@ mock.module("@/components/ui/dialog", () => ({
   DialogPortal: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-const AlertDialogCtx = createContext({ open: true })
+const AlertDialogCtx = createContext({ open: false })
 
 mock.module("@/components/ui/alert-dialog", () => ({
   AlertDialog: ({ children, open, onOpenChange }: { children: React.ReactNode; open?: boolean; onOpenChange?: (v: boolean) => void }) => {

@@ -86,7 +86,14 @@ describe("judging-rounds service", () => {
 
   describe("activateRound", () => {
     it("deactivates all then activates one", async () => {
-      setMockFromImplementation(() => createChainableMock({ data: null, error: null }))
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({ data: null, error: null })
+        }
+        return createChainableMock({ data: { id: ROUND_ID }, error: null })
+      })
       expect(await activateRound(ROUND_ID, HACKATHON_ID)).toBe(true)
     })
 

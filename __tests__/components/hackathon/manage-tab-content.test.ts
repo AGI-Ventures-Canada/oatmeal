@@ -27,8 +27,36 @@ mock.module("@/lib/services/results", () => ({
   getResults: mockGetResults,
 }))
 
+mock.module("@/lib/services/prizes", () => ({
+  listPrizeAssignments: mock(() => Promise.resolve([])),
+}))
+
+const mockListFulfillments = mock(() => Promise.resolve([]))
+const mockGetFulfillmentSummary = mock(() =>
+  Promise.resolve({ total: 0, pending: 0, contacted: 0, shipped: 0, claimed: 0 })
+)
+
+mock.module("@/lib/services/prize-fulfillment", () => ({
+  listFulfillments: mockListFulfillments,
+  getFulfillmentSummary: mockGetFulfillmentSummary,
+}))
+
+const mockListReminders = mock(() => Promise.resolve([]))
+
+mock.module("@/lib/services/post-event-reminders", () => ({
+  listReminders: mockListReminders,
+}))
+
 mock.module("@/components/hackathon/judging/judging-tab-client", () => ({
   JudgingTabClient: (props: Record<string, unknown>) => props,
+}))
+
+mock.module("@/components/hackathon/prizes/prize-fulfillment-tracker", () => ({
+  PrizeFulfillmentTracker: () => null,
+}))
+
+mock.module("@/components/hackathon/post-event-panel", () => ({
+  PostEventPanel: () => null,
 }))
 
 const { JudgingTabContent } = await import(
@@ -39,6 +67,14 @@ const baseProps = {
   hackathonId: "11111111-1111-1111-1111-111111111111",
   submissions: [],
   resultsPublishedAt: null,
+  incompleteAssignments: 0,
+  feedbackSurveySentAt: null,
+  feedbackSurveyUrl: null,
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getJudgingClientProps(element: any): Record<string, unknown> {
+  return element.props.children[0].props
 }
 
 describe("JudgingTabContent", () => {
@@ -49,6 +85,9 @@ describe("JudgingTabContent", () => {
     mockListRounds.mockClear()
     mockListJudgeInvitations.mockClear()
     mockGetResults.mockClear()
+    mockListFulfillments.mockClear()
+    mockGetFulfillmentSummary.mockClear()
+    mockListReminders.mockClear()
   })
 
   it("fetches all data for the given hackathonId", async () => {
@@ -79,8 +118,8 @@ describe("JudgingTabContent", () => {
       },
     ])
 
-    const element = (await JudgingTabContent(baseProps)) as { props?: Record<string, unknown> } & Record<string, unknown>
-    const result = element.props ?? element
+    const element = await JudgingTabContent(baseProps)
+    const result = getJudgingClientProps(element)
     const prizes = result.prizes as Array<Record<string, unknown>>
 
     expect(prizes).toHaveLength(1)
@@ -104,8 +143,8 @@ describe("JudgingTabContent", () => {
       },
     ])
 
-    const element = (await JudgingTabContent(baseProps)) as { props?: Record<string, unknown> } & Record<string, unknown>
-    const result = element.props ?? element
+    const element = await JudgingTabContent(baseProps)
+    const result = getJudgingClientProps(element)
     const judges = result.judges as Array<Record<string, unknown>>
 
     expect(judges).toHaveLength(1)
@@ -115,17 +154,17 @@ describe("JudgingTabContent", () => {
   })
 
   it("sets isPublished=false when resultsPublishedAt is null", async () => {
-    const element = (await JudgingTabContent(baseProps)) as { props?: Record<string, unknown> } & Record<string, unknown>
-    const result = element.props ?? element
+    const element = await JudgingTabContent(baseProps)
+    const result = getJudgingClientProps(element)
     expect(result.isPublished).toBe(false)
   })
 
   it("sets isPublished=true when resultsPublishedAt has a value", async () => {
-    const element = (await JudgingTabContent({
+    const element = await JudgingTabContent({
       ...baseProps,
       resultsPublishedAt: "2026-03-01T00:00:00Z",
-    })) as { props?: Record<string, unknown> } & Record<string, unknown>
-    const result = element.props ?? element
+    })
+    const result = getJudgingClientProps(element)
     expect(result.isPublished).toBe(true)
   })
 
@@ -135,8 +174,8 @@ describe("JudgingTabContent", () => {
       { id: "r2", hackathonId: baseProps.hackathonId, name: "Round 2", status: "planned", displayOrder: 1, submissionCount: 0 },
     ])
 
-    const element = (await JudgingTabContent(baseProps)) as { props?: Record<string, unknown> } & Record<string, unknown>
-    const result = element.props ?? element
+    const element = await JudgingTabContent(baseProps)
+    const result = getJudgingClientProps(element)
     const rounds = result.rounds as Array<Record<string, unknown>>
 
     expect(rounds[0].isActive).toBe(true)
