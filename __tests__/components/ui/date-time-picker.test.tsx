@@ -99,14 +99,14 @@ describe("DateTimePicker", () => {
     expect(screen.getByText("PM")).toBeTruthy()
   })
 
-  it("initializes time to 12:00 PM when no value", () => {
+  it("initializes time to 09:00 AM when no value", () => {
     render(<DateTimePicker />)
     fireEvent.click(screen.getByRole("button"))
     const hoursInput = screen.getByLabelText("Hours") as HTMLInputElement
     const minutesInput = screen.getByLabelText("Minutes") as HTMLInputElement
-    expect(hoursInput.value).toBe("12")
+    expect(hoursInput.value).toBe("09")
     expect(minutesInput.value).toBe("00")
-    expect(screen.getByText("PM")).toBeTruthy()
+    expect(screen.getByText("AM")).toBeTruthy()
   })
 
   describe("to12Hour", () => {

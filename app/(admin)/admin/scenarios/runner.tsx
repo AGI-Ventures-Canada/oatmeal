@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { RefreshCw } from "lucide-react"
-import type { ActiveScenario, RoleCard, ScenarioOption } from "@/lib/services/admin-scenarios"
+import type { ActiveScenario, RoleCard } from "@/lib/services/admin-scenarios"
+
+type ScenarioOption = { key: string; label: string }
 
 type Scenario = {
   name: string
   description: string
-  options: ScenarioOption[]
+  options?: ScenarioOption[]
 }
 
 type ScenarioResult = {
@@ -238,9 +240,9 @@ export function ScenarioRunner({
 
         {!showExisting && !result && (
           <div className="space-y-3">
-            {scenario.options.length > 0 && (
+            {(scenario.options ?? []).length > 0 && (
               <div className="space-y-2">
-                {scenario.options.map((opt) => (
+                {(scenario.options ?? []).map((opt) => (
                   <div key={opt.key} className="flex items-center gap-2">
                     <Checkbox
                       id={`${scenario.name}-${opt.key}`}

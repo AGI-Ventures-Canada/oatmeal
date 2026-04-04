@@ -24,6 +24,15 @@ export function resetClerkState() {
   clerkState.setActive.mockClear()
   clerkState.openUserProfile.mockClear()
   clerkState.signOut.mockClear()
+  clerkState.client = null
+  clerkState.signInLoaded = false
+  clerkState.signIn = null
+  clerkState.signInSetActive.mockClear()
+  clerkState.signUpLoaded = false
+  clerkState.signUp = null
+  clerkState.signUpSetActive.mockClear()
+  clerkState.createOrganization = undefined
+  clerkState.setOrgActive = undefined
 }
 
 export const clerkMock = {
@@ -40,6 +49,8 @@ export const clerkMock = {
   useClerk: () => ({
     openUserProfile: clerkState.openUserProfile,
     signOut: clerkState.signOut,
+    client: clerkState.client,
+    setActive: clerkState.signInSetActive,
   }),
   useOrganization: () => ({
     organization: clerkState.organization,
@@ -47,6 +58,17 @@ export const clerkMock = {
   }),
   useOrganizationList: () => ({
     userMemberships: { data: clerkState.memberships },
-    setActive: clerkState.setActive,
+    setActive: clerkState.setOrgActive ?? clerkState.setActive,
+    createOrganization: clerkState.createOrganization,
+  }),
+  useSignIn: () => ({
+    isLoaded: clerkState.signInLoaded,
+    signIn: clerkState.signIn,
+    setActive: clerkState.signInSetActive,
+  }),
+  useSignUp: () => ({
+    isLoaded: clerkState.signUpLoaded,
+    signUp: clerkState.signUp,
+    setActive: clerkState.signUpSetActive,
   }),
 }

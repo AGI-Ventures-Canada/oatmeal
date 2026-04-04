@@ -401,7 +401,7 @@ describe("Results Service", () => {
       const result = await unpublishResults("h1", "t1")
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe("Failed to update hackathon status")
+      expect(result.error).toBe("Failed to update hackathon")
     })
   })
 

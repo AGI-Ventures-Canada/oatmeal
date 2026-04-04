@@ -1,18 +1,18 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react"
 
-const mockPush = mock(() => {})
-const mockSetActive = mock(() => Promise.resolve())
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const g = globalThis as any
 
-let signInCreateImpl: () => Promise<unknown> = () =>
+let signInCreateImpl: (...args: unknown[]) => Promise<unknown> = () =>
   Promise.resolve({ status: "complete", createdSessionId: "session_123" })
-let signInAttemptSecondFactorImpl: () => Promise<unknown> = () =>
+let signInAttemptSecondFactorImpl: (...args: unknown[]) => Promise<unknown> = () =>
   Promise.resolve({ status: "complete", createdSessionId: "session_123" })
-let signInAttemptFirstFactorImpl: () => Promise<unknown> = () =>
+let signInAttemptFirstFactorImpl: (...args: unknown[]) => Promise<unknown> = () =>
   Promise.resolve({ status: "needs_new_password" })
-let signInResetPasswordImpl: () => Promise<unknown> = () =>
+let signInResetPasswordImpl: (...args: unknown[]) => Promise<unknown> = () =>
   Promise.resolve({ status: "complete", createdSessionId: "session_123" })
-let signInAuthenticateWithRedirectImpl: () => Promise<unknown> = () =>
+let signInAuthenticateWithRedirectImpl: (...args: unknown[]) => Promise<unknown> = () =>
   Promise.resolve()
 
 const signInCreate = mock((...args: unknown[]) => signInCreateImpl(...args))
@@ -29,52 +29,21 @@ const signInAuthenticateWithRedirect = mock((...args: unknown[]) =>
   signInAuthenticateWithRedirectImpl(...args),
 )
 
-let isSignInLoaded = true
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
-}))
-
-mock.module("next/link", () => ({
-  default: ({
-    children,
-    href,
-  }: {
-    children: React.ReactNode
-    href: string
-  }) => <a href={href}>{children}</a>,
-}))
-
-mock.module("@clerk/nextjs", () => ({
-  useSignIn: () => ({
-    isLoaded: isSignInLoaded,
-    signIn: isSignInLoaded
-      ? {
-          create: signInCreate,
-          attemptSecondFactor: signInAttemptSecondFactor,
-          attemptFirstFactor: signInAttemptFirstFactor,
-          resetPassword: signInResetPassword,
-          authenticateWithRedirect: signInAuthenticateWithRedirect,
-        }
-      : undefined,
-    setActive: mockSetActive,
-  }),
-  useSignUp: () => ({ isLoaded: false, signUp: undefined, setActive: mock(() => Promise.resolve()) }),
-  useOrganizationList: () => ({ createOrganization: undefined, setActive: undefined }),
-}))
-
-mock.module("@clerk/nextjs/errors", () => ({
-  isClerkAPIResponseError: (err: unknown) =>
-    err !== null &&
-    typeof err === "object" &&
-    "errors" in (err as object) &&
-    Array.isArray((err as { errors: unknown }).errors),
-}))
+const mockSetActive = g.__clerkState.signInSetActive
+const mockPush = g.__nextNavState.router.push
 
 const { SignInForm } = await import("@/components/auth/sign-in-form")
 
 beforeEach(() => {
-  isSignInLoaded = true
+  g.__clerkState.signInLoaded = true
+  g.__clerkState.signIn = {
+    create: signInCreate,
+    attemptSecondFactor: signInAttemptSecondFactor,
+    attemptFirstFactor: signInAttemptFirstFactor,
+    resetPassword: signInResetPassword,
+    authenticateWithRedirect: signInAuthenticateWithRedirect,
+  }
+
   signInCreateImpl = () =>
     Promise.resolve({ status: "complete", createdSessionId: "session_123" })
   signInAttemptSecondFactorImpl = () =>
@@ -94,6 +63,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  g.__clerkState.signInLoaded = false
+  g.__clerkState.signIn = null
   cleanup()
 })
 
@@ -115,7 +86,8 @@ describe("SignInForm", () => {
     })
 
     it("shows loading spinner while Clerk is not loaded", () => {
-      isSignInLoaded = false
+      g.__clerkState.signInLoaded = false
+      g.__clerkState.signIn = undefined
       render(<SignInForm />)
       expect(screen.queryByLabelText("Email")).toBeNull()
     })

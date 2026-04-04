@@ -147,6 +147,7 @@ describe("JudgePage", () => {
   it("redirects organizers viewing their own hackathon to the event page", async () => {
     mockAuth.mockResolvedValue({ userId: "user_123", orgId: "org_test" })
     mockGetPublicHackathon.mockResolvedValue(mockHackathon)
+    mockGetRegistrationInfo.mockResolvedValue({ participantRole: "organizer" })
 
     let caught: unknown
     try {

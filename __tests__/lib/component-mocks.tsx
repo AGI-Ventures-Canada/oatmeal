@@ -134,7 +134,7 @@ export function resetComponentMocks() {
 // mock.module registrations
 // ============================================================================
 
-// Step 1: Mock leaf dependencies first
+// Mock leaf dependencies first
 
 mock.module("@/components/ui/dialog", () => ({
   Dialog: ({ children, open, onOpenChange }: { children: React.ReactNode; open?: boolean; onOpenChange?: (v: boolean) => void }) => {
@@ -170,7 +170,7 @@ mock.module("@/components/ui/dialog", () => ({
   DialogPortal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-// Step 2: Pre-import real component implementations (before mocking them)
+// Pre-import real component implementations (before mocking them)
 // These load using the mocked dependencies above, so hooks/dialog are already shimmed.
 const realMenuModule = await import("@/components/hackathon/create-hackathon-menu")
 realCreateHackathonMenu = realMenuModule.CreateHackathonMenu as typeof realCreateHackathonMenu
