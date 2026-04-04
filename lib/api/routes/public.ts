@@ -933,6 +933,61 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       description: "Declines a team invitation. Requires Clerk session.",
     },
   })
+  .get("/prize-claims/:token", async ({ params }) => {
+    const { getClaimByToken } = await import("@/lib/services/prize-fulfillment")
+    const claim = await getClaimByToken(params.token)
+
+    if (!claim) {
+      return new Response(
+        JSON.stringify({ error: "Prize claim not found", code: "not_found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    return claim
+  }, {
+    detail: {
+      summary: "Get prize claim details",
+      description: "Returns prize claim details by token. No authentication required.",
+    },
+  })
+  .post("/prize-claims/:token/claim", async ({ params, body }) => {
+    const { recipientName, recipientEmail, shippingAddress } = body as {
+      recipientName: string
+      recipientEmail: string
+      shippingAddress?: string
+    }
+
+    if (!recipientName || !recipientEmail) {
+      return new Response(
+        JSON.stringify({ error: "Name and email are required", code: "validation" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { claimPrize } = await import("@/lib/services/prize-fulfillment")
+    const result = await claimPrize(params.token, { recipientName, recipientEmail, shippingAddress })
+
+    if (!result.success) {
+      const statusCode = result.code === "not_found" ? 404 : 400
+      return new Response(
+        JSON.stringify({ error: result.error, code: result.code }),
+        { status: statusCode, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    return { success: true }
+  }, {
+    body: t.Object({
+      recipientName: t.String({ description: "Full name of the prize recipient" }),
+      recipientEmail: t.String({ description: "Email address of the prize recipient" }),
+      shippingAddress: t.Optional(t.String({ description: "Shipping address for physical prizes" })),
+    }),
+    detail: {
+      summary: "Claim a prize",
+      description: "Submits a prize claim with recipient details. No authentication required — the token is the authorization.",
+    },
+  })
   .get("/hackathons/:slug/judging/assignments", async ({ params }) => {
     const { userId } = await auth()
 

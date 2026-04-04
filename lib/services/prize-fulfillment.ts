@@ -1,6 +1,9 @@
+import { randomBytes } from "crypto"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { PrizeFulfillment, PrizeFulfillmentStatus } from "@/lib/db/hackathon-types"
+
+const CLAIM_TOKEN_EXPIRY_DAYS = 30
 
 export type FulfillmentWithDetails = PrizeFulfillment & {
   prizeName: string
@@ -47,10 +50,15 @@ export async function initializeFulfillments(hackathonId: string): Promise<numbe
 
   if (newAssignments.length === 0) return 0
 
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + CLAIM_TOKEN_EXPIRY_DAYS)
+
   const rows = newAssignments.map((a) => ({
     prize_assignment_id: a.id,
     hackathon_id: hackathonId,
     status: "assigned" as const,
+    claim_token: randomBytes(32).toString("base64url"),
+    claim_token_expires_at: expiresAt.toISOString(),
   }))
 
   const { error } = await client.from("prize_fulfillments").insert(rows)
@@ -173,6 +181,152 @@ export async function updateFulfillmentStatus(
   }
 
   return data as unknown as PrizeFulfillment
+}
+
+export type ClaimWithDetails = {
+  fulfillmentId: string
+  status: PrizeFulfillmentStatus
+  prizeName: string
+  prizeValue: string | null
+  hackathonName: string
+  hackathonSlug: string
+  submissionTitle: string
+  teamName: string | null
+  recipientName: string | null
+  recipientEmail: string | null
+  shippingAddress: string | null
+  claimedAt: string | null
+  expiresAt: string | null
+}
+
+export async function getClaimByToken(token: string): Promise<ClaimWithDetails | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: fulfillment, error } = await client
+    .from("prize_fulfillments")
+    .select(`
+      id, status, recipient_name, recipient_email, shipping_address, claimed_at, claim_token_expires_at,
+      prize_assignment:prize_assignments!prize_assignment_id(
+        prize:prizes!prize_id(name, value),
+        submission:submissions!submission_id(title, team_id, hackathon_id)
+      )
+    `)
+    .eq("claim_token", token)
+    .single()
+
+  if (error || !fulfillment) return null
+
+  const pa = (fulfillment as Record<string, unknown>).prize_assignment as {
+    prize: { name: string; value: string | null }
+    submission: { title: string; team_id: string | null; hackathon_id: string }
+  }
+
+  const { data: hackathon } = await client
+    .from("hackathons")
+    .select("name, slug")
+    .eq("id", pa.submission.hackathon_id)
+    .single()
+
+  let teamName: string | null = null
+  if (pa.submission.team_id) {
+    const { data: team } = await client
+      .from("teams")
+      .select("name")
+      .eq("id", pa.submission.team_id)
+      .single()
+    teamName = team?.name ?? null
+  }
+
+  return {
+    fulfillmentId: fulfillment.id,
+    status: fulfillment.status as PrizeFulfillmentStatus,
+    prizeName: pa.prize.name,
+    prizeValue: pa.prize.value,
+    hackathonName: hackathon?.name ?? "Hackathon",
+    hackathonSlug: hackathon?.slug ?? "",
+    submissionTitle: pa.submission.title,
+    teamName,
+    recipientName: fulfillment.recipient_name,
+    recipientEmail: fulfillment.recipient_email,
+    shippingAddress: fulfillment.shipping_address,
+    claimedAt: fulfillment.claimed_at,
+    expiresAt: fulfillment.claim_token_expires_at,
+  }
+}
+
+export type ClaimPrizeResult =
+  | { success: true }
+  | { success: false; error: string; code: string }
+
+export async function claimPrize(
+  token: string,
+  data: {
+    recipientName: string
+    recipientEmail: string
+    shippingAddress?: string
+  }
+): Promise<ClaimPrizeResult> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: fulfillment, error } = await client
+    .from("prize_fulfillments")
+    .select("id, status, hackathon_id, claim_token_expires_at")
+    .eq("claim_token", token)
+    .single()
+
+  if (error || !fulfillment) {
+    return { success: false, error: "Prize claim not found", code: "not_found" }
+  }
+
+  if (fulfillment.claim_token_expires_at && new Date(fulfillment.claim_token_expires_at) < new Date()) {
+    return { success: false, error: "This claim link has expired. Contact the organizer for a new one.", code: "expired" }
+  }
+
+  if (fulfillment.status === "claimed") {
+    return { success: false, error: "This prize has already been claimed", code: "already_claimed" }
+  }
+
+  const now = new Date().toISOString()
+  const updateData: Record<string, unknown> = {
+    status: "claimed",
+    claimed_at: now,
+    updated_at: now,
+    recipient_name: data.recipientName,
+    recipient_email: data.recipientEmail,
+  }
+  if (data.shippingAddress) {
+    updateData.shipping_address = data.shippingAddress
+  }
+
+  const { error: updateError } = await client
+    .from("prize_fulfillments")
+    .update(updateData)
+    .eq("id", fulfillment.id)
+
+  if (updateError) {
+    console.error("Failed to claim prize:", updateError)
+    return { success: false, error: "Failed to claim prize", code: "update_failed" }
+  }
+
+  return { success: true }
+}
+
+export async function getClaimTokensForHackathon(
+  hackathonId: string
+): Promise<Record<string, string>> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data, error } = await client
+    .from("prize_fulfillments")
+    .select("prize_assignment_id, claim_token")
+    .eq("hackathon_id", hackathonId)
+    .not("claim_token", "is", null)
+
+  if (error || !data) return {}
+
+  return Object.fromEntries(
+    data.map((d) => [d.prize_assignment_id, d.claim_token as string])
+  )
 }
 
 export async function getFulfillmentSummary(hackathonId: string): Promise<FulfillmentSummary> {
