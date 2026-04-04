@@ -17,29 +17,18 @@ Sponsors appear on the public event page grouped by tier. Each sponsor can have:
 
 Create sponsors with a name and tier assignment:
 
-```typescript title="add-sponsors.ts"
-const sponsors = [
-  { name: "Anthropic", tier: "title", websiteUrl: "https://anthropic.com" },
-  { name: "Vercel", tier: "gold", websiteUrl: "https://vercel.com" },
-  { name: "Supabase", tier: "gold", websiteUrl: "https://supabase.com" },
-  { name: "Clerk", tier: "silver", websiteUrl: "https://clerk.com" },
-  { name: "Local Startup Hub", tier: "partner" },
-]
-
-for (const sponsor of sponsors) {
-  await fetch(
-    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors`,
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(sponsor),
-    }
-  )
-}
+```bash title="Add a sponsor"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Anthropic",
+    "tier": "title",
+    "websiteUrl": "https://anthropic.com"
+  }' | jq .
 ```
+
+Repeat for each sponsor, changing the name, tier, and URL.
 
 ## Tier System
 
@@ -57,32 +46,18 @@ Sponsors are grouped by tier on the event page, with higher tiers displayed more
 
 Upload separate logos for light and dark themes:
 
-```typescript title="upload-logos.ts"
-async function uploadSponsorLogo(
-  hackathonId: string,
-  sponsorId: string,
-  file: File,
-  variant: "light" | "dark"
-) {
-  const formData = new FormData()
-  formData.append("file", file)
-  formData.append("variant", variant)
+```bash title="Upload light logo for a sponsor"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/$SPONSOR_ID/logo" \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@sponsor-logo-light.png" \
+  -F "variant=light" | jq .
+```
 
-  const res = await fetch(
-    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}/logo`,
-    {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${API_KEY}` },
-      body: formData,
-    }
-  )
-
-  const { url } = await res.json()
-  return url
-}
-
-await uploadSponsorLogo(hackathonId, sponsorId, lightLogo, "light")
-await uploadSponsorLogo(hackathonId, sponsorId, darkLogo, "dark")
+```bash title="Upload dark logo for a sponsor"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/$SPONSOR_ID/logo" \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@sponsor-logo-dark.png" \
+  -F "variant=dark" | jq .
 ```
 
 Accepted formats: PNG, JPEG, WebP, SVG (max 5MB).
@@ -91,51 +66,35 @@ Accepted formats: PNG, JPEG, WebP, SVG (max 5MB).
 
 Within each tier, sponsors are displayed in a custom order. Use the reorder endpoint to set the exact position:
 
-```typescript title="reorder.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
+First, list sponsors to get their IDs:
 
-const { sponsors } = await res.json()
+```bash title="List sponsors"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors" \
+  -H "Authorization: Bearer $API_KEY" | jq '.sponsors[] | {id, name}'
+```
 
-const reordered = sponsors
-  .sort((a, b) => a.name.localeCompare(b.name))
-  .map((s) => s.id)
+Then send the reordered list of IDs:
 
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/reorder`,
-  {
-    method: "PATCH",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ sponsorIds: reordered }),
-  }
-)
+```bash title="Reorder sponsors"
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/reorder" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sponsorIds": ["sponsor_id_1", "sponsor_id_2", "sponsor_id_3"]
+  }' | jq .
 ```
 
 ## Linking to Organizations
 
 If a sponsor also has an Oatmeal organization, link them via `sponsorTenantId`. This shows the organization's profile information alongside the sponsor listing:
 
-```typescript title="link-org.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
-  {
-    method: "PATCH",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      sponsorTenantId: "org_xyz",
-    }),
-  }
-)
+```bash title="Link sponsor to an organization"
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/sponsors/$SPONSOR_ID" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sponsorTenantId": "org_xyz"
+  }' | jq .
 ```
 
 ## Best Practices

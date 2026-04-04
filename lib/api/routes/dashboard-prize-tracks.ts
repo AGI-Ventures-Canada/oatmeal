@@ -370,6 +370,8 @@ export const dashboardPrizeTracksRoutes = new Elysia()
           t.Literal("top_n"),
           t.Literal("compliance"),
           t.Literal("crowd"),
+          t.Literal("points"),
+          t.Literal("subjective"),
         ])),
         status: t.Optional(t.Union([
           t.Literal("planned"),
@@ -382,6 +384,85 @@ export const dashboardPrizeTracksRoutes = new Elysia()
           t.Literal("threshold"),
           t.Literal("manual"),
         ])),
+      }),
+    }
+  )
+  .post(
+    "/hackathons/:id/prize-tracks/:trackId/rounds",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { createRound, listRounds, createDefaultBuckets } = await import("@/lib/services/prize-tracks")
+      const existingRounds = await listRounds(params.trackId)
+      const nextOrder = existingRounds.length
+
+      const round = await createRound(params.id, params.trackId, {
+        name: body.name,
+        style: body.style,
+        status: "planned",
+        displayOrder: nextOrder,
+      })
+
+      if (!round) {
+        return new Response(JSON.stringify({ error: "Failed to create round" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      if (body.style === "bucket_sort") {
+        await createDefaultBuckets(round.id)
+      }
+
+      await logAudit({
+        principal,
+        action: "round.created",
+        resourceType: "judging_round",
+        resourceId: round.id,
+        metadata: { hackathonId: params.id, trackId: params.trackId, style: body.style },
+      })
+
+      return {
+        id: round.id,
+        name: round.name,
+        style: round.style,
+        status: round.status,
+        displayOrder: round.display_order,
+      }
+    },
+    {
+      detail: {
+        summary: "Create round",
+        description: "Creates a new judging round within a prize track. Automatically sets display order. Creates default buckets for bucket_sort style. Requires hackathons:write scope.",
+      },
+      body: t.Object({
+        name: t.String({ minLength: 1 }),
+        style: t.Union([
+          t.Literal("bucket_sort"),
+          t.Literal("gate_check"),
+          t.Literal("head_to_head"),
+          t.Literal("top_n"),
+          t.Literal("compliance"),
+          t.Literal("crowd"),
+          t.Literal("points"),
+          t.Literal("subjective"),
+        ]),
       }),
     }
   )

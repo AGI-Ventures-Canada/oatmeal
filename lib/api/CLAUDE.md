@@ -229,10 +229,7 @@ const hash = createHmac("sha256", API_KEY_SECRET).update(bearerToken).digest("he
 })
 ```
 
-2. **Code samples** - Update `lib/api/API_SAMPLES.md` with examples for:
-   - curl
-   - TypeScript
-   - Python
+2. **Code samples** - Update `lib/api/API_SAMPLES.md` with curl examples only (no TypeScript/Python SDK examples)
 
 3. **Request/response types** - Document body parameters with descriptions:
 ```typescript

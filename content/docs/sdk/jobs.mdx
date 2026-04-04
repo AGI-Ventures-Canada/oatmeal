@@ -43,27 +43,25 @@ interface JobResult {
 
 `POST /api/v1/jobs` — requires `hackathons:write` scope.
 
-```typescript title="create-job.ts"
-const res = await fetch(`${BASE_URL}/api/v1/jobs`, {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    type: "process-document",
-    input: {
-      url: "https://example.com/document.pdf",
-      options: { extractTables: true },
+```bash title="Create a job"
+curl -s -X POST "$BASE_URL/api/v1/jobs" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "process-document",
+    "input": {
+      "url": "https://example.com/document.pdf",
+      "options": {"extractTables": true}
     },
-    idempotencyKey: "doc-abc-123",
-  }),
-})
-
-const job = await res.json()
-console.log("Job created:", job.id)
-console.log("Status:", job.status) // "queued"
+    "idempotencyKey": "doc-abc-123"
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon jobs create --type process-document --input '{"url": "https://example.com/document.pdf"}'
+```
+</Callout>
 
 ### Request Body
 
@@ -90,17 +88,16 @@ The idempotency key can also be sent as an `Idempotency-Key` HTTP header.
 
 `GET /api/v1/jobs/:id` — requires `hackathons:read` scope.
 
-```typescript title="get-status.ts"
-const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}`, {
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-  },
-})
-
-const job = await res.json()
-console.log("Status:", job.status)
-console.log("Created:", job.createdAt)
+```bash title="Get job status"
+curl -s "$BASE_URL/api/v1/jobs/$JOB_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon jobs get $JOB_ID
+```
+</Callout>
 
 ### Response
 
@@ -121,20 +118,16 @@ console.log("Created:", job.createdAt)
 
 Returns `202` with `{ "error": "Job not completed", "status": "running" }` if the job is still in progress.
 
-```typescript title="get-result.ts"
-const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}/result`, {
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-  },
-})
-
-if (res.status === 202) {
-  console.log("Job still processing...")
-} else {
-  const data = await res.json()
-  console.log("Result:", data.result)
-}
+```bash title="Get job result"
+curl -s "$BASE_URL/api/v1/jobs/$JOB_ID/result" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon jobs result $JOB_ID
+```
+</Callout>
 
 ### Response (completed)
 
@@ -150,29 +143,19 @@ if (res.status === 202) {
 
 ## Polling Helper
 
-For convenience, here is a simple polling function you can use to wait for job completion:
+For convenience, here is a simple polling loop you can use to wait for job completion:
 
-```typescript title="polling-helper.ts"
-async function waitForResult(
-  jobId: string,
-  options?: { maxAttempts?: number; intervalMs?: number }
-) {
-  const { maxAttempts = 60, intervalMs = 1000 } = options ?? {}
+```bash title="Poll for job completion"
+while true; do
+  STATUS=$(curl -s "$BASE_URL/api/v1/jobs/$JOB_ID" \
+    -H "Authorization: Bearer $API_KEY" | jq -r '.status')
+  [ "$STATUS" = "succeeded" ] || [ "$STATUS" = "failed" ] && break
+  echo "Status: $STATUS — waiting..."
+  sleep 2
+done
 
-  for (let i = 0; i < maxAttempts; i++) {
-    const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}/result`, {
-      headers: { "Authorization": `Bearer ${API_KEY}` },
-    })
-
-    if (res.status !== 202) {
-      return await res.json()
-    }
-
-    await new Promise((r) => setTimeout(r, intervalMs))
-  }
-
-  throw new Error(`Job ${jobId} did not complete within ${maxAttempts} attempts`)
-}
+curl -s "$BASE_URL/api/v1/jobs/$JOB_ID/result" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 ## Cancel a Job
@@ -181,52 +164,52 @@ async function waitForResult(
 
 Cancels a queued or running job. Cannot cancel already-completed jobs.
 
-```typescript title="cancel-job.ts"
-const res = await fetch(`${BASE_URL}/api/v1/jobs/${jobId}/cancel`, {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-  },
-})
-
-const data = await res.json()
-if (data.success) {
-  console.log("Job canceled")
-}
+```bash title="Cancel a job"
+curl -s -X POST "$BASE_URL/api/v1/jobs/$JOB_ID/cancel" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon jobs cancel $JOB_ID
+```
+</Callout>
 
 ## Full Example
 
-```typescript title="full-example.ts"
-const API_KEY = process.env.OATMEAL_API_KEY!
-const BASE_URL = process.env.OATMEAL_BASE_URL!
+```bash title="Create a job, poll until done, then fetch the result"
+#!/usr/bin/env bash
+set -euo pipefail
 
-async function processDocument(url: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/jobs`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      type: "process-document",
-      input: { url },
-    }),
-  })
+# Create the job
+JOB_ID=$(curl -s -X POST "$BASE_URL/api/v1/jobs" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "process-document",
+    "input": {"url": "https://example.com/document.pdf"}
+  }' | jq -r '.id')
 
-  if (!res.ok) {
-    const err = await res.json()
-    throw new Error(err.error)
-  }
+echo "Created job: $JOB_ID"
 
-  const job = await res.json()
+# Poll until completion
+while true; do
+  STATUS=$(curl -s "$BASE_URL/api/v1/jobs/$JOB_ID" \
+    -H "Authorization: Bearer $API_KEY" | jq -r '.status')
+  [ "$STATUS" = "succeeded" ] || [ "$STATUS" = "failed" ] && break
+  echo "Status: $STATUS — waiting..."
+  sleep 2
+done
 
-  const result = await waitForResult(job.id)
+echo "Final status: $STATUS"
 
-  if (result.status === "failed") {
-    throw new Error(String(result.error))
-  }
-
-  return result.result
-}
+# Fetch the result
+curl -s "$BASE_URL/api/v1/jobs/$JOB_ID/result" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon jobs list
+```
+</Callout>

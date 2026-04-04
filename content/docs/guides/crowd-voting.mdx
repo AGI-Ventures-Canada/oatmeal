@@ -17,72 +17,32 @@ Key rules:
 
 Crowd voting is available by default on all hackathons. To award a prize for the crowd favorite, create a prize with type `"crowd"`:
 
-```typescript title="create-crowd-prize.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: "People's Choice",
-      description: "Most voted submission by the community",
-      value: "$500",
-      type: "crowd",
-    }),
-  }
-)
+```bash title="Create a crowd prize"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "People'\''s Choice",
+    "description": "Most voted submission by the community",
+    "value": "$500",
+    "type": "crowd"
+  }' | jq .
 ```
 
 ## Casting a Vote
 
-Users vote via the public API with a Clerk session:
-
-```typescript title="vote.ts"
-await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/vote`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ submissionId: "sub_xyz456" }),
-  }
-)
-```
-
-To change your vote, just vote for a different submission — the previous vote is automatically replaced.
+Participants vote through the web interface on the event page. Each user gets one vote per hackathon — voting for a different submission automatically replaces the previous vote.
 
 ## Removing a Vote
 
-```typescript title="remove-vote.ts"
-await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/vote`,
-  {
-    method: "DELETE",
-    credentials: "include",
-  }
-)
-```
+Participants can change or remove their vote through the web interface at any time while voting is open.
 
 ## Viewing Results
 
 Vote counts are public — no authentication required:
 
-```typescript title="view-results.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/vote`
-)
-
-const { userVote, counts } = await res.json()
-
-const sorted = counts.sort((a, b) => b.voteCount - a.voteCount)
-
-for (const { submissionId, voteCount } of sorted) {
-  const marker = submissionId === userVote ? " ← your vote" : ""
-  console.log(`${submissionId}: ${voteCount} votes${marker}`)
-}
+```bash title="Fetch vote counts"
+curl -s "$BASE_URL/api/public/hackathons/$SLUG/vote" | jq '.counts | sort_by(-.voteCount)'
 ```
 
 When authenticated, the response includes `userVote` with the submission ID the user voted for. When not authenticated, `userVote` is `null`.
@@ -91,25 +51,22 @@ When authenticated, the response includes `userVote` with the submission ID the 
 
 After voting closes, assign the crowd prize to the top-voted submission:
 
-```typescript title="assign-crowd-prize.ts"
-const voteRes = await fetch(
-  `${BASE_URL}/api/public/hackathons/${slug}/vote`
-)
+First, fetch vote counts and find the top-voted submission:
 
-const { counts } = await voteRes.json()
-const winner = counts.sort((a, b) => b.voteCount - a.voteCount)[0]
+```bash title="Find the crowd winner"
+curl -s "$BASE_URL/api/public/hackathons/$SLUG/vote" \
+  | jq -r '.counts | sort_by(-.voteCount) | .[0] | .submissionId'
+```
 
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes/${crowdPrizeId}/assign`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ submissionId: winner.submissionId }),
-  }
-)
+Then assign the prize to that submission:
+
+```bash title="Assign the crowd prize"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/$CROWD_PRIZE_ID/assign" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "submissionId": "WINNER_SUBMISSION_ID"
+  }' | jq .
 ```
 
 ## Best Practices

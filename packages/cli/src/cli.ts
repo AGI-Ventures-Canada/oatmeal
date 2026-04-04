@@ -121,7 +121,20 @@ const BANNER = `
     judging auto-assign <id>                             Auto-assign judges
     judging invitations list <id>                        List invitations
     judging invitations cancel <id> <iid>                Cancel invitation
+    judging track-assign <id>                            Assign judge to track
+    judging track-unassign <id>                          Remove judge from track
     judging pick-results <id>                            View pick results
+
+  ${pc.dim("PRIZE TRACKS")}
+    tracks list <id>                                     List prize tracks
+    tracks get <id> <tid>                                Get track details
+    tracks create <id>                                   Create a track
+    tracks update <id> <tid>                             Update a track
+    tracks delete <id> <tid>                             Delete a track
+    tracks buckets <id> <tid> <rid>                      Replace bucket definitions
+    tracks update-round <id> <tid> <rid>                 Update a round
+    tracks activate-round <id> <tid> <rid>               Activate a round
+    tracks calculate-results <id> <tid> <rid>            Calculate round results
 
   ${pc.dim("PRIZES")}
     prizes list <id>                         List prizes
@@ -442,6 +455,18 @@ async function main() {
             }
             break
 
+          case "track-assign": {
+            const { runTrackAssign } = await import("./commands/judging/track-assign.js")
+            await runTrackAssign(client, hackathonId, rest.slice(3).concat(flags.json ? ["--json"] : []))
+            break
+          }
+
+          case "track-unassign": {
+            const { runTrackUnassign } = await import("./commands/judging/track-unassign.js")
+            await runTrackUnassign(client, hackathonId, rest.slice(3).concat(flags.json ? ["--json"] : []).concat(flags.yes ? ["--yes"] : []))
+            break
+          }
+
           case "pick-results": {
             const { runPickResults } = await import("./commands/judging/pick-results.js")
             await runPickResults(client, hackathonId, { json: flags.json })
@@ -450,6 +475,61 @@ async function main() {
 
           default:
             console.error(`Unknown judging command: ${sub}`)
+            process.exit(1)
+        }
+        break
+      }
+
+      case "tracks": {
+        const client = createAuthenticatedClient(flags)
+        switch (sub) {
+          case "list": {
+            const { runTracksList } = await import("./commands/tracks/list.js")
+            await runTracksList(client, rest[2], { json: flags.json })
+            break
+          }
+          case "get": {
+            const { runTracksGet } = await import("./commands/tracks/get.js")
+            await runTracksGet(client, rest[2], rest[3], { json: flags.json })
+            break
+          }
+          case "create": {
+            const { runTracksCreate } = await import("./commands/tracks/create.js")
+            await runTracksCreate(client, rest[2], rest.slice(3).concat(flags.json ? ["--json"] : []))
+            break
+          }
+          case "update": {
+            const { runTracksUpdate } = await import("./commands/tracks/update.js")
+            await runTracksUpdate(client, rest[2], rest[3], rest.slice(4).concat(flags.json ? ["--json"] : []))
+            break
+          }
+          case "delete": {
+            const { runTracksDelete } = await import("./commands/tracks/delete.js")
+            await runTracksDelete(client, rest[2], rest[3], { yes: flags.yes })
+            break
+          }
+          case "buckets": {
+            const { runTracksBuckets } = await import("./commands/tracks/buckets.js")
+            await runTracksBuckets(client, rest[2], rest[3], rest[4], rest.slice(5).concat(flags.json ? ["--json"] : []))
+            break
+          }
+          case "update-round": {
+            const { runTracksUpdateRound } = await import("./commands/tracks/update-round.js")
+            await runTracksUpdateRound(client, rest[2], rest[3], rest[4], rest.slice(5).concat(flags.json ? ["--json"] : []))
+            break
+          }
+          case "activate-round": {
+            const { runTracksActivateRound } = await import("./commands/tracks/activate-round.js")
+            await runTracksActivateRound(client, rest[2], rest[3], rest[4], { json: flags.json })
+            break
+          }
+          case "calculate-results": {
+            const { runTracksCalculateResults } = await import("./commands/tracks/calculate-results.js")
+            await runTracksCalculateResults(client, rest[2], rest[3], rest[4], { json: flags.json })
+            break
+          }
+          default:
+            console.error(`Unknown tracks command: ${sub}. Run "hackathon tracks --help" for usage.`)
             process.exit(1)
         }
         break

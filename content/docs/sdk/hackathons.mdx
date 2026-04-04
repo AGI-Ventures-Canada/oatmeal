@@ -76,23 +76,21 @@ interface Hackathon {
 
 `POST /api/dashboard/hackathons` — requires `hackathons:write` scope.
 
-```typescript title="create-hackathon.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/hackathons`, {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    name: "AI Innovation Challenge 2026",
-    description: "Build the future of AI-powered tools",
-  }),
-})
-
-const hackathon = await res.json()
-console.log("Created:", hackathon.id)
-console.log("Slug:", hackathon.slug)
+```bash title="Create a hackathon"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "AI Innovation Challenge 2026",
+    "description": "Build the future of AI-powered tools"
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon events create --name "AI Innovation Challenge 2026" --description "Build the future of AI-powered tools"
+```
+</Callout>
 
 ### Request Body
 
@@ -115,19 +113,16 @@ console.log("Slug:", hackathon.slug)
 
 `GET /api/dashboard/hackathons` — requires `hackathons:read` scope.
 
-```typescript title="list-hackathons.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/hackathons?q=innovation`, {
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-  },
-})
-
-const { hackathons } = await res.json()
-
-for (const h of hackathons) {
-  console.log(`${h.name} (${h.status}) - ${h.slug}`)
-}
+```bash title="List your hackathons"
+curl -s "$BASE_URL/api/dashboard/hackathons?q=innovation" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon events list --json
+```
+</Callout>
 
 ### Query Parameters
 
@@ -160,18 +155,16 @@ for (const h of hackathons) {
 
 `GET /api/dashboard/hackathons/:id` — requires `hackathons:read` scope.
 
-```typescript title="get-hackathon.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/hackathons/${hackathonId}`, {
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-  },
-})
-
-const hackathon = await res.json()
-console.log("Name:", hackathon.name)
-console.log("Status:", hackathon.status)
-console.log("Judging mode:", hackathon.judgingMode)
+```bash title="Get hackathon details"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon events get --id "$HACKATHON_ID" --json
+```
+</Callout>
 
 ### Response
 
@@ -183,34 +176,30 @@ Returns the full `Hackathon` object as defined in the Response Types section.
 
 All fields are optional. Only include the fields you want to change.
 
-```typescript title="update-settings.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/settings`,
-  {
-    method: "PATCH",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      status: "registration_open",
-      startsAt: "2026-04-01T09:00:00Z",
-      endsAt: "2026-04-03T17:00:00Z",
-      registrationOpensAt: "2026-03-01T00:00:00Z",
-      registrationClosesAt: "2026-03-28T23:59:59Z",
-      maxParticipants: 200,
-      minTeamSize: 2,
-      maxTeamSize: 5,
-      allowSolo: false,
-      judgingMode: "points",
-      anonymousJudging: true,
-    }),
-  }
-)
-
-const updated = await res.json()
-console.log("Updated status:", updated.status)
+```bash title="Update hackathon settings"
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/settings" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "registration_open",
+    "startsAt": "2026-04-01T09:00:00Z",
+    "endsAt": "2026-04-03T17:00:00Z",
+    "registrationOpensAt": "2026-03-01T00:00:00Z",
+    "registrationClosesAt": "2026-03-28T23:59:59Z",
+    "maxParticipants": 200,
+    "minTeamSize": 2,
+    "maxTeamSize": 5,
+    "allowSolo": false,
+    "judgingMode": "points",
+    "anonymousJudging": true
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon events update --id "$HACKATHON_ID" --status registration_open --max-participants 200
+```
+</Callout>
 
 ### Request Body
 
@@ -246,20 +235,16 @@ Returns the full updated `Hackathon` object.
 Deleting a hackathon is permanent and cascades to all participants, submissions, judging data, and results.
 </Callout>
 
-```typescript title="delete-hackathon.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}`,
-  {
-    method: "DELETE",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-    },
-  }
-)
-
-const { success } = await res.json()
-console.log("Deleted:", success)
+```bash title="Delete a hackathon"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon events delete --id "$HACKATHON_ID"
+```
+</Callout>
 
 ## Upload Banner
 
@@ -267,41 +252,19 @@ console.log("Deleted:", success)
 
 Accepts PNG, JPEG, or WebP images up to 50MB.
 
-```typescript title="upload-banner.ts"
-const formData = new FormData()
-formData.append("file", bannerFile)
-
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/banner`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-    },
-    body: formData,
-  }
-)
-
-const { url } = await res.json()
-console.log("Banner URL:", url)
+```bash title="Upload banner image"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/banner" \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@banner.webp" | jq .
 ```
 
 ## Remove Banner
 
 `DELETE /api/dashboard/hackathons/:id/banner` — requires `hackathons:write` scope.
 
-```typescript title="delete-banner.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/banner`,
-  {
-    method: "DELETE",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-    },
-  }
-)
-
-const { success } = await res.json()
+```bash title="Remove banner image"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/banner" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
 
 ## List Public Hackathons
@@ -310,17 +273,8 @@ const { success } = await res.json()
 
 Returns published hackathons with pagination.
 
-```typescript title="browse-hackathons.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons?q=AI&page=1&limit=10`
-)
-
-const { hackathons, total, page, totalPages } = await res.json()
-
-for (const h of hackathons) {
-  console.log(`${h.name} by ${h.organizer.name} (${h.status})`)
-}
-console.log(`Page ${page} of ${totalPages} (${total} total)`)
+```bash title="Browse public hackathons"
+curl -s "$BASE_URL/api/public/hackathons?q=AI&page=1&limit=10" | jq .
 ```
 
 ### Query Parameters
@@ -367,12 +321,8 @@ console.log(`Page ${page} of ${totalPages} (${total} total)`)
 
 Returns full hackathon details including sponsors.
 
-```typescript title="get-public-hackathon.ts"
-const res = await fetch(`${BASE_URL}/api/public/hackathons/ai-innovation-2026`)
-
-const hackathon = await res.json()
-console.log("Name:", hackathon.name)
-console.log("Sponsors:", hackathon.sponsors.length)
+```bash title="Get public hackathon by slug"
+curl -s "$BASE_URL/api/public/hackathons/ai-innovation-2026" | jq .
 ```
 
 ### Response
@@ -415,46 +365,38 @@ console.log("Sponsors:", hackathon.sponsors.length)
 
 ## Full Example
 
-```typescript title="full-example.ts"
-const API_KEY = process.env.OATMEAL_API_KEY!
-const BASE_URL = process.env.OATMEAL_BASE_URL!
+```bash title="Create and configure a hackathon"
+#!/usr/bin/env bash
+set -euo pipefail
 
-async function createAndConfigureHackathon() {
-  const createRes = await fetch(`${BASE_URL}/api/dashboard/hackathons`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: "Spring Hack 2026",
-      description: "48-hour sprint to build something amazing",
-    }),
-  })
+# Create the hackathon
+HACKATHON_ID=$(curl -s -X POST "$BASE_URL/api/dashboard/hackathons" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Spring Hack 2026",
+    "description": "48-hour sprint to build something amazing"
+  }' | jq -r '.id')
 
-  const { id } = await createRes.json()
+echo "Created hackathon: $HACKATHON_ID"
 
-  await fetch(`${BASE_URL}/api/dashboard/hackathons/${id}/settings`, {
-    method: "PATCH",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      status: "published",
-      startsAt: "2026-05-01T09:00:00Z",
-      endsAt: "2026-05-03T09:00:00Z",
-      registrationOpensAt: "2026-04-01T00:00:00Z",
-      registrationClosesAt: "2026-04-28T23:59:59Z",
-      maxParticipants: 100,
-      minTeamSize: 2,
-      maxTeamSize: 4,
-      allowSolo: true,
-      judgingMode: "points",
-      anonymousJudging: true,
-    }),
-  })
+# Configure settings
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/settings" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "published",
+    "startsAt": "2026-05-01T09:00:00Z",
+    "endsAt": "2026-05-03T09:00:00Z",
+    "registrationOpensAt": "2026-04-01T00:00:00Z",
+    "registrationClosesAt": "2026-04-28T23:59:59Z",
+    "maxParticipants": 100,
+    "minTeamSize": 2,
+    "maxTeamSize": 4,
+    "allowSolo": true,
+    "judgingMode": "points",
+    "anonymousJudging": true
+  }' | jq .
 
-  console.log(`Hackathon ${id} created and configured`)
-}
+echo "Hackathon $HACKATHON_ID created and configured"
 ```

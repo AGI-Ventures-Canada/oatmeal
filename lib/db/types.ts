@@ -172,7 +172,8 @@ export type Database = {
           id: string
           label: string
           level: number
-          round_id: string
+          prize_id: string | null
+          round_id: string | null
         }
         Insert: {
           created_at?: string
@@ -181,7 +182,8 @@ export type Database = {
           id?: string
           label: string
           level: number
-          round_id: string
+          prize_id?: string | null
+          round_id?: string | null
         }
         Update: {
           created_at?: string
@@ -190,9 +192,17 @@ export type Database = {
           id?: string
           label?: string
           level?: number
-          round_id?: string
+          prize_id?: string | null
+          round_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "bucket_definitions_prize_id_fkey"
+            columns: ["prize_id"]
+            isOneToOne: false
+            referencedRelation: "prizes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bucket_definitions_round_id_fkey"
             columns: ["round_id"]
@@ -298,6 +308,7 @@ export type Database = {
           created_at: string
           hackathon_id: string
           id: string
+          prize_id: string | null
           submission_id: string
         }
         Insert: {
@@ -305,6 +316,7 @@ export type Database = {
           created_at?: string
           hackathon_id: string
           id?: string
+          prize_id?: string | null
           submission_id: string
         }
         Update: {
@@ -312,6 +324,7 @@ export type Database = {
           created_at?: string
           hackathon_id?: string
           id?: string
+          prize_id?: string | null
           submission_id?: string
         }
         Relationships: [
@@ -320,6 +333,13 @@ export type Database = {
             columns: ["hackathon_id"]
             isOneToOne: false
             referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crowd_votes_prize_id_fkey"
+            columns: ["prize_id"]
+            isOneToOne: false
+            referencedRelation: "prizes"
             referencedColumns: ["id"]
           },
           {
@@ -518,6 +538,7 @@ export type Database = {
           hackathon_id: string
           id: string
           judge_count: number
+          prize_id: string | null
           prize_track_id: string | null
           published_at: string | null
           rank: number
@@ -531,6 +552,7 @@ export type Database = {
           hackathon_id: string
           id?: string
           judge_count?: number
+          prize_id?: string | null
           prize_track_id?: string | null
           published_at?: string | null
           rank: number
@@ -544,6 +566,7 @@ export type Database = {
           hackathon_id?: string
           id?: string
           judge_count?: number
+          prize_id?: string | null
           prize_track_id?: string | null
           published_at?: string | null
           rank?: number
@@ -558,6 +581,13 @@ export type Database = {
             columns: ["hackathon_id"]
             isOneToOne: false
             referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathon_results_prize_id_fkey"
+            columns: ["prize_id"]
+            isOneToOne: false
+            referencedRelation: "prizes"
             referencedColumns: ["id"]
           },
           {
@@ -747,7 +777,7 @@ export type Database = {
           description: string | null
           ends_at: string | null
           id: string
-          judging_mode: Database["public"]["Enums"]["judging_mode"]
+          judging_mode: Database["public"]["Enums"]["judging_mode"] | null
           location_latitude: number | null
           location_longitude: number | null
           location_name: string | null
@@ -782,7 +812,7 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
-          judging_mode?: Database["public"]["Enums"]["judging_mode"]
+          judging_mode?: Database["public"]["Enums"]["judging_mode"] | null
           location_latitude?: number | null
           location_longitude?: number | null
           location_name?: string | null
@@ -817,7 +847,7 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
-          judging_mode?: Database["public"]["Enums"]["judging_mode"]
+          judging_mode?: Database["public"]["Enums"]["judging_mode"] | null
           location_latitude?: number | null
           location_longitude?: number | null
           location_name?: string | null
@@ -923,6 +953,7 @@ export type Database = {
           is_complete: boolean
           judge_participant_id: string
           notes: string
+          prize_id: string | null
           room_id: string | null
           round_id: string | null
           submission_id: string
@@ -936,6 +967,7 @@ export type Database = {
           is_complete?: boolean
           judge_participant_id: string
           notes?: string
+          prize_id?: string | null
           room_id?: string | null
           round_id?: string | null
           submission_id: string
@@ -949,6 +981,7 @@ export type Database = {
           is_complete?: boolean
           judge_participant_id?: string
           notes?: string
+          prize_id?: string | null
           room_id?: string | null
           round_id?: string | null
           submission_id?: string
@@ -967,6 +1000,13 @@ export type Database = {
             columns: ["judge_participant_id"]
             isOneToOne: false
             referencedRelation: "hackathon_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_assignments_prize_id_fkey"
+            columns: ["prize_id"]
+            isOneToOne: false
+            referencedRelation: "prizes"
             referencedColumns: ["id"]
           },
           {
@@ -1532,6 +1572,7 @@ export type Database = {
       }
       prizes: {
         Row: {
+          assignment_mode: string | null
           created_at: string
           criteria_id: string | null
           currency: string | null
@@ -1541,16 +1582,20 @@ export type Database = {
           distribution_method: string | null
           hackathon_id: string
           id: string
+          judging_style: string | null
           kind: string
+          max_picks: number | null
           monetary_value: number | null
           name: string
           prize_track_id: string | null
           rank: number | null
+          round_id: string | null
           type: Database["public"]["Enums"]["prize_type"]
           updated_at: string
           value: string | null
         }
         Insert: {
+          assignment_mode?: string | null
           created_at?: string
           criteria_id?: string | null
           currency?: string | null
@@ -1560,16 +1605,20 @@ export type Database = {
           distribution_method?: string | null
           hackathon_id: string
           id?: string
+          judging_style?: string | null
           kind?: string
+          max_picks?: number | null
           monetary_value?: number | null
           name: string
           prize_track_id?: string | null
           rank?: number | null
+          round_id?: string | null
           type?: Database["public"]["Enums"]["prize_type"]
           updated_at?: string
           value?: string | null
         }
         Update: {
+          assignment_mode?: string | null
           created_at?: string
           criteria_id?: string | null
           currency?: string | null
@@ -1579,11 +1628,14 @@ export type Database = {
           distribution_method?: string | null
           hackathon_id?: string
           id?: string
+          judging_style?: string | null
           kind?: string
+          max_picks?: number | null
           monetary_value?: number | null
           name?: string
           prize_track_id?: string | null
           rank?: number | null
+          round_id?: string | null
           type?: Database["public"]["Enums"]["prize_type"]
           updated_at?: string
           value?: string | null
@@ -1608,6 +1660,13 @@ export type Database = {
             columns: ["prize_track_id"]
             isOneToOne: false
             referencedRelation: "prize_tracks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prizes_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "judging_rounds"
             referencedColumns: ["id"]
           },
         ]
@@ -1706,6 +1765,42 @@ export type Database = {
             columns: ["hackathon_id"]
             isOneToOne: false
             referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      round_submissions: {
+        Row: {
+          advanced_at: string | null
+          id: string
+          round_id: string
+          submission_id: string
+        }
+        Insert: {
+          advanced_at?: string | null
+          id?: string
+          round_id: string
+          submission_id: string
+        }
+        Update: {
+          advanced_at?: string | null
+          id?: string
+          round_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_submissions_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "judging_rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "round_submissions_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
             referencedColumns: ["id"]
           },
         ]

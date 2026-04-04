@@ -14,27 +14,23 @@ Webhooks allow you to:
 
 ## Creating a Webhook
 
-```typescript title="create-webhook.ts"
-const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    url: "https://your-app.com/webhooks/oatmeal",
-    events: ["hackathon.created", "submission.created"],
-  }),
-})
-
-const webhook = await res.json()
-
-// Save the secret for verifying signatures
-console.log(`Webhook secret: ${webhook.secret}`)
+```bash title="Create a webhook"
+curl -s -X POST "$BASE_URL/api/v1/webhooks" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://your-app.com/webhooks/oatmeal", "events": ["hackathon.created", "submission.created"]}' | jq .
 ```
+
+The response includes a `secret` field for verifying signatures.
 
 <Callout type="warn">
 The webhook secret is only shown once. Store it securely for signature verification.
+</Callout>
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon webhooks create --url https://your-app.com/webhooks/oatmeal --events hackathon.created,submission.created
+```
 </Callout>
 
 ## Available Events
@@ -143,35 +139,29 @@ export async function POST(req: NextRequest) {
 
 ### List Webhooks
 
-```typescript title="list-webhooks.ts"
-const res = await fetch(`${BASE_URL}/api/v1/webhooks`, {
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-  },
-})
-
-const { webhooks } = await res.json()
-
-for (const wh of webhooks) {
-  console.log(`${wh.url} - ${wh.events.join(", ")}`)
-}
+```bash title="List all webhooks"
+curl -s "$BASE_URL/api/v1/webhooks" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon webhooks list
+```
+</Callout>
 
 ### Delete a Webhook
 
-```typescript title="delete-webhook.ts"
-const res = await fetch(`${BASE_URL}/api/v1/webhooks/${webhookId}`, {
-  method: "DELETE",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-  },
-})
-
-const data = await res.json()
-if (data.success) {
-  console.log("Webhook deleted")
-}
+```bash title="Delete a webhook"
+curl -s -X DELETE "$BASE_URL/api/v1/webhooks/$WEBHOOK_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon webhooks delete $WEBHOOK_ID
+```
+</Callout>
 
 ## Best Practices
 

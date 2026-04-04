@@ -68,50 +68,41 @@ interface PrizeAssignment {
 
 Returns all prizes and their current assignments.
 
-```typescript title="list-prizes.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { prizes, assignments } = await res.json()
-
-for (const p of prizes) {
-  const winner = assignments.find((a) => a.prizeId === p.id)
-  console.log(`${p.name}: ${winner ? winner.submissionTitle : "unassigned"}`)
-}
+```bash title="List prizes"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon prizes list $HACKATHON_ID
+```
+</Callout>
 
 ## Create a Prize
 
 `POST /api/dashboard/hackathons/:id/prizes` — requires `hackathons:write` scope.
 
-```typescript title="create-prize.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: "Best Overall",
-      description: "Top scoring project across all criteria",
-      value: "$5,000 USD",
-      type: "score",
-      rank: 1,
-      monetaryValue: 5000,
-      currency: "USD",
-    }),
-  }
-)
-
-const { id, name } = await res.json()
-console.log(`Prize created: ${name} (${id})`)
+```bash title="Create a prize"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Best Overall",
+    "description": "Top scoring project across all criteria",
+    "value": "$5,000 USD",
+    "type": "score",
+    "rank": 1,
+    "monetaryValue": 5000,
+    "currency": "USD"
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon prizes create $HACKATHON_ID
+```
+</Callout>
 
 ### Request Body
 
@@ -134,36 +125,36 @@ console.log(`Prize created: ${name} (${id})`)
 
 `PATCH /api/dashboard/hackathons/:id/prizes/:prizeId` — requires `hackathons:write` scope.
 
-```typescript title="update-prize.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes/${prizeId}`,
-  {
-    method: "PATCH",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      value: "$10,000 USD",
-      monetaryValue: 10000,
-    }),
-  }
-)
+```bash title="Update a prize"
+curl -s -X PATCH "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/$PRIZE_ID" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "value": "$10,000 USD",
+    "monetaryValue": 10000
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon prizes update $HACKATHON_ID
+```
+</Callout>
 
 ## Delete a Prize
 
 `DELETE /api/dashboard/hackathons/:id/prizes/:prizeId` — requires `hackathons:write` scope.
 
-```typescript title="delete-prize.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes/${prizeId}`,
-  {
-    method: "DELETE",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
+```bash title="Delete a prize"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/$PRIZE_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon prizes delete $HACKATHON_ID
+```
+</Callout>
 
 ## Reorder Prizes
 
@@ -171,21 +162,20 @@ await fetch(
 
 Sets display order based on array position.
 
-```typescript title="reorder-prizes.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes/reorder`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      orderedIds: ["prize_001", "prize_002", "prize_003"],
-    }),
-  }
-)
+```bash title="Reorder prizes"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/reorder" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orderedIds": ["prize_001", "prize_002", "prize_003"]
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon prizes reorder $HACKATHON_ID
+```
+</Callout>
 
 ### Request Body
 
@@ -197,36 +187,35 @@ await fetch(
 
 `POST /api/dashboard/hackathons/:id/prizes/:prizeId/assign` — requires `hackathons:write` scope.
 
-```typescript title="assign-prize.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes/${prizeId}/assign`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ submissionId: "sub_xyz456" }),
-  }
-)
-
-const { id } = await res.json()
-console.log("Assignment created:", id)
+```bash title="Assign prize to submission"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/$PRIZE_ID/assign" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "submissionId": "sub_xyz456"
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon prizes assign $HACKATHON_ID
+```
+</Callout>
 
 ## Unassign Prize
 
 `DELETE /api/dashboard/hackathons/:id/prizes/:prizeId/assign/:submissionId` — requires `hackathons:write` scope.
 
-```typescript title="unassign-prize.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes/${prizeId}/assign/${submissionId}`,
-  {
-    method: "DELETE",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
+```bash title="Unassign prize from submission"
+curl -s -X DELETE "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/$PRIZE_ID/assign/$SUBMISSION_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon prizes unassign $HACKATHON_ID
+```
+</Callout>
 
 ## List Public Prizes
 
@@ -234,17 +223,8 @@ await fetch(
 
 Returns prizes with winner information (if the hackathon is completed and results are published).
 
-```typescript title="public-prizes.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/prizes`
-)
-
-const { prizes } = await res.json()
-
-for (const p of prizes) {
-  const winner = p.winner ? `Won by: ${p.winner.title}` : "TBD"
-  console.log(`${p.name} (${p.value}) - ${winner}`)
-}
+```bash title="View public prizes"
+curl -s "$BASE_URL/api/public/hackathons/ai-innovation-2026/prizes" | jq .
 ```
 
 ### Response
@@ -273,48 +253,54 @@ for (const p of prizes) {
 
 ## Full Example
 
-```typescript title="full-example.ts"
-const API_KEY = process.env.OATMEAL_API_KEY!
-const BASE_URL = process.env.OATMEAL_BASE_URL!
+```bash title="Create prizes and set display order"
+#!/usr/bin/env bash
+set -euo pipefail
 
-async function setupPrizes(hackathonId: string) {
-  const prizes = [
-    { name: "Best Overall", value: "$5,000", type: "score", rank: 1 },
-    { name: "Runner Up", value: "$2,500", type: "score", rank: 2 },
-    { name: "Most Creative", value: "$1,000", type: "favorite" },
-    { name: "People's Choice", value: "$1,000", type: "crowd" },
-  ]
+PRIZE_1=$(curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Best Overall",
+    "value": "$5,000",
+    "type": "score",
+    "rank": 1
+  }' | jq -r '.id')
 
-  const ids: string[] = []
+PRIZE_2=$(curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Runner Up",
+    "value": "$2,500",
+    "type": "score",
+    "rank": 2
+  }' | jq -r '.id')
 
-  for (const prize of prizes) {
-    const res = await fetch(
-      `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(prize),
-      }
-    )
-    const { id } = await res.json()
-    ids.push(id)
-  }
+PRIZE_3=$(curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Most Creative",
+    "value": "$1,000",
+    "type": "favorite"
+  }' | jq -r '.id')
 
-  await fetch(
-    `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/prizes/reorder`,
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ orderedIds: ids }),
-    }
-  )
+PRIZE_4=$(curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "People'\''s Choice",
+    "value": "$1,000",
+    "type": "crowd"
+  }' | jq -r '.id')
 
-  console.log(`Created and ordered ${ids.length} prizes`)
-}
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/prizes/reorder" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"orderedIds\": [\"$PRIZE_1\", \"$PRIZE_2\", \"$PRIZE_3\", \"$PRIZE_4\"]
+  }" | jq .
+
+echo "Created and ordered 4 prizes"
 ```

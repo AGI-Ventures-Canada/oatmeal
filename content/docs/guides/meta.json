@@ -10,6 +10,7 @@
     "luma-import",
     "organization-setup",
     "api-keys-setup",
+    "integrations",
     "---",
     "cli-organizer",
     "cli-browsing",

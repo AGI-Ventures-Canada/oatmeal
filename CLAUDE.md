@@ -184,6 +184,20 @@ export default async function Page(props: PageProps<"/blog/[slug]">) {
 
 ## Development Rules
 
+### New Features Require Plan Mode and Interview
+
+**When the user asks to build a new feature, ALWAYS follow this process before writing any code:**
+
+1. **Enter plan mode first.** Do not start implementation until a plan is agreed upon.
+2. **Conduct an interview to clarify requirements.** Ask questions to understand:
+   - What the feature should do from the user's perspective
+   - Expected behavior, edge cases, and constraints
+   - How it fits with existing functionality
+   - Any UI/UX preferences or specific implementation details
+   - Priority and scope — what's in v1 vs. later
+
+Only proceed to implementation after the user has confirmed the plan. This applies to net-new features, not bug fixes, refactors, or small tweaks to existing behavior.
+
 ### Pages Must Be Server-Side
 
 All page components in `app/` must be server-side rendered. Never use `"use client"` in page files. Extract client-side functionality into separate client components.

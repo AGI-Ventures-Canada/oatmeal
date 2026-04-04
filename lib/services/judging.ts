@@ -1,129 +1,538 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { JudgingCriteria, JudgeAssignment } from "@/lib/db/hackathon-types"
+import type {
+  Prize,
+  BucketDefinition,
+  BinaryResponse,
+  PrizeJudgingStyle,
+  PrizeAssignmentMode,
+} from "@/lib/db/hackathon-types"
 import { checkRoleConflict } from "@/lib/services/role-conflict"
 
-export type CreateCriteriaInput = {
+const DEFAULT_BUCKETS = [
+  { level: 1, label: "Not Ready", description: "No working demo or unclear problem statement" },
+  { level: 2, label: "Solid Effort", description: "Working demo, clear problem, but incremental or execution has gaps" },
+  { level: 3, label: "Strong Contender", description: "Working demo, novel approach, good execution" },
+  { level: 4, label: "Outstanding", description: "Would invest in this team today. Exceptional on multiple dimensions" },
+]
+
+// ============================================================
+// Prize CRUD
+// ============================================================
+
+export type CreatePrizeInput = {
   name: string
   description?: string | null
-  maxScore?: number
-  weight?: number
-  category?: "core" | "bonus"
+  value?: string | null
+  judgingStyle: PrizeJudgingStyle
+  roundId?: string | null
+  assignmentMode?: PrizeAssignmentMode
+  maxPicks?: number
   displayOrder?: number
-  hackathonJudgingMode?: string
 }
 
-export type UpdateCriteriaInput = {
+export type UpdatePrizeInput = {
   name?: string
   description?: string | null
-  maxScore?: number
-  weight?: number
-  category?: "core" | "bonus"
+  value?: string | null
+  judgingStyle?: PrizeJudgingStyle
+  roundId?: string | null
+  assignmentMode?: PrizeAssignmentMode
+  maxPicks?: number
   displayOrder?: number
 }
 
-export async function listJudgingCriteria(
-  hackathonId: string
-): Promise<JudgingCriteria[]> {
+export type PrizeWithProgress = Prize & {
+  judgeCount: number
+  totalAssignments: number
+  completedAssignments: number
+  buckets?: BucketDefinition[]
+}
+
+export async function listPrizes(hackathonId: string): Promise<PrizeWithProgress[]> {
   const client = getSupabase() as unknown as SupabaseClient
-  const { data, error } = await client
-    .from("judging_criteria")
+
+  const { data: prizes, error } = await client
+    .from("prizes")
     .select("*")
     .eq("hackathon_id", hackathonId)
+    .not("judging_style", "is", null)
     .order("display_order")
 
-  if (error) {
-    console.error("Failed to list judging criteria:", error)
+  if (error || !prizes) {
+    console.error("Failed to list prizes:", error)
     return []
   }
 
-  return data as unknown as JudgingCriteria[]
+  const prizeIds = prizes.map((p) => p.id)
+  if (prizeIds.length === 0) return []
+
+  const { data: assignments } = await client
+    .from("judge_assignments")
+    .select("prize_id, judge_participant_id, is_complete")
+    .in("prize_id", prizeIds)
+
+  const prizeStats: Record<string, { judges: Set<string>; total: number; completed: number }> = {}
+  for (const a of assignments ?? []) {
+    if (!a.prize_id) continue
+    if (!prizeStats[a.prize_id]) prizeStats[a.prize_id] = { judges: new Set(), total: 0, completed: 0 }
+    prizeStats[a.prize_id].judges.add(a.judge_participant_id)
+    prizeStats[a.prize_id].total++
+    if (a.is_complete) prizeStats[a.prize_id].completed++
+  }
+
+  const bucketSortPrizeIds = prizes.filter((p) => p.judging_style === "bucket_sort").map((p) => p.id)
+  const bucketMap: Record<string, BucketDefinition[]> = {}
+  if (bucketSortPrizeIds.length > 0) {
+    const { data: buckets } = await client
+      .from("bucket_definitions")
+      .select("*")
+      .in("prize_id", bucketSortPrizeIds)
+      .order("level")
+
+    for (const b of (buckets ?? []) as unknown as BucketDefinition[]) {
+      if (!b.prize_id) continue
+      if (!bucketMap[b.prize_id]) bucketMap[b.prize_id] = []
+      bucketMap[b.prize_id].push(b)
+    }
+  }
+
+  return (prizes as unknown as Prize[]).map((p) => ({
+    ...p,
+    judgeCount: prizeStats[p.id]?.judges.size ?? 0,
+    totalAssignments: prizeStats[p.id]?.total ?? 0,
+    completedAssignments: prizeStats[p.id]?.completed ?? 0,
+    buckets: bucketMap[p.id],
+  }))
 }
 
-export async function createJudgingCriteria(
+export async function createPrize(
   hackathonId: string,
-  input: CreateCriteriaInput
-): Promise<JudgingCriteria | null> {
+  input: CreatePrizeInput
+): Promise<Prize | null> {
   const client = getSupabase() as unknown as SupabaseClient
-  const { data, error } = await client
-    .from("judging_criteria")
+
+  const { data: prize, error } = await client
+    .from("prizes")
     .insert({
       hackathon_id: hackathonId,
       name: input.name,
       description: input.description ?? null,
-      max_score: input.maxScore ?? 10,
-      weight: input.weight ?? 1.0,
-      category: input.category ?? "core",
+      value: input.value ?? null,
+      judging_style: input.judgingStyle,
+      round_id: input.roundId ?? null,
+      assignment_mode: input.assignmentMode ?? "organizer_assigned",
+      max_picks: input.maxPicks ?? 3,
       display_order: input.displayOrder ?? 0,
     })
     .select()
     .single()
 
-  if (error) {
-    console.error("Failed to create judging criteria:", error)
+  if (error || !prize) {
+    console.error("Failed to create prize:", error)
     return null
   }
 
-  const criteria = data as unknown as JudgingCriteria
-
-  if (input.hackathonJudgingMode === "rubric") {
-    const { createDefaultRubricLevels } = await import("@/lib/services/rubric-levels")
-    await createDefaultRubricLevels(criteria.id)
+  if (input.judgingStyle === "bucket_sort") {
+    await createDefaultBucketsForPrize(prize.id)
   }
 
-  return criteria
+  return prize as unknown as Prize
 }
 
-export async function updateJudgingCriteria(
-  criteriaId: string,
+export async function updatePrize(
+  prizeId: string,
   hackathonId: string,
-  input: UpdateCriteriaInput
-): Promise<JudgingCriteria | null> {
+  input: UpdatePrizeInput
+): Promise<Prize | null> {
   const client = getSupabase() as unknown as SupabaseClient
 
-  const updates: Record<string, unknown> = {}
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (input.name !== undefined) updates.name = input.name
   if (input.description !== undefined) updates.description = input.description
-  if (input.maxScore !== undefined) updates.max_score = input.maxScore
-  if (input.weight !== undefined) updates.weight = input.weight
-  if (input.category !== undefined) updates.category = input.category
+  if (input.value !== undefined) updates.value = input.value
+  if (input.judgingStyle !== undefined) updates.judging_style = input.judgingStyle
+  if (input.roundId !== undefined) updates.round_id = input.roundId
+  if (input.assignmentMode !== undefined) updates.assignment_mode = input.assignmentMode
+  if (input.maxPicks !== undefined) updates.max_picks = input.maxPicks
   if (input.displayOrder !== undefined) updates.display_order = input.displayOrder
-  updates.updated_at = new Date().toISOString()
 
   const { data, error } = await client
-    .from("judging_criteria")
+    .from("prizes")
     .update(updates)
-    .eq("id", criteriaId)
+    .eq("id", prizeId)
     .eq("hackathon_id", hackathonId)
     .select()
     .single()
 
-  if (error) {
-    console.error("Failed to update judging criteria:", error)
+  if (error || !data) {
+    console.error("Failed to update prize:", error)
     return null
   }
 
-  return data as unknown as JudgingCriteria
+  return data as unknown as Prize
 }
 
-export async function deleteJudgingCriteria(
-  criteriaId: string,
-  hackathonId: string
-): Promise<boolean> {
+export async function deletePrize(prizeId: string, hackathonId: string): Promise<boolean> {
   const client = getSupabase() as unknown as SupabaseClient
   const { error } = await client
-    .from("judging_criteria")
+    .from("prizes")
     .delete()
-    .eq("id", criteriaId)
+    .eq("id", prizeId)
     .eq("hackathon_id", hackathonId)
 
   if (error) {
-    console.error("Failed to delete judging criteria:", error)
+    console.error("Failed to delete prize:", error)
     return false
   }
 
   return true
 }
+
+export async function getPrizeDetails(prizeId: string): Promise<PrizeWithProgress | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: prize, error } = await client
+    .from("prizes")
+    .select("*")
+    .eq("id", prizeId)
+    .maybeSingle()
+
+  if (error || !prize) return null
+
+  const { data: assignments } = await client
+    .from("judge_assignments")
+    .select("judge_participant_id, is_complete")
+    .eq("prize_id", prizeId)
+
+  const judges = new Set((assignments ?? []).map((a) => a.judge_participant_id))
+  const total = assignments?.length ?? 0
+  const completed = assignments?.filter((a) => a.is_complete).length ?? 0
+
+  let buckets: BucketDefinition[] | undefined
+  if ((prize as unknown as Prize).judging_style === "bucket_sort") {
+    const { data } = await client
+      .from("bucket_definitions")
+      .select("*")
+      .eq("prize_id", prizeId)
+      .order("level")
+    buckets = (data ?? []) as unknown as BucketDefinition[]
+  }
+
+  return {
+    ...(prize as unknown as Prize),
+    judgeCount: judges.size,
+    totalAssignments: total,
+    completedAssignments: completed,
+    buckets,
+  }
+}
+
+// ============================================================
+// Bucket Definitions (for bucket_sort prizes)
+// ============================================================
+
+export async function createDefaultBucketsForPrize(prizeId: string): Promise<BucketDefinition[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const inserts = DEFAULT_BUCKETS.map((b) => ({
+    prize_id: prizeId,
+    level: b.level,
+    label: b.label,
+    description: b.description,
+    display_order: b.level,
+  }))
+
+  const { data, error } = await client
+    .from("bucket_definitions")
+    .insert(inserts)
+    .select()
+
+  if (error) {
+    console.error("Failed to create default buckets:", error)
+    return []
+  }
+
+  return data as unknown as BucketDefinition[]
+}
+
+export type UpsertBucketInput = {
+  id?: string
+  level: number
+  label: string
+  description?: string | null
+}
+
+export async function replaceBucketDefinitions(
+  prizeId: string,
+  buckets: UpsertBucketInput[]
+): Promise<BucketDefinition[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error: deleteError } = await client
+    .from("bucket_definitions")
+    .delete()
+    .eq("prize_id", prizeId)
+
+  if (deleteError) {
+    console.error("Failed to clear bucket definitions:", deleteError)
+    return []
+  }
+
+  const inserts = buckets.map((b, i) => ({
+    prize_id: prizeId,
+    level: b.level,
+    label: b.label,
+    description: b.description ?? null,
+    display_order: i,
+  }))
+
+  const { data, error } = await client
+    .from("bucket_definitions")
+    .insert(inserts)
+    .select()
+
+  if (error) {
+    console.error("Failed to insert bucket definitions:", error)
+    return []
+  }
+
+  return data as unknown as BucketDefinition[]
+}
+
+export async function listBucketDefinitions(prizeId: string): Promise<BucketDefinition[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("bucket_definitions")
+    .select("*")
+    .eq("prize_id", prizeId)
+    .order("level")
+
+  if (error) {
+    console.error("Failed to list bucket definitions:", error)
+    return []
+  }
+
+  return data as unknown as BucketDefinition[]
+}
+
+// ============================================================
+// Rounds (hackathon-level)
+// ============================================================
+
+export type RoundInfo = {
+  id: string
+  hackathonId: string
+  name: string
+  status: string
+  displayOrder: number
+  submissionCount: number
+}
+
+export async function listRounds(hackathonId: string): Promise<RoundInfo[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("judging_rounds")
+    .select("*")
+    .eq("hackathon_id", hackathonId)
+    .order("display_order")
+
+  if (error) {
+    console.error("Failed to list rounds:", error)
+    return []
+  }
+
+  const roundIds = (data ?? []).map((r) => r.id)
+  const roundSubCounts: Record<string, number> = {}
+
+  if (roundIds.length > 0) {
+    const { data: roundSubs } = await client
+      .from("round_submissions")
+      .select("round_id")
+      .in("round_id", roundIds)
+
+    for (const rs of roundSubs ?? []) {
+      roundSubCounts[rs.round_id] = (roundSubCounts[rs.round_id] ?? 0) + 1
+    }
+  }
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    hackathonId: r.hackathon_id,
+    name: r.name,
+    status: r.status ?? "planned",
+    displayOrder: r.display_order,
+    submissionCount: roundSubCounts[r.id] ?? 0,
+  }))
+}
+
+export async function createRound(
+  hackathonId: string,
+  name: string
+): Promise<RoundInfo | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: existing } = await client
+    .from("judging_rounds")
+    .select("display_order")
+    .eq("hackathon_id", hackathonId)
+    .order("display_order", { ascending: false })
+    .limit(1)
+
+  const nextOrder = ((existing?.[0]?.display_order ?? -1) + 1)
+
+  const { data, error } = await client
+    .from("judging_rounds")
+    .insert({
+      hackathon_id: hackathonId,
+      name,
+      status: "planned",
+      advancement: "manual",
+      display_order: nextOrder,
+    })
+    .select()
+    .single()
+
+  if (error || !data) {
+    console.error("Failed to create round:", error)
+    return null
+  }
+
+  return {
+    id: data.id,
+    hackathonId: data.hackathon_id,
+    name: data.name,
+    status: data.status ?? "planned",
+    displayOrder: data.display_order,
+    submissionCount: 0,
+  }
+}
+
+export async function updateRound(
+  roundId: string,
+  input: { name?: string; status?: string }
+): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (input.name !== undefined) updates.name = input.name
+  if (input.status !== undefined) updates.status = input.status
+
+  const { error } = await client
+    .from("judging_rounds")
+    .update(updates)
+    .eq("id", roundId)
+
+  if (error) {
+    console.error("Failed to update round:", error)
+    return false
+  }
+  return true
+}
+
+export async function activateRound(roundId: string, hackathonId: string): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error: deactivateError } = await client
+    .from("judging_rounds")
+    .update({ status: "planned", is_active: false, updated_at: new Date().toISOString() })
+    .eq("hackathon_id", hackathonId)
+    .eq("status", "active")
+
+  if (deactivateError) {
+    console.error("Failed to deactivate other rounds:", deactivateError)
+    return false
+  }
+
+  const { error } = await client
+    .from("judging_rounds")
+    .update({ status: "active", is_active: true, updated_at: new Date().toISOString() })
+    .eq("id", roundId)
+
+  if (error) {
+    console.error("Failed to activate round:", error)
+    return false
+  }
+  return true
+}
+
+export async function completeRound(roundId: string): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { error } = await client
+    .from("judging_rounds")
+    .update({ status: "complete", is_active: false, updated_at: new Date().toISOString() })
+    .eq("id", roundId)
+
+  if (error) {
+    console.error("Failed to complete round:", error)
+    return false
+  }
+  return true
+}
+
+// ============================================================
+// Round advancement
+// ============================================================
+
+export async function getRoundSubmissions(roundId: string): Promise<string[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("round_submissions")
+    .select("submission_id")
+    .eq("round_id", roundId)
+
+  if (error) {
+    console.error("Failed to get round submissions:", error)
+    return []
+  }
+
+  return (data ?? []).map((r) => r.submission_id)
+}
+
+export async function getRoundPool(hackathonId: string, roundId: string | null): Promise<string[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  if (roundId) {
+    const subs = await getRoundSubmissions(roundId)
+    if (subs.length > 0) return subs
+  }
+
+  const { data } = await client
+    .from("submissions")
+    .select("id")
+    .eq("hackathon_id", hackathonId)
+    .eq("status", "submitted")
+
+  return (data ?? []).map((s) => s.id)
+}
+
+export async function advanceSubmissions(
+  fromRoundId: string,
+  toRoundId: string,
+  submissionIds: string[]
+): Promise<{ advancedCount: number }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  if (submissionIds.length === 0) return { advancedCount: 0 }
+
+  const inserts = submissionIds.map((sid) => ({
+    round_id: toRoundId,
+    submission_id: sid,
+  }))
+
+  const { error } = await client
+    .from("round_submissions")
+    .upsert(inserts, { onConflict: "round_id,submission_id" })
+
+  if (error) {
+    console.error("Failed to advance submissions:", error)
+    return { advancedCount: 0 }
+  }
+
+  return { advancedCount: submissionIds.length }
+}
+
+// ============================================================
+// Judge management
+// ============================================================
 
 export type AddJudgeResult =
   | { success: true; participant: { id: string; clerkUserId: string } }
@@ -193,6 +602,22 @@ export type JudgeInfo = {
   imageUrl: string | null
   assignmentCount: number
   completedCount: number
+  prizeIds: string[]
+}
+
+export async function countJudges(hackathonId: string): Promise<number> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { count, error } = await client
+    .from("hackathon_participants")
+    .select("id", { count: "exact", head: true })
+    .eq("hackathon_id", hackathonId)
+    .eq("role", "judge")
+
+  if (error) {
+    console.error("Failed to count judges:", error)
+    return 0
+  }
+  return count ?? 0
 }
 
 export async function listJudges(hackathonId: string): Promise<JudgeInfo[]> {
@@ -215,25 +640,26 @@ export async function listJudges(hackathonId: string): Promise<JudgeInfo[]> {
 
   const { data: assignments } = await client
     .from("judge_assignments")
-    .select("judge_participant_id, is_complete")
+    .select("judge_participant_id, prize_id, is_complete")
     .eq("hackathon_id", hackathonId)
     .in("judge_participant_id", judgeIds)
 
-  const countMap: Record<string, { total: number; completed: number }> = {}
+  const countMap: Record<string, { total: number; completed: number; prizeIds: Set<string> }> = {}
   for (const a of assignments ?? []) {
     if (!countMap[a.judge_participant_id]) {
-      countMap[a.judge_participant_id] = { total: 0, completed: 0 }
+      countMap[a.judge_participant_id] = { total: 0, completed: 0, prizeIds: new Set() }
     }
     countMap[a.judge_participant_id].total++
     if (a.is_complete) countMap[a.judge_participant_id].completed++
+    if (a.prize_id) countMap[a.judge_participant_id].prizeIds.add(a.prize_id)
   }
 
   const userMap: Record<string, { displayName: string; email: string | null; imageUrl: string | null }> = {}
   try {
     const { clerkClient } = await import("@clerk/nextjs/server")
-    const client = await clerkClient()
+    const clerk = await clerkClient()
     const clerkUserIds = judges.map((j) => j.clerk_user_id)
-    const clerkUsers = await client.users.getUserList({ userId: clerkUserIds, limit: 100 })
+    const clerkUsers = await clerk.users.getUserList({ userId: clerkUserIds, limit: 100 })
     for (const u of clerkUsers.data) {
       const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.id
       userMap[u.id] = {
@@ -254,6 +680,7 @@ export async function listJudges(hackathonId: string): Promise<JudgeInfo[]> {
     imageUrl: userMap[j.clerk_user_id]?.imageUrl ?? null,
     assignmentCount: countMap[j.id]?.total ?? 0,
     completedCount: countMap[j.id]?.completed ?? 0,
+    prizeIds: [...(countMap[j.id]?.prizeIds ?? [])],
   }))
 }
 
@@ -298,160 +725,119 @@ export async function removeJudge(
     .limit(1)
 
   const resultsStale = (existingResults?.length ?? 0) > 0
-  if (resultsStale) {
-    console.warn(`Judge removed from hackathon ${hackathonId} — existing results may be stale`)
-  }
-
   return { success: true, resultsStale }
 }
 
-export type AssignmentWithDetails = JudgeAssignment & {
-  judgeName: string
-  judgeEmail: string | null
-  submissionTitle: string
-}
+// ============================================================
+// Judge-Prize assignments
+// ============================================================
 
-export async function listJudgeAssignments(
-  hackathonId: string
-): Promise<AssignmentWithDetails[]> {
-  const client = getSupabase() as unknown as SupabaseClient
-
-  const { data: assignments, error } = await client
-    .from("judge_assignments")
-    .select(`
-      *,
-      judge:hackathon_participants!judge_participant_id(clerk_user_id),
-      submission:submissions!submission_id(title)
-    `)
-    .eq("hackathon_id", hackathonId)
-    .order("assigned_at")
-
-  if (error || !assignments) {
-    console.error("Failed to list judge assignments:", error)
-    return []
-  }
-
-  const clerkUserIds = [
-    ...new Set(
-      assignments
-        .map((a: Record<string, unknown>) => {
-          const judge = a.judge as unknown as { clerk_user_id: string } | null
-          return judge?.clerk_user_id
-        })
-        .filter(Boolean) as string[]
-    ),
-  ]
-
-  const userMap: Record<string, { displayName: string; email: string | null }> = {}
-  if (clerkUserIds.length > 0) {
-    try {
-      const { clerkClient } = await import("@clerk/nextjs/server")
-      const clerk = await clerkClient()
-      const clerkUsers = await clerk.users.getUserList({ userId: clerkUserIds, limit: 100 })
-      for (const u of clerkUsers.data) {
-        const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.id
-        userMap[u.id] = {
-          displayName: name,
-          email: u.primaryEmailAddress?.emailAddress ?? null,
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch Clerk users for assignments:", err)
-    }
-  }
-
-  return assignments.map((a: Record<string, unknown>) => {
-    const judge = a.judge as unknown as { clerk_user_id: string } | null
-    const submission = a.submission as unknown as { title: string } | null
-    const clerkUserId = judge?.clerk_user_id
-    return {
-      ...(a as unknown as JudgeAssignment),
-      judgeName: clerkUserId ? (userMap[clerkUserId]?.displayName ?? clerkUserId) : "Unknown",
-      judgeEmail: clerkUserId ? (userMap[clerkUserId]?.email ?? null) : null,
-      submissionTitle: submission?.title ?? "Unknown",
-    }
-  })
-}
-
-export type AssignJudgeResult =
-  | { success: true; assignment: JudgeAssignment }
-  | { success: false; error: string; code: string }
-
-export async function assignJudgeToSubmission(
+export async function assignJudgeToPrize(
   hackathonId: string,
   judgeParticipantId: string,
-  submissionId: string
-): Promise<AssignJudgeResult> {
+  prizeId: string
+): Promise<{ assignedCount: number }> {
   const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: prize } = await client
+    .from("prizes")
+    .select("id, round_id")
+    .eq("id", prizeId)
+    .eq("hackathon_id", hackathonId)
+    .single()
+
+  if (!prize) return { assignedCount: 0 }
+
+  const pool = await getRoundPool(hackathonId, prize.round_id)
+  if (pool.length === 0) return { assignedCount: 0 }
 
   const { data: judge } = await client
     .from("hackathon_participants")
     .select("id, team_id")
     .eq("id", judgeParticipantId)
-    .eq("hackathon_id", hackathonId)
-    .eq("role", "judge")
     .single()
 
-  if (!judge) {
-    return { success: false, error: "Judge not found", code: "judge_not_found" }
-  }
-
-  const { data: submission } = await client
+  const { data: submissions } = await client
     .from("submissions")
     .select("id, team_id")
-    .eq("id", submissionId)
-    .eq("hackathon_id", hackathonId)
-    .single()
+    .in("id", pool)
 
-  if (!submission) {
-    return { success: false, error: "Submission not found", code: "submission_not_found" }
-  }
-
-  if (judge.team_id && submission.team_id && judge.team_id === submission.team_id) {
-    return { success: false, error: "Cannot assign judge to their own team's submission", code: "conflict_of_interest" }
-  }
-
-  const { data: assignment, error } = await client
+  const { data: existing } = await client
     .from("judge_assignments")
-    .insert({
+    .select("submission_id")
+    .eq("judge_participant_id", judgeParticipantId)
+    .eq("prize_id", prizeId)
+
+  const existingSet = new Set((existing ?? []).map((e) => e.submission_id))
+
+  const newAssignments = (submissions ?? [])
+    .filter((s) => !existingSet.has(s.id))
+    .filter((s) => !(judge?.team_id && s.team_id && judge.team_id === s.team_id))
+    .map((s) => ({
       hackathon_id: hackathonId,
       judge_participant_id: judgeParticipantId,
-      submission_id: submissionId,
-    })
-    .select()
-    .single()
+      submission_id: s.id,
+      prize_id: prizeId,
+      round_id: prize.round_id,
+    }))
 
+  if (newAssignments.length === 0) return { assignedCount: 0 }
+
+  const { error } = await client.from("judge_assignments").insert(newAssignments)
   if (error) {
-    if (error.code === "23505") {
-      return { success: false, error: "Judge already assigned to this submission", code: "already_assigned" }
-    }
-    console.error("Failed to assign judge:", error)
-    return { success: false, error: "Failed to assign judge", code: "insert_failed" }
+    console.error("Failed to assign judge to prize:", error)
+    return { assignedCount: 0 }
   }
 
-  return { success: true, assignment: assignment as unknown as JudgeAssignment }
+  return { assignedCount: newAssignments.length }
 }
 
-export async function removeJudgeAssignment(assignmentId: string): Promise<boolean> {
+export async function removeJudgeFromPrize(
+  hackathonId: string,
+  judgeParticipantId: string,
+  prizeId: string
+): Promise<{ removedCount: number }> {
   const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: toDelete } = await client
+    .from("judge_assignments")
+    .select("id")
+    .eq("hackathon_id", hackathonId)
+    .eq("judge_participant_id", judgeParticipantId)
+    .eq("prize_id", prizeId)
+
+  if (!toDelete || toDelete.length === 0) return { removedCount: 0 }
+
   const { error } = await client
     .from("judge_assignments")
     .delete()
-    .eq("id", assignmentId)
+    .eq("hackathon_id", hackathonId)
+    .eq("judge_participant_id", judgeParticipantId)
+    .eq("prize_id", prizeId)
 
   if (error) {
-    console.error("Failed to remove assignment:", error)
-    return false
+    console.error("Failed to remove judge from prize:", error)
+    return { removedCount: 0 }
   }
 
-  return true
+  return { removedCount: toDelete.length }
 }
 
 export async function autoAssignJudges(
   hackathonId: string,
+  prizeId: string,
   submissionsPerJudge: number
 ): Promise<{ assignedCount: number }> {
   const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: prize } = await client
+    .from("prizes")
+    .select("id, round_id")
+    .eq("id", prizeId)
+    .eq("hackathon_id", hackathonId)
+    .single()
+
+  if (!prize) return { assignedCount: 0 }
 
   const { data: judges } = await client
     .from("hackathon_participants")
@@ -461,50 +847,48 @@ export async function autoAssignJudges(
 
   if (!judges || judges.length === 0) return { assignedCount: 0 }
 
+  const pool = await getRoundPool(hackathonId, prize.round_id)
+  if (pool.length === 0) return { assignedCount: 0 }
+
   const { data: submissions } = await client
     .from("submissions")
     .select("id, team_id")
-    .eq("hackathon_id", hackathonId)
-    .eq("status", "submitted")
+    .in("id", pool)
 
   if (!submissions || submissions.length === 0) return { assignedCount: 0 }
 
   const { data: existing } = await client
     .from("judge_assignments")
     .select("judge_participant_id, submission_id")
-    .eq("hackathon_id", hackathonId)
+    .eq("prize_id", prizeId)
 
   const existingSet = new Set(
     (existing ?? []).map((e) => `${e.judge_participant_id}:${e.submission_id}`)
   )
 
-  const newAssignments: { hackathon_id: string; judge_participant_id: string; submission_id: string }[] = []
-
-  const judgeAssignmentCounts: Record<string, number> = {}
+  const judgeAssignCounts: Record<string, number> = {}
+  const subAssignCounts: Record<string, number> = {}
   for (const e of existing ?? []) {
-    judgeAssignmentCounts[e.judge_participant_id] = (judgeAssignmentCounts[e.judge_participant_id] ?? 0) + 1
+    judgeAssignCounts[e.judge_participant_id] = (judgeAssignCounts[e.judge_participant_id] ?? 0) + 1
+    subAssignCounts[e.submission_id] = (subAssignCounts[e.submission_id] ?? 0) + 1
   }
 
-  const submissionAssignmentCounts: Record<string, number> = {}
-  for (const e of existing ?? []) {
-    submissionAssignmentCounts[e.submission_id] = (submissionAssignmentCounts[e.submission_id] ?? 0) + 1
-  }
+  const newAssignments: { hackathon_id: string; judge_participant_id: string; submission_id: string; prize_id: string; round_id: string | null }[] = []
 
   let changed = true
   while (changed) {
     changed = false
-
-    const sortedSubmissions = [...submissions].sort(
-      (a, b) => (submissionAssignmentCounts[a.id] ?? 0) - (submissionAssignmentCounts[b.id] ?? 0)
+    const sortedSubs = [...submissions].sort(
+      (a, b) => (subAssignCounts[a.id] ?? 0) - (subAssignCounts[b.id] ?? 0)
     )
 
-    for (const sub of sortedSubmissions) {
+    for (const sub of sortedSubs) {
       const sortedJudges = [...judges].sort(
-        (a, b) => (judgeAssignmentCounts[a.id] ?? 0) - (judgeAssignmentCounts[b.id] ?? 0)
+        (a, b) => (judgeAssignCounts[a.id] ?? 0) - (judgeAssignCounts[b.id] ?? 0)
       )
 
       for (const judge of sortedJudges) {
-        if ((judgeAssignmentCounts[judge.id] ?? 0) >= submissionsPerJudge) continue
+        if ((judgeAssignCounts[judge.id] ?? 0) >= submissionsPerJudge) continue
         if (judge.team_id && sub.team_id && judge.team_id === sub.team_id) continue
         const key = `${judge.id}:${sub.id}`
         if (existingSet.has(key)) continue
@@ -513,10 +897,12 @@ export async function autoAssignJudges(
           hackathon_id: hackathonId,
           judge_participant_id: judge.id,
           submission_id: sub.id,
+          prize_id: prizeId,
+          round_id: prize.round_id,
         })
         existingSet.add(key)
-        judgeAssignmentCounts[judge.id] = (judgeAssignmentCounts[judge.id] ?? 0) + 1
-        submissionAssignmentCounts[sub.id] = (submissionAssignmentCounts[sub.id] ?? 0) + 1
+        judgeAssignCounts[judge.id] = (judgeAssignCounts[judge.id] ?? 0) + 1
+        subAssignCounts[sub.id] = (subAssignCounts[sub.id] ?? 0) + 1
         changed = true
         break
       }
@@ -525,10 +911,7 @@ export async function autoAssignJudges(
 
   if (newAssignments.length === 0) return { assignedCount: 0 }
 
-  const { error } = await client
-    .from("judge_assignments")
-    .insert(newAssignments)
-
+  const { error } = await client.from("judge_assignments").insert(newAssignments)
   if (error) {
     console.error("Failed to auto-assign judges:", error)
     return { assignedCount: 0 }
@@ -536,6 +919,452 @@ export async function autoAssignJudges(
 
   return { assignedCount: newAssignments.length }
 }
+
+// ============================================================
+// Scoring: Bucket Sort
+// ============================================================
+
+export type SubmitBinaryResponseInput = {
+  criteriaId: string
+  passed: boolean
+}
+
+export type SubmitBucketSortInput = {
+  gates: SubmitBinaryResponseInput[]
+  bucketId: string
+  notes?: string | null
+}
+
+export async function submitBucketSortResponse(
+  assignmentId: string,
+  input: SubmitBucketSortInput
+): Promise<{ success: true } | { success: false; error: string; code: string }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  if (input.gates.length > 0) {
+    await submitBinaryResponses(assignmentId, input.gates)
+  }
+
+  const { data, error } = await client
+    .from("bucket_responses")
+    .upsert(
+      {
+        judge_assignment_id: assignmentId,
+        bucket_id: input.bucketId,
+        notes: input.notes ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "judge_assignment_id" }
+    )
+    .select()
+    .single()
+
+  if (error || !data) {
+    return { success: false, error: "Failed to submit bucket response", code: "bucket_failed" }
+  }
+
+  const { error: updateError } = await client
+    .from("judge_assignments")
+    .update({ is_complete: true, completed_at: new Date().toISOString() })
+    .eq("id", assignmentId)
+
+  if (updateError) {
+    return { success: false, error: "Failed to mark assignment complete", code: "update_failed" }
+  }
+
+  return { success: true }
+}
+
+// ============================================================
+// Scoring: Gate Check
+// ============================================================
+
+export async function submitBinaryResponses(
+  assignmentId: string,
+  responses: SubmitBinaryResponseInput[]
+): Promise<BinaryResponse[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const now = new Date().toISOString()
+
+  const results: BinaryResponse[] = []
+  for (const r of responses) {
+    const { data, error } = await client
+      .from("binary_responses")
+      .upsert(
+        {
+          judge_assignment_id: assignmentId,
+          criteria_id: r.criteriaId,
+          passed: r.passed,
+          updated_at: now,
+        },
+        { onConflict: "judge_assignment_id,criteria_id" }
+      )
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Failed to submit binary response:", error)
+      continue
+    }
+    results.push(data as unknown as BinaryResponse)
+  }
+
+  return results
+}
+
+export async function submitGateCheckResponse(
+  assignmentId: string,
+  gates: SubmitBinaryResponseInput[]
+): Promise<{ success: true } | { success: false; error: string; code: string }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  await submitBinaryResponses(assignmentId, gates)
+
+  const { error } = await client
+    .from("judge_assignments")
+    .update({ is_complete: true, completed_at: new Date().toISOString() })
+    .eq("id", assignmentId)
+
+  if (error) {
+    return { success: false, error: "Failed to mark assignment complete", code: "update_failed" }
+  }
+
+  return { success: true }
+}
+
+// ============================================================
+// Scoring: Judge's Pick
+// ============================================================
+
+export async function submitJudgesPick(
+  hackathonId: string,
+  judgeParticipantId: string,
+  prizeId: string,
+  rankedSubmissionIds: string[]
+): Promise<{ success: true } | { success: false; error: string; code: string }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error: deleteError } = await client
+    .from("judge_picks")
+    .delete()
+    .eq("hackathon_id", hackathonId)
+    .eq("judge_participant_id", judgeParticipantId)
+    .eq("prize_id", prizeId)
+
+  if (deleteError) {
+    return { success: false, error: "Failed to clear existing picks", code: "delete_failed" }
+  }
+
+  if (rankedSubmissionIds.length > 0) {
+    const inserts = rankedSubmissionIds.map((sid, i) => ({
+      hackathon_id: hackathonId,
+      judge_participant_id: judgeParticipantId,
+      prize_id: prizeId,
+      submission_id: sid,
+      rank: i + 1,
+    }))
+
+    const { error } = await client.from("judge_picks").insert(inserts)
+    if (error) {
+      return { success: false, error: "Failed to submit picks", code: "insert_failed" }
+    }
+  }
+
+  const { error: completeError } = await client
+    .from("judge_assignments")
+    .update({ is_complete: true, completed_at: new Date().toISOString() })
+    .eq("hackathon_id", hackathonId)
+    .eq("judge_participant_id", judgeParticipantId)
+    .eq("prize_id", prizeId)
+
+  if (completeError) {
+    console.error("Failed to mark assignments complete:", completeError)
+  }
+
+  return { success: true }
+}
+
+// ============================================================
+// Results calculation
+// ============================================================
+
+export async function calculatePrizeResults(
+  hackathonId: string,
+  prizeId: string
+): Promise<{ success: boolean; count: number }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: prize } = await client
+    .from("prizes")
+    .select("judging_style")
+    .eq("id", prizeId)
+    .single()
+
+  if (!prize) return { success: false, count: 0 }
+
+  const style = (prize as unknown as Prize).judging_style
+
+  switch (style) {
+    case "bucket_sort":
+      return calculateBucketSortResults(hackathonId, prizeId)
+    case "gate_check":
+      return calculateGateCheckResults(hackathonId, prizeId)
+    case "judges_pick":
+      return calculateJudgesPickResults(hackathonId, prizeId)
+    case "crowd_vote":
+      return calculateCrowdVoteResults(hackathonId, prizeId)
+    default:
+      return { success: false, count: 0 }
+  }
+}
+
+async function calculateBucketSortResults(
+  hackathonId: string,
+  prizeId: string
+): Promise<{ success: boolean; count: number }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error: deleteError } = await client
+    .from("hackathon_results")
+    .delete()
+    .eq("hackathon_id", hackathonId)
+    .eq("prize_id", prizeId)
+
+  if (deleteError) {
+    console.error("Failed to clear results:", deleteError)
+    return { success: false, count: 0 }
+  }
+
+  const { data: assignments } = await client
+    .from("judge_assignments")
+    .select("id, submission_id")
+    .eq("prize_id", prizeId)
+    .eq("is_complete", true)
+
+  if (!assignments || assignments.length === 0) return { success: true, count: 0 }
+
+  const { data: bucketResponses } = await client
+    .from("bucket_responses")
+    .select("judge_assignment_id, bucket_id")
+    .in("judge_assignment_id", assignments.map((a) => a.id))
+
+  const { data: bucketDefs } = await client
+    .from("bucket_definitions")
+    .select("id, level")
+    .eq("prize_id", prizeId)
+
+  if (!bucketResponses || !bucketDefs) return { success: false, count: 0 }
+
+  const bucketLevelMap = new Map(bucketDefs.map((b) => [b.id, b.level]))
+  const assignmentSubMap = new Map(assignments.map((a) => [a.id, a.submission_id]))
+
+  const scores: Record<string, { totalLevel: number; judgeCount: number }> = {}
+  for (const resp of bucketResponses) {
+    const sid = assignmentSubMap.get(resp.judge_assignment_id)
+    const level = bucketLevelMap.get(resp.bucket_id)
+    if (!sid || level === undefined) continue
+
+    if (!scores[sid]) scores[sid] = { totalLevel: 0, judgeCount: 0 }
+    scores[sid].totalLevel += level
+    scores[sid].judgeCount++
+  }
+
+  const ranked = Object.entries(scores)
+    .map(([sid, { totalLevel, judgeCount }]) => ({
+      sid,
+      avg: totalLevel / judgeCount,
+      total: totalLevel,
+      judgeCount,
+    }))
+    .sort((a, b) => b.avg - a.avg)
+
+  return insertRankedResults(hackathonId, prizeId, ranked)
+}
+
+async function calculateGateCheckResults(
+  hackathonId: string,
+  prizeId: string
+): Promise<{ success: boolean; count: number }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error: deleteError } = await client
+    .from("hackathon_results")
+    .delete()
+    .eq("hackathon_id", hackathonId)
+    .eq("prize_id", prizeId)
+
+  if (deleteError) return { success: false, count: 0 }
+
+  const { data: assignments } = await client
+    .from("judge_assignments")
+    .select("id, submission_id")
+    .eq("prize_id", prizeId)
+    .eq("is_complete", true)
+
+  if (!assignments || assignments.length === 0) return { success: true, count: 0 }
+
+  const { data: binaryResponses } = await client
+    .from("binary_responses")
+    .select("judge_assignment_id, passed")
+    .in("judge_assignment_id", assignments.map((a) => a.id))
+
+  if (!binaryResponses) return { success: false, count: 0 }
+
+  const assignmentSubMap = new Map(assignments.map((a) => [a.id, a.submission_id]))
+  const subGates: Record<string, { passed: number; total: number; judgeCount: number }> = {}
+
+  const assignPassCounts: Record<string, { passed: number; total: number }> = {}
+  for (const resp of binaryResponses) {
+    if (!assignPassCounts[resp.judge_assignment_id]) assignPassCounts[resp.judge_assignment_id] = { passed: 0, total: 0 }
+    assignPassCounts[resp.judge_assignment_id].total++
+    if (resp.passed) assignPassCounts[resp.judge_assignment_id].passed++
+  }
+
+  for (const [aId, counts] of Object.entries(assignPassCounts)) {
+    const sid = assignmentSubMap.get(aId)
+    if (!sid) continue
+    if (!subGates[sid]) subGates[sid] = { passed: 0, total: 0, judgeCount: 0 }
+    subGates[sid].passed += counts.passed
+    subGates[sid].total += counts.total
+    subGates[sid].judgeCount++
+  }
+
+  const ranked = Object.entries(subGates)
+    .map(([sid, { passed, total, judgeCount }]) => ({
+      sid,
+      avg: total > 0 ? passed / total : 0,
+      total: passed,
+      judgeCount,
+    }))
+    .sort((a, b) => b.avg - a.avg || b.total - a.total)
+
+  return insertRankedResults(hackathonId, prizeId, ranked)
+}
+
+async function calculateJudgesPickResults(
+  hackathonId: string,
+  prizeId: string
+): Promise<{ success: boolean; count: number }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error: deleteError } = await client
+    .from("hackathon_results")
+    .delete()
+    .eq("hackathon_id", hackathonId)
+    .eq("prize_id", prizeId)
+
+  if (deleteError) return { success: false, count: 0 }
+
+  const { data: prize } = await client
+    .from("prizes")
+    .select("max_picks")
+    .eq("id", prizeId)
+    .single()
+
+  const maxPicks = (prize as unknown as Prize)?.max_picks ?? 3
+
+  const { data: picks } = await client
+    .from("judge_picks")
+    .select("judge_participant_id, submission_id, rank")
+    .eq("prize_id", prizeId)
+
+  if (!picks || picks.length === 0) return { success: true, count: 0 }
+
+  const judgeIds = [...new Set(picks.map((p) => p.judge_participant_id))]
+
+  // Borda count: 1st pick gets maxPicks points, 2nd gets maxPicks-1, etc.
+  const bordaScores: Record<string, { score: number; pickCount: number }> = {}
+  for (const pick of picks) {
+    if (!bordaScores[pick.submission_id]) bordaScores[pick.submission_id] = { score: 0, pickCount: 0 }
+    bordaScores[pick.submission_id].score += Math.max(0, maxPicks - pick.rank + 1)
+    bordaScores[pick.submission_id].pickCount++
+  }
+
+  const ranked = Object.entries(bordaScores)
+    .map(([sid, { score }]) => ({
+      sid,
+      avg: score,
+      total: score,
+      judgeCount: judgeIds.length,
+    }))
+    .sort((a, b) => b.avg - a.avg)
+
+  return insertRankedResults(hackathonId, prizeId, ranked)
+}
+
+async function calculateCrowdVoteResults(
+  hackathonId: string,
+  prizeId: string
+): Promise<{ success: boolean; count: number }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error: deleteError } = await client
+    .from("hackathon_results")
+    .delete()
+    .eq("hackathon_id", hackathonId)
+    .eq("prize_id", prizeId)
+
+  if (deleteError) return { success: false, count: 0 }
+
+  const { data: votes } = await client
+    .from("crowd_votes")
+    .select("submission_id")
+    .eq("hackathon_id", hackathonId)
+
+  if (!votes || votes.length === 0) return { success: true, count: 0 }
+
+  const voteCounts: Record<string, number> = {}
+  for (const v of votes) {
+    voteCounts[v.submission_id] = (voteCounts[v.submission_id] ?? 0) + 1
+  }
+
+  const ranked = Object.entries(voteCounts)
+    .map(([sid, count]) => ({
+      sid,
+      avg: count,
+      total: count,
+      judgeCount: votes.length,
+    }))
+    .sort((a, b) => b.avg - a.avg)
+
+  return insertRankedResults(hackathonId, prizeId, ranked)
+}
+
+async function insertRankedResults(
+  hackathonId: string,
+  prizeId: string,
+  ranked: { sid: string; avg: number; total: number; judgeCount: number }[]
+): Promise<{ success: boolean; count: number }> {
+  if (ranked.length === 0) return { success: true, count: 0 }
+
+  const client = getSupabase() as unknown as SupabaseClient
+
+  let currentRank = 1
+  const inserts = ranked.map((r, i) => {
+    if (i > 0 && r.avg < ranked[i - 1].avg) currentRank = i + 1
+    return {
+      hackathon_id: hackathonId,
+      submission_id: r.sid,
+      rank: currentRank,
+      total_score: r.total,
+      weighted_score: r.avg,
+      judge_count: r.judgeCount,
+      prize_id: prizeId,
+    }
+  })
+
+  const { error } = await client.from("hackathon_results").insert(inserts)
+  if (error) {
+    console.error("Failed to insert results:", error)
+    return { success: false, count: 0 }
+  }
+
+  return { success: true, count: inserts.length }
+}
+
+// ============================================================
+// Progress
+// ============================================================
 
 export type JudgingProgress = {
   totalAssignments: number
@@ -562,9 +1391,7 @@ export async function getJudgingProgress(hackathonId: string): Promise<JudgingPr
 
   const judgeMap: Record<string, { completed: number; total: number }> = {}
   for (const a of assignments ?? []) {
-    if (!judgeMap[a.judge_participant_id]) {
-      judgeMap[a.judge_participant_id] = { completed: 0, total: 0 }
-    }
+    if (!judgeMap[a.judge_participant_id]) judgeMap[a.judge_participant_id] = { completed: 0, total: 0 }
     judgeMap[a.judge_participant_id].total++
     if (a.is_complete) judgeMap[a.judge_participant_id].completed++
   }
@@ -575,13 +1402,9 @@ export async function getJudgingProgress(hackathonId: string): Promise<JudgingPr
       const { clerkClient } = await import("@clerk/nextjs/server")
       const clerk = await clerkClient()
       const clerkUserIds = judges.map((j) => j.clerk_user_id)
-      const batchSize = 100
-      for (let i = 0; i < clerkUserIds.length; i += batchSize) {
-        const batch = clerkUserIds.slice(i, i + batchSize)
-        const clerkUsers = await clerk.users.getUserList({ userId: batch, limit: batchSize })
-        for (const u of clerkUsers.data) {
-          userMap[u.id] = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.id
-        }
+      const clerkUsers = await clerk.users.getUserList({ userId: clerkUserIds, limit: 100 })
+      for (const u of clerkUsers.data) {
+        userMap[u.id] = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.id
       }
     } catch (err) {
       console.error("Failed to fetch Clerk users for judging progress:", err)
@@ -601,6 +1424,10 @@ export async function getJudgingProgress(hackathonId: string): Promise<JudgingPr
   }
 }
 
+// ============================================================
+// Judge-facing: get assignments and mark viewed
+// ============================================================
+
 export type JudgeAssignmentForJudge = {
   id: string
   submissionId: string
@@ -613,6 +1440,9 @@ export type JudgeAssignmentForJudge = {
   isComplete: boolean
   notes: string
   viewedAt: string | null
+  prizeId: string | null
+  prizeName: string | null
+  judgingStyle: PrizeJudgingStyle | null
 }
 
 export async function getJudgeAssignments(
@@ -634,31 +1464,34 @@ export async function getJudgeAssignments(
   const { data: assignments, error } = await client
     .from("judge_assignments")
     .select(`
-      id, submission_id, is_complete, notes, viewed_at,
+      id, submission_id, is_complete, notes, viewed_at, prize_id,
       submission:submissions!submission_id(title, description, github_url, live_app_url, screenshot_url, team_id)
     `)
     .eq("hackathon_id", hackathonId)
     .eq("judge_participant_id", participant.id)
     .order("assigned_at")
 
-  if (error || !assignments) {
-    console.error("Failed to get judge assignments:", error)
-    return []
+  if (error || !assignments) return []
+
+  const prizeIds = [...new Set(assignments.map((a: Record<string, unknown>) => a.prize_id).filter(Boolean))] as string[]
+  const prizeMap: Record<string, { name: string; judging_style: string | null }> = {}
+  if (prizeIds.length > 0) {
+    const { data: prizes } = await client
+      .from("prizes")
+      .select("id, name, judging_style")
+      .in("id", prizeIds)
+    for (const p of prizes ?? []) {
+      prizeMap[p.id] = { name: p.name, judging_style: p.judging_style }
+    }
   }
 
   const teamIds = assignments
-    .map((a: Record<string, unknown>) => {
-      const sub = a.submission as unknown as { team_id: string | null } | null
-      return sub?.team_id
-    })
+    .map((a: Record<string, unknown>) => (a.submission as unknown as { team_id: string | null })?.team_id)
     .filter((id): id is string => id !== null)
 
   let teamsMap: Record<string, string> = {}
   if (teamIds.length > 0) {
-    const { data: teams } = await client
-      .from("teams")
-      .select("id, name")
-      .in("id", teamIds)
+    const { data: teams } = await client.from("teams").select("id, name").in("id", teamIds)
     teamsMap = Object.fromEntries((teams ?? []).map((t) => [t.id, t.name]))
   }
 
@@ -671,6 +1504,7 @@ export async function getJudgeAssignments(
       screenshot_url: string | null
       team_id: string | null
     }
+    const pid = a.prize_id as string | null
     return {
       id: a.id as string,
       submissionId: a.submission_id as string,
@@ -683,151 +1517,42 @@ export async function getJudgeAssignments(
       isComplete: a.is_complete as boolean,
       notes: a.notes as string,
       viewedAt: (a.viewed_at as string | null) ?? null,
+      prizeId: pid,
+      prizeName: pid ? prizeMap[pid]?.name ?? null : null,
+      judgingStyle: pid ? (prizeMap[pid]?.judging_style as PrizeJudgingStyle | null) : null,
     }
   })
 }
 
-export type AssignmentDetail = {
-  id: string
-  submissionId: string
-  submissionTitle: string
-  submissionDescription: string | null
-  submissionGithubUrl: string | null
-  submissionLiveAppUrl: string | null
-  submissionScreenshotUrl: string | null
-  teamName: string | null
-  isComplete: boolean
-  notes: string
-  criteria: (JudgingCriteria & { currentScore: number | null })[]
-}
-
-export async function getAssignmentDetail(
+export async function markAssignmentViewed(
   assignmentId: string,
   clerkUserId: string
-): Promise<AssignmentDetail | null> {
+): Promise<boolean> {
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data: assignment } = await client
     .from("judge_assignments")
-    .select(`
-      *,
-      judge:hackathon_participants!judge_participant_id(clerk_user_id),
-      submission:submissions!submission_id(title, description, github_url, live_app_url, screenshot_url, team_id)
-    `)
+    .select("id, viewed_at, judge:hackathon_participants!judge_participant_id(clerk_user_id)")
     .eq("id", assignmentId)
     .single()
 
-  if (!assignment) return null
+  if (!assignment) return false
 
   const judge = assignment.judge as unknown as { clerk_user_id: string } | null
-  if (judge?.clerk_user_id !== clerkUserId) return null
+  if (judge?.clerk_user_id !== clerkUserId) return false
+  if (assignment.viewed_at) return true
 
-  const criteria = await listJudgingCriteria(assignment.hackathon_id)
-
-  const { data: existingScores } = await client
-    .from("scores")
-    .select("criteria_id, score")
-    .eq("judge_assignment_id", assignmentId)
-
-  const scoreMap: Record<string, number> = {}
-  for (const s of existingScores ?? []) {
-    scoreMap[s.criteria_id] = s.score
-  }
-
-  const sub = assignment.submission as unknown as {
-    title: string
-    description: string | null
-    github_url: string | null
-    live_app_url: string | null
-    screenshot_url: string | null
-    team_id: string | null
-  }
-
-  let teamName: string | null = null
-  if (sub.team_id) {
-    const { data: team } = await client
-      .from("teams")
-      .select("name")
-      .eq("id", sub.team_id)
-      .single()
-    teamName = team?.name ?? null
-  }
-
-  return {
-    id: assignment.id,
-    submissionId: assignment.submission_id,
-    submissionTitle: sub.title,
-    submissionDescription: sub.description,
-    submissionGithubUrl: sub.github_url,
-    submissionLiveAppUrl: sub.live_app_url,
-    submissionScreenshotUrl: sub.screenshot_url,
-    teamName,
-    isComplete: assignment.is_complete,
-    notes: assignment.notes,
-    criteria: criteria.map((c) => ({
-      ...c,
-      currentScore: scoreMap[c.id] ?? null,
-    })),
-  }
-}
-
-export type SubmitScoresInput = {
-  scores: { criteriaId: string; score: number }[]
-  notes?: string
-}
-
-export type SubmitScoresResult =
-  | { success: true }
-  | { success: false; error: string; code: string }
-
-export async function submitScores(
-  assignmentId: string,
-  clerkUserId: string,
-  input: SubmitScoresInput
-): Promise<SubmitScoresResult> {
-  const client = getSupabase() as unknown as SupabaseClient
-
-  const { data: assignment } = await client
+  const { error } = await client
     .from("judge_assignments")
-    .select("id, judge:hackathon_participants!judge_participant_id(clerk_user_id)")
+    .update({ viewed_at: new Date().toISOString() })
     .eq("id", assignmentId)
-    .single()
-
-  if (!assignment) {
-    return { success: false, error: "Assignment not found", code: "assignment_not_found" }
-  }
-
-  const judge = assignment.judge as unknown as { clerk_user_id: string } | null
-  if (judge?.clerk_user_id !== clerkUserId) {
-    return { success: false, error: "Not authorized", code: "not_authorized" }
-  }
-
-  const scoresJson = input.scores.map((s) => ({
-    criteria_id: s.criteriaId,
-    score: s.score,
-  }))
-
-  const { data, error } = await client.rpc("submit_scores", {
-    p_judge_assignment_id: assignmentId,
-    p_scores: scoresJson,
-    p_notes: input.notes ?? null,
-  })
 
   if (error) {
-    console.error("Failed to submit scores:", error)
-    return { success: false, error: "Failed to submit scores", code: "rpc_failed" }
+    console.error("Failed to mark assignment viewed:", error)
+    return false
   }
 
-  const result = data?.[0]
-  if (!result?.success) {
-    return {
-      success: false,
-      error: result?.error_message || "Failed to submit scores",
-      code: result?.error_code || "unknown",
-    }
-  }
-
-  return { success: true }
+  return true
 }
 
 export async function saveNotes(
@@ -859,103 +1584,4 @@ export async function saveNotes(
   }
 
   return true
-}
-
-export async function markAssignmentViewed(
-  assignmentId: string,
-  clerkUserId: string
-): Promise<boolean> {
-  const client = getSupabase() as unknown as SupabaseClient
-
-  const { data: assignment } = await client
-    .from("judge_assignments")
-    .select("id, viewed_at, judge:hackathon_participants!judge_participant_id(clerk_user_id)")
-    .eq("id", assignmentId)
-    .single()
-
-  if (!assignment) return false
-
-  const judge = assignment.judge as unknown as { clerk_user_id: string } | null
-  if (judge?.clerk_user_id !== clerkUserId) return false
-
-  if (assignment.viewed_at) return true
-
-  const { error } = await client
-    .from("judge_assignments")
-    .update({ viewed_at: new Date().toISOString() })
-    .eq("id", assignmentId)
-
-  if (error) {
-    console.error("Failed to mark assignment viewed:", error)
-    return false
-  }
-
-  return true
-}
-
-export type JudgingSetupStatus = {
-  hasCriteria: boolean
-  allCriteriaHaveLevels: boolean
-  judgeCount: number
-  hasSubmissions: boolean
-  hasUnassignedSubmissions: boolean
-  isReady: boolean
-}
-
-export async function getJudgingSetupStatus(hackathonId: string, judgingMode?: string): Promise<JudgingSetupStatus> {
-  const client = getSupabase() as unknown as SupabaseClient
-
-  const { data: criteria } = await client
-    .from("judging_criteria")
-    .select("id")
-    .eq("hackathon_id", hackathonId)
-
-  const hasCriteria = (criteria?.length ?? 0) > 0
-
-  const { data: judges } = await client
-    .from("hackathon_participants")
-    .select("id")
-    .eq("hackathon_id", hackathonId)
-    .eq("role", "judge")
-
-  const judgeCount = judges?.length ?? 0
-
-  const { data: submissions } = await client
-    .from("submissions")
-    .select("id")
-    .eq("hackathon_id", hackathonId)
-    .eq("status", "submitted")
-
-  const hasSubmissions = (submissions?.length ?? 0) > 0
-
-  const { data: assignments } = await client
-    .from("judge_assignments")
-    .select("submission_id")
-    .eq("hackathon_id", hackathonId)
-
-  const assignedSubmissionIds = new Set((assignments ?? []).map(a => a.submission_id))
-  const hasUnassignedSubmissions = (submissions ?? []).some(s => !assignedSubmissionIds.has(s.id))
-
-  let allCriteriaHaveLevels = true
-  if (judgingMode === "rubric" && hasCriteria && criteria) {
-    const criteriaIds = criteria.map(c => c.id)
-    const { data: levels } = await client
-      .from("rubric_levels")
-      .select("criteria_id")
-      .in("criteria_id", criteriaIds)
-
-    if (levels) {
-      const countMap = new Map<string, number>()
-      for (const l of levels) {
-        countMap.set(l.criteria_id, (countMap.get(l.criteria_id) ?? 0) + 1)
-      }
-      allCriteriaHaveLevels = criteriaIds.every(id => (countMap.get(id) ?? 0) >= 2)
-    } else {
-      allCriteriaHaveLevels = false
-    }
-  }
-
-  const isReady = hasCriteria && allCriteriaHaveLevels && judgeCount > 0 && hasSubmissions && !hasUnassignedSubmissions
-
-  return { hasCriteria, allCriteriaHaveLevels, judgeCount, hasSubmissions, hasUnassignedSubmissions, isReady }
 }

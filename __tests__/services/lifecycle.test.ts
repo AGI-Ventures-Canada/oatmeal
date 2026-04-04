@@ -145,13 +145,10 @@ describe("Lifecycle Service", () => {
       expect(call.type).toBe("hackathon_started")
     })
 
-    it("skips duplicate transitions within 5 minutes", async () => {
+    it("fails when status has already changed (optimistic lock)", async () => {
       setMockFromImplementation((table) => {
-        if (table === "hackathon_transitions") {
-          return createChainableMock({
-            data: [{ id: "existing-transition" }],
-            error: null,
-          })
+        if (table === "hackathons") {
+          return createChainableMock({ data: null, error: null })
         }
         return createChainableMock({ data: null, error: null })
       })
@@ -166,14 +163,11 @@ describe("Lifecycle Service", () => {
       })
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain("already occurred recently")
+      expect(result.error).toContain("status has already changed")
     })
 
     it("handles DB update failure", async () => {
       setMockFromImplementation((table) => {
-        if (table === "hackathon_transitions") {
-          return createChainableMock({ data: [], error: null })
-        }
         if (table === "hackathons") {
           return createChainableMock({
             data: null,

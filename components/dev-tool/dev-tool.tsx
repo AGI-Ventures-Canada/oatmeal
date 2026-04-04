@@ -6,11 +6,10 @@ import { cn } from "@/lib/utils"
 import { DevToolPanel } from "./dev-tool-panel"
 import { useEventContext } from "./use-event-context"
 
-const EDGE_MARGIN = 12
+const EDGE_MARGIN = 16
 const SNAP_TRANSITION = "all 200ms cubic-bezier(0.25, 1, 0.5, 1)"
-const DRAG_THRESHOLD = 5
-const BUTTON_W = 140
-const BUTTON_H = 48
+const DRAG_THRESHOLD = 8
+const BUTTON_SIZE = 44
 const SIDEBAR_WIDTH = 256
 
 type EdgeY = "top" | "center" | "bottom"
@@ -20,10 +19,10 @@ type Edge = `${EdgeY}-${EdgeX}`
 function snapToEdge(x: number, y: number): { x: number; y: number; edge: Edge } {
   const hasSidebar = window.innerWidth >= 1024
   const leftEdge = hasSidebar ? SIDEBAR_WIDTH + EDGE_MARGIN : EDGE_MARGIN
-  const rightEdge = window.innerWidth - BUTTON_W - EDGE_MARGIN
+  const rightEdge = window.innerWidth - BUTTON_SIZE - EDGE_MARGIN
   const contentMidX = hasSidebar ? (SIDEBAR_WIDTH + window.innerWidth) / 2 : window.innerWidth / 2
-  const centerX = contentMidX - BUTTON_W / 2
-  const centerY = window.innerHeight / 2 - BUTTON_H / 2
+  const centerX = contentMidX - BUTTON_SIZE / 2
+  const centerY = window.innerHeight / 2 - BUTTON_SIZE / 2
 
   const thirdX = (window.innerWidth - (hasSidebar ? SIDEBAR_WIDTH : 0)) / 3
   const offsetX = x - (hasSidebar ? SIDEBAR_WIDTH : 0)
@@ -33,15 +32,15 @@ function snapToEdge(x: number, y: number): { x: number; y: number; edge: Edge } 
   const edgeY: EdgeY = y < thirdY ? "top" : y < thirdY * 2 ? "center" : "bottom"
 
   const snapX = edgeX === "left" ? leftEdge : edgeX === "center" ? centerX : rightEdge
-  const snapY = edgeY === "top" ? EDGE_MARGIN : edgeY === "center" ? centerY : window.innerHeight - BUTTON_H - EDGE_MARGIN
+  const snapY = edgeY === "top" ? EDGE_MARGIN : edgeY === "center" ? centerY : window.innerHeight - BUTTON_SIZE - EDGE_MARGIN
 
   return { x: snapX, y: snapY, edge: `${edgeY}-${edgeX}` }
 }
 
 function defaultPosition() {
   return {
-    x: window.innerWidth - BUTTON_W - EDGE_MARGIN,
-    y: window.innerHeight - BUTTON_H - EDGE_MARGIN,
+    x: window.innerWidth - BUTTON_SIZE - EDGE_MARGIN,
+    y: window.innerHeight - BUTTON_SIZE - EDGE_MARGIN,
   }
 }
 
@@ -53,7 +52,7 @@ export function DevTool() {
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [edge, setEdge] = useState<Edge>("bottom-right")
   const [isSnapping, setIsSnapping] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
+  const [isActiveDrag, setIsActiveDrag] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLDivElement>(null)
   const positionRef = useRef(position)
@@ -93,7 +92,7 @@ export function DevTool() {
 
   useEffect(() => {
     function handleResize() {
-      const snapped = snapToEdge(positionRef.current.x + BUTTON_W / 2, positionRef.current.y + BUTTON_H / 2)
+      const snapped = snapToEdge(positionRef.current.x + BUTTON_SIZE / 2, positionRef.current.y + BUTTON_SIZE / 2)
       setPosition({ x: snapped.x, y: snapped.y })
       setEdge(snapped.edge)
     }
@@ -105,18 +104,8 @@ export function DevTool() {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && expanded) setExpanded(false)
     }
-    function handleClickOutside(e: MouseEvent) {
-      if (!expanded) return
-      const target = e.target as Node
-      if (panelRef.current?.contains(target) || buttonRef.current?.contains(target)) return
-      setExpanded(false)
-    }
     window.addEventListener("keydown", handleKeyDown)
-    window.addEventListener("pointerdown", handleClickOutside)
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown)
-      window.removeEventListener("pointerdown", handleClickOutside)
-    }
+    return () => window.removeEventListener("keydown", handleKeyDown)
   }, [expanded])
 
   const saveState = useCallback(() => {
@@ -128,6 +117,7 @@ export function DevTool() {
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
+      if (expanded) return
       if ((e.target as HTMLElement).closest("button, [role=button], a, input, textarea, select")) return
       isDragging.current = true
       hasMoved.current = false
@@ -143,9 +133,10 @@ export function DevTool() {
     const dx = e.clientX - dragStart.current.x
     const dy = e.clientY - dragStart.current.y
     if (!hasMoved.current && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return
+    if (!hasMoved.current) setIsActiveDrag(true)
     hasMoved.current = true
-    const newX = Math.max(0, Math.min(dragStart.current.posX + dx, window.innerWidth - BUTTON_W))
-    const newY = Math.max(0, Math.min(dragStart.current.posY + dy, window.innerHeight - BUTTON_H))
+    const newX = Math.max(0, Math.min(dragStart.current.posX + dx, window.innerWidth - BUTTON_SIZE))
+    const newY = Math.max(0, Math.min(dragStart.current.posY + dy, window.innerHeight - BUTTON_SIZE))
     setPosition({ x: newX, y: newY })
   }, [])
 
@@ -153,10 +144,11 @@ export function DevTool() {
     const wasDragging = hasMoved.current
     isDragging.current = false
     hasMoved.current = false
+    setIsActiveDrag(false)
 
     if (wasDragging) {
-      const centerX = positionRef.current.x + BUTTON_W / 2
-      const centerY = positionRef.current.y + BUTTON_H / 2
+      const centerX = positionRef.current.x + BUTTON_SIZE / 2
+      const centerY = positionRef.current.y + BUTTON_SIZE / 2
       const snapped = snapToEdge(centerX, centerY)
       setIsSnapping(true)
       setPosition({ x: snapped.x, y: snapped.y })
@@ -177,7 +169,7 @@ export function DevTool() {
 
   return (
     <div
-      className={cn("fixed z-9999 select-none", !expanded && "cursor-grab active:cursor-grabbing")}
+      className={cn("fixed z-9999 select-none", !expanded && (isActiveDrag ? "cursor-grabbing" : "cursor-pointer"))}
       style={{
         left: position.x,
         top: position.y,
@@ -188,6 +180,8 @@ export function DevTool() {
       onPointerUp={handlePointerUp}
     >
       {expanded ? (
+        <>
+        <div className="fixed inset-0" onClick={() => setExpanded(false)} />
         <div
           ref={panelRef}
           className={cn(
@@ -198,13 +192,13 @@ export function DevTool() {
             transform:
               [
                 edgeX === "right"
-                  ? `translateX(calc(-100% + ${BUTTON_W}px))`
+                  ? `translateX(calc(-100% + ${BUTTON_SIZE}px))`
                   : edgeX === "center"
-                    ? `translateX(calc(-50% + ${BUTTON_W / 2}px))`
+                    ? `translateX(calc(-50% + ${BUTTON_SIZE / 2}px))`
                     : "",
                 edgeY === "bottom" || edgeY === "center"
                   ? `translateY(calc(-100% - ${EDGE_MARGIN}px))`
-                  : `translateY(${BUTTON_H + EDGE_MARGIN}px)`,
+                  : `translateY(${BUTTON_SIZE + EDGE_MARGIN}px)`,
               ]
                 .filter(Boolean)
                 .join(" ") || undefined,
@@ -216,27 +210,15 @@ export function DevTool() {
             onSaveState={saveState}
           />
         </div>
+        </>
       ) : (
         <div
           ref={buttonRef}
-          className={cn(
-            "flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-primary-foreground transition-all duration-150",
-            isHovered && "scale-105"
-          )}
-          style={{
-            boxShadow: isHovered
-              ? "0 8px 32px color-mix(in oklch, var(--primary) 50%, transparent)"
-              : "0 4px 20px color-mix(in oklch, var(--primary) 35%, transparent)",
-          }}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          className="flex size-11 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-md hover:text-foreground hover:shadow-lg transition-all duration-150"
         >
-          <FlaskConical
-            className={cn("size-5 shrink-0 transition-transform duration-150", isHovered && "rotate-12")}
-          />
-          <span className="text-sm font-semibold whitespace-nowrap">Dev Tools</span>
+          <FlaskConical className="size-5 shrink-0" />
           {eventContext && (
-            <span className="size-2 rounded-full bg-primary-foreground/50 shrink-0" />
+            <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-primary" />
           )}
         </div>
       )}

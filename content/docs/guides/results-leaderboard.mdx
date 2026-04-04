@@ -18,26 +18,12 @@ The results flow has four steps:
 
 Before calculating results, confirm all judges have completed their assignments.
 
-```typescript title="check-progress.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/judging/assignments`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { progress } = await res.json()
-
-console.log(
-  `${progress.completedAssignments}/${progress.totalAssignments} assignments complete`
-)
-
-for (const judge of progress.judges) {
-  if (judge.completed < judge.total) {
-    console.log(`${judge.displayName}: ${judge.completed}/${judge.total} (incomplete)`)
-  }
-}
+```bash title="Check judging progress"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/judging/assignments" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+The response includes a `progress` object with `completedAssignments`, `totalAssignments`, and per-judge breakdowns.
 
 <Callout type="info">
 You can calculate results before all assignments are complete, but scores will only reflect submitted evaluations. Incomplete assignments are excluded from the calculation.
@@ -47,18 +33,16 @@ You can calculate results before all assignments are complete, but scores will o
 
 Trigger result calculation to aggregate scores and generate rankings.
 
-```typescript title="calculate.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/calculate`,
-  {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { count } = await res.json()
-console.log(`Ranked ${count} submissions`)
+```bash title="Calculate results"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results/calculate" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon results calculate $HACKATHON_ID
+```
+</Callout>
 
 ### How Calculation Works
 
@@ -72,25 +56,16 @@ You can recalculate at any time — new results replace previous ones.
 
 Preview the full leaderboard before publishing.
 
-```typescript title="preview.ts"
-const res = await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results`,
-  {
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-const { results, isPublished } = await res.json()
-
-console.log(`Published: ${isPublished}\n`)
-console.log("Rank | Team | Score | Prizes")
-console.log("-----|------|-------|-------")
-
-for (const r of results) {
-  const prizes = r.prizes.map((p) => p.name).join(", ") || "—"
-  console.log(`#${r.rank} | ${r.teamName} | ${r.totalScore} | ${prizes}`)
-}
+```bash title="Preview leaderboard"
+curl -s "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon results get $HACKATHON_ID
+```
+</Callout>
 
 At this point you can:
 - **Assign prizes manually** if needed (see [Prizes API](/docs/sdk/prizes))
@@ -101,17 +76,16 @@ At this point you can:
 
 When you're satisfied with the leaderboard, publish it.
 
-```typescript title="publish.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/publish`,
-  {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
-
-console.log("Results are now public!")
+```bash title="Publish results"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results/publish" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon results publish $HACKATHON_ID
+```
+</Callout>
 
 Publishing triggers:
 - Score-based prizes are auto-assigned to top-ranked submissions
@@ -123,15 +97,16 @@ Publishing triggers:
 
 If you need to make corrections after publishing:
 
-```typescript title="unpublish.ts"
-await fetch(
-  `${BASE_URL}/api/dashboard/hackathons/${hackathonId}/results/unpublish`,
-  {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${API_KEY}` },
-  }
-)
+```bash title="Unpublish results"
+curl -s -X POST "$BASE_URL/api/dashboard/hackathons/$HACKATHON_ID/results/unpublish" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon results unpublish $HACKATHON_ID
+```
+</Callout>
 
 This hides results from the public page and reverts the hackathon status to `"judging"`.
 
@@ -139,25 +114,17 @@ This hides results from the public page and reverts the hackathon status to `"ju
 
 Once published, anyone can view results without authentication:
 
-```typescript title="public-view.ts"
-const res = await fetch(
-  `${BASE_URL}/api/public/hackathons/ai-innovation-2026/results`
-)
-
-if (res.status === 404) {
-  console.log("Results not yet published")
-  return
-}
-
-const { results } = await res.json()
-
-for (const r of results) {
-  console.log(`#${r.rank} ${r.submissionTitle} by ${r.teamName}`)
-  if (r.prizes.length > 0) {
-    console.log(`   Prizes: ${r.prizes.map((p) => p.name).join(", ")}`)
-  }
-}
+```bash title="View public results"
+curl -s "$BASE_URL/api/public/hackathons/ai-innovation-2026/results" | jq .
 ```
+
+Returns a 404 if results have not been published yet.
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon browse results ai-innovation-2026
+```
+</Callout>
 
 ## Best Practices
 

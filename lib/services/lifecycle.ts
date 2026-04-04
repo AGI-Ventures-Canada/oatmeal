@@ -9,12 +9,12 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { getEffectiveStatus } from "@/lib/utils/timeline"
 
 const VALID_TRANSITIONS: Record<HackathonStatus, HackathonStatus[]> = {
-  draft: ["published"],
+  draft: ["published", "registration_open"],
   published: ["registration_open", "active", "draft"],
-  registration_open: ["active", "published"],
-  active: ["judging", "completed"],
-  judging: ["completed"],
-  completed: ["archived", "judging"],
+  registration_open: ["active", "published", "draft"],
+  active: ["judging", "completed", "registration_open", "published", "draft"],
+  judging: ["completed", "active", "registration_open", "published", "draft"],
+  completed: ["archived", "judging", "active", "registration_open", "published", "draft"],
   archived: [],
 }
 
@@ -56,30 +56,19 @@ export async function executeTransition(
 
   const client = getSupabase() as unknown as SupabaseClient
 
-  const isDuplicate = await checkRecentTransition(
-    client,
-    hackathonId,
-    toStatus
-  )
-  if (isDuplicate) {
-    return {
-      success: false,
-      error: `Transition to ${toStatus} already occurred recently`,
-    }
-  }
-
   const { data: hackathon, error: updateError } = await client
     .from("hackathons")
     .update({ status: toStatus, updated_at: new Date().toISOString() })
     .eq("id", hackathonId)
     .eq("tenant_id", tenantId)
+    .eq("status", fromStatus)
     .select()
     .single()
 
   if (updateError || !hackathon) {
     return {
       success: false,
-      error: `Failed to update status: ${updateError?.message ?? "hackathon not found"}`,
+      error: `Failed to update status: ${updateError?.message ?? "status has already changed"}`,
     }
   }
 
@@ -179,20 +168,3 @@ export async function processAutoTransitions(): Promise<AutoTransitionResult> {
   return result
 }
 
-async function checkRecentTransition(
-  client: SupabaseClient,
-  hackathonId: string,
-  toStatus: string
-): Promise<boolean> {
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
-
-  const { data } = await client
-    .from("hackathon_transitions")
-    .select("id")
-    .eq("hackathon_id", hackathonId)
-    .eq("to_status", toStatus)
-    .gte("created_at", fiveMinutesAgo)
-    .limit(1)
-
-  return (data?.length ?? 0) > 0
-}

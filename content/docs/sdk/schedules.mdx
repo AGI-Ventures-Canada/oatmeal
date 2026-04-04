@@ -21,26 +21,24 @@ All endpoints require an API key with `schedules:read` or `schedules:write` scop
 
 `POST /api/dashboard/schedules` — requires `schedules:write` scope.
 
-```typescript title="create-schedule.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/schedules`, {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    name: "Daily report",
-    frequency: "daily",
-    timezone: "America/New_York",
-    jobType: "generate-report",
-    input: { format: "pdf" },
-  }),
-})
-
-const schedule = await res.json()
-console.log("Schedule ID:", schedule.id)
-console.log("Next run:", schedule.nextRunAt)
+```bash title="Create a schedule"
+curl -s -X POST "$BASE_URL/api/dashboard/schedules" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Daily report",
+    "frequency": "daily",
+    "timezone": "America/New_York",
+    "jobType": "generate-report",
+    "input": {"format": "pdf"}
+  }' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon schedules create --name "Daily report" --frequency daily --timezone America/New_York
+```
+</Callout>
 
 ### Request Body
 
@@ -81,19 +79,16 @@ console.log("Next run:", schedule.nextRunAt)
 
 Supports optional query parameters: `limit` (number) and `activeOnly` (`true`/`false`).
 
-```typescript title="list-schedules.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/schedules?activeOnly=true`, {
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-  },
-})
-
-const { schedules } = await res.json()
-
-for (const s of schedules) {
-  console.log(`${s.name} (${s.frequency}) - next: ${s.nextRunAt}`)
-}
+```bash title="List active schedules"
+curl -s "$BASE_URL/api/dashboard/schedules?activeOnly=true" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon schedules list
+```
+</Callout>
 
 ### Response
 
@@ -121,16 +116,16 @@ for (const s of schedules) {
 
 `GET /api/dashboard/schedules/:id` — requires `schedules:read` scope.
 
-```typescript title="get-schedule.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-  },
-})
-
-const schedule = await res.json()
-console.log(schedule.name, schedule.isActive)
+```bash title="Get schedule details"
+curl -s "$BASE_URL/api/dashboard/schedules/$SCHEDULE_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon schedules get $SCHEDULE_ID
+```
+</Callout>
 
 ### Response
 
@@ -158,21 +153,18 @@ console.log(schedule.name, schedule.isActive)
 
 All fields are optional. Only provided fields are updated.
 
-```typescript title="update-schedule.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {
-  method: "PATCH",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    isActive: false,
-  }),
-})
-
-const data = await res.json()
-console.log("Updated:", data.updatedAt)
+```bash title="Pause a schedule"
+curl -s -X PATCH "$BASE_URL/api/dashboard/schedules/$SCHEDULE_ID" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"isActive": false}' | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon schedules update $SCHEDULE_ID --active false
+```
+</Callout>
 
 ### Updatable Fields
 
@@ -200,19 +192,16 @@ console.log("Updated:", data.updatedAt)
 
 `DELETE /api/dashboard/schedules/:id` — requires `schedules:write` scope.
 
-```typescript title="delete-schedule.ts"
-const res = await fetch(`${BASE_URL}/api/dashboard/schedules/${scheduleId}`, {
-  method: "DELETE",
-  headers: {
-    "Authorization": `Bearer ${API_KEY}`,
-  },
-})
-
-const data = await res.json()
-if (data.success) {
-  console.log("Schedule deleted")
-}
+```bash title="Delete a schedule"
+curl -s -X DELETE "$BASE_URL/api/dashboard/schedules/$SCHEDULE_ID" \
+  -H "Authorization: Bearer $API_KEY" | jq .
 ```
+
+<Callout type="info" title="CLI equivalent">
+```bash
+hackathon schedules delete $SCHEDULE_ID
+```
+</Callout>
 
 ## Cron Expression Examples
 

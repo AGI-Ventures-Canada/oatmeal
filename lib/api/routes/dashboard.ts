@@ -6,10 +6,8 @@ import { listJobs, getJobById } from "@/lib/services/jobs"
 import { logAudit } from "@/lib/services/audit"
 import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
 import { dashboardJudgingRoutes } from "./dashboard-judging"
-import { dashboardPrizesRoutes } from "./dashboard-prizes"
 import { dashboardResultsRoutes } from "./dashboard-results"
 import { dashboardJudgeDisplayRoutes } from "./dashboard-judge-display"
-import { dashboardPrizeTracksRoutes } from "./dashboard-prize-tracks"
 import { getEffectiveStatus } from "@/lib/utils/timeline"
 import type { Scope } from "@/lib/auth/types"
 import { ALL_SCOPES } from "@/lib/auth/types"
@@ -1076,56 +1074,84 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       const isStatusChange = body.status !== undefined
 
       let previousStatus: string | undefined
+      let currentHackathon: import("@/lib/db/hackathon-types").Hackathon | undefined
       if (hasDateUpdate || isStatusChange) {
-        const { getHackathonByIdForOrganizer } = await import("@/lib/services/public-hackathons")
-        const current = await getHackathonByIdForOrganizer(params.id, principal.tenantId)
-        if (current) {
-          previousStatus = current.status
+        const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+        const check = await checkHackathonOrganizer(params.id, principal.tenantId)
+        if (check.status === "not_found") {
+          return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          })
+        }
+        if (check.status === "not_authorized") {
+          return new Response(JSON.stringify({ error: "Not authorized" }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          })
+        }
+        currentHackathon = check.hackathon
+        previousStatus = currentHackathon.status
 
-          if (hasDateUpdate) {
-            const { validateTimelineDates } = await import("@/lib/utils/timeline")
-            const dateError = validateTimelineDates({
-              registrationOpensAt: body.registrationOpensAt !== undefined ? body.registrationOpensAt : current.registration_opens_at,
-              registrationClosesAt: body.registrationClosesAt !== undefined ? body.registrationClosesAt : current.registration_closes_at,
-              startsAt: body.startsAt !== undefined ? body.startsAt : current.starts_at,
-              endsAt: body.endsAt !== undefined ? body.endsAt : current.ends_at,
+        const isTransition = body.status !== undefined && body.status !== previousStatus
+        if (hasDateUpdate && !isTransition) {
+          const { validateTimelineDates } = await import("@/lib/utils/timeline")
+          const dateError = validateTimelineDates({
+            registrationOpensAt: body.registrationOpensAt !== undefined ? body.registrationOpensAt : currentHackathon.registration_opens_at,
+            registrationClosesAt: body.registrationClosesAt !== undefined ? body.registrationClosesAt : currentHackathon.registration_closes_at,
+            startsAt: body.startsAt !== undefined ? body.startsAt : currentHackathon.starts_at,
+            endsAt: body.endsAt !== undefined ? body.endsAt : currentHackathon.ends_at,
+          })
+          if (dateError) {
+            return new Response(JSON.stringify({ error: dateError }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
             })
-            if (dateError) {
-              return new Response(JSON.stringify({ error: dateError }), {
-                status: 400,
-                headers: { "Content-Type": "application/json" },
-              })
-            }
           }
         }
       }
 
       const hasStatusTransition = previousStatus && body.status && body.status !== previousStatus
+      const hasOtherFields = body.bannerUrl !== undefined || body.name !== undefined ||
+        body.description !== undefined || body.rules !== undefined ||
+        body.startsAt !== undefined || body.endsAt !== undefined ||
+        body.registrationOpensAt !== undefined || body.registrationClosesAt !== undefined ||
+        body.anonymousJudging !== undefined || body.judgingMode !== undefined ||
+        body.locationType !== undefined || body.locationName !== undefined ||
+        body.locationUrl !== undefined || body.locationLatitude !== undefined ||
+        body.locationLongitude !== undefined || body.requireLocationVerification !== undefined ||
+        body.maxParticipants !== undefined || body.minTeamSize !== undefined ||
+        body.maxTeamSize !== undefined || body.allowSolo !== undefined
 
-      const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
-      const hackathon = await updateHackathonSettings(params.id, principal.tenantId, {
-        bannerUrl: body.bannerUrl,
-        name: body.name,
-        description: body.description,
-        rules: body.rules,
-        startsAt: body.startsAt,
-        endsAt: body.endsAt,
-        registrationOpensAt: body.registrationOpensAt,
-        registrationClosesAt: body.registrationClosesAt,
-        status: hasStatusTransition ? undefined : body.status as "draft" | "published" | "registration_open" | "active" | "judging" | "completed" | "archived" | undefined,
-        anonymousJudging: body.anonymousJudging,
-        judgingMode: body.judgingMode as "points" | "subjective" | "rubric" | undefined,
-        locationType: body.locationType as "in_person" | "virtual" | null | undefined,
-        locationName: body.locationName,
-        locationUrl: normalizeOptionalUrl(body.locationUrl),
-        locationLatitude: body.locationLatitude,
-        locationLongitude: body.locationLongitude,
-        requireLocationVerification: body.requireLocationVerification,
-        maxParticipants: body.maxParticipants,
-        minTeamSize: body.minTeamSize,
-        maxTeamSize: body.maxTeamSize,
-        allowSolo: body.allowSolo,
-      })
+      let hackathon: import("@/lib/db/hackathon-types").Hackathon | null
+      if (hasStatusTransition && !hasOtherFields) {
+        hackathon = currentHackathon!
+      } else {
+        const { updateHackathonSettings } = await import("@/lib/services/public-hackathons")
+        hackathon = await updateHackathonSettings(params.id, principal.tenantId, {
+          bannerUrl: body.bannerUrl,
+          name: body.name,
+          description: body.description,
+          rules: body.rules,
+          startsAt: body.startsAt,
+          endsAt: body.endsAt,
+          registrationOpensAt: body.registrationOpensAt,
+          registrationClosesAt: body.registrationClosesAt,
+          status: hasStatusTransition ? undefined : body.status as "draft" | "published" | "registration_open" | "active" | "judging" | "completed" | "archived" | undefined,
+          anonymousJudging: body.anonymousJudging,
+          judgingMode: body.judgingMode as "points" | "subjective" | "rubric" | undefined,
+          locationType: body.locationType as "in_person" | "virtual" | null | undefined,
+          locationName: body.locationName,
+          locationUrl: normalizeOptionalUrl(body.locationUrl),
+          locationLatitude: body.locationLatitude,
+          locationLongitude: body.locationLongitude,
+          requireLocationVerification: body.requireLocationVerification,
+          maxParticipants: body.maxParticipants,
+          minTeamSize: body.minTeamSize,
+          maxTeamSize: body.maxTeamSize,
+          allowSolo: body.allowSolo,
+        })
+      }
 
       if (!hackathon) {
         return new Response(JSON.stringify({ error: "Hackathon not found" }), {
@@ -2225,7 +2251,5 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     },
   })
   .use(dashboardJudgingRoutes)
-  .use(dashboardPrizesRoutes)
   .use(dashboardResultsRoutes)
   .use(dashboardJudgeDisplayRoutes)
-  .use(dashboardPrizeTracksRoutes)

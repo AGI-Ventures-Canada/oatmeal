@@ -167,6 +167,44 @@ export interface OrgProfile {
   sponsoredHackathons?: unknown[]
 }
 
+export interface PrizeTrack {
+  trackId: string
+  trackName: string
+  description?: string | null
+  intent?: string
+  style?: string | null
+  displayOrder?: number
+  totalAssignments: number
+  completedAssignments: number
+}
+
+export interface TrackDetail {
+  id: string
+  name: string
+  description: string | null
+  intent: string
+  displayOrder?: number
+  rounds: TrackRound[]
+}
+
+export interface TrackRound {
+  id: string
+  name: string
+  style: string | null
+  status: string
+  advancement: string
+  advancementConfig: Record<string, unknown>
+  displayOrder: number
+  buckets: BucketDef[]
+}
+
+export interface BucketDef {
+  id: string
+  level: number
+  label: string
+  description: string | null
+}
+
 export interface PickResults {
   hackathonId: string
   results: Record<string, unknown>

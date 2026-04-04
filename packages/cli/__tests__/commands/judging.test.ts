@@ -462,6 +462,66 @@ describe("judging commands", () => {
     })
   })
 
+  describe("track-assign", () => {
+    it("assigns judge to track", async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ assignedCount: 5 }))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runTrackAssign } = await import("../../src/commands/judging/track-assign")
+      await runTrackAssign(client, hackathonId, ["--judge", "j1", "--track", "t1"])
+
+      const url = mockFetch.mock.calls[0][0] as string
+      const init = mockFetch.mock.calls[0][1] as RequestInit
+      expect(url).toContain("/judging/track-assign")
+      expect(init.method).toBe("POST")
+      const body = JSON.parse(init.body as string)
+      expect(body.judgeParticipantId).toBe("j1")
+      expect(body.trackId).toBe("t1")
+    })
+
+    it("exits when --judge or --track missing", async () => {
+      const exitSpy = spyOn(process, "exit").mockImplementation(() => { throw new Error("exit") })
+      const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {})
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runTrackAssign } = await import("../../src/commands/judging/track-assign")
+      await expect(runTrackAssign(client, hackathonId, ["--judge", "j1"])).rejects.toThrow()
+      exitSpy.mockRestore()
+      consoleErrorSpy.mockRestore()
+    })
+
+    it("--json outputs raw data", async () => {
+      const data = { assignedCount: 3 }
+      mockFetch.mockResolvedValueOnce(jsonResponse(data))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runTrackAssign } = await import("../../src/commands/judging/track-assign")
+      await runTrackAssign(client, hackathonId, ["--judge", "j1", "--track", "t1", "--json"])
+      expect(JSON.parse(consoleLogSpy.mock.calls[0][0])).toEqual(data)
+    })
+  })
+
+  describe("track-unassign", () => {
+    it("removes judge from track with --yes", async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ removedCount: 5 }))
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runTrackUnassign } = await import("../../src/commands/judging/track-unassign")
+      await runTrackUnassign(client, hackathonId, ["--judge", "j1", "--track", "t1", "--yes"])
+
+      const url = mockFetch.mock.calls[0][0] as string
+      const init = mockFetch.mock.calls[0][1] as RequestInit
+      expect(url).toContain("/judging/track-assign")
+      expect(init.method).toBe("DELETE")
+      const body = JSON.parse(init.body as string)
+      expect(body.judgeParticipantId).toBe("j1")
+    })
+
+    it("skips when user declines confirmation", async () => {
+      mockConfirm.mockResolvedValueOnce(false)
+      const client = new OatmealClient({ baseUrl: "http://localhost", apiKey: "sk_test" })
+      const { runTrackUnassign } = await import("../../src/commands/judging/track-unassign")
+      await runTrackUnassign(client, hackathonId, ["--judge", "j1", "--track", "t1"])
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+  })
+
   describe("levels delete", () => {
     it("sends DELETE and shows updated levels list", async () => {
       mockFetch

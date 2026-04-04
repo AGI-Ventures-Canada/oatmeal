@@ -390,12 +390,21 @@ export interface Prize {
   distribution_method: string | null
   display_value: string | null
   criteria_id: string | null
+  prize_track_id: string | null
+  judging_style: PrizeJudgingStyle | null
+  round_id: string | null
+  assignment_mode: PrizeAssignmentMode | null
+  max_picks: number | null
   display_order: number
   created_at: string
   updated_at: string
 }
 
 export type JudgingMode = "points" | "subjective" | "rubric"
+
+export type PrizeJudgingStyle = "bucket_sort" | "gate_check" | "crowd_vote" | "judges_pick"
+
+export type PrizeAssignmentMode = "organizer_assigned" | "self_select"
 
 export type JudgingStyle =
   | "bucket_sort"
@@ -433,7 +442,8 @@ export interface PrizeTrack {
 
 export interface BucketDefinition {
   id: string
-  round_id: string
+  round_id: string | null
+  prize_id: string | null
   level: number
   label: string
   description: string | null

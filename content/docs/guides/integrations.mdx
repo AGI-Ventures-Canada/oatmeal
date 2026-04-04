@@ -1,0 +1,215 @@
+---
+title: Integrations
+description: Connect Oatmeal to external systems — CRMs, Slack, Zapier, and AI agents.
+---
+
+Use the Oatmeal API and webhooks to connect your hackathon data to the tools your team already uses.
+
+## Zapier / n8n / Make.com
+
+Use webhooks as triggers and the REST API as actions in any automation platform.
+
+### Trigger: New submission received
+
+Register a webhook to fire when a submission is created:
+
+```bash title="Create a webhook trigger"
+curl -s -X POST "$BASE_URL/api/v1/webhooks" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://hooks.zapier.com/hooks/catch/123456/abcdef/",
+    "events": ["submission.created", "submission.submitted"]
+  }' | jq .
+```
+
+Zapier receives a POST with this payload:
+
+```json title="Webhook payload"
+{
+  "event": "submission.created",
+  "timestamp": "2026-04-02T14:30:00Z",
+  "data": {
+    "hackathonId": "hack_abc123",
+    "submissionId": "sub_xyz456",
+    "title": "AI Code Review Bot"
+  }
+}
+```
+
+In Zapier, use **Webhooks by Zapier > Catch Hook** as your trigger, then add actions like sending an email, posting to Slack, or creating a row in Google Sheets.
+
+### Action: Fetch hackathon data
+
+Use **Webhooks by Zapier > Custom Request** to call any Oatmeal endpoint. For example, to fetch all submissions after results are published:
+
+```bash title="Export submissions"
+curl -s "$BASE_URL/api/public/hackathons/ai-innovation-2026/submissions" | jq .
+```
+
+### Available webhook events
+
+| Event | When it fires |
+|-------|--------------|
+| `hackathon.created` | New hackathon created |
+| `hackathon.updated` | Settings changed |
+| `participant.registered` | Someone registered |
+| `submission.created` | Team started a submission |
+| `submission.submitted` | Submission finalized |
+| `submission.updated` | Submission edited |
+| `results.published` | Leaderboard went live |
+
+## CRM Sync
+
+Pull registration and submission data into your CRM for sponsor reporting, follow-up emails, or lead tracking.
+
+### Export submissions to a file
+
+```bash title="Export submissions as JSON"
+curl -s "$BASE_URL/api/public/hackathons/ai-innovation-2026/submissions" \
+  | jq '.submissions' > submissions.json
+```
+
+### Track registration counts
+
+```bash title="Check registration numbers"
+curl -s "$BASE_URL/api/public/hackathons/ai-innovation-2026/registration" | jq .
+```
+
+```json title="Response"
+{
+  "participantCount": 87,
+  "isRegistered": null
+}
+```
+
+### Sync winners to your CRM
+
+After results are published, pull the leaderboard and push winners to your CRM:
+
+```bash title="Get published results"
+curl -s "$BASE_URL/api/public/hackathons/ai-innovation-2026/results" \
+  | jq '.results[] | {rank, team: .teamName, project: .submissionTitle, prizes: [.prizes[].name]}'
+```
+
+Output:
+
+```json title="Formatted results"
+{"rank": 1, "team": "Team Alpha", "project": "AI Code Review Bot", "prizes": ["Best Overall"]}
+{"rank": 2, "team": "Team Beta", "project": "Smart Budget Tracker", "prizes": ["Runner Up"]}
+```
+
+Pipe this into your CRM's API, a CSV, or a Google Sheet via the tool of your choice.
+
+### Automated sync with webhooks
+
+For real-time sync, register a webhook for `participant.registered` and `results.published`, then process the events in your backend to update CRM records automatically.
+
+## Slack Notifications
+
+Get notified in Slack when submissions come in or results are published.
+
+### Option 1: Zapier webhook → Slack
+
+1. Create a webhook for `submission.created` (see above)
+2. Point it at a Zapier Catch Hook
+3. Add a **Slack > Send Channel Message** action
+4. Map the webhook data to the message template
+
+### Option 2: Custom webhook handler
+
+Build a small handler that receives Oatmeal webhooks and posts to a Slack incoming webhook:
+
+```typescript title="slack-webhook-handler.ts"
+import express from "express"
+import crypto from "crypto"
+
+const app = express()
+app.use(express.json())
+
+const WEBHOOK_SECRET = process.env.OATMEAL_WEBHOOK_SECRET!
+const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL!
+
+app.post("/webhooks/oatmeal", async (req, res) => {
+  const signature = req.headers["x-webhook-signature"] as string
+  const expected = crypto
+    .createHmac("sha256", WEBHOOK_SECRET)
+    .update(JSON.stringify(req.body))
+    .digest("hex")
+
+  if (signature !== expected) {
+    return res.status(401).send("Invalid signature")
+  }
+
+  const { event, data } = req.body
+
+  let message = ""
+  if (event === "submission.created") {
+    message = `New submission: *${data.title}*`
+  } else if (event === "results.published") {
+    message = `Results are live for hackathon \`${data.hackathonId}\``
+  }
+
+  if (message) {
+    await fetch(SLACK_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: message }),
+    })
+  }
+
+  res.status(200).send("OK")
+})
+
+app.listen(3001)
+```
+
+## Claude Code + CLI
+
+The Oatmeal CLI works with [Claude Code](https://claude.ai/code) out of the box. Claude Code can read `hackathon --help`, compose commands, and manage your hackathon interactively.
+
+### Setup
+
+```bash title="Install and authenticate"
+npm install -g @agi-ventures-canada/hackathon-cli
+hackathon login
+```
+
+### Example workflows
+
+Ask Claude Code to manage your hackathon:
+
+```
+> Set up judging criteria for my hackathon with Technical Innovation,
+  Design, and Completeness — weight technical higher
+```
+
+Claude Code runs:
+
+```bash title="Claude Code creates criteria"
+hackathon judging criteria create $HACKATHON_ID \
+  --name "Technical Innovation" --max-score 10 --weight 1.5
+
+hackathon judging criteria create $HACKATHON_ID \
+  --name "Design & UX" --max-score 10 --weight 1.0
+
+hackathon judging criteria create $HACKATHON_ID \
+  --name "Completeness" --max-score 10 --weight 1.0
+```
+
+Other things you can ask:
+
+- "List all submissions for my hackathon and export to CSV"
+- "Add these 5 judges by email"
+- "Auto-assign judges with 5 submissions each, then show the assignment breakdown"
+- "Calculate results and show me the top 5 before publishing"
+
+### Install Oatmeal skills for richer context
+
+For deeper hackathon knowledge, install the [Oatmeal skills](/docs/skills):
+
+```bash title="Install skills"
+npx skills add AGI-Ventures-Canada/oatmeal
+```
+
+This gives Claude Code domain expertise for planning hackathons, managing judging workflows, and advising participants.

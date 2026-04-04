@@ -15,9 +15,19 @@ import {
   Share2,
   ChevronDown,
   ChevronUp,
+  Workflow,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Section, PipelineButton, type SeedStatus } from "./event-shared"
+
+const PRIZE_TRACK_PRESETS = [
+  { key: "standard", label: "Standard", desc: "3 tracks: Grand Prize, Most Innovative, People's Choice" },
+  { key: "sponsor_heavy", label: "Sponsor Heavy", desc: "5 tracks: Grand Prize + 3 sponsor prizes + Crowd Favorite" },
+  { key: "multi_round", label: "Multi-Round", desc: "3 tracks: Gate Check, Head-to-Head, Crowd Vote" },
+  { key: "minimal", label: "Minimal", desc: "1 track: Single winner, bucket sort" },
+  { key: "kitchen_sink", label: "Kitchen Sink", desc: "7 tracks: every judging style represented" },
+] as const
 
 interface EventSeedSectionProps {
   seedStatus: SeedStatus
@@ -110,6 +120,45 @@ export function EventSeedSection({ seedStatus, pending, devAction }: EventSeedSe
             </div>
           </div>
         </div>
+      </Section>
+
+      <Section
+        label="Prize Tracks"
+        action={
+          seedStatus.prizeTracks > 0 ? (
+            <Badge variant="secondary" className="text-[10px] h-4 px-1">
+              {seedStatus.prizeTracks} tracks
+            </Badge>
+          ) : undefined
+        }
+      >
+        <div className="space-y-1">
+          {PRIZE_TRACK_PRESETS.map((preset) => (
+            <Button
+              key={preset.key}
+              size="sm"
+              variant="outline"
+              disabled={isLoading}
+              onClick={() =>
+                devAction("/seed-prize-tracks", "POST", {
+                  preset: preset.key,
+                  assignJudges: hasJudging,
+                  scorePercentage: 0,
+                })
+              }
+              className="h-auto min-h-8 text-xs justify-start w-full py-1.5"
+            >
+              <Workflow className="size-3 shrink-0" />
+              <div className="text-left min-w-0">
+                <span className="truncate">{preset.label}</span>
+                <p className="text-[10px] text-muted-foreground font-normal truncate">{preset.desc}</p>
+              </div>
+            </Button>
+          ))}
+        </div>
+        {hasJudging && (
+          <p className="text-[10px] text-muted-foreground">Judges will be auto-assigned to tracks</p>
+        )}
       </Section>
 
       <Section label="Extras">

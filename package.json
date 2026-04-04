@@ -38,7 +38,7 @@
     "@tailwindcss/typography": "^0.5.19",
     "@tavily/core": "^0.7.2",
     "@workflow/ai": "^4.0.1-beta.44",
-    "@xyflow/react": "^12.10.0",
+    "@xyflow/react": "^12.10.2",
     "ai": "^6.0.33",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

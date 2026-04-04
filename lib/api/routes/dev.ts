@@ -93,7 +93,7 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
       const db = await getDb()
       const hid = params.id
 
-      const [teams, submissions, criteria, judges, assignments, rooms, prizes, categories, hackathon, mentorRequests] = await Promise.all([
+      const [teams, submissions, criteria, judges, assignments, rooms, prizes, categories, hackathon, mentorRequests, prizeTracks] = await Promise.all([
         db.from("teams").select("id", { count: "exact", head: true }).eq("hackathon_id", hid).in("captain_clerk_user_id", SEED_USERS),
         db.from("submissions").select("id", { count: "exact", head: true }).eq("hackathon_id", hid),
         db.from("judging_criteria").select("id", { count: "exact", head: true }).eq("hackathon_id", hid),
@@ -104,6 +104,7 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
         db.from("submission_categories").select("id", { count: "exact", head: true }).eq("hackathon_id", hid),
         db.from("hackathons").select("challenge_released_at, results_published_at").eq("id", hid).single(),
         db.from("mentor_requests").select("id", { count: "exact", head: true }).eq("hackathon_id", hid),
+        db.from("prize_tracks").select("id", { count: "exact", head: true }).eq("hackathon_id", hid),
       ])
 
       const scoredAssignments = assignments.data?.filter((a) => a.is_complete)?.length ?? 0
@@ -121,6 +122,7 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
         challengeReleased: !!hackathon.data?.challenge_released_at,
         resultsPublished: !!hackathon.data?.results_published_at,
         mentorRequests: mentorRequests.count ?? 0,
+        prizeTracks: prizeTracks.count ?? 0,
       }
     }
   )
@@ -451,7 +453,37 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
         }
       }
 
-      return { criteriaCount: criteriaIds.length, judgeCount: judgePids.length, assignmentCount }
+      // Create prizes and assign judges
+      const { createPrize, assignJudgeToPrize } = await import("@/lib/services/judging")
+
+      const standardPrizes = [
+        { name: "Grand Prize", judgingStyle: "bucket_sort" as const, description: "Best project overall" },
+        { name: "Most Innovative", judgingStyle: "judges_pick" as const, description: "Creative and novel approach" },
+        { name: "People's Choice", judgingStyle: "crowd_vote" as const, description: "Audience vote winner" },
+      ]
+
+      // Clear existing prizes
+      await db.from("prizes").delete().eq("hackathon_id", params.id)
+
+      const prizeIds: string[] = []
+      for (let i = 0; i < standardPrizes.length; i++) {
+        const p = standardPrizes[i]
+        const prize = await createPrize(params.id, {
+          name: p.name,
+          description: p.description,
+          judgingStyle: p.judgingStyle,
+          displayOrder: i,
+        })
+        if (prize) prizeIds.push(prize.id)
+      }
+
+      for (const prizeId of prizeIds) {
+        for (const judgePid of judgePids) {
+          await assignJudgeToPrize(params.id, judgePid, prizeId).catch(() => {})
+        }
+      }
+
+      return { criteriaCount: criteriaIds.length, judgeCount: judgePids.length, assignmentCount, prizeCount: prizeIds.length }
     },
   )
 
@@ -685,6 +717,128 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
 
   .post(
     "/hackathons/:id/seed-prizes",
+    async ({ params, body, set }) => {
+      const guard = devGuard(set)
+      if (guard) return guard
+
+      const { createPrize, assignJudgeToPrize } = await import("@/lib/services/judging")
+      const db = await getDb()
+
+      const preset = body.preset ?? "standard"
+
+      type PrizeJudgingStyle = "bucket_sort" | "gate_check" | "crowd_vote" | "judges_pick"
+      const PRESETS: Record<string, Array<{
+        name: string
+        judgingStyle: PrizeJudgingStyle
+        description: string
+      }>> = {
+        standard: [
+          { name: "Grand Prize", judgingStyle: "bucket_sort", description: "Best project overall" },
+          { name: "Most Innovative", judgingStyle: "judges_pick", description: "Creative and novel approach" },
+          { name: "People's Choice", judgingStyle: "crowd_vote", description: "Audience vote winner" },
+        ],
+        sponsor_heavy: [
+          { name: "Grand Prize", judgingStyle: "bucket_sort", description: "Top project across all criteria" },
+          { name: "Best AI/ML", judgingStyle: "bucket_sort", description: "Sponsored by TechCorp — best use of machine learning" },
+          { name: "Best Developer Tool", judgingStyle: "judges_pick", description: "Sponsored by DevHub — most useful dev tool" },
+          { name: "Best Social Impact", judgingStyle: "judges_pick", description: "Sponsored by GoodCause — biggest real-world impact" },
+          { name: "Crowd Favorite", judgingStyle: "crowd_vote", description: "Voted by all attendees" },
+        ],
+        minimal: [
+          { name: "Winner", judgingStyle: "bucket_sort", description: "Single prize, bucket sort style" },
+        ],
+        kitchen_sink: [
+          { name: "Grand Prize", judgingStyle: "bucket_sort", description: "Best overall project" },
+          { name: "Best AI Agent", judgingStyle: "bucket_sort", description: "Most capable autonomous agent" },
+          { name: "Best UX", judgingStyle: "judges_pick", description: "Best user experience and design" },
+          { name: "Most Innovative", judgingStyle: "judges_pick", description: "Creative and novel approach" },
+          { name: "Best Use of MCP", judgingStyle: "gate_check", description: "Best Model Context Protocol integration" },
+          { name: "People's Choice", judgingStyle: "crowd_vote", description: "Live audience voting" },
+        ],
+      }
+
+      const prizes = PRESETS[preset]
+      if (!prizes) {
+        set.status = 400
+        return { error: `Unknown preset: ${preset}. Available: ${Object.keys(PRESETS).join(", ")}` }
+      }
+
+      // Clear existing prizes
+      await db.from("prizes").delete().eq("hackathon_id", params.id)
+
+      const created: string[] = []
+      for (let i = 0; i < prizes.length; i++) {
+        const p = prizes[i]
+        const prize = await createPrize(params.id, {
+          name: p.name,
+          description: p.description,
+          judgingStyle: p.judgingStyle,
+          displayOrder: i,
+        })
+        if (prize) created.push(prize.id)
+      }
+
+      // If judging is set up, auto-assign judges to prizes
+      if (body.assignJudges) {
+        const { data: judgePids } = await db
+          .from("hackathon_participants")
+          .select("id")
+          .eq("hackathon_id", params.id)
+          .eq("role", "judge")
+        if (judgePids?.length) {
+          for (const prizeId of created) {
+            for (const judge of judgePids) {
+              await assignJudgeToPrize(params.id, judge.id, prizeId).catch(() => {})
+            }
+          }
+        }
+      }
+
+      // If requested, seed scores
+      if (body.scorePercentage && body.scorePercentage > 0) {
+        const { data: assignments } = await db
+          .from("judge_assignments")
+          .select("id")
+          .eq("hackathon_id", params.id)
+          .eq("is_complete", false)
+
+        const { data: criteriaRows } = await db
+          .from("judging_criteria")
+          .select("id")
+          .eq("hackathon_id", params.id)
+
+        const criteriaIds = criteriaRows?.map((c) => c.id) ?? []
+        if (assignments?.length && criteriaIds.length) {
+          const toScore = Math.ceil(assignments.length * (body.scorePercentage / 100))
+          for (let i = 0; i < toScore; i++) {
+            for (const cId of criteriaIds) {
+              await db.from("scores").insert({
+                judge_assignment_id: assignments[i].id,
+                criteria_id: cId,
+                score: Math.floor(Math.random() * 8) + 3,
+              })
+            }
+            await db
+              .from("judge_assignments")
+              .update({ is_complete: true, completed_at: new Date().toISOString() })
+              .eq("id", assignments[i].id)
+          }
+        }
+      }
+
+      return { preset, tracksCreated: created.length }
+    },
+    {
+      body: t.Object({
+        preset: t.Optional(t.String()),
+        assignJudges: t.Optional(t.Boolean()),
+        scorePercentage: t.Optional(t.Number({ minimum: 0, maximum: 100 })),
+      }),
+    }
+  )
+
+  .post(
+    "/hackathons/:id/seed-prizes",
     async ({ params, set }) => {
       const guard = devGuard(set)
       if (guard) return guard
@@ -825,6 +979,11 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
         db.from("rooms").select("id").eq("hackathon_id", params.id) as unknown as string[]
       )
       await db.from("rooms").delete().eq("hackathon_id", params.id)
+      await db.from("judging_rounds").delete().in(
+        "prize_track_id",
+        db.from("prize_tracks").select("id").eq("hackathon_id", params.id) as unknown as string[]
+      )
+      await db.from("prize_tracks").delete().eq("hackathon_id", params.id)
       await db.from("submissions").delete().eq("hackathon_id", params.id)
       await db.from("hackathon_participants").delete().eq("hackathon_id", params.id).in("clerk_user_id", SEED_USERS)
       await db.from("teams").delete().eq("hackathon_id", params.id).in("captain_clerk_user_id", SEED_USERS)

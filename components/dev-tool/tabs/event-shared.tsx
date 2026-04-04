@@ -17,12 +17,14 @@ export type SeedStatus = {
   challengeReleased: boolean
   resultsPublished: boolean
   mentorRequests: number
+  prizeTracks: number
 }
 
 export const EMPTY_SEED_STATUS: SeedStatus = {
   teams: 0, submissions: 0, criteria: 0, judges: 0, assignments: 0,
   scoredAssignments: 0, rooms: 0, prizes: 0, categories: 0,
   challengeReleased: false, resultsPublished: false, mentorRequests: 0,
+  prizeTracks: 0,
 }
 
 export function Section({ label, children, action }: { label: string; children: React.ReactNode; action?: React.ReactNode }) {

@@ -96,7 +96,7 @@ export async function createPrizeTrack(
   }
 
   const round = await createRound(hackathonId, track.id, {
-    name: "Default",
+    name: "Round 1",
     style,
     status: "planned",
   })
@@ -946,4 +946,192 @@ export async function getJudgeTrackAssignments(
       }
     })
     .filter((t): t is JudgeTrackAssignment => t !== null)
+}
+
+// ============================================================
+// Track Workflow Data (for prize workflow canvas)
+// ============================================================
+
+export type TrackJudgeInfo = {
+  participantId: string
+  name: string
+  imageUrl: string | null
+}
+
+export type TrackRoundInfo = {
+  id: string
+  name: string
+  style: JudgingStyle | null
+  status: RoundStatus
+  advancement: AdvancementRule
+  isActive: boolean
+  totalAssignments: number
+  completedAssignments: number
+  judges: TrackJudgeInfo[]
+}
+
+export type TrackWinnerInfo = {
+  rank: number
+  submissionId: string
+  submissionTitle: string
+  teamName: string | null
+  weightedScore: number | null
+  prizes: string[]
+}
+
+export type TrackWorkflowData = {
+  trackId: string
+  trackName: string
+  intent: TrackIntent
+  description: string | null
+  rounds: TrackRoundInfo[]
+  winners: TrackWinnerInfo[]
+}
+
+export async function getTrackWorkflowData(hackathonId: string): Promise<TrackWorkflowData[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const tracks = await listPrizeTracks(hackathonId)
+  const results: TrackWorkflowData[] = []
+  const allParticipantIds = new Set<string>()
+  const roundJudgeIds = new Map<string, string[]>()
+
+  for (const track of tracks) {
+    const rounds = await listRounds(track.id)
+
+    const roundInfos: TrackRoundInfo[] = []
+    for (const round of rounds) {
+      const { data: assignments } = await client
+        .from("judge_assignments")
+        .select("is_complete, judge_participant_id")
+        .eq("hackathon_id", hackathonId)
+        .eq("round_id", round.id)
+
+      const uniqueJudgeIds = [...new Set((assignments ?? []).map((a) => a.judge_participant_id))]
+      uniqueJudgeIds.forEach((id) => allParticipantIds.add(id))
+      roundJudgeIds.set(round.id, uniqueJudgeIds)
+
+      roundInfos.push({
+        id: round.id,
+        name: round.name,
+        style: round.style as JudgingStyle | null,
+        status: round.status as RoundStatus,
+        advancement: round.advancement as AdvancementRule,
+        isActive: round.is_active,
+        totalAssignments: assignments?.length ?? 0,
+        completedAssignments: assignments?.filter((a) => a.is_complete).length ?? 0,
+        judges: [],
+      })
+    }
+
+    const { data: trackResults } = await client
+      .from("hackathon_results")
+      .select("rank, submission_id, weighted_score, total_score")
+      .eq("hackathon_id", hackathonId)
+      .eq("prize_track_id", track.id)
+      .order("rank")
+      .limit(5)
+
+    let winners: TrackWinnerInfo[] = []
+    if (trackResults && trackResults.length > 0) {
+      const subIds = trackResults.map((r) => r.submission_id)
+      const { data: subs } = await client
+        .from("submissions")
+        .select("id, title, team_id")
+        .in("id", subIds)
+
+      const teamIds = (subs ?? []).map((s) => s.team_id).filter((id): id is string => id !== null)
+      let teamsMap: Record<string, string> = {}
+      if (teamIds.length > 0) {
+        const { data: teams } = await client.from("teams").select("id, name").in("id", teamIds)
+        teamsMap = Object.fromEntries((teams ?? []).map((t) => [t.id, t.name]))
+      }
+
+      const { data: prizeAssignments } = await client
+        .from("prize_assignments")
+        .select("submission_id, prize:prizes!prize_id(name)")
+        .in("submission_id", subIds)
+
+      const prizeMap = new Map<string, string[]>()
+      for (const pa of (prizeAssignments ?? []) as unknown as Array<{ submission_id: string; prize: { name: string } | null }>) {
+        if (pa.prize?.name) {
+          const existing = prizeMap.get(pa.submission_id) ?? []
+          existing.push(pa.prize.name)
+          prizeMap.set(pa.submission_id, existing)
+        }
+      }
+
+      const subMap = new Map((subs ?? []).map((s) => [s.id, s]))
+
+      winners = trackResults.map((r) => {
+        const sub = subMap.get(r.submission_id)
+        return {
+          rank: r.rank,
+          submissionId: r.submission_id,
+          submissionTitle: sub?.title ?? "Unknown",
+          teamName: sub?.team_id ? teamsMap[sub.team_id] ?? null : null,
+          weightedScore: r.weighted_score,
+          prizes: prizeMap.get(r.submission_id) ?? [],
+        }
+      })
+    }
+
+    results.push({
+      trackId: track.id,
+      trackName: track.name,
+      intent: track.intent,
+      description: track.description,
+      rounds: roundInfos,
+      winners,
+    })
+  }
+
+  // Batch-fetch judge profiles (single Clerk API call for all judges)
+  if (allParticipantIds.size > 0) {
+    const judgeProfileMap = new Map<string, { name: string; imageUrl: string | null }>()
+
+    const { data: participants } = await client
+      .from("hackathon_participants")
+      .select("id, clerk_user_id")
+      .in("id", [...allParticipantIds])
+
+    if (participants && participants.length > 0) {
+      try {
+        const { clerkClient } = await import("@clerk/nextjs/server")
+        const clerk = await clerkClient()
+        const clerkUserIds = participants.map((p) => p.clerk_user_id)
+        const clerkUsers = await clerk.users.getUserList({ userId: clerkUserIds, limit: 100 })
+
+        const clerkMap = new Map(
+          clerkUsers.data.map((u) => [
+            u.id,
+            {
+              name: [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.id,
+              imageUrl: u.imageUrl ?? null,
+            },
+          ])
+        )
+
+        for (const p of participants) {
+          const profile = clerkMap.get(p.clerk_user_id)
+          if (profile) judgeProfileMap.set(p.id, profile)
+        }
+      } catch (err) {
+        console.error("Failed to fetch Clerk users for track workflow:", err)
+      }
+    }
+
+    for (const result of results) {
+      for (const roundInfo of result.rounds) {
+        const pIds = roundJudgeIds.get(roundInfo.id) ?? []
+        roundInfo.judges = pIds.map((pid) => ({
+          participantId: pid,
+          name: judgeProfileMap.get(pid)?.name ?? "Judge",
+          imageUrl: judgeProfileMap.get(pid)?.imageUrl ?? null,
+        }))
+      }
+    }
+  }
+
+  return results
 }

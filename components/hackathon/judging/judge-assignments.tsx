@@ -130,6 +130,7 @@ interface JudgeAssignmentsProps {
   initialInvitations: PendingInvitation[]
   submissions: Submission[]
   anonymousJudging: boolean
+  onMutation?: () => void
 }
 
 export function JudgeAssignments({
@@ -139,6 +140,7 @@ export function JudgeAssignments({
   initialInvitations,
   submissions,
   anonymousJudging: initialAnonymous,
+  onMutation,
 }: JudgeAssignmentsProps) {
   const [judges, setJudges] = useState<Judge[]>(initialJudges)
   const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments)
@@ -288,6 +290,7 @@ export function JudgeAssignments({
       setAddJudgeSuccess(`${displayName} added as judge`)
       setSearchQuery("")
       setSearchResults([])
+      onMutation?.()
       setTimeout(() => setAddJudgeOpen(false), 1200)
     } catch (err) {
       setAddJudgeError(err instanceof Error ? err.message : "Something went wrong")
@@ -346,6 +349,7 @@ export function JudgeAssignments({
 
       setInviteEmail("")
       setShowInviteForm(false)
+      onMutation?.()
       setTimeout(() => setAddJudgeOpen(false), 1200)
     } catch (err) {
       setAddJudgeError(err instanceof Error ? err.message : "Something went wrong")
@@ -374,6 +378,7 @@ export function JudgeAssignments({
       setAssignments((prev) =>
         prev.filter((a) => a.judgeParticipantId !== participantId)
       )
+      onMutation?.()
     } catch {
       setRemoveJudgeError("Failed to remove judge")
     } finally {
@@ -475,6 +480,7 @@ export function JudgeAssignments({
         setJudges(data.judges)
       }
       setAutoAssignSuccess(true)
+      onMutation?.()
       setTimeout(() => setAutoAssignSuccess(false), 3000)
     } catch (err) {
       setAutoAssignError(err instanceof Error ? err.message : "Something went wrong")
