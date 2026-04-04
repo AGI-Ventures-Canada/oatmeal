@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { PackageCheck, Mail, Truck, CheckCircle2, Loader2 } from "lucide-react"
+import { PackageCheck, Mail, Truck, CheckCircle2, Loader2, ChevronRight, CircleCheck } from "lucide-react"
 
 type FulfillmentStatus = "assigned" | "contacted" | "shipped" | "claimed"
 
@@ -223,7 +223,11 @@ export function PrizeFulfillmentTracker({
               const config = STATUS_CONFIG[f.status]
               const next = NEXT_STATUS[f.status]
               return (
-                <TableRow key={f.id}>
+                <TableRow
+                key={f.id}
+                className={next ? "cursor-pointer" : undefined}
+                onClick={next ? () => openUpdateDialog(f) : undefined}
+              >
                   <TableCell>
                     <div>
                       <span className="font-medium">{f.prizeName}</span>
@@ -247,11 +251,15 @@ export function PrizeFulfillmentTracker({
                   </TableCell>
                   <TableCell>
                     {next ? (
-                      <Button size="sm" variant="outline" onClick={() => openUpdateDialog(f)}>
+                      <Button size="sm" onClick={() => openUpdateDialog(f)}>
                         {STATUS_CONFIG[next].label}
+                        <ChevronRight className="ml-1 h-3 w-3" />
                       </Button>
                     ) : (
-                      <span className="text-sm text-muted-foreground">Done</span>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <CircleCheck className="h-4 w-4" />
+                        Done
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
