@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 type OAuthProvider = "oauth_google" | "oauth_github" | "oauth_linkedin_oidc";
@@ -17,14 +17,13 @@ export function OAuthButtons({
 }: {
   onOAuth: (provider: OAuthProvider) => void;
 }) {
-  const [lastUsed, setLastUsed] = useState<OAuthProvider | null>(null);
-
-  useEffect(() => {
+  const [lastUsed, setLastUsed] = useState<OAuthProvider | null>(() => {
+    if (typeof window === "undefined") return null;
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && VALID_PROVIDERS.includes(stored as OAuthProvider)) {
-      setLastUsed(stored as OAuthProvider);
-    }
-  }, []);
+    return stored && VALID_PROVIDERS.includes(stored as OAuthProvider)
+      ? (stored as OAuthProvider)
+      : null;
+  });
 
   function handleOAuth(provider: OAuthProvider) {
     localStorage.setItem(STORAGE_KEY, provider);
