@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, CheckCircle2, ExternalLink, Github, Maximize2 } from "lucide-react"
+import { RubricLevelSelector } from "./rubric-level-selector"
 import Image from "next/image"
 import {
   Dialog,
@@ -21,7 +22,9 @@ type CriterionWithScore = {
   description: string | null
   max_score: number
   weight: number
+  category?: string | null
   currentScore: number | null
+  rubricLevels?: { id: string; level_number: number; label: string; description: string | null }[]
 }
 
 type AssignmentDetail = {
@@ -55,7 +58,7 @@ export function ScoringPanel({
 }: ScoringPanelProps) {
   const [detail, setDetail] = useState<AssignmentDetail | null>(null)
   const [loading, setLoading] = useState(true)
-  const [scores, setScores] = useState<Record<string, number>>({})
+  const [scores, setScores] = useState<Record<string, number | null>>({})
   const [notes, setNotes] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -73,9 +76,9 @@ export function ScoringPanel({
       .then((res) => res.json())
       .then((data) => {
         setDetail(data)
-        const initialScores: Record<string, number> = {}
+        const initialScores: Record<string, number | null> = {}
         for (const c of data.criteria ?? []) {
-          initialScores[c.id] = c.currentScore ?? 0
+          initialScores[c.id] = c.currentScore ?? (c.rubricLevels?.length > 0 ? null : 0)
         }
         setScores(initialScores)
         setNotes(data.notes ?? "")
@@ -115,20 +118,30 @@ export function ScoringPanel({
 
   async function handleSubmit() {
     if (!detail) return
+
+    const unscoredRubric = detail.criteria.some(
+      (c) => c.rubricLevels && c.rubricLevels.length > 0 && scores[c.id] == null
+    )
+    if (unscoredRubric) {
+      setError("Please select a rubric level for all criteria before submitting")
+      return
+    }
+
     setSubmitting(true)
     setError(null)
 
     try {
+      const validScores = Object.entries(scores)
+        .filter(([, score]) => score !== null)
+        .map(([criteriaId, score]) => ({ criteriaId, score }))
+
       const res = await fetch(
         `/api/public/hackathons/${hackathonSlug}/judging/assignments/${assignmentId}/scores`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            scores: Object.entries(scores).map(([criteriaId, score]) => ({
-              criteriaId,
-              score,
-            })),
+            scores: validScores,
             notes,
           }),
         }
@@ -180,6 +193,10 @@ export function ScoringPanel({
       </div>
     )
   }
+
+  const hasUnscoredRubric = detail.criteria.some(
+    (c) => c.rubricLevels && c.rubricLevels.length > 0 && scores[c.id] == null
+  )
 
   return (
     <div className="space-y-6" onKeyDown={handleKeyDown}>
@@ -251,36 +268,53 @@ export function ScoringPanel({
                   <p className="text-xs text-muted-foreground">{c.description}</p>
                 )}
               </div>
-              <Badge variant="secondary">{c.weight}x</Badge>
+              <Badge variant="secondary">
+                {c.rubricLevels && c.rubricLevels.length > 0
+                  ? ((c.category ?? "core") === "core" ? "2x" : "1x")
+                  : `${c.weight}x`}
+              </Badge>
             </div>
-            <div className="flex items-center gap-3">
-              <Slider
-                value={[scores[c.id] ?? 0]}
-                onValueChange={([val]) =>
-                  setScores((prev) => ({ ...prev, [c.id]: val }))
+            {c.rubricLevels && c.rubricLevels.length > 0 ? (
+              <RubricLevelSelector
+                levels={c.rubricLevels}
+                selectedLevel={scores[c.id] ?? null}
+                onSelect={(level) =>
+                  setScores((prev) => ({
+                    ...prev,
+                    [c.id]: level,
+                  }))
                 }
-                min={0}
-                max={c.max_score}
-                step={1}
-                className="flex-1"
               />
-              <Input
-                type="number"
-                min={0}
-                max={c.max_score}
-                value={scores[c.id] ?? 0}
-                onChange={(e) => {
-                  const val = Math.max(0, Math.min(c.max_score, parseInt(e.target.value) || 0))
-                  setScores((prev) => ({ ...prev, [c.id]: val }))
-                }}
-                className="w-16 text-center"
-                autoComplete="off"
-                data-1p-ignore
-                data-lpignore="true"
-                data-form-type="other"
-              />
-              <span className="text-xs text-muted-foreground w-8">/{c.max_score}</span>
-            </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Slider
+                  value={[scores[c.id] ?? 0]}
+                  onValueChange={([val]) =>
+                    setScores((prev) => ({ ...prev, [c.id]: val }))
+                  }
+                  min={0}
+                  max={c.max_score}
+                  step={1}
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  max={c.max_score}
+                  value={scores[c.id] ?? 0}
+                  onChange={(e) => {
+                    const val = Math.max(0, Math.min(c.max_score, parseInt(e.target.value) || 0))
+                    setScores((prev) => ({ ...prev, [c.id]: val }))
+                  }}
+                  className="w-16 text-center"
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
+                />
+                <span className="text-xs text-muted-foreground w-8">/{c.max_score}</span>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -307,7 +341,7 @@ export function ScoringPanel({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="flex gap-2">
-        <Button onClick={handleSubmit} disabled={submitting}>
+        <Button onClick={handleSubmit} disabled={submitting || hasUnscoredRubric}>
           {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
           Submit Scores
         </Button>

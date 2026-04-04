@@ -84,6 +84,7 @@ const baseJudgesProps = {
   judgingMode: "points" as const,
   anonymousJudging: false,
   judgingProgress: { totalAssignments: 0, completedAssignments: 0 },
+  trackProgress: [],
 }
 
 const basePrizesProps = {

@@ -1005,9 +1005,19 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
 
     markAssignmentViewed(params.assignmentId, userId).catch(() => {})
 
+    const { listRubricLevels } = await import("@/lib/services/rubric-levels")
+
+    const criteriaWithLevels = await Promise.all(
+      detail.criteria.map(async (c) => ({
+        ...c,
+        rubricLevels: await listRubricLevels(c.id),
+      }))
+    )
+
     const anonymize = hackathon.anonymous_judging
     return {
       ...detail,
+      criteria: criteriaWithLevels,
       teamName: anonymize ? null : detail.teamName,
     }
   }, {
@@ -1067,7 +1077,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         scores: t.Array(
           t.Object({
             criteriaId: t.String(),
-            score: t.Number({ minimum: 0 }),
+            score: t.Number(),
           })
         ),
         notes: t.Optional(t.String()),
@@ -1256,6 +1266,153 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       description: "Removes a pick for a prize category in subjective judging mode.",
     },
   })
+  .get("/hackathons/:slug/judging/track-assignments", async ({ params }) => {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const hackathon = await getPublicHackathon(params.slug)
+    if (!hackathon) {
+      return new Response(
+        JSON.stringify({ error: "Hackathon not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getRegistrationInfo } = await import("@/lib/services/hackathons")
+    const regInfo = await getRegistrationInfo(hackathon.id, userId)
+    if (regInfo.participantRole !== "judge" || !regInfo.participantId) {
+      return new Response(
+        JSON.stringify({ error: "Not a judge" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { getJudgeTrackAssignments } = await import("@/lib/services/prize-tracks")
+    const tracks = await getJudgeTrackAssignments(hackathon.id, regInfo.participantId)
+
+    return { tracks }
+  }, {
+    detail: {
+      summary: "Get judge track assignments",
+      description: "Returns the authenticated judge's prize track assignments with progress.",
+    },
+  })
+  .post(
+    "/hackathons/:slug/judging/assignments/:assignmentId/bucket-sort",
+    async ({ params, body }) => {
+      const { userId } = await auth()
+
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const hackathon = await getPublicHackathon(params.slug)
+      if (!hackathon) {
+        return new Response(
+          JSON.stringify({ error: "Hackathon not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      if (hackathon.status !== "judging" && hackathon.status !== "active") {
+        return new Response(
+          JSON.stringify({ error: "Hackathon is not in judging phase", code: "not_judging" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const { submitBucketSortResponse } = await import("@/lib/services/prize-tracks")
+      const result = await submitBucketSortResponse(params.assignmentId, {
+        gates: body.gates ?? [],
+        bucketId: body.bucketId,
+        notes: body.notes,
+      })
+
+      if (!result.success) {
+        return new Response(
+          JSON.stringify({ error: result.error, code: result.code }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      return { success: true }
+    },
+    {
+      detail: {
+        summary: "Submit bucket sort response",
+        description: "Submits a bucket sort evaluation (gate responses + bucket placement) for a judging assignment.",
+      },
+      body: t.Object({
+        gates: t.Optional(t.Array(t.Object({
+          criteriaId: t.String(),
+          passed: t.Boolean(),
+        }))),
+        bucketId: t.String(),
+        notes: t.Optional(t.String()),
+      }),
+    }
+  )
+  .post(
+    "/hackathons/:slug/judging/assignments/:assignmentId/gate-check",
+    async ({ params, body }) => {
+      const { userId } = await auth()
+
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "Sign in required", code: "not_authenticated" }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const hackathon = await getPublicHackathon(params.slug)
+      if (!hackathon) {
+        return new Response(
+          JSON.stringify({ error: "Hackathon not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      if (hackathon.status !== "judging" && hackathon.status !== "active") {
+        return new Response(
+          JSON.stringify({ error: "Hackathon is not in judging phase", code: "not_judging" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const { submitGateCheckResponse } = await import("@/lib/services/prize-tracks")
+      const result = await submitGateCheckResponse(params.assignmentId, body.gates)
+
+      if (!result.success) {
+        return new Response(
+          JSON.stringify({ error: result.error, code: result.code }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      return { success: true }
+    },
+    {
+      detail: {
+        summary: "Submit gate check response",
+        description: "Submits gate check evaluation (binary pass/fail per criterion) for a judging assignment.",
+      },
+      body: t.Object({
+        gates: t.Array(t.Object({
+          criteriaId: t.String(),
+          passed: t.Boolean(),
+        })),
+      }),
+    }
+  )
   .get("/judge-invitations/:token", async ({ params }) => {
     const { getJudgeInvitationByToken } = await import("@/lib/services/judge-invitations")
     const invitation = await getJudgeInvitationByToken(params.token)

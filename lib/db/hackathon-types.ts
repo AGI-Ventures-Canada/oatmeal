@@ -40,11 +40,43 @@ export type HackathonPhase =
 export type WebhookEvent =
   | "hackathon.created"
   | "hackathon.updated"
+  | "hackathon.registration_opened"
+  | "hackathon.started"
+  | "hackathon.judging_started"
+  | "hackathon.completed"
   | "participant.registered"
   | "submission.created"
   | "submission.submitted"
   | "submission.updated"
   | "results.published"
+
+export type TransitionTrigger = "manual" | "auto"
+
+export type TransitionEvent =
+  | "registration_opened"
+  | "hackathon_started"
+  | "judging_started"
+  | "results_published"
+
+export interface HackathonTransition {
+  id: string
+  hackathon_id: string
+  from_status: string
+  to_status: string
+  trigger: TransitionTrigger
+  triggered_by: string | null
+  created_at: string
+}
+
+export interface HackathonNotificationSettings {
+  hackathon_id: string
+  email_on_registration_open: boolean
+  email_on_hackathon_active: boolean
+  email_on_judging_started: boolean
+  email_on_results_published: boolean
+  created_at: string
+  updated_at: string
+}
 
 export type ScheduleFrequency =
   | "once"
@@ -303,6 +335,7 @@ export interface JudgingCriteria {
   description: string | null
   max_score: number
   weight: number
+  category: CriterionCategory | null
   display_order: number
   created_at: string
   updated_at: string
@@ -362,7 +395,94 @@ export interface Prize {
   updated_at: string
 }
 
-export type JudgingMode = "points" | "subjective"
+export type JudgingMode = "points" | "subjective" | "rubric"
+
+export type JudgingStyle =
+  | "bucket_sort"
+  | "gate_check"
+  | "head_to_head"
+  | "top_n"
+  | "compliance"
+  | "crowd"
+  | "points"
+  | "subjective"
+
+export type RoundStatus = "planned" | "active" | "complete" | "advanced"
+
+export type AdvancementRule = "top_n" | "threshold" | "manual"
+
+export type TrackIntent =
+  | "overall_winner"
+  | "sponsor_prize"
+  | "crowd_favorite"
+  | "quick_comparison"
+  | "custom"
+
+export type CriterionCategory = "core" | "bonus"
+
+export interface PrizeTrack {
+  id: string
+  hackathon_id: string
+  name: string
+  description: string | null
+  intent: TrackIntent
+  display_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface BucketDefinition {
+  id: string
+  round_id: string
+  level: number
+  label: string
+  description: string | null
+  display_order: number
+  created_at: string
+}
+
+export interface BucketResponse {
+  id: string
+  judge_assignment_id: string
+  bucket_id: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BinaryResponse {
+  id: string
+  judge_assignment_id: string
+  criteria_id: string
+  passed: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface JudgingRound {
+  id: string
+  hackathon_id: string
+  prize_track_id: string | null
+  name: string
+  round_type: string | null
+  style: JudgingStyle | null
+  status: RoundStatus
+  advancement: AdvancementRule
+  advancement_config: Record<string, unknown>
+  is_active: boolean
+  display_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface RubricLevel {
+  id: string
+  criteria_id: string
+  level_number: number
+  label: string
+  description: string | null
+  created_at: string
+}
 
 export interface PrizeAssignment {
   id: string

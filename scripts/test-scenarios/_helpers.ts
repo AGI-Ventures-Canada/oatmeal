@@ -45,9 +45,17 @@ const SUBMISSION_DATA = [
 ]
 
 const CRITERIA_PRESETS = [
-  { name: "Innovation", description: "Novelty and creativity of the solution", max_score: 10, weight: 1.5 },
-  { name: "Technical Execution", description: "Code quality, architecture, and reliability", max_score: 10, weight: 1.0 },
-  { name: "Presentation", description: "Demo clarity, documentation, and communication", max_score: 10, weight: 0.5 },
+  { name: "Innovation", description: "Novelty and creativity of the solution", max_score: 10, weight: 1.5, category: "core" },
+  { name: "Technical Execution", description: "Code quality, architecture, and reliability", max_score: 10, weight: 1.0, category: "core" },
+  { name: "Presentation", description: "Demo clarity, documentation, and communication", max_score: 10, weight: 0.5, category: "bonus" },
+]
+
+const DEFAULT_RUBRIC_LEVELS = [
+  { level_number: 1, label: "Far Below Expectations" },
+  { level_number: 2, label: "Below Expectations" },
+  { level_number: 3, label: "Meets Expectations" },
+  { level_number: 4, label: "Exceeds Expectations" },
+  { level_number: 5, label: "Far Exceeds Expectations" },
 ]
 
 export async function getOrCreateTenant(overrideTenantId?: string): Promise<string> {
@@ -103,6 +111,7 @@ export async function createTestHackathon(opts: {
   registrationClosesAt?: Date
   anonymousJudging?: boolean
   resultsPublishedAt?: string | null
+  judgingMode?: string
 }): Promise<string> {
   await supabase.from("hackathons").delete().eq("slug", opts.slug)
 
@@ -123,6 +132,7 @@ export async function createTestHackathon(opts: {
       allow_solo: true,
       anonymous_judging: opts.anonymousJudging ?? false,
       results_published_at: opts.resultsPublishedAt ?? null,
+      judging_mode: opts.judgingMode ?? "points",
     })
     .select("id")
     .single()
@@ -251,6 +261,7 @@ export async function addJudgingCriteria(hackathonId: string): Promise<string[]>
         max_score: c.max_score,
         weight: c.weight,
         display_order: i,
+        category: c.category,
       })
       .select("id")
       .single()
@@ -261,6 +272,19 @@ export async function addJudgingCriteria(hackathonId: string): Promise<string[]>
     }
 
     criteriaIds.push(data.id)
+
+    for (const level of DEFAULT_RUBRIC_LEVELS) {
+      const { error: levelError } = await supabase.from("rubric_levels").insert({
+        criteria_id: data.id,
+        level_number: level.level_number,
+        label: level.label,
+      })
+
+      if (levelError) {
+        console.error("Failed to create rubric level:", levelError)
+        process.exit(1)
+      }
+    }
   }
 
   return criteriaIds
@@ -313,7 +337,7 @@ export async function submitRandomScores(
   criteriaIds: string[]
 ): Promise<void> {
   for (const criteriaId of criteriaIds) {
-    const score = Math.floor(Math.random() * 8) + 3
+    const score = Math.floor(Math.random() * 5) + 1
 
     await supabase
       .from("scores")

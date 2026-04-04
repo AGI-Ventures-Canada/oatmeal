@@ -37,6 +37,7 @@ export const dashboardJudgingRoutes = new Elysia()
         description: c.description,
         maxScore: c.max_score,
         weight: c.weight,
+        category: c.category,
         displayOrder: c.display_order,
         createdAt: c.created_at,
       })),
@@ -75,6 +76,8 @@ export const dashboardJudgingRoutes = new Elysia()
         maxScore: body.maxScore,
         weight: body.weight,
         displayOrder: body.displayOrder,
+        category: body.category,
+        hackathonJudgingMode: result.hackathon?.judging_mode,
       })
 
       if (!criteria) {
@@ -110,6 +113,7 @@ export const dashboardJudgingRoutes = new Elysia()
         maxScore: t.Optional(t.Number({ minimum: 1 })),
         weight: t.Optional(t.Number({ minimum: 0 })),
         displayOrder: t.Optional(t.Number()),
+        category: t.Optional(t.Union([t.Literal("core"), t.Literal("bonus")])),
       }),
     }
   )
@@ -141,6 +145,7 @@ export const dashboardJudgingRoutes = new Elysia()
         maxScore: body.maxScore,
         weight: body.weight,
         displayOrder: body.displayOrder,
+        category: body.category,
       })
 
       if (!criteria) {
@@ -163,6 +168,7 @@ export const dashboardJudgingRoutes = new Elysia()
         maxScore: t.Optional(t.Number({ minimum: 1 })),
         weight: t.Optional(t.Number({ minimum: 0 })),
         displayOrder: t.Optional(t.Number()),
+        category: t.Optional(t.Union([t.Literal("core"), t.Literal("bonus")])),
       }),
     }
   )
@@ -888,5 +894,188 @@ export const dashboardJudgingRoutes = new Elysia()
     detail: {
       summary: "Cancel judge invitation",
       description: "Cancels a pending judge invitation. Requires hackathons:write scope.",
+    },
+  })
+  .get("/hackathons/:id/judging/criteria/:criteriaId/levels", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:read"])
+
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+    if (result.status === "not_found") {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    const { listRubricLevels } = await import("@/lib/services/rubric-levels")
+    const levels = await listRubricLevels(params.criteriaId)
+
+    return { levels }
+  }, {
+    detail: {
+      summary: "List rubric levels",
+      description: "Lists all rubric levels for a judging criteria. Requires hackathons:read scope.",
+    },
+  })
+  .post(
+    "/hackathons/:id/judging/criteria/:criteriaId/levels",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { createRubricLevel } = await import("@/lib/services/rubric-levels")
+      const level = await createRubricLevel(params.criteriaId, {
+        label: body.label.trim(),
+        description: body.description,
+      })
+
+      if (!level) {
+        return new Response(JSON.stringify({ error: "Failed to create rubric level" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      await logAudit({
+        principal,
+        action: "rubric_level.created",
+        resourceType: "rubric_level",
+        resourceId: level.id,
+        metadata: { hackathonId: params.id, criteriaId: params.criteriaId },
+      })
+
+      return { level }
+    },
+    {
+      detail: {
+        summary: "Create rubric level",
+        description: "Creates a new rubric level for a judging criteria. Requires hackathons:write scope.",
+      },
+      body: t.Object({
+        label: t.String({ minLength: 1 }),
+        description: t.Optional(t.String()),
+      }),
+    }
+  )
+  .patch(
+    "/hackathons/:id/judging/criteria/:criteriaId/levels/:levelId",
+    async ({ principal, params, body }) => {
+      requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+      const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+      const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+      if (result.status === "not_found") {
+        return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (result.status === "not_authorized") {
+        return new Response(JSON.stringify({ error: "Not authorized" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      const { updateRubricLevel } = await import("@/lib/services/rubric-levels")
+      const level = await updateRubricLevel(params.levelId, {
+        label: body.label,
+        description: body.description,
+      })
+
+      if (!level) {
+        return new Response(JSON.stringify({ error: "Rubric level not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      await logAudit({
+        principal,
+        action: "rubric_level.updated",
+        resourceType: "rubric_level",
+        resourceId: params.levelId,
+        metadata: { hackathonId: params.id, criteriaId: params.criteriaId },
+      })
+
+      return { level }
+    },
+    {
+      detail: {
+        summary: "Update rubric level",
+        description: "Updates a rubric level. Requires hackathons:write scope.",
+      },
+      body: t.Object({
+        label: t.Optional(t.String({ minLength: 1 })),
+        description: t.Optional(t.String()),
+      }),
+    }
+  )
+  .delete("/hackathons/:id/judging/criteria/:criteriaId/levels/:levelId", async ({ principal, params }) => {
+    requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
+
+    const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
+    const result = await checkHackathonOrganizer(params.id, principal.tenantId)
+
+    if (result.status === "not_found") {
+      return new Response(JSON.stringify({ error: "Hackathon not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+    if (result.status === "not_authorized") {
+      return new Response(JSON.stringify({ error: "Not authorized" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    const { deleteRubricLevel } = await import("@/lib/services/rubric-levels")
+    const deleteResult = await deleteRubricLevel(params.levelId, params.criteriaId)
+
+    if (!deleteResult.success) {
+      return new Response(JSON.stringify({ error: deleteResult.error }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    await logAudit({
+      principal,
+      action: "rubric_level.deleted",
+      resourceType: "rubric_level",
+      resourceId: params.levelId,
+      metadata: { hackathonId: params.id, criteriaId: params.criteriaId },
+    })
+
+    return { levels: deleteResult.levels }
+  }, {
+    detail: {
+      summary: "Delete rubric level",
+      description: "Deletes a rubric level. Minimum 2 levels required. Requires hackathons:write scope.",
     },
   })

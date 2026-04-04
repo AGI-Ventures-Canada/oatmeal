@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server"
 import { getPublicHackathon } from "@/lib/services/public-hackathons"
 import { JudgeAssignmentsCard } from "@/components/hackathon/judging/judge-assignments-card"
 import { SubjectiveScoringView } from "@/components/hackathon/judging/subjective-scoring-view"
+import { TrackAssignmentsView } from "@/components/hackathon/judging/track-assignments-view"
 import { PageHeader } from "@/components/page-header"
 
 type PageProps = {
@@ -32,6 +33,33 @@ export default async function JudgePage({ params }: PageProps) {
 
   if (registrationInfo.participantRole !== "judge") {
     redirect(`/e/${slug}`)
+  }
+
+  const { getJudgeTrackAssignments } = await import("@/lib/services/prize-tracks")
+  const trackAssignments = registrationInfo.participantId
+    ? await getJudgeTrackAssignments(hackathon.id, registrationInfo.participantId)
+    : []
+
+  const hasTrackAssignments = trackAssignments.length > 0
+
+  if (hasTrackAssignments) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <PageHeader
+          breadcrumbs={[
+            { label: hackathon.name, href: `/e/${slug}` },
+            { label: "Judging" },
+          ]}
+          title="Judging"
+          description="Review and evaluate your assigned submissions"
+        />
+
+        <TrackAssignmentsView
+          hackathonSlug={slug}
+          initialTracks={trackAssignments}
+        />
+      </div>
+    )
   }
 
   const isSubjective = hackathon.judging_mode === "subjective"
