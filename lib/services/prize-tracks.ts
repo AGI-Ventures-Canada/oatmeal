@@ -1,0 +1,949 @@
+import { supabase as getSupabase } from "@/lib/db/client"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type {
+  PrizeTrack,
+  JudgingRound,
+  BucketDefinition,
+  BinaryResponse,
+  BucketResponse,
+  TrackIntent,
+  JudgingStyle,
+  AdvancementRule,
+  RoundStatus,
+} from "@/lib/db/hackathon-types"
+
+const DEFAULT_BUCKETS: { level: number; label: string; description: string }[] = [
+  { level: 1, label: "Not Ready", description: "No working demo or unclear problem statement" },
+  { level: 2, label: "Solid Effort", description: "Working demo, clear problem, but incremental or execution has gaps" },
+  { level: 3, label: "Strong Contender", description: "Working demo, novel approach, good execution" },
+  { level: 4, label: "Outstanding", description: "Would invest in this team today. Exceptional on multiple dimensions" },
+]
+
+const INTENT_TO_STYLE: Record<TrackIntent, JudgingStyle> = {
+  overall_winner: "bucket_sort",
+  sponsor_prize: "compliance",
+  crowd_favorite: "crowd",
+  quick_comparison: "head_to_head",
+  custom: "bucket_sort",
+}
+
+export type CreatePrizeTrackInput = {
+  name: string
+  description?: string | null
+  intent?: TrackIntent
+  style?: JudgingStyle
+  displayOrder?: number
+}
+
+export type UpdatePrizeTrackInput = {
+  name?: string
+  description?: string | null
+  intent?: TrackIntent
+  displayOrder?: number
+}
+
+export async function listPrizeTracks(hackathonId: string): Promise<PrizeTrack[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("prize_tracks")
+    .select("*")
+    .eq("hackathon_id", hackathonId)
+    .order("display_order")
+
+  if (error) {
+    console.error("Failed to list prize tracks:", error)
+    return []
+  }
+
+  return data as unknown as PrizeTrack[]
+}
+
+export async function getPrizeTrack(trackId: string): Promise<PrizeTrack | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("prize_tracks")
+    .select("*")
+    .eq("id", trackId)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return data as unknown as PrizeTrack
+}
+
+export async function createPrizeTrack(
+  hackathonId: string,
+  input: CreatePrizeTrackInput
+): Promise<PrizeTrack | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const intent = input.intent ?? "custom"
+  const style = input.style ?? INTENT_TO_STYLE[intent]
+
+  const { data: track, error } = await client
+    .from("prize_tracks")
+    .insert({
+      hackathon_id: hackathonId,
+      name: input.name,
+      description: input.description ?? null,
+      intent,
+      display_order: input.displayOrder ?? 0,
+    })
+    .select()
+    .single()
+
+  if (error || !track) {
+    console.error("Failed to create prize track:", error)
+    return null
+  }
+
+  const round = await createRound(hackathonId, track.id, {
+    name: "Default",
+    style,
+    status: "planned",
+  })
+
+  if (round && style === "bucket_sort") {
+    await createDefaultBuckets(round.id)
+  }
+
+  return track as unknown as PrizeTrack
+}
+
+export async function updatePrizeTrack(
+  trackId: string,
+  hackathonId: string,
+  input: UpdatePrizeTrackInput
+): Promise<PrizeTrack | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (input.name !== undefined) updates.name = input.name
+  if (input.description !== undefined) updates.description = input.description
+  if (input.intent !== undefined) updates.intent = input.intent
+  if (input.displayOrder !== undefined) updates.display_order = input.displayOrder
+
+  const { data, error } = await client
+    .from("prize_tracks")
+    .update(updates)
+    .eq("id", trackId)
+    .eq("hackathon_id", hackathonId)
+    .select()
+    .single()
+
+  if (error || !data) {
+    console.error("Failed to update prize track:", error)
+    return null
+  }
+
+  return data as unknown as PrizeTrack
+}
+
+export async function deletePrizeTrack(trackId: string, hackathonId: string): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { error } = await client
+    .from("prize_tracks")
+    .delete()
+    .eq("id", trackId)
+    .eq("hackathon_id", hackathonId)
+
+  if (error) {
+    console.error("Failed to delete prize track:", error)
+    return false
+  }
+
+  return true
+}
+
+// ============================================================
+// Rounds
+// ============================================================
+
+export type CreateRoundInput = {
+  name: string
+  style: JudgingStyle
+  status?: RoundStatus
+  advancement?: AdvancementRule
+  advancementConfig?: Record<string, unknown>
+  displayOrder?: number
+}
+
+export type UpdateRoundInput = {
+  name?: string
+  style?: JudgingStyle
+  status?: RoundStatus
+  advancement?: AdvancementRule
+  advancementConfig?: Record<string, unknown>
+  displayOrder?: number
+}
+
+export async function listRounds(prizeTrackId: string): Promise<JudgingRound[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("judging_rounds")
+    .select("*")
+    .eq("prize_track_id", prizeTrackId)
+    .order("display_order")
+
+  if (error) {
+    console.error("Failed to list rounds:", error)
+    return []
+  }
+
+  return data as unknown as JudgingRound[]
+}
+
+export async function getRound(roundId: string): Promise<JudgingRound | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("judging_rounds")
+    .select("*")
+    .eq("id", roundId)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return data as unknown as JudgingRound
+}
+
+export async function createRound(
+  hackathonId: string,
+  prizeTrackId: string,
+  input: CreateRoundInput
+): Promise<JudgingRound | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("judging_rounds")
+    .insert({
+      hackathon_id: hackathonId,
+      prize_track_id: prizeTrackId,
+      name: input.name,
+      style: input.style,
+      status: input.status ?? "planned",
+      advancement: input.advancement ?? "manual",
+      advancement_config: input.advancementConfig ?? {},
+      display_order: input.displayOrder ?? 0,
+    })
+    .select()
+    .single()
+
+  if (error || !data) {
+    console.error("Failed to create round:", error)
+    return null
+  }
+
+  return data as unknown as JudgingRound
+}
+
+export async function updateRound(
+  roundId: string,
+  input: UpdateRoundInput
+): Promise<JudgingRound | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (input.name !== undefined) updates.name = input.name
+  if (input.style !== undefined) updates.style = input.style
+  if (input.status !== undefined) updates.status = input.status
+  if (input.advancement !== undefined) updates.advancement = input.advancement
+  if (input.advancementConfig !== undefined) updates.advancement_config = input.advancementConfig
+  if (input.displayOrder !== undefined) updates.display_order = input.displayOrder
+
+  const { data, error } = await client
+    .from("judging_rounds")
+    .update(updates)
+    .eq("id", roundId)
+    .select()
+    .single()
+
+  if (error || !data) {
+    console.error("Failed to update round:", error)
+    return null
+  }
+
+  return data as unknown as JudgingRound
+}
+
+export async function activateRound(roundId: string, prizeTrackId: string): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error: deactivateError } = await client
+    .from("judging_rounds")
+    .update({ status: "planned", updated_at: new Date().toISOString() })
+    .eq("prize_track_id", prizeTrackId)
+    .eq("status", "active")
+
+  if (deactivateError) {
+    console.error("Failed to deactivate other rounds:", deactivateError)
+    return false
+  }
+
+  const { error } = await client
+    .from("judging_rounds")
+    .update({ status: "active", is_active: true, updated_at: new Date().toISOString() })
+    .eq("id", roundId)
+
+  if (error) {
+    console.error("Failed to activate round:", error)
+    return false
+  }
+
+  return true
+}
+
+// ============================================================
+// Bucket Definitions
+// ============================================================
+
+export async function listBucketDefinitions(roundId: string): Promise<BucketDefinition[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("bucket_definitions")
+    .select("*")
+    .eq("round_id", roundId)
+    .order("level")
+
+  if (error) {
+    console.error("Failed to list bucket definitions:", error)
+    return []
+  }
+
+  return data as unknown as BucketDefinition[]
+}
+
+export async function createDefaultBuckets(roundId: string): Promise<BucketDefinition[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const inserts = DEFAULT_BUCKETS.map((b) => ({
+    round_id: roundId,
+    level: b.level,
+    label: b.label,
+    description: b.description,
+    display_order: b.level,
+  }))
+
+  const { data, error } = await client
+    .from("bucket_definitions")
+    .insert(inserts)
+    .select()
+
+  if (error) {
+    console.error("Failed to create default buckets:", error)
+    return []
+  }
+
+  return data as unknown as BucketDefinition[]
+}
+
+export type UpsertBucketInput = {
+  id?: string
+  level: number
+  label: string
+  description?: string | null
+}
+
+export async function replaceBucketDefinitions(
+  roundId: string,
+  buckets: UpsertBucketInput[]
+): Promise<BucketDefinition[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error: deleteError } = await client
+    .from("bucket_definitions")
+    .delete()
+    .eq("round_id", roundId)
+
+  if (deleteError) {
+    console.error("Failed to clear bucket definitions:", deleteError)
+    return []
+  }
+
+  const inserts = buckets.map((b, i) => ({
+    round_id: roundId,
+    level: b.level,
+    label: b.label,
+    description: b.description ?? null,
+    display_order: i,
+  }))
+
+  const { data, error } = await client
+    .from("bucket_definitions")
+    .insert(inserts)
+    .select()
+
+  if (error) {
+    console.error("Failed to insert bucket definitions:", error)
+    return []
+  }
+
+  return data as unknown as BucketDefinition[]
+}
+
+// ============================================================
+// Bucket Responses (judge places submission into a bucket)
+// ============================================================
+
+export type SubmitBucketResponseInput = {
+  bucketId: string
+  notes?: string | null
+}
+
+export async function submitBucketResponse(
+  assignmentId: string,
+  input: SubmitBucketResponseInput
+): Promise<BucketResponse | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data, error } = await client
+    .from("bucket_responses")
+    .upsert(
+      {
+        judge_assignment_id: assignmentId,
+        bucket_id: input.bucketId,
+        notes: input.notes ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "judge_assignment_id" }
+    )
+    .select()
+    .single()
+
+  if (error || !data) {
+    console.error("Failed to submit bucket response:", error)
+    return null
+  }
+
+  return data as unknown as BucketResponse
+}
+
+export async function getBucketResponse(assignmentId: string): Promise<BucketResponse | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("bucket_responses")
+    .select("*")
+    .eq("judge_assignment_id", assignmentId)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return data as unknown as BucketResponse
+}
+
+// ============================================================
+// Binary Responses (judge answers yes/no per gate criterion)
+// ============================================================
+
+export type SubmitBinaryResponseInput = {
+  criteriaId: string
+  passed: boolean
+}
+
+export async function submitBinaryResponses(
+  assignmentId: string,
+  responses: SubmitBinaryResponseInput[]
+): Promise<BinaryResponse[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const now = new Date().toISOString()
+
+  const upserts = responses.map((r) => ({
+    judge_assignment_id: assignmentId,
+    criteria_id: r.criteriaId,
+    passed: r.passed,
+    updated_at: now,
+  }))
+
+  const results: BinaryResponse[] = []
+  for (const upsert of upserts) {
+    const { data, error } = await client
+      .from("binary_responses")
+      .upsert(upsert, { onConflict: "judge_assignment_id,criteria_id" })
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Failed to submit binary response:", error)
+      continue
+    }
+    results.push(data as unknown as BinaryResponse)
+  }
+
+  return results
+}
+
+export async function listBinaryResponses(assignmentId: string): Promise<BinaryResponse[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data, error } = await client
+    .from("binary_responses")
+    .select("*")
+    .eq("judge_assignment_id", assignmentId)
+
+  if (error) {
+    console.error("Failed to list binary responses:", error)
+    return []
+  }
+
+  return data as unknown as BinaryResponse[]
+}
+
+// ============================================================
+// Combined submission for bucket sort (gates + bucket in one call)
+// ============================================================
+
+export type SubmitBucketSortInput = {
+  gates: SubmitBinaryResponseInput[]
+  bucketId: string
+  notes?: string | null
+}
+
+export async function submitBucketSortResponse(
+  assignmentId: string,
+  input: SubmitBucketSortInput
+): Promise<{ success: true } | { success: false; error: string; code: string }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  if (input.gates.length > 0) {
+    await submitBinaryResponses(assignmentId, input.gates)
+  }
+
+  const bucketResult = await submitBucketResponse(assignmentId, {
+    bucketId: input.bucketId,
+    notes: input.notes,
+  })
+
+  if (!bucketResult) {
+    return { success: false, error: "Failed to submit bucket response", code: "bucket_failed" }
+  }
+
+  const { error } = await client
+    .from("judge_assignments")
+    .update({
+      is_complete: true,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", assignmentId)
+
+  if (error) {
+    console.error("Failed to mark assignment complete:", error)
+    return { success: false, error: "Failed to mark assignment complete", code: "update_failed" }
+  }
+
+  return { success: true }
+}
+
+// ============================================================
+// Combined submission for gate check (just gates)
+// ============================================================
+
+export async function submitGateCheckResponse(
+  assignmentId: string,
+  gates: SubmitBinaryResponseInput[]
+): Promise<{ success: true } | { success: false; error: string; code: string }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  await submitBinaryResponses(assignmentId, gates)
+
+  const { error } = await client
+    .from("judge_assignments")
+    .update({
+      is_complete: true,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", assignmentId)
+
+  if (error) {
+    console.error("Failed to mark assignment complete:", error)
+    return { success: false, error: "Failed to mark assignment complete", code: "update_failed" }
+  }
+
+  return { success: true }
+}
+
+// ============================================================
+// Track progress and results
+// ============================================================
+
+export type TrackProgress = {
+  trackId: string
+  trackName: string
+  intent: TrackIntent
+  style: JudgingStyle | null
+  totalAssignments: number
+  completedAssignments: number
+  criteriaCount: number
+  judgeCount: number
+}
+
+export async function getTrackProgress(hackathonId: string): Promise<TrackProgress[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const tracks = await listPrizeTracks(hackathonId)
+  const results: TrackProgress[] = []
+
+  for (const track of tracks) {
+    const rounds = await listRounds(track.id)
+    const activeRound = rounds.find((r) => r.status === "active") ?? rounds[0]
+
+    let totalAssignments = 0
+    let completedAssignments = 0
+    let criteriaCount = 0
+    let judgeCount = 0
+
+    if (activeRound) {
+      const { data: assignments } = await client
+        .from("judge_assignments")
+        .select("is_complete, judge_participant_id")
+        .eq("hackathon_id", hackathonId)
+        .eq("round_id", activeRound.id)
+
+      totalAssignments = assignments?.length ?? 0
+      completedAssignments = assignments?.filter((a) => a.is_complete).length ?? 0
+
+      const uniqueJudges = new Set(assignments?.map((a) => a.judge_participant_id) ?? [])
+      judgeCount = uniqueJudges.size
+
+      const { data: criteria } = await client
+        .from("judging_criteria")
+        .select("id")
+        .eq("hackathon_id", hackathonId)
+        .eq("round_id", activeRound.id)
+
+      criteriaCount = criteria?.length ?? 0
+    }
+
+    results.push({
+      trackId: track.id,
+      trackName: track.name,
+      intent: track.intent,
+      style: activeRound?.style ?? null,
+      totalAssignments,
+      completedAssignments,
+      criteriaCount,
+      judgeCount,
+    })
+  }
+
+  return results
+}
+
+export type TrackWithRoundsAndBuckets = PrizeTrack & {
+  rounds: (JudgingRound & { buckets: BucketDefinition[] })[]
+}
+
+export async function getPrizeTrackWithDetails(
+  trackId: string
+): Promise<TrackWithRoundsAndBuckets | null> {
+  const track = await getPrizeTrack(trackId)
+  if (!track) return null
+
+  const rounds = await listRounds(trackId)
+  const roundsWithBuckets = await Promise.all(
+    rounds.map(async (round) => {
+      const buckets = round.style === "bucket_sort"
+        ? await listBucketDefinitions(round.id)
+        : []
+      return { ...round, buckets }
+    })
+  )
+
+  return { ...track, rounds: roundsWithBuckets }
+}
+
+// ============================================================
+// Result calculation for bucket sort
+// ============================================================
+
+export async function calculateBucketSortResults(
+  hackathonId: string,
+  roundId: string,
+  prizeTrackId: string
+): Promise<{ success: boolean; count: number }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error: deleteError } = await client
+    .from("hackathon_results")
+    .delete()
+    .eq("hackathon_id", hackathonId)
+    .eq("prize_track_id", prizeTrackId)
+    .eq("round_id", roundId)
+
+  if (deleteError) {
+    console.error("Failed to clear existing results:", deleteError)
+    return { success: false, count: 0 }
+  }
+
+  const { data: assignments } = await client
+    .from("judge_assignments")
+    .select("id, submission_id")
+    .eq("hackathon_id", hackathonId)
+    .eq("round_id", roundId)
+    .eq("is_complete", true)
+
+  if (!assignments || assignments.length === 0) {
+    return { success: true, count: 0 }
+  }
+
+  const assignmentIds = assignments.map((a) => a.id)
+
+  const { data: bucketResponses } = await client
+    .from("bucket_responses")
+    .select("judge_assignment_id, bucket_id")
+    .in("judge_assignment_id", assignmentIds)
+
+  const { data: bucketDefs } = await client
+    .from("bucket_definitions")
+    .select("id, level")
+    .eq("round_id", roundId)
+
+  if (!bucketResponses || !bucketDefs) {
+    return { success: false, count: 0 }
+  }
+
+  const bucketLevelMap = new Map(bucketDefs.map((b) => [b.id, b.level]))
+  const assignmentSubmissionMap = new Map(assignments.map((a) => [a.id, a.submission_id]))
+
+  const submissionScores: Record<string, { totalLevel: number; judgeCount: number }> = {}
+
+  for (const resp of bucketResponses) {
+    const submissionId = assignmentSubmissionMap.get(resp.judge_assignment_id)
+    const level = bucketLevelMap.get(resp.bucket_id)
+    if (!submissionId || level === undefined) continue
+
+    if (!submissionScores[submissionId]) {
+      submissionScores[submissionId] = { totalLevel: 0, judgeCount: 0 }
+    }
+    submissionScores[submissionId].totalLevel += level
+    submissionScores[submissionId].judgeCount++
+  }
+
+  const ranked = Object.entries(submissionScores)
+    .map(([submissionId, { totalLevel, judgeCount }]) => ({
+      submissionId,
+      avgLevel: totalLevel / judgeCount,
+      totalLevel,
+      judgeCount,
+    }))
+    .sort((a, b) => b.avgLevel - a.avgLevel)
+
+  let currentRank = 1
+  const inserts = ranked.map((r, i) => {
+    if (i > 0 && r.avgLevel < ranked[i - 1].avgLevel) {
+      currentRank = i + 1
+    }
+    return {
+      hackathon_id: hackathonId,
+      submission_id: r.submissionId,
+      rank: currentRank,
+      total_score: r.totalLevel,
+      weighted_score: r.avgLevel,
+      judge_count: r.judgeCount,
+      prize_track_id: prizeTrackId,
+      round_id: roundId,
+    }
+  })
+
+  if (inserts.length === 0) {
+    return { success: true, count: 0 }
+  }
+
+  const { error: insertError } = await client
+    .from("hackathon_results")
+    .insert(inserts)
+
+  if (insertError) {
+    console.error("Failed to insert bucket sort results:", insertError)
+    return { success: false, count: 0 }
+  }
+
+  return { success: true, count: inserts.length }
+}
+
+// ============================================================
+// Result calculation for gate check
+// ============================================================
+
+export async function calculateGateCheckResults(
+  hackathonId: string,
+  roundId: string,
+  prizeTrackId: string
+): Promise<{ success: boolean; count: number }> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { error: deleteError } = await client
+    .from("hackathon_results")
+    .delete()
+    .eq("hackathon_id", hackathonId)
+    .eq("prize_track_id", prizeTrackId)
+    .eq("round_id", roundId)
+
+  if (deleteError) {
+    console.error("Failed to clear existing results:", deleteError)
+    return { success: false, count: 0 }
+  }
+
+  const { data: assignments } = await client
+    .from("judge_assignments")
+    .select("id, submission_id")
+    .eq("hackathon_id", hackathonId)
+    .eq("round_id", roundId)
+    .eq("is_complete", true)
+
+  if (!assignments || assignments.length === 0) {
+    return { success: true, count: 0 }
+  }
+
+  const assignmentIds = assignments.map((a) => a.id)
+
+  const { data: binaryResponses } = await client
+    .from("binary_responses")
+    .select("judge_assignment_id, passed")
+    .in("judge_assignment_id", assignmentIds)
+
+  if (!binaryResponses) {
+    return { success: false, count: 0 }
+  }
+
+  const assignmentSubmissionMap = new Map(assignments.map((a) => [a.id, a.submission_id]))
+
+  const submissionGates: Record<string, { passed: number; total: number; judgeCount: number }> = {}
+
+  const assignmentPassCounts: Record<string, { passed: number; total: number }> = {}
+  for (const resp of binaryResponses) {
+    if (!assignmentPassCounts[resp.judge_assignment_id]) {
+      assignmentPassCounts[resp.judge_assignment_id] = { passed: 0, total: 0 }
+    }
+    assignmentPassCounts[resp.judge_assignment_id].total++
+    if (resp.passed) assignmentPassCounts[resp.judge_assignment_id].passed++
+  }
+
+  for (const [assignmentId, counts] of Object.entries(assignmentPassCounts)) {
+    const submissionId = assignmentSubmissionMap.get(assignmentId)
+    if (!submissionId) continue
+
+    if (!submissionGates[submissionId]) {
+      submissionGates[submissionId] = { passed: 0, total: 0, judgeCount: 0 }
+    }
+    submissionGates[submissionId].passed += counts.passed
+    submissionGates[submissionId].total += counts.total
+    submissionGates[submissionId].judgeCount++
+  }
+
+  const ranked = Object.entries(submissionGates)
+    .map(([submissionId, { passed, total, judgeCount }]) => ({
+      submissionId,
+      passRate: total > 0 ? passed / total : 0,
+      totalPassed: passed,
+      judgeCount,
+    }))
+    .sort((a, b) => b.passRate - a.passRate || b.totalPassed - a.totalPassed)
+
+  let currentRank = 1
+  const inserts = ranked.map((r, i) => {
+    if (i > 0 && (r.passRate < ranked[i - 1].passRate || r.totalPassed < ranked[i - 1].totalPassed)) {
+      currentRank = i + 1
+    }
+    return {
+      hackathon_id: hackathonId,
+      submission_id: r.submissionId,
+      rank: currentRank,
+      total_score: r.totalPassed,
+      weighted_score: r.passRate,
+      judge_count: r.judgeCount,
+      prize_track_id: prizeTrackId,
+      round_id: roundId,
+    }
+  })
+
+  if (inserts.length === 0) {
+    return { success: true, count: 0 }
+  }
+
+  const { error: insertError } = await client
+    .from("hackathon_results")
+    .insert(inserts)
+
+  if (insertError) {
+    console.error("Failed to insert gate check results:", insertError)
+    return { success: false, count: 0 }
+  }
+
+  return { success: true, count: inserts.length }
+}
+
+// ============================================================
+// Judge's view: get track assignments
+// ============================================================
+
+export type JudgeTrackAssignment = {
+  trackId: string
+  trackName: string
+  intent: TrackIntent
+  style: JudgingStyle | null
+  roundId: string
+  roundName: string
+  totalAssignments: number
+  completedAssignments: number
+}
+
+export async function getJudgeTrackAssignments(
+  hackathonId: string,
+  judgeParticipantId: string
+): Promise<JudgeTrackAssignment[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: assignments } = await client
+    .from("judge_assignments")
+    .select("round_id, is_complete")
+    .eq("hackathon_id", hackathonId)
+    .eq("judge_participant_id", judgeParticipantId)
+    .not("round_id", "is", null)
+
+  if (!assignments || assignments.length === 0) return []
+
+  const roundIds = [...new Set(assignments.map((a) => a.round_id).filter(Boolean))] as string[]
+
+  const { data: rounds } = await client
+    .from("judging_rounds")
+    .select("id, name, style, prize_track_id, status")
+    .in("id", roundIds)
+
+  if (!rounds) return []
+
+  const trackIds = [...new Set(rounds.map((r) => r.prize_track_id).filter(Boolean))] as string[]
+
+  const { data: tracks } = await client
+    .from("prize_tracks")
+    .select("id, name, intent")
+    .in("id", trackIds)
+
+  if (!tracks) return []
+
+  const trackMap = new Map(tracks.map((t) => [t.id, t]))
+  const roundMap = new Map(rounds.map((r) => [r.id, r]))
+
+  const roundAssignmentCounts: Record<string, { total: number; completed: number }> = {}
+  for (const a of assignments) {
+    if (!a.round_id) continue
+    if (!roundAssignmentCounts[a.round_id]) {
+      roundAssignmentCounts[a.round_id] = { total: 0, completed: 0 }
+    }
+    roundAssignmentCounts[a.round_id].total++
+    if (a.is_complete) roundAssignmentCounts[a.round_id].completed++
+  }
+
+  return roundIds
+    .map((roundId) => {
+      const round = roundMap.get(roundId)
+      if (!round?.prize_track_id) return null
+      const track = trackMap.get(round.prize_track_id)
+      if (!track) return null
+
+      const counts = roundAssignmentCounts[roundId] ?? { total: 0, completed: 0 }
+
+      return {
+        trackId: track.id,
+        trackName: track.name,
+        intent: track.intent as TrackIntent,
+        style: round.style as JudgingStyle | null,
+        roundId: round.id,
+        roundName: round.name,
+        totalAssignments: counts.total,
+        completedAssignments: counts.completed,
+      }
+    })
+    .filter((t): t is JudgeTrackAssignment => t !== null)
+}

@@ -232,21 +232,25 @@ export async function publishResults(
 
   const now = new Date().toISOString()
 
-  const { data: updated, error: hackathonError } = await client
+  const { data: existing } = await client
     .from("hackathons")
-    .update({
-      results_published_at: now,
-      status: "completed",
-      updated_at: now,
-    })
+    .select("results_published_at")
     .eq("id", hackathonId)
     .eq("tenant_id", tenantId)
-    .is("results_published_at", null)
-    .select("id")
     .single()
 
-  if (hackathonError || !updated) {
+  if (existing?.results_published_at) {
     return { success: false, error: "Results are already published" }
+  }
+
+  const { error: tsError } = await client
+    .from("hackathons")
+    .update({ results_published_at: now, updated_at: now })
+    .eq("id", hackathonId)
+    .eq("tenant_id", tenantId)
+
+  if (tsError) {
+    return { success: false, error: "Failed to update published timestamp" }
   }
 
   const { error: updateError } = await client
@@ -256,6 +260,22 @@ export async function publishResults(
 
   if (updateError) {
     console.error("Failed to update results published_at:", updateError)
+  }
+
+  const currentStatus = hackathon.status as string
+  if (currentStatus !== "completed") {
+    const { executeTransition } = await import("@/lib/services/lifecycle")
+    const transitionResult = await executeTransition({
+      hackathonId,
+      tenantId,
+      fromStatus: currentStatus as import("@/lib/db/hackathon-types").HackathonStatus,
+      toStatus: "completed",
+      trigger: "manual",
+      triggeredBy: "system",
+    })
+    if (!transitionResult.success) {
+      console.error("Lifecycle transition to completed failed:", transitionResult.error)
+    }
   }
 
   if (!hackathon.winner_emails_sent_at) {
@@ -296,15 +316,35 @@ export async function unpublishResults(
     .from("hackathons")
     .update({
       results_published_at: null,
-      status: "judging",
       updated_at: new Date().toISOString(),
     })
     .eq("id", hackathonId)
     .eq("tenant_id", tenantId)
 
   if (hackathonError) {
-    console.error("Failed to update hackathon status:", hackathonError)
-    return { success: false, error: "Failed to update hackathon status" }
+    console.error("Failed to update hackathon:", hackathonError)
+    return { success: false, error: "Failed to update hackathon" }
+  }
+
+  const { data: hackathon } = await client
+    .from("hackathons")
+    .select("status")
+    .eq("id", hackathonId)
+    .single()
+
+  if (hackathon?.status === "completed") {
+    const { executeTransition } = await import("@/lib/services/lifecycle")
+    const transitionResult = await executeTransition({
+      hackathonId,
+      tenantId,
+      fromStatus: "completed",
+      toStatus: "judging" as import("@/lib/db/hackathon-types").HackathonStatus,
+      trigger: "manual",
+      triggeredBy: "system",
+    })
+    if (!transitionResult.success) {
+      console.error("Lifecycle transition to judging failed:", transitionResult.error)
+    }
   }
 
   return { success: true }

@@ -371,7 +371,8 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
 
       let result: Awaited<ReturnType<typeof runScenario>>
       try {
-        result = await runScenario(params.name, body?.tenant_id || undefined)
+        const orgId = principal.kind === "admin" ? principal.orgId : null
+        result = await runScenario(params.name, body?.tenant_id || undefined, orgId)
       } catch (err) {
         throw new AuthError(err instanceof Error ? err.message : "Failed to run scenario", 400)
       }

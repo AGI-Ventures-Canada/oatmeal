@@ -7,14 +7,37 @@ Development-only tools for testing the hackathon lifecycle. Guarded by `NODE_ENV
 | File | Purpose |
 |------|---------|
 | `lib/api/routes/dev.ts` | Elysia API endpoints (`/api/dev/hackathons/:id/*`) |
-| `components/hackathon/debug-stage-switcher.tsx` | Floating dev tools panel UI |
+| `lib/dev/scenarios.ts` | Centralized scenario registry (single source of truth) |
+| `lib/dev/test-personas.ts` | Test persona definitions and lookup |
+| `components/dev-tool/dev-tool.tsx` | Global floating dev tools panel (root component) |
+| `components/dev-tool/dev-tool-panel.tsx` | Tabbed panel container |
+| `components/dev-tool/tabs/scenarios-tab.tsx` | Scenario quick-launch tab |
+| `components/dev-tool/tabs/personas-tab.tsx` | Persona switcher tab |
+| `components/dev-tool/tabs/event-tools-tab.tsx` | Event-specific tools tab |
+| `components/dev-tool/use-event-context.ts` | Hook for detecting event page context |
 
-## How It Works
+## Architecture
 
-1. The panel is a draggable floating pill rendered on manage pages when `NODE_ENV === "development"`
-2. Each button calls a `POST`/`PATCH`/`DELETE` endpoint in `dev.ts`
-3. After every action the panel saves its state (position, edge, expanded sections) to `sessionStorage` under key `devtools-state`, then calls `window.location.reload()` so the page reflects the change
-4. On mount, the component checks `sessionStorage` and restores the panel open in the same position — the user never has to re-open it between actions
+The Dev Tool is a single client component mounted in `app/layout.tsx` with a `NODE_ENV === "development"` guard. It provides three tabs:
+
+1. **Scenarios** — Run test scenarios from anywhere, with one-click launch that creates the scenario, switches persona, and navigates to the appropriate page
+2. **Personas** — Switch between test personas (organizer, test users). Shows role badges when inside an event
+3. **Event** — Event-specific tools (status, phase, timeline, seed data). Only visible when on `/e/[slug]/*` routes
+
+The component detects event context by parsing `usePathname()` for `/e/[slug]` and fetching hackathon data via `GET /api/dev/hackathons/by-slug/:slug`.
+
+## Scenario Registry
+
+All scenarios are defined once in `lib/dev/scenarios.ts`:
+
+```typescript
+{ name, description, category, defaultPersona, defaultRoute }
+```
+
+Consumers:
+- `lib/services/admin-scenarios.ts` — admin API scenario runners
+- `scripts/test-scenario.ts` — CLI scenario entry point
+- `components/dev-tool/tabs/scenarios-tab.tsx` — Dev Tool UI
 
 ## Adding a New Dev Tool Action
 
@@ -42,7 +65,7 @@ Patterns:
 - Use `ensureParticipant(db, hackathonId, clerkUserId, role?)` to upsert seed users as participants
 - Keep dynamic imports for services (`await import(...)`) to avoid circular deps
 
-### 2. Add the UI button in `debug-stage-switcher.tsx`
+### 2. Add the UI button in `event-tools-tab.tsx`
 
 Add a `<SeedButton>` inside the Seed Data grid:
 
@@ -51,18 +74,21 @@ Add a `<SeedButton>` inside the Seed Data grid:
   icon={<IconName className="size-3" />}
   label="Button Label"
   loading={isLoading}
-  onClick={async () => {
-    await devAction("/seed-thing", "POST", { count: 3 })
-    showToast("Thing seeded")
-  }}
+  onClick={() => devAction("/seed-thing", "POST", { count: 3 })}
 />
 ```
 
-The `devAction()` helper handles fetch, sessionStorage save, and page reload automatically. The `showToast()` call won't actually display (reload happens first) but documents intent.
+The `devAction()` helper handles fetch, sessionStorage save, and page reload automatically.
 
 ### 3. Add the icon import
 
-Icons come from `lucide-react`. Add to the import at the top of the file.
+Icons come from `lucide-react`. Add to the import at the top of `event-tools-tab.tsx`.
+
+## Adding a New Scenario
+
+1. Add the scenario definition to `lib/dev/scenarios.ts`
+2. Add the runner function in `lib/services/admin-scenarios.ts` under `scenarioRunners`
+3. Create the CLI script in `scripts/test-scenarios/<name>.ts`
 
 ## Constants
 
@@ -72,23 +98,13 @@ Icons come from `lucide-react`. Add to the import at the top of the file.
 
 ## Panel UX
 
+- **Global**: Visible on all pages in development mode
 - **Draggable**: pointer events with snap-to-edge on release (9-zone grid)
 - **Escape to close**: global keydown listener
 - **Click outside to close**: pointerdown listener checks panel/button refs
-- **Session persistence**: `sessionStorage.getItem("devtools-state")` restores `{ position, edge, showMore }` after reload, then removes the key
+- **Session persistence**: `sessionStorage.getItem("devtools-state")` restores `{ position, edge }` after reload, then removes the key
 - **Responsive**: accounts for sidebar width (256px at `lg:` breakpoint) in snap calculations
-
-## UX Rules
-
-### Human-Friendly Time Inputs
-
-Never use raw `datetime-local` or ISO timestamp pickers for organizer-facing time inputs. Organizers set timers during a live event under time pressure — they need one-tap durations, not date pickers.
-
-**Do:** Quick-select duration buttons (e.g., "3 min", "5 min", "10 min", "15 min", "30 min", "1 hr") that calculate `endsAt` from `Date.now() + duration`. Optionally include a custom minutes input for non-standard durations.
-
-**Don't:** `<input type="datetime-local">` for setting countdown timers or deadlines relative to "now".
-
-This applies to room timers, presentation timers, and any organizer-facing countdown control.
+- **Event-aware**: small dot indicator on pill when on an event page
 
 ## Important Rules
 

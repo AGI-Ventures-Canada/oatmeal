@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs/server"
 import { getManageHackathon } from "@/lib/services/manage-hackathon"
 import { getHackathonSubmissions } from "@/lib/services/submissions"
 import { getJudgingProgress, getJudgingSetupStatus, listJudgingCriteria } from "@/lib/services/judging"
+import { getTrackProgress } from "@/lib/services/prize-tracks"
 import { listPrizes } from "@/lib/services/prizes"
 import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
 import { getManageOverviewStats } from "@/lib/services/manage-overview"
@@ -18,7 +19,6 @@ import { SubmissionGallery } from "@/components/hackathon/submission-gallery"
 import { LifecycleStepper } from "@/components/hackathon/lifecycle-stepper"
 import { OrganizerOverview } from "@/components/hackathon/organizer-overview"
 import { TimeRemainingBar } from "@/components/hackathon/time-remaining-bar"
-import { DebugStageSwitcher } from "@/components/hackathon/debug-stage-switcher"
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TabCount } from "@/components/ui/tab-count"
 import { TabsUrlSync } from "./_tabs-url-sync"
@@ -59,6 +59,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     overviewStats,
     announcements,
     scheduleItems,
+    trackProgress,
   ] = await Promise.all([
     getHackathonSubmissions(hackathon.id),
     getJudgingProgress(hackathon.id),
@@ -69,12 +70,11 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     getManageOverviewStats(hackathon.id),
     listAnnouncements(hackathon.id),
     listScheduleItems(hackathon.id),
+    getTrackProgress(hackathon.id),
   ])
 
   const submissionCount = submissions.length
   const incompleteAssignments = judgingProgress.totalAssignments - judgingProgress.completedAssignments
-  const isDev = process.env.NODE_ENV === "development"
-
   const actionItems = getOrganizerActionItems({
     status: hackathon.status,
     phase: hackathon.phase,
@@ -119,17 +119,6 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      {isDev && (
-        <DebugStageSwitcher
-          hackathonId={hackathon.id}
-          currentStatus={hackathon.status}
-          registrationOpensAt={hackathon.registration_opens_at}
-          registrationClosesAt={hackathon.registration_closes_at}
-          startsAt={hackathon.starts_at}
-          endsAt={hackathon.ends_at}
-        />
-      )}
-
       <TabsUrlSync paramKey="tab" value={activeTab} className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
@@ -218,6 +207,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               judgingMode={hackathon.judging_mode}
               anonymousJudging={hackathon.anonymous_judging}
               judgingProgress={judgingProgress}
+              trackProgress={trackProgress}
             />
           </Suspense>
         </TabsContent>

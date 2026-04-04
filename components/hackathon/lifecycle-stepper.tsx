@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -42,6 +42,7 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import type { HackathonStatus, HackathonPhase } from "@/lib/db/hackathon-types"
+import type { DevStatusDetail } from "@/components/dev-tool/events"
 
 const phases = [
   { key: "draft" as const, label: "Draft", icon: EyeOff },
@@ -230,6 +231,27 @@ export function LifecycleStepper({
   const [currentStatus, setCurrentStatus] = useState(status)
   const [updating, setUpdating] = useState(false)
   const [pendingTarget, setPendingTarget] = useState<PhaseKey | null>(null)
+  const devOverrideUntil = useRef(0)
+
+  useEffect(() => {
+    if (Date.now() < devOverrideUntil.current) return
+    setCurrentStatus(status)
+  }, [status])
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<DevStatusDetail>).detail
+      if (detail?.status) {
+        devOverrideUntil.current = Date.now() + 30_000
+        setCurrentStatus(detail.status as HackathonStatus)
+      } else {
+        router.refresh()
+      }
+    }
+    document.addEventListener("dev-status-changed", handler)
+    return () => document.removeEventListener("dev-status-changed", handler)
+  }, [router])
 
   const currentIndex = resolvePhaseIndex(currentStatus)
 
