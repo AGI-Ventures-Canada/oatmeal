@@ -4,12 +4,15 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import { RefreshCw } from "lucide-react"
-import type { ActiveScenario, RoleCard } from "@/lib/services/admin-scenarios"
+import type { ActiveScenario, RoleCard, ScenarioOption } from "@/lib/services/admin-scenarios"
 
 type Scenario = {
   name: string
   description: string
+  options: ScenarioOption[]
 }
 
 type ScenarioResult = {
@@ -147,16 +150,18 @@ export function ScenarioRunner({
   const [refreshing, setRefreshing] = useState(false)
   const [result, setResult] = useState<ScenarioResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, boolean>>({})
 
   async function handleRun() {
     setRunning(true)
     setResult(null)
     setError(null)
 
+    const hasOptions = Object.values(selectedOptions).some(Boolean)
     const res = await fetch(`/api/admin/scenario-run/${scenario.name}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify(hasOptions ? { options: selectedOptions } : {}),
     })
 
     const data = await res.json().catch(() => null)
@@ -232,9 +237,35 @@ export function ScenarioRunner({
         )}
 
         {!showExisting && !result && (
-          <Button onClick={handleRun} disabled={running} size="sm">
-            {running ? "Running…" : "Run"}
-          </Button>
+          <div className="space-y-3">
+            {scenario.options.length > 0 && (
+              <div className="space-y-2">
+                {scenario.options.map((opt) => (
+                  <div key={opt.key} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`${scenario.name}-${opt.key}`}
+                      checked={selectedOptions[opt.key] ?? false}
+                      onCheckedChange={(checked) => {
+                        setSelectedOptions((prev) => ({
+                          ...prev,
+                          [opt.key]: checked === true,
+                        }))
+                      }}
+                    />
+                    <Label
+                      htmlFor={`${scenario.name}-${opt.key}`}
+                      className="text-sm font-normal"
+                    >
+                      {opt.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button onClick={handleRun} disabled={running} size="sm">
+              {running ? "Running…" : "Run"}
+            </Button>
+          </div>
         )}
 
         {result && (

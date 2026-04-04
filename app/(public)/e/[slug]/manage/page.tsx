@@ -190,6 +190,9 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               hackathonId={hackathon.id}
               submissions={submissionsForSelect}
               resultsPublishedAt={hackathon.results_published_at}
+              incompleteAssignments={incompleteAssignments}
+              feedbackSurveySentAt={hackathon.feedback_survey_sent_at ?? null}
+              feedbackSurveyUrl={hackathon.feedback_survey_url ?? null}
             />
           </Suspense>
         </TabsContent>

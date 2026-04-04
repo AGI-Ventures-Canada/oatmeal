@@ -4,6 +4,8 @@ import { getOrCreateTenant } from "@/lib/services/tenants"
 import { getSeedUserIds, findPersonaByUserId, getPersonaUserId } from "@/lib/dev/test-personas"
 import { SCENARIOS } from "@/lib/dev/scenarios"
 
+export type ScenarioOptions = Record<string, boolean>
+
 export function listScenarios() {
   return SCENARIOS.map((s) => ({ name: s.name, label: s.label, description: s.description }))
 }
@@ -210,7 +212,7 @@ async function addJudgingCriteria(hackathonId: string): Promise<string[]> {
   return ids
 }
 
-const scenarioRunners: Record<string, (tenantId?: string, principalOrgId?: string | null) => Promise<{ hackathonId: string; slug: string; tenantId: string }>> = {
+const scenarioRunners: Record<string, (tenantId?: string, principalOrgId?: string | null, options?: ScenarioOptions) => Promise<{ hackathonId: string; slug: string; tenantId: string }>> = {
   "pre-registration": async (overrideTenantId, principalOrgId) => {
     const tenantId = await resolveScenarioTenant(overrideTenantId, principalOrgId)
     const now = new Date()
@@ -262,8 +264,9 @@ const scenarioRunners: Record<string, (tenantId?: string, principalOrgId?: strin
     return { hackathonId, slug, tenantId }
   },
 
-  "submitted": async (overrideTenantId, principalOrgId) => {
+  "submitted": async (overrideTenantId, principalOrgId, options) => {
     const tenantId = await resolveScenarioTenant(overrideTenantId, principalOrgId)
+    const db = getSupabase()
     const now = new Date()
     const slug = uniqueSlug("test-submitted")
     const hackathonId = await createTestHackathon({
@@ -277,11 +280,50 @@ const scenarioRunners: Record<string, (tenantId?: string, principalOrgId?: strin
     const seedUsers = getSeedUsers()
     const teamId = await createTeamWithMembers(hackathonId, seedUsers[0], [seedUsers[1]])
     const pid = await registerParticipant(hackathonId, seedUsers[0])
-    await createSubmission(hackathonId, teamId, pid, 0)
+    const submissionId = await createSubmission(hackathonId, teamId, pid, 0)
+
+    if (options?.criteria || options?.preJudge) {
+      const criteriaIds = await addJudgingCriteria(hackathonId)
+
+      if (options?.preJudge) {
+        const judgeUserIds = [seedUsers[2], seedUsers[3], seedUsers[4]]
+        for (const userId of judgeUserIds) {
+          const judgePid = await registerParticipant(hackathonId, userId, "judge")
+          const { data: assignment } = await db
+            .from("judge_assignments")
+            .insert({
+              hackathon_id: hackathonId,
+              judge_participant_id: judgePid,
+              submission_id: submissionId,
+            })
+            .select("id")
+            .single()
+
+          if (assignment) {
+            for (const criteriaId of criteriaIds) {
+              await db.from("scores").insert({
+                judge_assignment_id: assignment.id,
+                criteria_id: criteriaId,
+                score: Math.floor(Math.random() * 8) + 3,
+              })
+            }
+            await db.from("judge_assignments").update({
+              is_complete: true,
+              completed_at: new Date().toISOString(),
+              notes: "Scored via admin scenario runner.",
+            }).eq("id", assignment.id)
+          }
+        }
+
+        await db.rpc("calculate_results", { p_hackathon_id: hackathonId })
+        await db.from("hackathons").update({ status: "judging" }).eq("id", hackathonId)
+      }
+    }
+
     return { hackathonId, slug, tenantId }
   },
 
-  "judging": async (overrideTenantId, principalOrgId) => {
+  "judging": async (overrideTenantId, principalOrgId, options) => {
     const tenantId = await resolveScenarioTenant(overrideTenantId, principalOrgId)
     const db = getSupabase()
     const now = new Date()
@@ -336,6 +378,37 @@ const scenarioRunners: Record<string, (tenantId?: string, principalOrgId?: strin
           submission_id: subId,
         })
       }
+    }
+
+    if (options?.preJudge) {
+      const { data: assignments } = await db
+        .from("judge_assignments")
+        .select("id")
+        .eq("hackathon_id", hackathonId)
+
+      const { data: criteria } = await db
+        .from("judging_criteria")
+        .select("id")
+        .eq("hackathon_id", hackathonId)
+
+      if (assignments && criteria) {
+        for (const a of assignments) {
+          for (const c of criteria) {
+            await db.from("scores").insert({
+              judge_assignment_id: a.id,
+              criteria_id: c.id,
+              score: Math.floor(Math.random() * 8) + 3,
+            })
+          }
+          await db.from("judge_assignments").update({
+            is_complete: true,
+            completed_at: new Date().toISOString(),
+            notes: "Scored via admin scenario runner.",
+          }).eq("id", a.id)
+        }
+      }
+
+      await db.rpc("calculate_results", { p_hackathon_id: hackathonId })
     }
 
     return { hackathonId, slug, tenantId }
@@ -486,7 +559,7 @@ async function clearScenario(name: string): Promise<void> {
   }
 }
 
-export async function runScenario(name: string, tenantId?: string, principalOrgId?: string | null): Promise<{ hackathonId: string; slug: string; tenantId: string }> {
+export async function runScenario(name: string, tenantId?: string, principalOrgId?: string | null, options?: ScenarioOptions): Promise<{ hackathonId: string; slug: string; tenantId: string }> {
   if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
     throw new Error("Test scenarios can only be run in local development or staging")
   }
@@ -497,7 +570,7 @@ export async function runScenario(name: string, tenantId?: string, principalOrgI
   }
 
   await clearScenario(name)
-  return runner(tenantId, principalOrgId)
+  return runner(tenantId, principalOrgId, options)
 }
 
 export type RoleCard = {

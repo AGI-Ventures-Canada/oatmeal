@@ -278,6 +278,13 @@ export async function publishResults(
     }
   }
 
+  try {
+    const { initializeFulfillments } = await import("@/lib/services/prize-fulfillment")
+    await initializeFulfillments(hackathonId)
+  } catch (err) {
+    console.error("Failed to initialize fulfillments (non-blocking):", err)
+  }
+
   if (!hackathon.winner_emails_sent_at) {
     try {
       const { sendWinnerEmails } = await import("@/lib/email/winner-notifications")
@@ -291,6 +298,20 @@ export async function publishResults(
     } catch (err) {
       console.error("Failed to send winner emails (non-blocking):", err)
     }
+  }
+
+  try {
+    const { sendResultsAnnouncementEmails } = await import("@/lib/email/results-announcement")
+    await sendResultsAnnouncementEmails(hackathonId)
+  } catch (err) {
+    console.error("Failed to send results announcement (non-blocking):", err)
+  }
+
+  try {
+    const { schedulePostEventReminders } = await import("@/lib/services/post-event-reminders")
+    await schedulePostEventReminders(hackathonId)
+  } catch (err) {
+    console.error("Failed to schedule post-event reminders (non-blocking):", err)
   }
 
   return { success: true }
