@@ -661,6 +661,14 @@ This catches real production bugs — not just style issues. Skipping this step 
 - **Suggestions**: Evaluate and apply if they improve the code. If skipping, have a concrete reason (not "it works fine as-is").
 - **Dead code, unused parameters, stale comments**: Fix immediately — these are easy wins that reviewers shouldn't have to flag twice.
 
+### Address All PR Review Warnings
+
+**All warnings from PR reviewers (automated or human) must be resolved before merging.** Do not treat warnings as optional — they indicate real issues that will compound if left unaddressed.
+
+- **Warnings**: Must be fixed or refactored. If a warning is genuinely inapplicable, reply on the PR explaining why — don't silently ignore it.
+- **Suggestions**: Evaluate and apply if they improve the code. If skipping, have a concrete reason (not "it works fine as-is").
+- **Dead code, unused parameters, stale comments**: Fix immediately — these are easy wins that reviewers shouldn't have to flag twice.
+
 ### Browser Verification
 
 **For any UI change, always verify the result with the `agent-browser` skill before considering the task done.** Do not rely only on static code review, screenshots, or tests when the interface can be exercised in the browser.
