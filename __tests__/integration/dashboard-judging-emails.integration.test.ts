@@ -292,7 +292,8 @@ describe("POST /hackathons/:id/judging/judges - email notifications", () => {
       const res = await postAddJudge({ email: "newjudge@example.com" })
       const data = await res.json()
 
-      expect(data.invited).toBe(true)
+      expect(data.invitation).toBeDefined()
+      expect(data.invitation.email).toBe("newjudge@example.com")
       expect(mockSendJudgeInvitationEmail).toHaveBeenCalledTimes(1)
       expect(mockSendJudgeInvitationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -312,7 +313,8 @@ describe("POST /hackathons/:id/judging/judges - email notifications", () => {
       const res = await postAddJudge({ email: "newjudge@example.com" })
       const data = await res.json()
 
-      expect(data.invited).toBe(true)
+      expect(data.invitation).toBeDefined()
+      expect(data.invitation.email).toBe("newjudge@example.com")
       expect(mockSendJudgeInvitationEmail).not.toHaveBeenCalled()
     })
   })

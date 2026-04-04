@@ -112,7 +112,10 @@ describe("Results Integration - publishResults", () => {
             error: null,
           })
         }
-        return createIntegrationChainableMock({ data: null, error: null })
+        return createIntegrationChainableMock({
+          data: { results_published_at: "2026-03-01T00:00:00Z" },
+          error: null,
+        })
       }
       if (table === "hackathon_results") {
         return createIntegrationChainableMock({ data: [{ id: "r1" }], error: null })
