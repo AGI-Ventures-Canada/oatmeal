@@ -1308,6 +1308,8 @@ export type Database = {
       }
       prize_fulfillments: {
         Row: {
+          claim_token: string | null
+          claim_token_expires_at: string | null
           claimed_at: string | null
           contacted_at: string | null
           created_at: string
@@ -1324,6 +1326,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          claim_token?: string | null
+          claim_token_expires_at?: string | null
           claimed_at?: string | null
           contacted_at?: string | null
           created_at?: string
@@ -1340,6 +1344,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          claim_token?: string | null
+          claim_token_expires_at?: string | null
           claimed_at?: string | null
           contacted_at?: string | null
           created_at?: string
