@@ -3,15 +3,33 @@ import type { HackathonStatus } from "@/lib/db/hackathon-types"
 import { getOrCreateTenant } from "@/lib/services/tenants"
 import { getSeedUserIds, findPersonaByUserId, getPersonaUserId } from "@/lib/dev/test-personas"
 
-const AVAILABLE_SCENARIOS = [
-  { name: "pre-registration", description: "Hackathon not yet open for registration (opens tomorrow)" },
-  { name: "registered-no-team", description: "Dev user registered, no team yet, registration open" },
-  { name: "team-formed", description: "Dev user is captain with 2 members + 1 pending invite" },
-  { name: "submitted", description: "Dev user's team has a submitted project, hackathon ends in 2 days" },
-  { name: "judging", description: "5 teams with submissions, 3 judges assigned, no scores yet" },
-  { name: "judging-in-progress", description: "Same as judging but ~60% of assignments scored" },
-  { name: "results-ready", description: "All submissions scored, results calculated, 3 prizes defined" },
-] as const
+export type ScenarioOption = {
+  key: string
+  label: string
+}
+
+export type ScenarioOptions = Record<string, boolean>
+
+type ScenarioDefinition = {
+  name: string
+  description: string
+  options: ScenarioOption[]
+}
+
+const AVAILABLE_SCENARIOS: ScenarioDefinition[] = [
+  { name: "pre-registration", description: "Hackathon not yet open for registration (opens tomorrow)", options: [] },
+  { name: "registered-no-team", description: "Dev user registered, no team yet, registration open", options: [] },
+  { name: "team-formed", description: "Dev user is captain with 2 members + 1 pending invite", options: [] },
+  { name: "submitted", description: "Dev user's team has a submitted project, hackathon ends in 2 days", options: [
+    { key: "criteria", label: "Add judging criteria" },
+    { key: "preJudge", label: "Pre-judge submissions" },
+  ] },
+  { name: "judging", description: "5 teams with submissions, 3 judges assigned, no scores yet", options: [
+    { key: "preJudge", label: "Pre-score all submissions" },
+  ] },
+  { name: "judging-in-progress", description: "Same as judging but ~60% of assignments scored", options: [] },
+  { name: "results-ready", description: "All submissions scored, results calculated, 3 prizes defined", options: [] },
+]
 
 export function listScenarios() {
   return AVAILABLE_SCENARIOS
@@ -219,7 +237,7 @@ async function addJudgingCriteria(hackathonId: string): Promise<string[]> {
   return ids
 }
 
-const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathonId: string; slug: string; tenantId: string }>> = {
+const scenarioRunners: Record<string, (tenantId?: string, options?: ScenarioOptions) => Promise<{ hackathonId: string; slug: string; tenantId: string }>> = {
   "pre-registration": async (overrideTenantId) => {
     const tenantId = await resolveScenarioTenant(overrideTenantId)
     const now = new Date()
@@ -271,8 +289,9 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
     return { hackathonId, slug, tenantId }
   },
 
-  "submitted": async (overrideTenantId) => {
+  "submitted": async (overrideTenantId, options) => {
     const tenantId = await resolveScenarioTenant(overrideTenantId)
+    const db = getSupabase()
     const now = new Date()
     const slug = uniqueSlug("test-submitted")
     const hackathonId = await createTestHackathon({
@@ -286,11 +305,50 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
     const seedUsers = getSeedUsers()
     const teamId = await createTeamWithMembers(hackathonId, seedUsers[0], [seedUsers[1]])
     const pid = await registerParticipant(hackathonId, seedUsers[0])
-    await createSubmission(hackathonId, teamId, pid, 0)
+    const submissionId = await createSubmission(hackathonId, teamId, pid, 0)
+
+    if (options?.criteria || options?.preJudge) {
+      const criteriaIds = await addJudgingCriteria(hackathonId)
+
+      if (options?.preJudge) {
+        const judgeUserIds = [seedUsers[2], seedUsers[3], seedUsers[4]]
+        for (const userId of judgeUserIds) {
+          const judgePid = await registerParticipant(hackathonId, userId, "judge")
+          const { data: assignment } = await db
+            .from("judge_assignments")
+            .insert({
+              hackathon_id: hackathonId,
+              judge_participant_id: judgePid,
+              submission_id: submissionId,
+            })
+            .select("id")
+            .single()
+
+          if (assignment) {
+            for (const criteriaId of criteriaIds) {
+              await db.from("scores").insert({
+                judge_assignment_id: assignment.id,
+                criteria_id: criteriaId,
+                score: Math.floor(Math.random() * 8) + 3,
+              })
+            }
+            await db.from("judge_assignments").update({
+              is_complete: true,
+              completed_at: new Date().toISOString(),
+              notes: "Scored via admin scenario runner.",
+            }).eq("id", assignment.id)
+          }
+        }
+
+        await db.rpc("calculate_results", { p_hackathon_id: hackathonId })
+        await db.from("hackathons").update({ status: "judging" }).eq("id", hackathonId)
+      }
+    }
+
     return { hackathonId, slug, tenantId }
   },
 
-  "judging": async (overrideTenantId) => {
+  "judging": async (overrideTenantId, options) => {
     const tenantId = await resolveScenarioTenant(overrideTenantId)
     const db = getSupabase()
     const now = new Date()
@@ -345,6 +403,37 @@ const scenarioRunners: Record<string, (tenantId?: string) => Promise<{ hackathon
           submission_id: subId,
         })
       }
+    }
+
+    if (options?.preJudge) {
+      const { data: assignments } = await db
+        .from("judge_assignments")
+        .select("id")
+        .eq("hackathon_id", hackathonId)
+
+      const { data: criteria } = await db
+        .from("judging_criteria")
+        .select("id")
+        .eq("hackathon_id", hackathonId)
+
+      if (assignments && criteria) {
+        for (const a of assignments) {
+          for (const c of criteria) {
+            await db.from("scores").insert({
+              judge_assignment_id: a.id,
+              criteria_id: c.id,
+              score: Math.floor(Math.random() * 8) + 3,
+            })
+          }
+          await db.from("judge_assignments").update({
+            is_complete: true,
+            completed_at: new Date().toISOString(),
+            notes: "Scored via admin scenario runner.",
+          }).eq("id", a.id)
+        }
+      }
+
+      await db.rpc("calculate_results", { p_hackathon_id: hackathonId })
     }
 
     return { hackathonId, slug, tenantId }
@@ -495,7 +584,7 @@ async function clearScenario(name: string): Promise<void> {
   }
 }
 
-export async function runScenario(name: string, tenantId?: string): Promise<{ hackathonId: string; slug: string; tenantId: string }> {
+export async function runScenario(name: string, tenantId?: string, options?: ScenarioOptions): Promise<{ hackathonId: string; slug: string; tenantId: string }> {
   if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
     throw new Error("Test scenarios can only be run in local development or staging")
   }
@@ -506,7 +595,7 @@ export async function runScenario(name: string, tenantId?: string): Promise<{ ha
   }
 
   await clearScenario(name)
-  return runner(tenantId)
+  return runner(tenantId, options)
 }
 
 export type RoleCard = {

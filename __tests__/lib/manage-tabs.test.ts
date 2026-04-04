@@ -19,7 +19,8 @@ describe("VALID_TABS", () => {
     expect(VALID_TABS).toContain("judges")
     expect(VALID_TABS).toContain("prizes")
     expect(VALID_TABS).toContain("event")
-    expect(VALID_TABS).toHaveLength(8)
+    expect(VALID_TABS).toContain("activity")
+    expect(VALID_TABS).toHaveLength(9)
   })
 })
 
@@ -36,7 +37,8 @@ describe("VALID_PTABS", () => {
   it("contains prizes and results", () => {
     expect(VALID_PTABS).toContain("prizes")
     expect(VALID_PTABS).toContain("results")
-    expect(VALID_PTABS).toHaveLength(2)
+    expect(VALID_PTABS).toContain("fulfillment")
+    expect(VALID_PTABS).toHaveLength(3)
   })
 })
 

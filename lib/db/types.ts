@@ -538,6 +538,8 @@ export type Database = {
           created_at: string
           description: string | null
           ends_at: string | null
+          feedback_survey_sent_at: string | null
+          feedback_survey_url: string | null
           id: string
           judging_mode: Database["public"]["Enums"]["judging_mode"]
           location_latitude: number | null
@@ -554,6 +556,7 @@ export type Database = {
           registration_closes_at: string | null
           registration_opens_at: string | null
           require_location_verification: boolean
+          results_announcement_sent_at: string | null
           results_published_at: string | null
           rules: string | null
           slug: string
@@ -573,6 +576,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           ends_at?: string | null
+          feedback_survey_sent_at?: string | null
+          feedback_survey_url?: string | null
           id?: string
           judging_mode?: Database["public"]["Enums"]["judging_mode"]
           location_latitude?: number | null
@@ -589,6 +594,7 @@ export type Database = {
           registration_closes_at?: string | null
           registration_opens_at?: string | null
           require_location_verification?: boolean
+          results_announcement_sent_at?: string | null
           results_published_at?: string | null
           rules?: string | null
           slug: string
@@ -608,6 +614,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           ends_at?: string | null
+          feedback_survey_sent_at?: string | null
+          feedback_survey_url?: string | null
           id?: string
           judging_mode?: Database["public"]["Enums"]["judging_mode"]
           location_latitude?: number | null
@@ -624,6 +632,7 @@ export type Database = {
           registration_closes_at?: string | null
           registration_opens_at?: string | null
           require_location_verification?: boolean
+          results_announcement_sent_at?: string | null
           results_published_at?: string | null
           rules?: string | null
           slug?: string
@@ -1217,6 +1226,50 @@ export type Database = {
           },
         ]
       }
+      post_event_reminders: {
+        Row: {
+          cancelled_at: string | null
+          created_at: string
+          hackathon_id: string
+          id: string
+          metadata: Json | null
+          recipient_filter: string
+          scheduled_for: string
+          sent_at: string | null
+          type: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          created_at?: string
+          hackathon_id: string
+          id?: string
+          metadata?: Json | null
+          recipient_filter: string
+          scheduled_for: string
+          sent_at?: string | null
+          type: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          created_at?: string
+          hackathon_id?: string
+          id?: string
+          metadata?: Json | null
+          recipient_filter?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_event_reminders_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prize_assignments: {
         Row: {
           assigned_at: string
@@ -1249,6 +1302,78 @@ export type Database = {
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prize_fulfillments: {
+        Row: {
+          claim_token: string | null
+          claim_token_expires_at: string | null
+          claimed_at: string | null
+          contacted_at: string | null
+          created_at: string
+          hackathon_id: string
+          id: string
+          notes: string | null
+          prize_assignment_id: string
+          recipient_email: string | null
+          recipient_name: string | null
+          shipped_at: string | null
+          shipping_address: string | null
+          status: Database["public"]["Enums"]["prize_fulfillment_status"]
+          tracking_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          claim_token?: string | null
+          claim_token_expires_at?: string | null
+          claimed_at?: string | null
+          contacted_at?: string | null
+          created_at?: string
+          hackathon_id: string
+          id?: string
+          notes?: string | null
+          prize_assignment_id: string
+          recipient_email?: string | null
+          recipient_name?: string | null
+          shipped_at?: string | null
+          shipping_address?: string | null
+          status?: Database["public"]["Enums"]["prize_fulfillment_status"]
+          tracking_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          claim_token?: string | null
+          claim_token_expires_at?: string | null
+          claimed_at?: string | null
+          contacted_at?: string | null
+          created_at?: string
+          hackathon_id?: string
+          id?: string
+          notes?: string | null
+          prize_assignment_id?: string
+          recipient_email?: string | null
+          recipient_name?: string | null
+          shipped_at?: string | null
+          shipping_address?: string | null
+          status?: Database["public"]["Enums"]["prize_fulfillment_status"]
+          tracking_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prize_fulfillments_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prize_fulfillments_prize_assignment_id_fkey"
+            columns: ["prize_assignment_id"]
+            isOneToOne: true
+            referencedRelation: "prize_assignments"
             referencedColumns: ["id"]
           },
         ]
@@ -2173,6 +2298,7 @@ export type Database = {
       location_type: "in_person" | "virtual"
       mentor_request_status: "open" | "claimed" | "resolved" | "cancelled"
       participant_role: "participant" | "judge" | "mentor" | "organizer"
+      prize_fulfillment_status: "assigned" | "contacted" | "shipped" | "claimed"
       prize_type: "score" | "favorite" | "crowd" | "criteria"
       schedule_frequency:
         | "once"
@@ -2358,6 +2484,7 @@ export const Constants = {
       location_type: ["in_person", "virtual"],
       mentor_request_status: ["open", "claimed", "resolved", "cancelled"],
       participant_role: ["participant", "judge", "mentor", "organizer"],
+      prize_fulfillment_status: ["assigned", "contacted", "shipped", "claimed"],
       prize_type: ["score", "favorite", "crowd", "criteria"],
       schedule_frequency: [
         "once",
