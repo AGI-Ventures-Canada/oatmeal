@@ -20,7 +20,7 @@ const {
   activateRound,
   listBucketDefinitions,
   createDefaultBuckets,
-  replaceBucketDefinitions,
+  replaceRoundBucketDefinitions,
   submitBucketResponse,
   submitBinaryResponses,
   submitBucketSortResponse,
@@ -187,7 +187,7 @@ describe("prize-tracks service", () => {
 
   describe("activateRound", () => {
     it("deactivates other rounds and activates target", async () => {
-      setMockFromImplementation(() => createChainableMock({ data: null, error: null }))
+      setMockFromImplementation(() => createChainableMock({ data: { id: ROUND_ID }, error: null }))
       expect(await activateRound(ROUND_ID, TRACK_ID)).toBe(true)
     })
 
@@ -231,7 +231,7 @@ describe("prize-tracks service", () => {
     })
   })
 
-  describe("replaceBucketDefinitions", () => {
+  describe("replaceRoundBucketDefinitions", () => {
     it("deletes old and inserts new buckets", async () => {
       const newBuckets = [
         { id: "nb1", round_id: ROUND_ID, level: 1, label: "Fail", display_order: 0 },
@@ -243,7 +243,7 @@ describe("prize-tracks service", () => {
         if (callCount === 1) return createChainableMock({ data: null, error: null })
         return createChainableMock(mockSuccess(newBuckets))
       })
-      const result = await replaceBucketDefinitions(ROUND_ID, [
+      const result = await replaceRoundBucketDefinitions(ROUND_ID, [
         { level: 1, label: "Fail" },
         { level: 2, label: "Pass" },
       ])
@@ -252,7 +252,7 @@ describe("prize-tracks service", () => {
 
     it("returns empty on delete error", async () => {
       setMockFromImplementation(() => createChainableMock(mockError("Delete failed")))
-      const result = await replaceBucketDefinitions(ROUND_ID, [{ level: 1, label: "Fail" }])
+      const result = await replaceRoundBucketDefinitions(ROUND_ID, [{ level: 1, label: "Fail" }])
       expect(result).toEqual([])
     })
   })

@@ -642,13 +642,16 @@ refactor: extract payment logic into service
 
 ### Proactive Code Review
 
-**After completing any non-trivial change, run the review skill before considering the task done:**
+**CRITICAL: Before every push, run a local code review and fix all findings.** This is mandatory, not optional — do not push code that hasn't been reviewed.
 
-```bash
-/review-pr
-```
+1. Run the `code-reviewer` agent against the branch diff (`git diff origin/staging...HEAD`)
+2. Fix all critical and important issues found
+3. Re-run affected tests to verify fixes
+4. Only then proceed with `git push`
 
-This catches style violations, shadcn primitive misuse, dead code, and other issues before they land in a PR.
+Focus areas: security (auth bypasses, missing ownership checks), missing validation (body schemas, input sanitization), logic bugs (race conditions, regressions from refactors), type safety (unsafe casts, `as unknown`), and dead/duplicate code.
+
+This catches real production bugs — not just style issues. Skipping this step has let security holes, functional regressions, and data integrity issues slip through.
 
 ### Address All PR Review Warnings
 

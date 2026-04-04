@@ -106,7 +106,16 @@ export const dashboardJudgingRoutes = new Elysia()
       }
 
       const { updatePrize } = await import("@/lib/services/judging")
-      const prize = await updatePrize(params.prizeId, params.id, body as Record<string, unknown>)
+      const prize = await updatePrize(params.prizeId, params.id, {
+        name: body.name,
+        description: body.description,
+        value: body.value,
+        judgingStyle: body.judgingStyle as import("@/lib/db/hackathon-types").PrizeJudgingStyle | undefined,
+        roundId: body.roundId,
+        assignmentMode: body.assignmentMode as import("@/lib/db/hackathon-types").PrizeAssignmentMode | undefined,
+        maxPicks: body.maxPicks,
+        displayOrder: body.displayOrder,
+      })
 
       if (!prize) {
         return new Response(JSON.stringify({ error: "Prize not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
@@ -215,8 +224,8 @@ export const dashboardJudgingRoutes = new Elysia()
   )
 
   .delete(
-    "/hackathons/:id/prizes/:prizeId/remove-judge",
-    async ({ principal, params, body }) => {
+    "/hackathons/:id/prizes/:prizeId/judges/:judgeParticipantId",
+    async ({ principal, params }) => {
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
       const { checkHackathonOrganizer } = await import("@/lib/services/public-hackathons")
@@ -229,9 +238,8 @@ export const dashboardJudgingRoutes = new Elysia()
         return new Response(JSON.stringify({ error: "Not authorized" }), { status: 403, headers: { "Content-Type": "application/json" } })
       }
 
-      const typedBody = body as { judgeParticipantId: string }
       const { removeJudgeFromPrize } = await import("@/lib/services/judging")
-      const removed = await removeJudgeFromPrize(params.id, typedBody.judgeParticipantId, params.prizeId)
+      const removed = await removeJudgeFromPrize(params.id, params.judgeParticipantId, params.prizeId)
 
       return removed
     },
@@ -623,6 +631,55 @@ export const dashboardJudgingRoutes = new Elysia()
 
       if (typedBody.email) {
         const hackathon = result.hackathon
+
+        const existingUsers = await client.users.getUserList({ emailAddress: [typedBody.email] })
+        if (existingUsers.data.length > 0) {
+          const existingUser = existingUsers.data[0]
+
+          const { hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
+          let isPending: boolean
+          try {
+            isPending = await hasPendingJudgeEntry(params.id, typedBody.email)
+          } catch {
+            return new Response(JSON.stringify({ error: "Failed to check invitation status", code: "lookup_failed" }), { status: 500, headers: { "Content-Type": "application/json" } })
+          }
+          if (isPending) {
+            return new Response(JSON.stringify({ error: "This email already has a pending invitation or notification", code: "already_pending" }), { status: 400, headers: { "Content-Type": "application/json" } })
+          }
+
+          const { addJudge } = await import("@/lib/services/judging")
+          const addResult = await addJudge(params.id, existingUser.id)
+
+          if (!addResult.success) {
+            return new Response(JSON.stringify({ error: addResult.error, code: addResult.code }), { status: 400, headers: { "Content-Type": "application/json" } })
+          }
+
+          if (hackathon.status !== "draft") {
+            const addedByName = await resolveAdderName(principal, client)
+            const { sendJudgeAddedNotification } = await import("@/lib/email/judge-invitations")
+            sendJudgeAddedNotification({
+              to: typedBody.email,
+              hackathonName: hackathon.name,
+              hackathonSlug: hackathon.slug,
+              addedByName,
+            }).catch(console.error)
+          } else {
+            const addedByName = await resolveAdderName(principal, client)
+            const { createJudgePendingNotification } = await import("@/lib/services/judge-invitations")
+            await createJudgePendingNotification(hackathon.id, addResult.participant.id, typedBody.email, addedByName)
+          }
+
+          logAudit({
+            principal,
+            action: "judge.added",
+            resourceType: "hackathon",
+            resourceId: params.id,
+            metadata: { judgeClerkUserId: existingUser.id, email: typedBody.email },
+          })
+
+          return { participant: addResult.participant }
+        }
+
         const { createJudgeInvitation, hasPendingJudgeEntry } = await import("@/lib/services/judge-invitations")
 
         let isPending: boolean
@@ -647,14 +704,19 @@ export const dashboardJudgingRoutes = new Elysia()
           return new Response(JSON.stringify({ error: invitationResult.error, code: invitationResult.code }), { status: 400, headers: { "Content-Type": "application/json" } })
         }
 
-        const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
-        sendJudgeInvitationEmail({
-          to: typedBody.email,
-          hackathonName: hackathon.name,
-          inviterName,
-          inviteToken: invitationResult.invitation.token,
-          expiresAt: invitationResult.invitation.expires_at,
-        }).catch(console.error)
+        if (hackathon.status !== "draft") {
+          const { sendJudgeInvitationEmail } = await import("@/lib/email/judge-invitations")
+          sendJudgeInvitationEmail({
+            to: typedBody.email,
+            hackathonName: hackathon.name,
+            inviterName,
+            inviteToken: invitationResult.invitation.token,
+            expiresAt: invitationResult.invitation.expires_at,
+          }).catch(console.error)
+        } else {
+          const { createJudgePendingNotification } = await import("@/lib/services/judge-invitations")
+          await createJudgePendingNotification(hackathon.id, invitationResult.invitation.id, typedBody.email, inviterName)
+        }
 
         logAudit({
           principal,
@@ -670,6 +732,10 @@ export const dashboardJudgingRoutes = new Elysia()
       return new Response(JSON.stringify({ error: "Must provide clerkUserId or email" }), { status: 400, headers: { "Content-Type": "application/json" } })
     },
     {
+      body: t.Object({
+        clerkUserId: t.Optional(t.String()),
+        email: t.Optional(t.String({ format: "email" })),
+      }),
       detail: { summary: "Add judge", description: "Adds a judge by Clerk user ID or invites by email." },
     }
   )

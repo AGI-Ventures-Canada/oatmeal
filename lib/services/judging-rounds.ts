@@ -119,19 +119,22 @@ export async function activateRound(roundId: string, hackathonId: string): Promi
     .from("judging_rounds")
     .update({ is_active: false })
     .eq("hackathon_id", hackathonId)
+    .neq("id", roundId)
 
   if (deactivateErr) {
     console.error("Failed to deactivate rounds:", deactivateErr)
     return false
   }
 
-  const { error: activateErr } = await client
+  const { data, error: activateErr } = await client
     .from("judging_rounds")
     .update({ is_active: true })
     .eq("id", roundId)
     .eq("hackathon_id", hackathonId)
+    .select("id")
+    .single()
 
-  if (activateErr) {
+  if (activateErr || !data) {
     console.error("Failed to activate round:", activateErr)
     return false
   }

@@ -838,28 +838,6 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
   )
 
   .post(
-    "/hackathons/:id/seed-prizes",
-    async ({ params, set }) => {
-      const guard = devGuard(set)
-      if (guard) return guard
-
-      const db = await getDb()
-      const prizes: { name: string; description: string; value: string; type: "score" | "criteria" | "crowd" | "favorite"; rank: number | null; display_order: number }[] = [
-        { name: "Best Overall", description: "Top scoring project across all criteria", value: "$500", type: "score", rank: 1, display_order: 0 },
-        { name: "Most Innovative", description: "Most creative and novel approach", value: "$250", type: "criteria", rank: null, display_order: 1 },
-        { name: "People's Choice", description: "Audience favorite", value: "$100", type: "crowd", rank: null, display_order: 2 },
-      ]
-
-      let seeded = 0
-      for (const p of prizes) {
-        const { error } = await db.from("prizes").insert({ hackathon_id: params.id, ...p })
-        if (!error) seeded++
-      }
-      return { seeded }
-    },
-  )
-
-  .post(
     "/hackathons/:id/seed-categories",
     async ({ params, set }) => {
       const guard = devGuard(set)

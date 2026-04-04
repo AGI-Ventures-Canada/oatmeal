@@ -436,18 +436,22 @@ export async function activateRound(roundId: string, hackathonId: string): Promi
     .update({ status: "planned", is_active: false, updated_at: new Date().toISOString() })
     .eq("hackathon_id", hackathonId)
     .eq("status", "active")
+    .neq("id", roundId)
 
   if (deactivateError) {
     console.error("Failed to deactivate other rounds:", deactivateError)
     return false
   }
 
-  const { error } = await client
+  const { data, error } = await client
     .from("judging_rounds")
     .update({ status: "active", is_active: true, updated_at: new Date().toISOString() })
     .eq("id", roundId)
+    .eq("hackathon_id", hackathonId)
+    .select("id")
+    .single()
 
-  if (error) {
+  if (error || !data) {
     console.error("Failed to activate round:", error)
     return false
   }
@@ -790,6 +794,22 @@ export async function assignJudgeToPrize(
   }
 
   return { assignedCount: newAssignments.length }
+}
+
+export async function verifyAssignmentOwnership(
+  assignmentId: string,
+  clerkUserId: string
+): Promise<boolean> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data } = await client
+    .from("judge_assignments")
+    .select("judge_participant_id, hackathon_participants!inner(clerk_user_id)")
+    .eq("id", assignmentId)
+    .single()
+
+  if (!data) return false
+  const participant = data.hackathon_participants as unknown as { clerk_user_id: string }
+  return participant.clerk_user_id === clerkUserId
 }
 
 export async function removeJudgeFromPrize(

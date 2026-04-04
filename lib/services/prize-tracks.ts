@@ -266,21 +266,25 @@ export async function activateRound(roundId: string, prizeTrackId: string): Prom
 
   const { error: deactivateError } = await client
     .from("judging_rounds")
-    .update({ status: "planned", updated_at: new Date().toISOString() })
+    .update({ status: "planned", is_active: false, updated_at: new Date().toISOString() })
     .eq("prize_track_id", prizeTrackId)
     .eq("status", "active")
+    .neq("id", roundId)
 
   if (deactivateError) {
     console.error("Failed to deactivate other rounds:", deactivateError)
     return false
   }
 
-  const { error } = await client
+  const { data, error } = await client
     .from("judging_rounds")
     .update({ status: "active", is_active: true, updated_at: new Date().toISOString() })
     .eq("id", roundId)
+    .eq("prize_track_id", prizeTrackId)
+    .select("id")
+    .single()
 
-  if (error) {
+  if (error || !data) {
     console.error("Failed to activate round:", error)
     return false
   }
@@ -338,7 +342,7 @@ export type UpsertBucketInput = {
   description?: string | null
 }
 
-export async function replaceBucketDefinitions(
+export async function replaceRoundBucketDefinitions(
   roundId: string,
   buckets: UpsertBucketInput[]
 ): Promise<BucketDefinition[]> {

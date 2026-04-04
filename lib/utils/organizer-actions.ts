@@ -64,10 +64,10 @@ function addDraftActions(items: ActionItem[], input: ActionItemsInput) {
     items.push({ id: "no-reg-dates", label: "Set registration dates", hint: "Controls when signups open and close", severity: "urgent", tab: "edit" })
   }
   if (input.prizeCount === 0) {
-    items.push({ id: "no-prizes", label: "Add prizes", severity: "info", tab: "judging" })
+    items.push({ id: "no-prizes", label: "Add prizes", hint: "Define what teams are competing for", severity: "info", tab: "judging" })
   }
   if (input.judgeDisplayCount === 0) {
-    items.push({ id: "no-judges", label: "Invite judges", severity: "info", tab: "judging" })
+    items.push({ id: "no-judges", label: "Invite judges", hint: "Judges evaluate submissions after the event", severity: "info", tab: "judging" })
   }
   if (!input.bannerUrl) {
     items.push({ id: "no-banner", label: "Upload a banner image", hint: "Makes your event page stand out", severity: "info", tab: "edit" })
@@ -123,7 +123,7 @@ function addJudgingActions(items: ActionItem[], input: ActionItemsInput) {
 
 function addCompletedActions(items: ActionItem[], input: ActionItemsInput) {
   if (!input.resultsPublishedAt) {
-    items.push({ id: "results-not-published", label: "Results not yet published", severity: "urgent", tab: "judging" })
+    items.push({ id: "results-not-published", label: "Results not yet published", hint: "Review scores and publish", severity: "urgent", tab: "judging" })
   }
   if (input.resultsPublishedAt && !input.winnerEmailsSentAt) {
     items.push({ id: "winner-emails-not-sent", label: "Winner notification emails not sent", hint: "Let winners know they've been selected", severity: "warning" })

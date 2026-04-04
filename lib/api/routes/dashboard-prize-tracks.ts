@@ -299,8 +299,8 @@ export const dashboardPrizeTracksRoutes = new Elysia()
         })
       }
 
-      const { replaceBucketDefinitions } = await import("@/lib/services/prize-tracks")
-      const buckets = await replaceBucketDefinitions(params.roundId, body.buckets)
+      const { replaceRoundBucketDefinitions } = await import("@/lib/services/prize-tracks")
+      const buckets = await replaceRoundBucketDefinitions(params.roundId, body.buckets)
 
       return { buckets: buckets.map((b) => ({ id: b.id, level: b.level, label: b.label, description: b.description })) }
     },

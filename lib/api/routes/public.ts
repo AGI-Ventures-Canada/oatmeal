@@ -1221,6 +1221,15 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         )
       }
 
+      const { verifyAssignmentOwnership } = await import("@/lib/services/judging")
+      const ownerCheck = await verifyAssignmentOwnership(params.assignmentId, userId)
+      if (!ownerCheck) {
+        return new Response(
+          JSON.stringify({ error: "Assignment not found", code: "not_found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
       const { submitBucketSortResponse } = await import("@/lib/services/prize-tracks")
       const result = await submitBucketSortResponse(params.assignmentId, {
         gates: body.gates ?? [],
@@ -1276,6 +1285,15 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         return new Response(
           JSON.stringify({ error: "Hackathon is not in judging phase", code: "not_judging" }),
           { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+
+      const { verifyAssignmentOwnership } = await import("@/lib/services/judging")
+      const ownerCheck = await verifyAssignmentOwnership(params.assignmentId, userId)
+      if (!ownerCheck) {
+        return new Response(
+          JSON.stringify({ error: "Assignment not found", code: "not_found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
         )
       }
 
