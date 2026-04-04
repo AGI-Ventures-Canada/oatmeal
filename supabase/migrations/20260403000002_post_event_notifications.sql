@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS prize_fulfillments (
   shipping_address text,
   tracking_number text,
   notes text,
+  claim_token text UNIQUE,
+  claim_token_expires_at timestamptz,
   contacted_at timestamptz,
   shipped_at timestamptz,
   claimed_at timestamptz,
@@ -30,6 +32,7 @@ CREATE TABLE IF NOT EXISTS prize_fulfillments (
 
 CREATE INDEX idx_prize_fulfillments_hackathon ON prize_fulfillments(hackathon_id);
 CREATE INDEX idx_prize_fulfillments_status ON prize_fulfillments(hackathon_id, status);
+CREATE INDEX idx_prize_fulfillments_claim_token ON prize_fulfillments(claim_token) WHERE claim_token IS NOT NULL;
 
 ALTER TABLE prize_fulfillments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Deny all access to prize_fulfillments" ON prize_fulfillments FOR ALL USING (false);
