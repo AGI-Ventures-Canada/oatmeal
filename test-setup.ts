@@ -59,7 +59,7 @@ mock.module("@clerk/nextjs", () => ({
   useOrganization: () => ({ organization: g.__clerkState.organization, isLoaded: g.__clerkState.isLoaded }),
   useOrganizationList: () => ({
     userMemberships: { data: g.__clerkState.memberships },
-    setActive: g.__clerkState.setActive,
+    setActive: g.__clerkState.setOrgActive ?? g.__clerkState.setActive,
     createOrganization: g.__clerkState.createOrganization,
   }),
   useSignIn: () => ({
