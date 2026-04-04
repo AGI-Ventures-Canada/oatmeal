@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Loader2, Mail, Clock, X, Send } from "lucide-react"
+import { normalizeUrl } from "@/lib/utils/url"
 
 type Reminder = {
   id: string
@@ -76,7 +77,7 @@ export function PostEventPanel({
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/feedback-survey`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ surveyUrl: surveyUrl.trim() }),
+        body: JSON.stringify({ surveyUrl: normalizeUrl(surveyUrl.trim()) }),
       })
       if (res.ok) {
         const data = await res.json()

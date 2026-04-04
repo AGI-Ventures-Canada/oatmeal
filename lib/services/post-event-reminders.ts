@@ -40,6 +40,9 @@ export async function schedulePostEventReminders(hackathonId: string): Promise<n
     metadata: { hackathonName: hackathon.name, hackathonSlug: hackathon.slug },
   })
 
+  // Only schedule feedback_followup if a survey URL is already configured.
+  // If the organizer sets a URL after results are published, they can manually
+  // send the survey from the Post-Event panel — no automatic backfill occurs.
   if (!hackathon.feedback_survey_sent_at && hackathon.feedback_survey_url) {
     const feedbackDate = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000)
     reminders.push({
@@ -85,26 +88,44 @@ export async function listReminders(hackathonId: string): Promise<PostEventRemin
   return (data ?? []) as PostEventReminder[]
 }
 
+export async function getReminderById(
+  reminderId: string,
+  hackathonId: string
+): Promise<PostEventReminder | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data, error } = await client
+    .from("post_event_reminders")
+    .select("*")
+    .eq("id", reminderId)
+    .eq("hackathon_id", hackathonId)
+    .single()
+
+  if (error || !data) return null
+  return data as PostEventReminder
+}
+
 export async function cancelReminder(
   reminderId: string,
   hackathonId: string
 ): Promise<boolean> {
   const client = getSupabase() as unknown as SupabaseClient
 
-  const { error } = await client
+  const { data, error } = await client
     .from("post_event_reminders")
     .update({ cancelled_at: new Date().toISOString() })
     .eq("id", reminderId)
     .eq("hackathon_id", hackathonId)
     .is("sent_at", null)
     .is("cancelled_at", null)
+    .select("id")
 
   if (error) {
     console.error("Failed to cancel reminder:", error)
     return false
   }
 
-  return true
+  return data !== null && data.length > 0
 }
 
 export async function getPendingReminders(limit = 50): Promise<PostEventReminder[]> {

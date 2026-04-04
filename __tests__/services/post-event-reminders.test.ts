@@ -8,6 +8,7 @@ import {
 const {
   schedulePostEventReminders,
   listReminders,
+  getReminderById,
   cancelReminder,
   getPendingReminders,
   markReminderSent,
@@ -141,19 +142,60 @@ describe("Post-Event Reminders Service", () => {
     })
   })
 
+  describe("getReminderById", () => {
+    it("returns reminder when found", async () => {
+      const mockReminder = {
+        id: "r1",
+        hackathon_id: "h1",
+        type: "prize_claim",
+        scheduled_for: "2026-04-06T00:00:00Z",
+        sent_at: null,
+        cancelled_at: null,
+        recipient_filter: "winners",
+        metadata: {},
+        created_at: "2026-04-03T00:00:00Z",
+      }
+      setMockFromImplementation(() =>
+        createChainableMock({ data: mockReminder, error: null })
+      )
+
+      const result = await getReminderById("r1", "h1")
+      expect(result).not.toBeNull()
+      expect(result!.type).toBe("prize_claim")
+    })
+
+    it("returns null when not found", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: null, error: { message: "Not found" } })
+      )
+
+      const result = await getReminderById("r1", "h1")
+      expect(result).toBeNull()
+    })
+  })
+
   describe("cancelReminder", () => {
     it("cancels a pending reminder", async () => {
       setMockFromImplementation(() =>
-        createChainableMock({ data: null, error: null })
+        createChainableMock({ data: [{ id: "r1" }], error: null })
       )
 
       const result = await cancelReminder("r1", "h1")
       expect(result).toBe(true)
     })
 
+    it("returns false when no rows matched", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: [], error: null })
+      )
+
+      const result = await cancelReminder("r1", "h1")
+      expect(result).toBe(false)
+    })
+
     it("returns false on error", async () => {
       setMockFromImplementation(() =>
-        createChainableMock({ data: null, error: { message: "Not found" } })
+        createChainableMock({ data: null, error: { message: "DB error" } })
       )
 
       const result = await cancelReminder("r1", "h1")

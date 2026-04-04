@@ -320,9 +320,8 @@ export const dashboardPostEventRoutes = new Elysia()
       })
     }
 
-    const { listReminders, processReminder } = await import("@/lib/services/post-event-reminders")
-    const reminders = await listReminders(params.id)
-    const reminder = reminders.find((r) => r.id === params.reminderId)
+    const { getReminderById, processReminder } = await import("@/lib/services/post-event-reminders")
+    const reminder = await getReminderById(params.reminderId, params.id)
 
     if (!reminder || reminder.sent_at || reminder.cancelled_at) {
       return new Response(JSON.stringify({ error: "Reminder not found or already sent/cancelled" }), {
