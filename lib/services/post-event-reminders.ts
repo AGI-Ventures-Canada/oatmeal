@@ -20,6 +20,8 @@ export async function schedulePostEventReminders(hackathonId: string): Promise<n
     scheduled_for: string
     recipient_filter: string
     metadata: Record<string, unknown>
+    sent_at: null
+    cancelled_at: null
   }> = []
 
   const prizeClaimDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
@@ -29,6 +31,8 @@ export async function schedulePostEventReminders(hackathonId: string): Promise<n
     scheduled_for: prizeClaimDate.toISOString(),
     recipient_filter: "winners",
     metadata: { hackathonName: hackathon.name, hackathonSlug: hackathon.slug },
+    sent_at: null,
+    cancelled_at: null,
   })
 
   const orgReminderDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -38,6 +42,8 @@ export async function schedulePostEventReminders(hackathonId: string): Promise<n
     scheduled_for: orgReminderDate.toISOString(),
     recipient_filter: "organizers",
     metadata: { hackathonName: hackathon.name, hackathonSlug: hackathon.slug },
+    sent_at: null,
+    cancelled_at: null,
   })
 
   // Only schedule feedback_followup if a survey URL is already configured.
@@ -55,6 +61,8 @@ export async function schedulePostEventReminders(hackathonId: string): Promise<n
         hackathonSlug: hackathon.slug,
         surveyUrl: hackathon.feedback_survey_url,
       },
+      sent_at: null,
+      cancelled_at: null,
     })
   }
 
