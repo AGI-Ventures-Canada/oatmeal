@@ -303,7 +303,6 @@ export function JudgingTabClient({
         prizes={initialPrizes}
         judges={initialJudges}
         rounds={rounds}
-        hackathonId={hackathonId}
         onAddPrize={() => setShowAddPrize(true)}
         onDeletePrize={handleDeletePrize}
         onAssignJudge={handleAssignJudge}
@@ -447,7 +446,6 @@ function PrizesSection({
   prizes,
   judges,
   rounds,
-  hackathonId,
   onAddPrize,
   onDeletePrize,
   onAssignJudge,
@@ -457,7 +455,6 @@ function PrizesSection({
   prizes: PrizeData[]
   judges: JudgeData[]
   rounds: RoundData[]
-  hackathonId: string
   onAddPrize: () => void
   onDeletePrize: (id: string) => void
   onAssignJudge: (prizeId: string, judgeParticipantId: string) => void
