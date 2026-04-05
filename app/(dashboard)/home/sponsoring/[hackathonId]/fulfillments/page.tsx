@@ -33,6 +33,15 @@ export default async function SponsorFulfillmentsPage({ params }: PageProps) {
 
   if (!hackathon) notFound()
 
+  const { data: sponsor } = await client
+    .from("hackathon_sponsors")
+    .select("id")
+    .eq("sponsor_tenant_id", tenant.id)
+    .eq("hackathon_id", hackathonId)
+    .single()
+
+  if (!sponsor) notFound()
+
   const fulfillments = await listSponsorFulfillments(tenant.id, hackathonId)
 
   return (
