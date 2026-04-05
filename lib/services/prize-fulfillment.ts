@@ -437,6 +437,12 @@ export async function claimPrize(
   if (data.shippingAddress) {
     updateData.shipping_address = data.shippingAddress
   }
+  const hasPaymentMethod = !!data.paymentMethod
+  const hasPaymentDetail = !!data.paymentDetail
+  if (hasPaymentMethod !== hasPaymentDetail) {
+    return { success: false, error: "Payment method and payment detail must both be provided", code: "invalid_payment" }
+  }
+
   if (data.paymentMethod) {
     updateData.payment_method = data.paymentMethod
   }
