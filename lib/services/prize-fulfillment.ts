@@ -310,6 +310,8 @@ export type SiblingClaim = {
   isExpired: boolean
 }
 
+export type SiblingClaimPublic = Omit<SiblingClaim, "recipientEmail" | "shippingAddress">
+
 export async function getSiblingClaims(token: string): Promise<SiblingClaim[]> {
   const client = getSupabase() as unknown as SupabaseClient
 

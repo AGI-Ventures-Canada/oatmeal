@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Package, Check, Clock, Mail } from "lucide-react"
 import type { PrizeFulfillmentStatus } from "@/lib/db/hackathon-types"
 
@@ -59,10 +60,12 @@ export function SponsorFulfillmentView({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [trackingNumber, setTrackingNumber] = useState("")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   function openFulfillDialog(id: string) {
     setSelectedId(id)
     setTrackingNumber("")
+    setError(null)
     setFulfillDialogOpen(true)
   }
 
@@ -86,7 +89,11 @@ export function SponsorFulfillmentView({
           )
         )
         setFulfillDialogOpen(false)
+      } else {
+        setError("Failed to mark as fulfilled. Please try again.")
       }
+    } catch {
+      setError("Something went wrong. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -214,6 +221,11 @@ export function SponsorFulfillmentView({
                 data-form-type="other"
               />
             </div>
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFulfillDialogOpen(false)}>

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { getClaimByToken, getSiblingClaims } from "@/lib/services/prize-fulfillment"
+import { getClaimByToken, getSiblingClaims, type SiblingClaimPublic } from "@/lib/services/prize-fulfillment"
 import { PrizeClaimClient } from "./prize-claim-client"
 import type { Metadata } from "next"
 
@@ -53,7 +53,7 @@ export default async function PrizeClaimPage({ params }: PageProps) {
           shippingAddress: claim.shippingAddress,
           isExpired,
         }}
-        siblings={siblings}
+        siblings={siblings.map(({ recipientEmail: _email, shippingAddress: _addr, ...rest }): SiblingClaimPublic => rest)}
       />
     </div>
   )

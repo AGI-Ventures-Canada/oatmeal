@@ -980,8 +980,9 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
 
     const { getSiblingClaims } = await import("@/lib/services/prize-fulfillment")
     const siblings = await getSiblingClaims(params.token)
+    const publicSiblings = siblings.map(({ recipientEmail: _email, shippingAddress: _addr, ...rest }) => rest)
 
-    return { success: true, siblings }
+    return { success: true, siblings: publicSiblings }
   }, {
     body: t.Object({
       recipientName: t.String({ minLength: 1, description: "Full name of the prize recipient" }),

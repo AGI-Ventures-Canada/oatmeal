@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,7 +23,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Gift, Trophy, Check, Clock, AlertCircle, Info, ChevronRight } from "lucide-react"
-import type { SiblingClaim } from "@/lib/services/prize-fulfillment"
+import type { SiblingClaimPublic } from "@/lib/services/prize-fulfillment"
 
 type ClaimInfo = {
   prizeName: string
@@ -44,7 +44,7 @@ type ClaimInfo = {
 interface PrizeClaimClientProps {
   token: string
   claim: ClaimInfo
-  siblings: SiblingClaim[]
+  siblings: SiblingClaimPublic[]
 }
 
 const PAYMENT_METHODS = [
@@ -67,26 +67,21 @@ function isDigitalOnly(kind: string): boolean {
 }
 
 export function PrizeClaimClient({ token, claim, siblings }: PrizeClaimClientProps) {
-  const allPrizes = useMemo(() => {
-    if (siblings.length <= 1) return siblings
-    return siblings
-  }, [siblings])
-
-  const totalCount = allPrizes.length
+  const totalCount = siblings.length
   const isMultiPrize = totalCount > 1
 
-  const initialQueue = useMemo(() => {
-    const current = allPrizes.find((s) => s.token === token)
+  const initialQueue = (() => {
+    const current = siblings.find((s) => s.token === token)
     if (!current || current.status === "claimed" || current.isExpired) {
-      return allPrizes.filter((s) => s.status !== "claimed" && !s.isExpired)
+      return siblings.filter((s) => s.status !== "claimed" && !s.isExpired)
     }
-    const rest = allPrizes.filter((s) => s.token !== token && s.status !== "claimed" && !s.isExpired)
+    const rest = siblings.filter((s) => s.token !== token && s.status !== "claimed" && !s.isExpired)
     return [current, ...rest]
-  }, [allPrizes, token])
+  })()
 
-  const alreadyClaimedCount = allPrizes.filter((s) => s.status === "claimed").length
+  const alreadyClaimedCount = siblings.filter((s) => s.status === "claimed").length
 
-  const [claimQueue, setClaimQueue] = useState<SiblingClaim[]>(initialQueue)
+  const [claimQueue, setClaimQueue] = useState<SiblingClaimPublic[]>(initialQueue)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [claimedThisSession, setClaimedThisSession] = useState<string[]>([])
   const [allDone, setAllDone] = useState(false)
@@ -104,8 +99,8 @@ export function PrizeClaimClient({ token, claim, siblings }: PrizeClaimClientPro
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const currentPrize = claimQueue[currentIndex] as SiblingClaim | undefined
-  const nextPrize = claimQueue[currentIndex + 1] as SiblingClaim | undefined
+  const currentPrize = claimQueue[currentIndex] as SiblingClaimPublic | undefined
+  const nextPrize = claimQueue[currentIndex + 1] as SiblingClaimPublic | undefined
   const claimedSoFar = alreadyClaimedCount + claimedThisSession.length
   const isLastPrize = !nextPrize
 
@@ -163,8 +158,8 @@ export function PrizeClaimClient({ token, claim, siblings }: PrizeClaimClientPro
 
       setClaimedThisSession((prev) => [...prev, currentPrize.prizeName])
 
-      const remaining: SiblingClaim[] = (data.siblings ?? []).filter(
-        (s: SiblingClaim) => s.status !== "claimed" && !s.isExpired
+      const remaining: SiblingClaimPublic[] = (data.siblings ?? []).filter(
+        (s: SiblingClaimPublic) => s.status !== "claimed" && !s.isExpired
       )
 
       if (remaining.length > 0) {
@@ -209,7 +204,7 @@ export function PrizeClaimClient({ token, claim, siblings }: PrizeClaimClientPro
   }
 
   if (allDone) {
-    const allClaimed = [...allPrizes.filter((s) => s.status === "claimed").map((s) => s.prizeName), ...claimedThisSession]
+    const allClaimed = [...siblings.filter((s) => s.status === "claimed").map((s) => s.prizeName), ...claimedThisSession]
     return (
       <Card className="w-full max-w-md">
         <CardContent className="pt-6 text-center">
@@ -241,7 +236,7 @@ export function PrizeClaimClient({ token, claim, siblings }: PrizeClaimClientPro
   }
 
   if (claim.status === "claimed" && claimQueue.length === 0) {
-    const unclaimed = allPrizes.filter((s) => s.status !== "claimed" && !s.isExpired && s.token !== token)
+    const unclaimed = siblings.filter((s) => s.status !== "claimed" && !s.isExpired && s.token !== token)
     if (unclaimed.length > 0) {
       return (
         <Card className="w-full max-w-md">
