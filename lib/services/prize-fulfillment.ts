@@ -187,7 +187,7 @@ export async function updateFulfillmentStatus(
 
   const fulfillment = data as unknown as PrizeFulfillment
 
-  if (status === "shipped" && fulfillment.recipient_email) {
+  if (status === "shipped" && fulfillment.recipient_email && fulfillment.tracking_number) {
     void notifyWinnerOfShipment(fulfillment, hackathonId, client).catch(console.error)
   }
 
