@@ -438,6 +438,7 @@ export interface PrizeTrack {
   name: string
   description: string | null
   intent: TrackIntent
+  sponsor_id: string | null
   display_order: number
   created_at: string
   updated_at: string

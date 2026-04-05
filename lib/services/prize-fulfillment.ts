@@ -544,7 +544,7 @@ async function notifyOrganizerOnClaim(
 
   const { data: hackathon } = await client
     .from("hackathons")
-    .select("name")
+    .select("name, slug")
     .eq("id", hackathonId)
     .single()
 
@@ -554,8 +554,9 @@ async function notifyOrganizerOnClaim(
   await sendOrganizerClaimNotification({
     prizeName: pa.prize.name,
     hackathonName: hackathon.name,
+    hackathonSlug: hackathon.slug,
     winnerName,
-    hackathonId: hackathonId,
+    hackathonId,
   })
 }
 

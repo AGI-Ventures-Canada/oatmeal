@@ -4,10 +4,11 @@ import { escapeHtml } from "./utils"
 export async function sendOrganizerClaimNotification(params: {
   prizeName: string
   hackathonName: string
+  hackathonSlug: string
   winnerName: string
   hackathonId: string
 }): Promise<number> {
-  const { prizeName, hackathonName, winnerName, hackathonId } = params
+  const { prizeName, hackathonName, hackathonSlug, winnerName, hackathonId } = params
   const { supabase: getSupabase } = await import("@/lib/db/client")
   const { clerkClient } = await import("@clerk/nextjs/server")
   const client = (getSupabase as () => import("@supabase/supabase-js").SupabaseClient)()
@@ -79,8 +80,10 @@ export async function sendOrganizerClaimNotification(params: {
         </p>
 
         <p style="font-size: 14px; color: #6b7280; margin-bottom: 24px;">
-          Their contact and delivery details are now available in the fulfillment tracker. You can review them and proceed with fulfillment.
+          Their contact and delivery details are now available in the fulfillment tracker.
         </p>
+
+        ${process.env.NEXT_PUBLIC_APP_URL ? `<a href="${process.env.NEXT_PUBLIC_APP_URL}/e/${escapeHtml(hackathonSlug)}/manage?tab=prizes&ptab=fulfillment" style="display: inline-block; background: #18181b; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">View Fulfillment Tracker</a>` : ""}
 
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
 
@@ -96,7 +99,7 @@ export async function sendOrganizerClaimNotification(params: {
 
 ${winnerName} has claimed the ${prizeName} prize from ${hackathonName}.
 
-Their contact and delivery details are now available in the fulfillment tracker. You can review them and proceed with fulfillment.
+Their contact and delivery details are now available in the fulfillment tracker.${process.env.NEXT_PUBLIC_APP_URL ? `\n\nView fulfillment tracker: ${process.env.NEXT_PUBLIC_APP_URL}/e/${hackathonSlug}/manage?tab=prizes&ptab=fulfillment` : ""}
 
 You're receiving this because you organize ${hackathonName}.`.trim()
 
