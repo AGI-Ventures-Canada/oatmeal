@@ -1153,6 +1153,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         )
       }
 
+      const { calculatePrizeResults } = await import("@/lib/services/judging")
+      calculatePrizeResults(hackathon.id, typedBody.prizeId).catch((err) => {
+        console.error(`[judging] auto-recalculate failed for prize ${typedBody.prizeId}:`, err)
+      })
+
       return { id: result.pick.id }
     },
     {
@@ -1204,6 +1209,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         { status: 404, headers: { "Content-Type": "application/json" } }
       )
     }
+
+    const { calculatePrizeResults } = await import("@/lib/services/judging")
+    calculatePrizeResults(hackathon.id, params.prizeId).catch((err) => {
+      console.error(`[judging] auto-recalculate failed for prize ${params.prizeId}:`, err)
+    })
 
     return { success: true }
   }, {
@@ -1299,6 +1309,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         )
       }
 
+      const { recalculateForAssignment } = await import("@/lib/services/judging")
+      recalculateForAssignment(params.assignmentId).catch((err) => {
+        console.error(`[judging] auto-recalculate failed for assignment ${params.assignmentId}:`, err)
+      })
+
       return { success: true }
     },
     {
@@ -1361,6 +1376,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
           { status: 400, headers: { "Content-Type": "application/json" } }
         )
       }
+
+      const { recalculateForAssignment } = await import("@/lib/services/judging")
+      recalculateForAssignment(params.assignmentId).catch((err) => {
+        console.error(`[judging] auto-recalculate failed for assignment ${params.assignmentId}:`, err)
+      })
 
       return { success: true }
     },

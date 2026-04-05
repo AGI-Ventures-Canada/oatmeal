@@ -14,6 +14,7 @@ const {
   getJudgeAssignments,
   saveNotes,
   markAssignmentViewed,
+  recalculateForAssignment,
 } = await import("@/lib/services/judging")
 
 describe("Judging Service", () => {
@@ -742,6 +743,48 @@ describe("Judging Service", () => {
 
       const result = await markAssignmentViewed("a1", "user_123")
       expect(result).toBe(false)
+    })
+  })
+
+  describe("recalculateForAssignment", () => {
+    it("looks up assignment and triggers calculation when prize_id exists", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({
+            data: { hackathon_id: "h1", prize_id: "p1" },
+            error: null,
+          })
+        }
+        if (callCount === 2) {
+          return createChainableMock({
+            data: { judging_style: "bucket_sort" },
+            error: null,
+          })
+        }
+        if (callCount === 3) {
+          return createChainableMock({ data: null, error: null })
+        }
+        if (callCount === 4) {
+          return createChainableMock({ data: [], error: null })
+        }
+        return createChainableMock({ data: [], error: null })
+      })
+
+      await recalculateForAssignment("a1")
+      expect(callCount).toBeGreaterThanOrEqual(2)
+    })
+
+    it("does nothing when assignment not found", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        return createChainableMock({ data: null, error: { message: "Not found" } })
+      })
+
+      await recalculateForAssignment("nonexistent")
+      expect(callCount).toBe(1)
     })
   })
 })

@@ -50,7 +50,7 @@ export const dashboardJudgingRoutes = new Elysia()
       }
 
       const { createPrize } = await import("@/lib/services/judging")
-      const prize = await createPrize(params.id, {
+      const createResult = await createPrize(params.id, {
         name: body.name,
         description: body.description,
         value: body.value,
@@ -61,9 +61,11 @@ export const dashboardJudgingRoutes = new Elysia()
         displayOrder: body.displayOrder,
       })
 
-      if (!prize) {
-        return new Response(JSON.stringify({ error: "Failed to create prize" }), { status: 500, headers: { "Content-Type": "application/json" } })
+      if (!createResult.success) {
+        return new Response(JSON.stringify({ error: createResult.error }), { status: 500, headers: { "Content-Type": "application/json" } })
       }
+
+      const prize = createResult.prize
 
       logAudit({
         principal,
@@ -212,6 +214,10 @@ export const dashboardJudgingRoutes = new Elysia()
 
       const { assignJudgeToPrize } = await import("@/lib/services/judging")
       const assigned = await assignJudgeToPrize(params.id, body.judgeParticipantId, params.prizeId)
+
+      if (!assigned.success) {
+        return new Response(JSON.stringify({ error: assigned.error ?? "Failed to assign judge" }), { status: 400, headers: { "Content-Type": "application/json" } })
+      }
 
       return assigned
     },

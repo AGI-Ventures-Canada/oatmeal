@@ -1201,6 +1201,52 @@ export type Database = {
           },
         ]
       }
+      judge_prize_assignments: {
+        Row: {
+          created_at: string
+          hackathon_id: string
+          id: string
+          judge_participant_id: string
+          prize_id: string
+        }
+        Insert: {
+          created_at?: string
+          hackathon_id: string
+          id?: string
+          judge_participant_id: string
+          prize_id: string
+        }
+        Update: {
+          created_at?: string
+          hackathon_id?: string
+          id?: string
+          judge_participant_id?: string
+          prize_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "judge_prize_assignments_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_prize_assignments_judge_participant_id_fkey"
+            columns: ["judge_participant_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_prize_assignments_prize_id_fkey"
+            columns: ["prize_id"]
+            isOneToOne: false
+            referencedRelation: "prizes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       judging_criteria: {
         Row: {
           category: Database["public"]["Enums"]["criterion_category"] | null

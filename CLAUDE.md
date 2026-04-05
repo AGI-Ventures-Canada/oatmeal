@@ -406,6 +406,34 @@ When a feature references a user by email and the user doesn't exist in Clerk, s
 <div className="relative w-64">
 ```
 
+### Optimistic Rendering
+
+**Default to optimistic UI updates for all user-initiated mutations.** The user should see the result of their action instantly — never wait for an API round-trip to update the UI.
+
+Pattern: track "hidden" or "pending" sets in component state. Apply them as filters/overlays on the server-provided data. On API failure, revert the optimistic state and show an error.
+
+```typescript
+// Optimistic removal: hide immediately, revert on failure
+const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
+const visibleItems = serverItems.filter(item => !hiddenIds.has(item.id))
+
+async function handleRemove(id: string) {
+  setHiddenIds(prev => new Set(prev).add(id))
+  try {
+    const res = await fetch(`/api/items/${id}`, { method: "DELETE" })
+    if (!res.ok) throw new Error("Failed")
+    router.refresh()
+  } catch {
+    setHiddenIds(prev => { const next = new Set(prev); next.delete(id); return next })
+    setError("Failed to remove item")
+  }
+}
+```
+
+- Remove loading spinners on buttons/items that disappear instantly — there's nothing left to show a spinner on
+- Keep `router.refresh()` after success for eventual consistency with server state
+- Re-throw errors when the optimistic function is called by child components that also handle errors
+
 ### Code Style
 
 - Do not write comments above code
@@ -671,7 +699,67 @@ This catches real production bugs — not just style issues. Skipping this step 
 
 ### Browser Verification
 
-**For any UI change, always verify the result with the `agent-browser` skill before considering the task done.** Do not rely only on static code review, screenshots, or tests when the interface can be exercised in the browser.
+**CRITICAL: For any UI change, you MUST verify the result in the browser with `agent-browser` before considering the task done.** Do not rely only on static code review, screenshots, or tests. If the interface can be exercised in the browser, exercise it.
+
+#### Setup and Updates
+
+Install: `brew install agent-browser` (or `npm i -g agent-browser` / `cargo install agent-browser`)
+Update: `agent-browser upgrade` (or `brew upgrade agent-browser`)
+Post-install: `agent-browser install` (downloads a bundled Chrome)
+
+#### Skill Reference
+
+Full command reference, authentication patterns, templates, and troubleshooting are in `.agents/skills/agent-browser/`. Use the `agent-browser` skill for detailed guidance on any command.
+
+#### Connecting to the User's Chrome
+
+The user keeps Chrome running with `--remote-debugging-port=9222`. Always connect to the existing session with `--auto-connect` instead of launching a headless browser.
+
+```bash
+# Auto-connect picks up the user's Chrome session automatically
+agent-browser --auto-connect --session oatmeal open http://localhost:3000
+```
+
+If `--auto-connect` targets the wrong tab, find the correct one explicitly:
+```bash
+# List all tabs
+curl -s http://127.0.0.1:9222/json/list | python3 -c "
+import json,sys
+tabs=json.load(sys.stdin)
+for t in tabs:
+  if t.get('type')=='page': print(f\"{t['id'][:12]}  {t['url'][:80]}\")
+"
+
+# Connect to a specific tab by WebSocket URL
+WS_URL=$(curl -s http://127.0.0.1:9222/json/list | python3 -c "
+import json,sys
+tabs=json.load(sys.stdin)
+for t in tabs:
+  if 'localhost:3000' in t.get('url',''): print(t['webSocketDebuggerUrl']); break
+")
+agent-browser --cdp "$WS_URL" --session oatmeal snapshot -i
+```
+
+#### Standard Workflow
+
+```bash
+# 1. Open a page (auto-connect to user's Chrome)
+agent-browser --auto-connect --session oatmeal open http://localhost:3000
+
+# 2. Wait for page load, snapshot, interact
+agent-browser --session oatmeal wait --load networkidle
+agent-browser --session oatmeal snapshot -i
+agent-browser --session oatmeal click @e1
+
+# 3. Take screenshots to verify
+agent-browser --session oatmeal screenshot /tmp/screenshot.png
+
+# 4. Check browser console for errors
+agent-browser --session oatmeal console
+
+# 5. Always close session when done
+agent-browser --session oatmeal close
+```
 
 ### Required Environment Variables
 
