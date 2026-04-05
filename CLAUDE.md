@@ -8,23 +8,25 @@ This project uses **bun** as the package manager.
 
 **CRITICAL: NEVER use npm, yarn, or pnpm commands in this repository.**
 
+**CRITICAL: Always use `bun run test`, never `bun test`.** The `bun test` command invokes Bun's built-in test runner directly, which can behave differently from the project's configured test script. Always use `bun run test` (and `bun run test:integration`, `bun run test:all`, etc.) to ensure the correct test configuration is used.
+
 ## Commands
 
 ```bash
-bun dev              # Start dev server (auto-starts local Supabase)
-bun dev:fresh        # Reset database + start dev server (clean slate)
-bun run build        # Production build
-bun start            # Start production server
-bun lint             # Run ESLint
-bun test             # Run unit tests (api, lib, services)
-bun test:integration # Run integration tests separately
-bun test:all         # Run all tests (unit + integration)
-bun db:sync          # Reset DB + regenerate types
-bun db:diff name     # Capture Studio changes as migration
-bun update-types     # Regenerate TypeScript types from DB
-bun cli <args>       # Run CLI package (dev mode, TypeScript)
-bun cli:test         # Run CLI tests
-bun cli:build        # Build CLI for npm distribution
+bun dev                  # Start dev server (auto-starts local Supabase)
+bun dev:fresh            # Reset database + start dev server (clean slate)
+bun run build            # Production build
+bun start                # Start production server
+bun lint                 # Run ESLint
+bun run test             # Run unit tests (api, lib, services)
+bun run test:integration # Run integration tests separately
+bun run test:all         # Run all tests (unit + integration)
+bun db:sync              # Reset DB + regenerate types
+bun db:diff name         # Capture Studio changes as migration
+bun update-types         # Regenerate TypeScript types from DB
+bun cli <args>           # Run CLI package (dev mode, TypeScript)
+bun cli:test             # Run CLI tests
+bun cli:build            # Build CLI for npm distribution
 ```
 
 ### Test Scenarios
@@ -464,11 +466,11 @@ When a service function like `createPrize()` gains new parameters, update its ty
 #### Test Commands
 
 ```bash
-bun test              # Run unit tests (api, lib, services)
-bun test:integration  # Run integration tests separately
-bun test:email        # Run email template tests separately
-bun test:all          # Run all tests sequentially
-bun test --coverage   # Run with coverage report
+bun run test              # Run unit tests (api, lib, services)
+bun run test:integration  # Run integration tests separately
+bun run test:email        # Run email template tests separately
+bun run test:all          # Run all tests sequentially
+bun run test --coverage   # Run with coverage report
 ```
 
 **IMPORTANT: Integration tests must run separately.** They use `mock.module` at the service layer, which conflicts with service tests that mock at the database layer. Running all tests together causes mock isolation failures.
@@ -565,12 +567,12 @@ Do all of this without being asked — the user shouldn't need to spell out thes
 **CRITICAL: Before pushing, run the same checks CI runs.** Catch failures locally instead of waiting for the pipeline.
 
 ```bash
-bun lint && bun run build && bun test:all && bun cli:build
+bun lint && bun run build && bun run test:all && bun cli:build
 ```
 
 - `bun lint` — ESLint (CI `lint` job)
 - `bun run build` — TypeScript type check + Next.js build (CI `test` job runs `tsc --noEmit`; build implies the same)
-- `bun test:all` — unit + integration tests (CI `test` job)
+- `bun run test:all` — unit + integration tests (CI `test` job)
 - `bun cli:build` — CLI bundle must produce `packages/cli/dist/cli.mjs` without errors
 
 If any command fails, fix the issue before pushing. Do not push code that doesn't pass all three.

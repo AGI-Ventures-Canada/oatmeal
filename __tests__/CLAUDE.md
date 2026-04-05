@@ -3,11 +3,11 @@
 ## Test Commands
 
 ```bash
-bun test              # Unit tests (api, components, services, lib)
-bun test:integration  # Integration tests (*.integration.test.ts)
-bun test:email        # Email tests (*.email.test.ts)
-bun test:all          # All tests sequentially
-bun test --coverage   # With coverage report
+bun run test              # Unit tests (api, components, services, lib)
+bun run test:integration  # Integration tests (*.integration.test.ts)
+bun run test:email        # Email tests (*.email.test.ts)
+bun run test:all          # All tests sequentially
+bun run test --coverage   # With coverage report
 ```
 
 ## File Naming Conventions
