@@ -37,6 +37,7 @@ export function formatAddress(address: StructuredAddress): string {
   return lines.filter(Boolean).join("\n")
 }
 
+// Manually maintained — update when adding support for new countries.
 export const COUNTRIES = [
   "United States",
   "Canada",

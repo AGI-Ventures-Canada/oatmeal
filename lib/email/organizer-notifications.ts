@@ -37,9 +37,13 @@ export async function sendOrganizerClaimNotification(params: {
       limit: 500,
     })
 
-    for (const m of memberships.data) {
-      if (m.publicUserData?.userId) {
-        const user = await clerk.users.getUser(m.publicUserData.userId)
+    const memberIds = memberships.data
+      .map((m) => m.publicUserData?.userId)
+      .filter((id): id is string => !!id)
+
+    if (memberIds.length > 0) {
+      const users = await clerk.users.getUserList({ userId: memberIds, limit: 500 })
+      for (const user of users.data) {
         const email = user.primaryEmailAddress?.emailAddress
         if (email) emails.push(email)
       }
