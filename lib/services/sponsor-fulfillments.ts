@@ -18,6 +18,8 @@ export type SponsorFulfillmentView = {
   claimedAt: string | null
 }
 
+// 5 sequential queries: sponsor → tracks → prizes → assignments → fulfillments.
+// Each step filters by the previous result's IDs, so they can't be parallelized.
 export async function listSponsorFulfillments(
   tenantId: string,
   hackathonId: string
