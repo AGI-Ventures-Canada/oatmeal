@@ -445,8 +445,8 @@ export async function claimPrize(
       const { encryptToken } = await import("@/lib/services/encryption")
       updateData.payment_detail = encryptToken(data.paymentDetail)
     } catch (err) {
-      console.error("[claimPrize] Failed to encrypt payment_detail, storing as plaintext:", err)
-      updateData.payment_detail = data.paymentDetail
+      console.error("[claimPrize] Failed to encrypt payment_detail:", err)
+      return { success: false, error: "Unable to securely store payment details. Please try again.", code: "encryption_failed" }
     }
   }
 
