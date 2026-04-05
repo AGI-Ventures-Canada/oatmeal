@@ -15,6 +15,7 @@ import { Loader2, Search, Check, Mail } from "lucide-react"
 
 type JudgeData = {
   participantId: string
+  clerkUserId: string
   displayName: string
   email: string | null
   imageUrl: string | null
@@ -54,6 +55,7 @@ export function AssignJudgesDialog({
   onRefresh,
 }: AssignJudgesDialogProps) {
   const [toggling, setToggling] = useState<Set<string>>(new Set())
+  const [localOverrides, setLocalOverrides] = useState<Map<string, boolean>>(new Map())
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<SearchUser[]>([])
   const [searching, setSearching] = useState(false)
@@ -61,7 +63,7 @@ export function AssignJudgesDialog({
   const [addingBatch, setAddingBatch] = useState(false)
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviting, setInviting] = useState(false)
-  const [feedback, setFeedback] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<{ message: string; isError: boolean } | null>(null)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasChanges = useRef(false)
 
@@ -72,6 +74,7 @@ export function AssignJudgesDialog({
       setSearchQuery("")
       setSearchResults([])
       setSelectedUsers(new Set())
+      setLocalOverrides(new Map())
       setFeedback(null)
       setInviteEmail("")
       if (hasChanges.current) {
@@ -82,16 +85,34 @@ export function AssignJudgesDialog({
     onOpenChange(nextOpen)
   }
 
+  function isJudgeAssigned(judge: JudgeData) {
+    if (localOverrides.has(judge.participantId)) {
+      return localOverrides.get(judge.participantId)!
+    }
+    return judge.prizeIds.includes(prizeId)
+  }
+
   async function handleToggle(judge: JudgeData) {
-    const isAssigned = judge.prizeIds.includes(prizeId)
+    const wasAssigned = isJudgeAssigned(judge)
+    const newState = !wasAssigned
+
+    setLocalOverrides((prev) => new Map(prev).set(judge.participantId, newState))
     setToggling((prev) => new Set(prev).add(judge.participantId))
+
     try {
-      if (isAssigned) {
+      if (wasAssigned) {
         await onUnassignJudge(prizeId, judge.participantId)
       } else {
         await onAssignJudge(prizeId, judge.participantId)
       }
       hasChanges.current = true
+    } catch {
+      setLocalOverrides((prev) => {
+        const next = new Map(prev)
+        next.set(judge.participantId, wasAssigned)
+        return next
+      })
+      setFeedback({ message: `Failed to ${wasAssigned ? "remove" : "assign"} ${judge.displayName}`, isError: true })
     } finally {
       setToggling((prev) => {
         const next = new Set(prev)
@@ -125,7 +146,7 @@ export function AssignJudgesDialog({
           )
           if (!res.ok) throw new Error("Search failed")
           const data = await res.json()
-          const existingClerkIds = new Set(judges.map((j) => j.participantId))
+          const existingClerkIds = new Set(judges.map((j) => j.clerkUserId))
           setSearchResults(
             (data.users ?? []).filter((u: SearchUser) => !existingClerkIds.has(u.id))
           )
@@ -166,9 +187,11 @@ export function AssignJudgesDialog({
     setFeedback(null)
 
     let added = 0
-    let failed = 0
+    const errors: string[] = []
 
     for (const userId of selectedUsers) {
+      const user = searchResults.find((u) => u.id === userId)
+      const name = user ? getDisplayName(user) : userId
       try {
         const res = await fetch(`${base}/judges`, {
           method: "POST",
@@ -176,7 +199,8 @@ export function AssignJudgesDialog({
           body: JSON.stringify({ clerkUserId: userId }),
         })
         if (!res.ok) {
-          failed++
+          const data = await res.json().catch(() => ({}))
+          errors.push(`${name}: ${data.error || "failed to add"}`)
           continue
         }
         const data = await res.json()
@@ -189,8 +213,8 @@ export function AssignJudgesDialog({
           })
         }
         added++
-      } catch {
-        failed++
+      } catch (err) {
+        errors.push(`${name}: ${err instanceof Error ? err.message : "unknown error"}`)
       }
     }
 
@@ -199,11 +223,10 @@ export function AssignJudgesDialog({
     setSearchResults([])
     setSelectedUsers(new Set())
 
-    if (failed === 0) {
-      setFeedback(`${added} judge${added !== 1 ? "s" : ""} added and assigned`)
-    } else {
-      setFeedback(`${added} added, ${failed} failed`)
-    }
+    const parts: string[] = []
+    if (added > 0) parts.push(`${added} judge${added !== 1 ? "s" : ""} added`)
+    if (errors.length > 0) parts.push(errors.join("; "))
+    setFeedback({ message: parts.join(". "), isError: errors.length > 0 })
 
     setAddingBatch(false)
   }
@@ -227,13 +250,14 @@ export function AssignJudgesDialog({
         throw new Error(data.error || "Failed to invite judge")
       }
       const data = await res.json()
-      setFeedback(
-        data.invitation ? `Invitation sent to ${email}` : `${email} added as judge`
-      )
+      setFeedback({
+        message: data.invitation ? `Invitation sent to ${email}` : `${email} added as judge`,
+        isError: false,
+      })
       hasChanges.current = true
       setInviteEmail("")
     } catch (err) {
-      setFeedback(err instanceof Error ? err.message : "Something went wrong")
+      setFeedback({ message: err instanceof Error ? err.message : "Something went wrong", isError: true })
     } finally {
       setInviting(false)
     }
@@ -251,7 +275,7 @@ export function AssignJudgesDialog({
           {judges.length > 0 && (
             <div className="space-y-1 max-h-48 overflow-y-auto">
               {judges.map((judge) => {
-                const isAssigned = judge.prizeIds.includes(prizeId)
+                const isAssigned = isJudgeAssigned(judge)
                 const isLoading = toggling.has(judge.participantId)
                 return (
                   <button
@@ -388,7 +412,9 @@ export function AssignJudgesDialog({
           </div>
 
           {feedback && (
-            <p className="text-sm text-muted-foreground text-center">{feedback}</p>
+            <p className={`text-sm text-center ${feedback.isError ? "text-destructive" : "text-muted-foreground"}`}>
+              {feedback.message}
+            </p>
           )}
         </div>
       </DialogContent>
