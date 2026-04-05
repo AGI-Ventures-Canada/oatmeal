@@ -28,11 +28,11 @@ export async function sendPrizeClaimFollowup(
     sendReminderEmails,
     buildPrizeClaimFollowupContent,
   } = await import("@/lib/email/post-event-reminders")
-  const { getFulfillmentSummary } = await import("@/lib/services/prize-fulfillment")
+  const { listFulfillments } = await import("@/lib/services/prize-fulfillment")
 
-  const summary = await getFulfillmentSummary(input.hackathonId)
-  const unclaimed = summary.assigned + summary.contacted + summary.shipped
-  if (unclaimed === 0) return 0
+  const all = await listFulfillments(input.hackathonId)
+  const unclaimed = all.filter((f) => !f.claimed_at)
+  if (unclaimed.length === 0) return 0
 
   const content = buildPrizeClaimFollowupContent(input.hackathonName, input.hackathonSlug)
   const sent = await sendReminderEmails(
@@ -55,7 +55,7 @@ export async function sendOrganizerEscalation(
   const { listFulfillments } = await import("@/lib/services/prize-fulfillment")
 
   const fulfillments = await listFulfillments(input.hackathonId)
-  const unclaimed = fulfillments.filter((f) => f.status !== "claimed")
+  const unclaimed = fulfillments.filter((f) => !f.claimed_at)
   if (unclaimed.length === 0) return 0
 
   const unclaimedDetails = unclaimed

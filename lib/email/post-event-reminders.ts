@@ -102,7 +102,7 @@ export async function sendReminderEmails(
           )
         `)
         .eq("hackathon_id", hackathonId)
-        .neq("status", "claimed")
+        .is("claimed_at", null)
 
       if (fulfillments) {
         const teamIds: string[] = []
