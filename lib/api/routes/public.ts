@@ -988,8 +988,8 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       recipientName: t.String({ minLength: 1, description: "Full name of the prize recipient" }),
       recipientEmail: t.String({ format: "email", description: "Email address of the prize recipient" }),
       shippingAddress: t.Optional(t.String({ description: "Shipping address for physical prizes" })),
-      paymentMethod: t.Optional(t.String({ description: "Payment method for cash prizes (e.g., venmo, paypal, bank_transfer)" })),
-      paymentDetail: t.Optional(t.String({ description: "Payment handle or account details (e.g., @username, email)" })),
+      paymentMethod: t.Optional(t.String({ maxLength: 50, description: "Payment method for cash prizes (e.g., venmo, paypal, bank_transfer)" })),
+      paymentDetail: t.Optional(t.String({ maxLength: 500, description: "Payment handle or account details (e.g., @username, email)" })),
     }),
     detail: {
       summary: "Claim a prize",
