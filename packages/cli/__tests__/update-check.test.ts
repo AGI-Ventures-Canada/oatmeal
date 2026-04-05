@@ -1,5 +1,5 @@
 import { describe, expect, it, mock, beforeEach, afterEach, spyOn } from "bun:test"
-import { existsSync, unlinkSync, mkdirSync } from "node:fs"
+import { existsSync, unlinkSync } from "node:fs"
 import { join } from "node:path"
 import { homedir } from "node:os"
 

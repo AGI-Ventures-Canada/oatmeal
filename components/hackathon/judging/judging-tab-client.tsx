@@ -135,7 +135,7 @@ export function JudgingTabClient({
   rounds,
   pendingInvitations: initialInvitations,
   results: initialResults,
-  submissions,
+  submissions: _submissions,
   isPublished: initialIsPublished,
 }: JudgingTabClientProps) {
   const router = useRouter()
@@ -349,7 +349,7 @@ export function JudgingTabClient({
 function JudgesSection({
   judges,
   invitations,
-  hackathonId,
+  hackathonId: _hackathonId,
   onAddJudge,
   onRemoveJudge,
   onCancelInvitation,
@@ -665,7 +665,7 @@ function PrizesSection({
 }
 
 function ResultsSection({
-  hackathonId,
+  hackathonId: _hackathonId,
   results,
   isPublished,
   calculating,

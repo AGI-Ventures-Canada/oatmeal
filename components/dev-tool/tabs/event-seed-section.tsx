@@ -140,7 +140,7 @@ export function EventSeedSection({ seedStatus, pending, devAction }: EventSeedSe
               variant="outline"
               disabled={isLoading}
               onClick={() =>
-                devAction("/seed-prize-tracks", "POST", {
+                devAction("/seed-prizes", "POST", {
                   preset: preset.key,
                   assignJudges: hasJudging,
                   scorePercentage: 0,

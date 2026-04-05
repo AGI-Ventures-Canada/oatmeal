@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { getClaimByToken } from "@/lib/services/prize-fulfillment"
+import { getClaimByToken, getSiblingClaims } from "@/lib/services/prize-fulfillment"
 import { PrizeClaimClient } from "./prize-claim-client"
 import type { Metadata } from "next"
 
@@ -23,7 +23,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function PrizeClaimPage({ params }: PageProps) {
   const { token } = await params
-  const claim = await getClaimByToken(token)
+  const [claim, siblings] = await Promise.all([
+    getClaimByToken(token),
+    getSiblingClaims(token),
+  ])
 
   if (!claim) {
     notFound()
@@ -38,6 +41,8 @@ export default async function PrizeClaimPage({ params }: PageProps) {
         claim={{
           prizeName: claim.prizeName,
           prizeValue: claim.prizeValue,
+          prizeKind: claim.prizeKind,
+          distributionMethod: claim.distributionMethod,
           hackathonName: claim.hackathonName,
           hackathonSlug: claim.hackathonSlug,
           submissionTitle: claim.submissionTitle,
@@ -48,6 +53,7 @@ export default async function PrizeClaimPage({ params }: PageProps) {
           shippingAddress: claim.shippingAddress,
           isExpired,
         }}
+        siblings={siblings}
       />
     </div>
   )

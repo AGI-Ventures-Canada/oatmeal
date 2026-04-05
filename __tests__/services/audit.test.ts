@@ -2,7 +2,6 @@ import { describe, expect, it, beforeEach } from "bun:test"
 import type { UserPrincipal, ApiKeyPrincipal, AdminPrincipal } from "@/lib/auth/types"
 import {
   createChainableMock,
-  mockFrom,
   resetSupabaseMocks,
   setMockFromImplementation,
 } from "../lib/supabase-mock"

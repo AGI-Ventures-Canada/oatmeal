@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Copy, Check } from "lucide-react"
+import { Copy, Check, Eye, EyeOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
@@ -11,6 +11,7 @@ interface CopyableProps {
   className?: string
   iconClassName?: string
   masked?: boolean
+  revealable?: boolean
 }
 
 export function Copyable({
@@ -19,8 +20,10 @@ export function Copyable({
   className,
   iconClassName,
   masked = false,
+  revealable = false,
 }: CopyableProps) {
   const [copied, setCopied] = useState(false)
+  const [revealed, setRevealed] = useState(false)
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(value)
@@ -29,13 +32,24 @@ export function Copyable({
   }
 
   const display = displayValue ?? value
-  const maskedDisplay = masked ? "•".repeat(Math.min(display.length, 32)) : display
+  const showMasked = masked && !(revealable && revealed)
+  const visibleText = showMasked ? "•".repeat(Math.min(display.length, 32)) : display
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <code className="text-sm bg-muted px-2 py-1 rounded font-mono truncate">
-        {maskedDisplay}
+        {visibleText}
       </code>
+      {revealable && masked && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8 shrink-0"
+          onClick={() => setRevealed((r) => !r)}
+        >
+          {revealed ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="icon"

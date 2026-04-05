@@ -3,7 +3,6 @@ import {
   createChainableMock,
   resetSupabaseMocks,
   setMockFromImplementation,
-  mockMultiTableQuery,
   mockSuccess,
   mockError,
 } from "../lib/supabase-mock"

@@ -1,4 +1,4 @@
-import { describe, expect, it, afterEach, beforeEach } from "bun:test"
+import { describe, expect, it, afterEach } from "bun:test"
 import { render, screen, cleanup, fireEvent } from "@testing-library/react"
 import { TruncatableContent } from "@/components/hackathon/preview/truncatable-content"
 

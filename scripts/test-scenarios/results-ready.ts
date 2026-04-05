@@ -7,6 +7,9 @@ import {
   addJudgingCriteria,
   assignJudges,
   submitRandomScores,
+  buildDefaultPrizes,
+  createPrizes,
+  autoAssignAndInitFulfillments,
   DEV_USER_ID,
   SEED_USERS,
   supabase,
@@ -81,22 +84,14 @@ async function run() {
 
   await supabase.rpc("calculate_results", { p_hackathon_id: hackathonId })
 
-  const prizes = [
-    { name: "Grand Prize", description: "Overall best project", value: "$10,000", display_order: 0 },
-    { name: "Runner Up", description: "Second place", value: "$5,000", display_order: 1 },
-    { name: "Best Design", description: "Most polished UI/UX", value: "$2,500", display_order: 2 },
-  ]
+  const prizes = buildDefaultPrizes(criteriaIds)
+  await createPrizes(hackathonId, prizes)
 
-  for (const p of prizes) {
-    await supabase.from("prizes").insert({
-      hackathon_id: hackathonId,
-      ...p,
-    })
-  }
+  const { assigned, fulfillments } = await autoAssignAndInitFulfillments(hackathonId)
 
   console.log(`Created 5 teams, 5 submissions, 3 judges, ${assignmentIds.length} assignments — all scored.`)
-  console.log("Results calculated. 3 prizes defined but not yet assigned.")
-  console.log("Test: assign prizes to winners, then publish results.")
+  console.log(`Results calculated. 3 prizes created, ${assigned} assigned, ${fulfillments} fulfillments initialized.`)
+  console.log("Test: publish results, then visit claim links.")
   printReady(SLUG)
 }
 

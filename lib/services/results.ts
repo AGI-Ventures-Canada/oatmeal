@@ -211,7 +211,7 @@ export async function publishResults(
 
   const { data: hackathon } = await client
     .from("hackathons")
-    .select("id, status, tenant_id, winner_emails_sent_at")
+    .select("id, name, slug, status, tenant_id, winner_emails_sent_at")
     .eq("id", hackathonId)
     .eq("tenant_id", tenantId)
     .single()
@@ -279,6 +279,13 @@ export async function publishResults(
   }
 
   try {
+    const { autoAssignPrizes } = await import("@/lib/services/prizes")
+    await autoAssignPrizes(hackathonId)
+  } catch (err) {
+    console.error("Failed to auto-assign prizes (non-blocking):", err)
+  }
+
+  try {
     const { initializeFulfillments } = await import("@/lib/services/prize-fulfillment")
     await initializeFulfillments(hackathonId)
   } catch (err) {
@@ -308,10 +315,17 @@ export async function publishResults(
   }
 
   try {
-    const { schedulePostEventReminders } = await import("@/lib/services/post-event-reminders")
-    await schedulePostEventReminders(hackathonId)
+    const { start } = await import("workflow/api")
+    const { postEventRemindersWorkflow } = await import("@/lib/workflows/post-event-reminders")
+    start(postEventRemindersWorkflow, [{
+      hackathonId,
+      hackathonName: hackathon.name,
+      hackathonSlug: hackathon.slug,
+    }]).catch((err) => {
+      console.error("Failed to start post-event reminders workflow:", err)
+    })
   } catch (err) {
-    console.error("Failed to schedule post-event reminders (non-blocking):", err)
+    console.error("Failed to start post-event reminders workflow (non-blocking):", err)
   }
 
   return { success: true }

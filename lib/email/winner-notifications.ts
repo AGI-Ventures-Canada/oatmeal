@@ -193,3 +193,112 @@ export async function sendWinnerEmails(hackathonId: string): Promise<number> {
   }
   return succeeded
 }
+
+export async function sendPrizeClaimEmail(
+  hackathonId: string,
+  prizeAssignmentId: string
+): Promise<number> {
+  if (!process.env.NEXT_PUBLIC_APP_URL) return 0
+
+  const client = getSupabase() as unknown as SupabaseClient
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+
+  const { data: hackathon } = await client
+    .from("hackathons")
+    .select("name, slug")
+    .eq("id", hackathonId)
+    .single()
+
+  if (!hackathon) return 0
+
+  const { data: assignment } = await client
+    .from("prize_assignments")
+    .select(`
+      id,
+      submission_id,
+      prize:prizes!prize_id(name, value),
+      submission:submissions!submission_id(title, team_id, participant_id)
+    `)
+    .eq("id", prizeAssignmentId)
+    .single()
+
+  if (!assignment) return 0
+
+  const prize = (assignment as Record<string, unknown>).prize as { name: string; value: string | null } | null
+  const submission = (assignment as Record<string, unknown>).submission as {
+    title: string; team_id: string | null; participant_id: string | null
+  } | null
+
+  if (!prize || !submission) return 0
+
+  let claimToken: string | null = null
+  try {
+    const { getClaimTokensForHackathon } = await import("@/lib/services/prize-fulfillment")
+    const tokenMap = await getClaimTokensForHackathon(hackathonId)
+    claimToken = tokenMap[prizeAssignmentId] ?? null
+  } catch {
+    // Claim token unavailable
+  }
+
+  const clerkUserIds: string[] = []
+
+  if (submission.team_id) {
+    const { data: members } = await client
+      .from("hackathon_participants")
+      .select("clerk_user_id")
+      .eq("team_id", submission.team_id)
+    if (members) clerkUserIds.push(...members.map((m) => m.clerk_user_id))
+  } else if (submission.participant_id) {
+    const { data: participant } = await client
+      .from("hackathon_participants")
+      .select("clerk_user_id")
+      .eq("id", submission.participant_id)
+      .single()
+    if (participant) clerkUserIds.push(participant.clerk_user_id)
+  }
+
+  if (clerkUserIds.length === 0) return 0
+
+  const clerk = await clerkClient()
+  const users = await clerk.users.getUserList({ userId: clerkUserIds })
+  const tag = sanitizeTag(hackathon.name)
+  const resultsUrl = `${baseUrl}/e/${hackathon.slug}`
+  const claimUrl = claimToken ? `${baseUrl}/prizes/claim/${claimToken}` : null
+
+  let sent = 0
+
+  for (const user of users.data) {
+    const email = user.primaryEmailAddress?.emailAddress
+    if (!email) continue
+
+    const { html, text } = await renderEmail(
+      WinnerNotificationEmail({
+        submissionTitle: submission.title,
+        rank: "Prize Winner",
+        hackathonName: hackathon.name,
+        resultsUrl,
+        prizes: [{
+          name: prize.name,
+          value: prize.value,
+          claimUrl,
+        }],
+        primaryClaimUrl: claimUrl,
+      })
+    )
+
+    const result = await sendEmail({
+      to: email,
+      subject: `You Won a Prize — ${hackathon.name}`,
+      html,
+      text,
+      tags: [
+        { name: "type", value: "prize_claim_notification" },
+        { name: "hackathon", value: tag },
+      ],
+    })
+
+    if (result) sent++
+  }
+
+  return sent
+}

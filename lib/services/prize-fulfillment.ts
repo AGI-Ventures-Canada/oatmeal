@@ -8,6 +8,7 @@ const CLAIM_TOKEN_EXPIRY_DAYS = 30
 export type FulfillmentWithDetails = PrizeFulfillment & {
   prizeName: string
   prizeValue: string | null
+  prizeKind: string
   submissionTitle: string
   teamName: string | null
 }
@@ -79,7 +80,7 @@ export async function listFulfillments(hackathonId: string): Promise<Fulfillment
     .select(`
       *,
       prize_assignment:prize_assignments!prize_assignment_id(
-        prize:prizes!prize_id(name, value),
+        prize:prizes!prize_id(name, value, kind),
         submission:submissions!submission_id(title, team_id)
       )
     `)
@@ -109,7 +110,7 @@ export async function listFulfillments(hackathonId: string): Promise<Fulfillment
 
   return fulfillments.map((f: Record<string, unknown>) => {
     const pa = f.prize_assignment as {
-      prize: { name: string; value: string | null }
+      prize: { name: string; value: string | null; kind: string | null }
       submission: { title: string; team_id: string | null }
     }
     const fulfillment = f as unknown as PrizeFulfillment
@@ -117,6 +118,7 @@ export async function listFulfillments(hackathonId: string): Promise<Fulfillment
       ...fulfillment,
       prizeName: pa.prize.name,
       prizeValue: pa.prize.value,
+      prizeKind: pa.prize.kind ?? "other",
       submissionTitle: pa.submission.title,
       teamName: pa.submission.team_id ? teamsMap[pa.submission.team_id] ?? null : null,
     }
@@ -180,7 +182,43 @@ export async function updateFulfillmentStatus(
     return null
   }
 
-  return data as unknown as PrizeFulfillment
+  const fulfillment = data as unknown as PrizeFulfillment
+
+  if (status === "shipped" && fulfillment.recipient_email) {
+    void notifyWinnerOfShipment(fulfillment, hackathonId, client).catch(console.error)
+  }
+
+  return fulfillment
+}
+
+async function notifyWinnerOfShipment(
+  fulfillment: PrizeFulfillment,
+  hackathonId: string,
+  client: SupabaseClient
+): Promise<void> {
+  const { data: assignment } = await client
+    .from("prize_assignments")
+    .select("prize:prizes!prize_id(name)")
+    .eq("id", fulfillment.prize_assignment_id)
+    .single()
+
+  const { data: hackathon } = await client
+    .from("hackathons")
+    .select("name")
+    .eq("id", hackathonId)
+    .single()
+
+  if (!assignment || !hackathon) return
+
+  const pa = assignment as unknown as { prize: { name: string } }
+  const { sendPrizeShippedEmail } = await import("@/lib/email/prize-shipped")
+  await sendPrizeShippedEmail({
+    recipientEmail: fulfillment.recipient_email!,
+    recipientName: fulfillment.recipient_name ?? "Winner",
+    prizeName: pa.prize.name,
+    hackathonName: hackathon.name,
+    trackingNumber: fulfillment.tracking_number,
+  })
 }
 
 export type ClaimWithDetails = {
@@ -188,6 +226,8 @@ export type ClaimWithDetails = {
   status: PrizeFulfillmentStatus
   prizeName: string
   prizeValue: string | null
+  prizeKind: string
+  distributionMethod: string | null
   hackathonName: string
   hackathonSlug: string
   submissionTitle: string
@@ -207,7 +247,7 @@ export async function getClaimByToken(token: string): Promise<ClaimWithDetails |
     .select(`
       id, status, recipient_name, recipient_email, shipping_address, claimed_at, claim_token_expires_at,
       prize_assignment:prize_assignments!prize_assignment_id(
-        prize:prizes!prize_id(name, value),
+        prize:prizes!prize_id(name, value, kind, distribution_method),
         submission:submissions!submission_id(title, team_id, hackathon_id)
       )
     `)
@@ -217,7 +257,7 @@ export async function getClaimByToken(token: string): Promise<ClaimWithDetails |
   if (error || !fulfillment) return null
 
   const pa = (fulfillment as Record<string, unknown>).prize_assignment as {
-    prize: { name: string; value: string | null }
+    prize: { name: string; value: string | null; kind: string; distribution_method: string | null }
     submission: { title: string; team_id: string | null; hackathon_id: string }
   }
 
@@ -242,6 +282,8 @@ export async function getClaimByToken(token: string): Promise<ClaimWithDetails |
     status: fulfillment.status as PrizeFulfillmentStatus,
     prizeName: pa.prize.name,
     prizeValue: pa.prize.value,
+    prizeKind: pa.prize.kind ?? "other",
+    distributionMethod: pa.prize.distribution_method,
     hackathonName: hackathon?.name ?? "Hackathon",
     hackathonSlug: hackathon?.slug ?? "",
     submissionTitle: pa.submission.title,
@@ -254,6 +296,85 @@ export async function getClaimByToken(token: string): Promise<ClaimWithDetails |
   }
 }
 
+export type SiblingClaim = {
+  token: string
+  fulfillmentId: string
+  status: PrizeFulfillmentStatus
+  prizeName: string
+  prizeValue: string | null
+  prizeKind: string
+  distributionMethod: string | null
+  recipientName: string | null
+  recipientEmail: string | null
+  shippingAddress: string | null
+  isExpired: boolean
+}
+
+export async function getSiblingClaims(token: string): Promise<SiblingClaim[]> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data: fulfillment } = await client
+    .from("prize_fulfillments")
+    .select(`
+      prize_assignment:prize_assignments!prize_assignment_id(
+        submission_id
+      )
+    `)
+    .eq("claim_token", token)
+    .single()
+
+  if (!fulfillment) return []
+
+  const pa = (fulfillment as Record<string, unknown>).prize_assignment as { submission_id: string } | null
+  if (!pa?.submission_id) return []
+
+  const { data: assignments } = await client
+    .from("prize_assignments")
+    .select("id")
+    .eq("submission_id", pa.submission_id)
+
+  if (!assignments || assignments.length === 0) return []
+
+  const assignmentIds = assignments.map((a) => a.id)
+
+  const { data: siblings } = await client
+    .from("prize_fulfillments")
+    .select(`
+      id, status, claim_token, claim_token_expires_at, recipient_name, recipient_email, shipping_address,
+      prize_assignment:prize_assignments!prize_assignment_id(
+        prize:prizes!prize_id(name, value, kind, distribution_method)
+      )
+    `)
+    .in("prize_assignment_id", assignmentIds)
+    .not("claim_token", "is", null)
+    .order("created_at")
+
+  if (!siblings) return []
+
+  const now = new Date()
+
+  return siblings.map((s: Record<string, unknown>) => {
+    const spa = s.prize_assignment as {
+      prize: { name: string; value: string | null; kind: string; distribution_method: string | null }
+    }
+    return {
+      token: s.claim_token as string,
+      fulfillmentId: s.id as string,
+      status: s.status as PrizeFulfillmentStatus,
+      prizeName: spa.prize.name,
+      prizeValue: spa.prize.value,
+      prizeKind: spa.prize.kind ?? "other",
+      distributionMethod: spa.prize.distribution_method,
+      recipientName: s.recipient_name as string | null,
+      recipientEmail: s.recipient_email as string | null,
+      shippingAddress: s.shipping_address as string | null,
+      isExpired: s.claim_token_expires_at
+        ? new Date(s.claim_token_expires_at as string) < now
+        : false,
+    }
+  })
+}
+
 export type ClaimPrizeResult =
   | { success: true }
   | { success: false; error: string; code: string }
@@ -264,6 +385,8 @@ export async function claimPrize(
     recipientName: string
     recipientEmail: string
     shippingAddress?: string
+    paymentMethod?: string
+    paymentDetail?: string
   }
 ): Promise<ClaimPrizeResult> {
   const client = getSupabase() as unknown as SupabaseClient
@@ -297,6 +420,12 @@ export async function claimPrize(
   if (data.shippingAddress) {
     updateData.shipping_address = data.shippingAddress
   }
+  if (data.paymentMethod) {
+    updateData.payment_method = data.paymentMethod
+  }
+  if (data.paymentDetail) {
+    updateData.payment_detail = data.paymentDetail
+  }
 
   const { error: updateError } = await client
     .from("prize_fulfillments")
@@ -308,7 +437,107 @@ export async function claimPrize(
     return { success: false, error: "Failed to claim prize", code: "update_failed" }
   }
 
+  void notifySponsorOnClaim(fulfillment.id, data.recipientName, client).catch(console.error)
+  void notifyOrganizerOnClaim(fulfillment.id, data.recipientName, client).catch(console.error)
+
   return { success: true }
+}
+
+async function notifySponsorOnClaim(
+  fulfillmentId: string,
+  winnerName: string,
+  client: SupabaseClient
+): Promise<void> {
+  const { data: fulfillmentRow } = await client
+    .from("prize_fulfillments")
+    .select("prize_assignment_id, hackathon_id")
+    .eq("id", fulfillmentId)
+    .single()
+
+  if (!fulfillmentRow) return
+
+  const { data: assignment } = await client
+    .from("prize_assignments")
+    .select("prize:prizes!prize_id(name, prize_track_id)")
+    .eq("id", fulfillmentRow.prize_assignment_id)
+    .single()
+
+  if (!assignment) return
+
+  const pa = assignment as unknown as { prize: { name: string; prize_track_id: string | null } }
+  if (!pa.prize.prize_track_id) return
+
+  const { data: track } = await client
+    .from("prize_tracks")
+    .select("sponsor_id")
+    .eq("id", pa.prize.prize_track_id)
+    .single()
+
+  if (!track?.sponsor_id) return
+
+  const { data: sponsor } = await client
+    .from("hackathon_sponsors")
+    .select("sponsor_tenant_id")
+    .eq("id", track.sponsor_id)
+    .single()
+
+  if (!sponsor?.sponsor_tenant_id) return
+
+  const { data: hackathon } = await client
+    .from("hackathons")
+    .select("name")
+    .eq("id", fulfillmentRow.hackathon_id)
+    .single()
+
+  if (!hackathon) return
+
+  const { sendSponsorClaimNotification } = await import("@/lib/email/sponsor-notifications")
+  await sendSponsorClaimNotification({
+    prizeName: pa.prize.name,
+    hackathonName: hackathon.name,
+    winnerName,
+    sponsorTenantId: sponsor.sponsor_tenant_id,
+  })
+}
+
+async function notifyOrganizerOnClaim(
+  fulfillmentId: string,
+  winnerName: string,
+  client: SupabaseClient
+): Promise<void> {
+  const { data: fulfillmentRow } = await client
+    .from("prize_fulfillments")
+    .select("prize_assignment_id, hackathon_id")
+    .eq("id", fulfillmentId)
+    .single()
+
+  if (!fulfillmentRow) return
+
+  const { data: assignment } = await client
+    .from("prize_assignments")
+    .select("prize:prizes!prize_id(name)")
+    .eq("id", fulfillmentRow.prize_assignment_id)
+    .single()
+
+  if (!assignment) return
+
+  const pa = assignment as unknown as { prize: { name: string } }
+
+  const { data: hackathon } = await client
+    .from("hackathons")
+    .select("name")
+    .eq("id", fulfillmentRow.hackathon_id)
+    .single()
+
+  if (!hackathon) return
+
+  const { sendOrganizerClaimNotification } = await import("@/lib/email/organizer-notifications")
+  await sendOrganizerClaimNotification({
+    prizeName: pa.prize.name,
+    hackathonName: hackathon.name,
+    winnerName,
+    hackathonId: fulfillmentRow.hackathon_id,
+  })
 }
 
 export async function getClaimTokensForHackathon(

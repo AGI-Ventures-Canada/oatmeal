@@ -62,6 +62,7 @@ export default function LumaImportLoading() {
     }, baseDelay + jitter)
 
     return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- messages is a static array; messageIndex drives the cycle
   }, [messageIndex])
 
   const handleReload = useCallback(() => {

@@ -7,6 +7,7 @@ import {
   Award,
   Compass,
   ChevronDown,
+  Gift,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -150,12 +151,21 @@ export function SponsoringDashboard({ hackathons, sponsorships }: Props) {
             {active.map((h) => {
               const info = sponsorMap.get(h.id)
               return (
-                <div key={h.id}>
+                <div key={h.id} className="space-y-2">
                   <HackathonCard
                     hackathon={h}
                     href={`/e/${h.slug}`}
                     extras={info ? <TierBadge tier={info.tier} /> : undefined}
                   />
+                  {(h.status === "completed" || h.status === "archived") && (
+                    <Button variant="outline" size="sm" className="w-full" asChild>
+                      <Link href={`/home/sponsoring/${h.id}/fulfillments`}>
+                        <Gift className="mr-2 size-4" />
+                        <span className="hidden sm:inline">View Prize Fulfillment</span>
+                        <span className="sm:hidden">Prizes</span>
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               )
             })}
@@ -175,12 +185,19 @@ export function SponsoringDashboard({ hackathons, sponsorships }: Props) {
               {past.map((h) => {
                 const info = sponsorMap.get(h.id)
                 return (
-                  <div key={h.id}>
+                  <div key={h.id} className="space-y-2">
                     <HackathonCard
                       hackathon={h}
                       href={`/e/${h.slug}`}
                       extras={info ? <TierBadge tier={info.tier} /> : undefined}
                     />
+                    <Button variant="outline" size="sm" className="w-full" asChild>
+                      <Link href={`/home/sponsoring/${h.id}/fulfillments`}>
+                        <Gift className="mr-2 size-4" />
+                        <span className="hidden sm:inline">View Prize Fulfillment</span>
+                        <span className="sm:hidden">Prizes</span>
+                      </Link>
+                    </Button>
                   </div>
                 )
               })}

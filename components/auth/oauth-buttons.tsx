@@ -26,7 +26,7 @@ export function OAuthButtons({
 }: {
   onOAuth: (provider: OAuthProvider) => void;
 }) {
-  const [lastUsed, setLastUsed] = useState<OAuthProvider | null>(getLastUsedProvider);
+  const [lastUsed] = useState<OAuthProvider | null>(getLastUsedProvider);
 
   function handleOAuth(provider: OAuthProvider) {
     localStorage.setItem(STORAGE_KEY, provider);

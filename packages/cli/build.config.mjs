@@ -1,4 +1,4 @@
-export default {
+const config = {
   entries: ["src/cli"],
   outDir: "dist",
   declaration: false,
@@ -6,3 +6,4 @@ export default {
     emitCJS: false,
   },
 }
+export default config

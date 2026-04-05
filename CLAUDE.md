@@ -434,6 +434,19 @@ async function handleRemove(id: string) {
 - Keep `router.refresh()` after success for eventual consistency with server state
 - Re-throw errors when the optimistic function is called by child components that also handle errors
 
+### Keep Seed Data in Sync
+
+**When adding new columns, types, or features that affect database tables used in seed data, update ALL seed sources to include the new fields.** Stale seed data causes silent failures where seeded records fall through service logic that depends on the new fields.
+
+Seed sources to check:
+- `scripts/test-scenarios/_helpers.ts` — shared builders (`buildDefaultPrizes`, `addJudgingCriteria`, etc.)
+- `scripts/test-scenarios/*.ts` — individual scenario scripts
+- `lib/services/admin-scenarios.ts` — admin UI scenario runners
+- `lib/api/routes/dev.ts` — dev API seed endpoints (`seed-all`, `seed-judging`, `seed-prizes`)
+- `components/dev-tool/` — dev toolbar buttons that trigger seed endpoints
+
+When a service function like `createPrize()` gains new parameters, update its type and pass-through logic so all callers (including seed code) can use the new fields. Raw `db.from().insert()` calls in seed code must include all required and functionally important columns — don't rely on DB defaults when the default value (e.g., `type = 'favorite'`) would cause downstream logic to skip the record.
+
 ### Code Style
 
 - Do not write comments above code

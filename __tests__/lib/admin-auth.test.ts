@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test"
 import { mockAuth, resetAllMocks } from "./supabase-mock"
 
-const { resolvePrincipal, requireAdmin, isAdminEnabled, AuthError } =
+const { resolvePrincipal, requireAdmin, isAdminEnabled } =
   await import("@/lib/auth/principal")
 
 describe("Admin Auth", () => {

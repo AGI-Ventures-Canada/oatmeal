@@ -263,6 +263,96 @@ describe("Prizes Service", () => {
 
       expect(result).toBeNull()
     })
+
+    it("creates fulfillment when results are already published", async () => {
+      let fulfillmentsQueried = false
+      let prizesCallCount = 0
+      let prizeAssignmentsCallCount = 0
+      setMockFromImplementation((table) => {
+        if (table === "prize_assignments") {
+          prizeAssignmentsCallCount++
+          if (prizeAssignmentsCallCount === 1) {
+            return {
+              insert: () =>
+                createChainableMock({ data: mockPrizeAssignment, error: null }),
+            }
+          }
+          return createChainableMock({
+            data: [{ id: "pa1" }],
+            error: null,
+          })
+        }
+        if (table === "prizes") {
+          prizesCallCount++
+          if (prizesCallCount === 1) {
+            return createChainableMock({
+              data: { hackathon_id: "h1" },
+              error: null,
+            })
+          }
+          return createChainableMock({
+            data: [{ id: "p1" }],
+            error: null,
+          })
+        }
+        if (table === "hackathons") {
+          return createChainableMock({
+            data: { results_published_at: "2026-01-01T00:00:00Z" },
+            error: null,
+          })
+        }
+        if (table === "prize_fulfillments") {
+          fulfillmentsQueried = true
+          return {
+            select: () =>
+              createChainableMock({ data: [], error: null }),
+            insert: () =>
+              createChainableMock({ data: null, error: null }),
+          }
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      const result = await assignPrize("p1", "s1")
+
+      expect(result).not.toBeNull()
+      expect(result?.prize_id).toBe("p1")
+      expect(fulfillmentsQueried).toBe(true)
+    })
+
+    it("skips fulfillment when results are not published", async () => {
+      let fulfillmentsInitialized = false
+      setMockFromImplementation((table) => {
+        if (table === "prize_assignments") {
+          return {
+            insert: () =>
+              createChainableMock({ data: mockPrizeAssignment, error: null }),
+          }
+        }
+        if (table === "prizes") {
+          return createChainableMock({
+            data: { hackathon_id: "h1" },
+            error: null,
+          })
+        }
+        if (table === "hackathons") {
+          return createChainableMock({
+            data: { results_published_at: null },
+            error: null,
+          })
+        }
+        if (table === "prize_fulfillments") {
+          fulfillmentsInitialized = true
+          return createChainableMock({ data: [], error: null })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      const result = await assignPrize("p1", "s1")
+
+      expect(result).not.toBeNull()
+      expect(fulfillmentsInitialized).toBe(false)
+    })
   })
 
   describe("removePrizeAssignment", () => {

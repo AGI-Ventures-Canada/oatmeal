@@ -1,5 +1,4 @@
 import { listPrizes, listJudges, getJudgingProgress, listRounds } from "@/lib/services/judging"
-import { listPrizeAssignments } from "@/lib/services/prizes"
 import { listJudgeInvitations } from "@/lib/services/judge-invitations"
 import { getResults } from "@/lib/services/results"
 import { listFulfillments, getFulfillmentSummary } from "@/lib/services/prize-fulfillment"
@@ -21,7 +20,7 @@ export async function JudgingTabContent({
   hackathonId,
   submissions,
   resultsPublishedAt,
-  incompleteAssignments,
+  incompleteAssignments: _incompleteAssignments,
   feedbackSurveySentAt,
   feedbackSurveyUrl,
 }: JudgingTabContentProps) {
@@ -100,6 +99,7 @@ export async function JudgingTabContent({
           prizeAssignmentId: f.prize_assignment_id,
           prizeName: f.prizeName,
           prizeValue: f.prizeValue,
+          prizeKind: f.prizeKind,
           submissionTitle: f.submissionTitle,
           teamName: f.teamName,
           status: f.status,
@@ -107,6 +107,8 @@ export async function JudgingTabContent({
           recipientName: f.recipient_name,
           shippingAddress: f.shipping_address,
           trackingNumber: f.tracking_number,
+          paymentMethod: f.payment_method,
+          paymentDetail: f.payment_detail,
           notes: f.notes,
           contactedAt: f.contacted_at,
           shippedAt: f.shipped_at,

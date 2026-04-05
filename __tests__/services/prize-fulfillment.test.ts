@@ -3,9 +3,6 @@ import {
   createChainableMock,
   resetSupabaseMocks,
   setMockFromImplementation,
-  mockMultiTableQuery,
-  mockSuccess,
-  mockError,
 } from "../lib/supabase-mock"
 
 const {
@@ -257,7 +254,7 @@ describe("Prize Fulfillment Service", () => {
       expect(result).toBeNull()
     })
 
-    it("returns claim details for valid token", async () => {
+    it("returns claim details for valid token including prizeKind", async () => {
       let callCount = 0
       setMockFromImplementation(() => {
         callCount++
@@ -272,7 +269,7 @@ describe("Prize Fulfillment Service", () => {
               claimed_at: null,
               claim_token_expires_at: "2026-05-01T00:00:00Z",
               prize_assignment: {
-                prize: { name: "Best Demo", value: "$500" },
+                prize: { name: "Best Demo", value: "$500", kind: "cash", distribution_method: null },
                 submission: { title: "Cool Project", team_id: "t1", hackathon_id: "h1" },
               },
             },
@@ -295,6 +292,8 @@ describe("Prize Fulfillment Service", () => {
       expect(result).not.toBeNull()
       expect(result!.prizeName).toBe("Best Demo")
       expect(result!.prizeValue).toBe("$500")
+      expect(result!.prizeKind).toBe("cash")
+      expect(result!.distributionMethod).toBeNull()
       expect(result!.hackathonName).toBe("Test Hackathon")
       expect(result!.submissionTitle).toBe("Cool Project")
       expect(result!.teamName).toBe("Team Alpha")
@@ -386,6 +385,33 @@ describe("Prize Fulfillment Service", () => {
         recipientName: "Alice",
         recipientEmail: "alice@test.com",
         shippingAddress: "123 Main St",
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it("successfully claims with payment fields", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({
+            data: {
+              id: "f1",
+              status: "assigned",
+              hackathon_id: "h1",
+              claim_token_expires_at: "2027-01-01T00:00:00Z",
+            },
+            error: null,
+          })
+        }
+        return createChainableMock({ data: null, error: null })
+      })
+
+      const result = await claimPrize("valid-token", {
+        recipientName: "Bob",
+        recipientEmail: "bob@test.com",
+        paymentMethod: "venmo",
+        paymentDetail: "@bob123",
       })
       expect(result.success).toBe(true)
     })

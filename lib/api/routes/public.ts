@@ -952,10 +952,12 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     },
   })
   .post("/prize-claims/:token/claim", async ({ params, body }) => {
-    const { recipientName, recipientEmail, shippingAddress } = body as {
+    const { recipientName, recipientEmail, shippingAddress, paymentMethod, paymentDetail } = body as {
       recipientName: string
       recipientEmail: string
       shippingAddress?: string
+      paymentMethod?: string
+      paymentDetail?: string
     }
 
     if (!recipientName || !recipientEmail) {
@@ -966,7 +968,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     }
 
     const { claimPrize } = await import("@/lib/services/prize-fulfillment")
-    const result = await claimPrize(params.token, { recipientName, recipientEmail, shippingAddress })
+    const result = await claimPrize(params.token, { recipientName, recipientEmail, shippingAddress, paymentMethod, paymentDetail })
 
     if (!result.success) {
       const statusCode = result.code === "not_found" ? 404 : 400
@@ -976,12 +978,17 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
-    return { success: true }
+    const { getSiblingClaims } = await import("@/lib/services/prize-fulfillment")
+    const siblings = await getSiblingClaims(params.token)
+
+    return { success: true, siblings }
   }, {
     body: t.Object({
       recipientName: t.String({ minLength: 1, description: "Full name of the prize recipient" }),
       recipientEmail: t.String({ format: "email", description: "Email address of the prize recipient" }),
       shippingAddress: t.Optional(t.String({ description: "Shipping address for physical prizes" })),
+      paymentMethod: t.Optional(t.String({ description: "Payment method for cash prizes (e.g., venmo, paypal, bank_transfer)" })),
+      paymentDetail: t.Optional(t.String({ description: "Payment handle or account details (e.g., @username, email)" })),
     }),
     detail: {
       summary: "Claim a prize",

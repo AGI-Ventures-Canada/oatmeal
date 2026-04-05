@@ -15,6 +15,7 @@ function WinnerCard({ result }: { result: PublicResultWithDetails }) {
     <Card className="border-primary overflow-hidden">
       {result.submissionScreenshotUrl && (
         <div className="w-full aspect-video bg-muted overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={result.submissionScreenshotUrl}
             alt={result.submissionTitle}
@@ -62,8 +63,8 @@ function WinnerCard({ result }: { result: PublicResultWithDetails }) {
 
         {result.members.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {result.members.map((name) => (
-              <Badge key={name} variant="secondary">
+            {result.members.map((name, i) => (
+              <Badge key={i} variant="secondary">
                 {name}
               </Badge>
             ))}
@@ -95,6 +96,7 @@ function RunnerUpExpandedContent({ result }: { result: PublicResultWithDetails }
     <div className="space-y-4 p-6">
       {result.submissionScreenshotUrl && (
         <div className="w-full aspect-video bg-muted overflow-hidden rounded-md">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={result.submissionScreenshotUrl}
             alt={result.submissionTitle}

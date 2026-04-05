@@ -407,9 +407,17 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
       const db = await getDb()
 
       const criteria = [
-        { name: "Innovation", description: "Novelty and creativity", max_score: 10, weight: 1.5 },
-        { name: "Technical Execution", description: "Code quality and architecture", max_score: 10, weight: 1.0 },
-        { name: "Presentation", description: "Demo clarity and communication", max_score: 10, weight: 0.5 },
+        { name: "Innovation", description: "Novelty and creativity of the solution", max_score: 10, weight: 1.5, category: "core" as const },
+        { name: "Technical Execution", description: "Code quality, architecture, and reliability", max_score: 10, weight: 1.0, category: "core" as const },
+        { name: "Presentation", description: "Demo clarity, documentation, and communication", max_score: 10, weight: 0.5, category: "bonus" as const },
+      ]
+
+      const rubricLevels = [
+        { level_number: 1, label: "Far Below Expectations" },
+        { level_number: 2, label: "Below Expectations" },
+        { level_number: 3, label: "Meets Expectations" },
+        { level_number: 4, label: "Exceeds Expectations" },
+        { level_number: 5, label: "Far Exceeds Expectations" },
       ]
 
       const criteriaIds: string[] = []
@@ -419,7 +427,12 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
           .insert({ hackathon_id: params.id, ...criteria[i], display_order: i })
           .select("id")
           .single()
-        if (data) criteriaIds.push(data.id)
+        if (data) {
+          criteriaIds.push(data.id)
+          for (const level of rubricLevels) {
+            await db.from("rubric_levels").insert({ criteria_id: data.id, ...level })
+          }
+        }
       }
 
       const judgeUserIds = SEED_USERS.slice(0, 3)
@@ -453,25 +466,21 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
         }
       }
 
-      // Create prizes and assign judges
       const { createPrize, assignJudgeToPrize } = await import("@/lib/services/judging")
 
       const standardPrizes = [
-        { name: "Grand Prize", judgingStyle: "bucket_sort" as const, description: "Best project overall" },
-        { name: "Most Innovative", judgingStyle: "judges_pick" as const, description: "Creative and novel approach" },
-        { name: "People's Choice", judgingStyle: "crowd_vote" as const, description: "Audience vote winner" },
+        { name: "Grand Prize", judgingStyle: "bucket_sort" as const, description: "Best project overall", value: "$10,000", type: "score" as const, rank: 1, kind: "cash", monetaryValue: 10000, currency: "USD" },
+        { name: "Most Innovative", judgingStyle: "judges_pick" as const, description: "Creative and novel approach", value: "$500 API Credits", type: "criteria" as const, kind: "credit", criteriaId: criteriaIds[0] ?? null },
+        { name: "People's Choice", judgingStyle: "crowd_vote" as const, description: "Audience vote winner", value: "Swag Pack", type: "crowd" as const, kind: "swag" },
       ]
 
-      // Clear existing prizes
       await db.from("prizes").delete().eq("hackathon_id", params.id)
 
       const prizeIds: string[] = []
       for (let i = 0; i < standardPrizes.length; i++) {
         const p = standardPrizes[i]
         const result = await createPrize(params.id, {
-          name: p.name,
-          description: p.description,
-          judgingStyle: p.judgingStyle,
+          ...p,
           displayOrder: i,
         })
         if (result.success) prizeIds.push(result.prize.id)
@@ -670,21 +679,23 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
         })
       }
 
+      const { data: seedCriteria } = await db
+        .from("judging_criteria")
+        .select("id")
+        .eq("hackathon_id", params.id)
+        .order("display_order")
+      const firstCriteriaId = seedCriteria?.[0]?.id ?? null
+
       const prizeData = [
-        { name: "Best Overall", description: "Awarded to the top-scoring team overall", value: "$500", type: "score" as const, rank: 1, display_order: 0 },
-        { name: "Most Innovative", description: "Awarded for the most creative and novel solution", value: "$250", type: "criteria" as const, rank: null, display_order: 1 },
-        { name: "People's Choice", description: "Voted by the crowd", value: "$100", type: "crowd" as const, rank: null, display_order: 2 },
+        { name: "Best Overall", description: "Awarded to the top-scoring team overall", value: "$500", type: "score" as const, rank: 1, kind: "cash", judging_style: "bucket_sort", monetary_value: 500, currency: "USD", display_order: 0 },
+        { name: "Most Innovative", description: "Awarded for the most creative and novel solution", value: "$250", type: "criteria" as const, rank: null, kind: "credit", judging_style: "judges_pick", criteria_id: firstCriteriaId, display_order: 1 },
+        { name: "People's Choice", description: "Voted by the crowd", value: "$100", type: "crowd" as const, rank: null, kind: "cash", judging_style: "crowd_vote", monetary_value: 100, currency: "USD", display_order: 2 },
       ]
       let prizesSeeded = 0
       for (const p of prizeData) {
         const { error: pErr } = await db.from("prizes").insert({
           hackathon_id: params.id,
-          name: p.name,
-          description: p.description,
-          value: p.value,
-          type: p.type,
-          rank: p.rank,
-          display_order: p.display_order,
+          ...p,
         })
         if (!pErr) prizesSeeded++
       }
@@ -727,33 +738,49 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
       const preset = body.preset ?? "standard"
 
       type PrizeJudgingStyle = "bucket_sort" | "gate_check" | "crowd_vote" | "judges_pick"
-      const PRESETS: Record<string, Array<{
+      type PrizeType = "score" | "criteria" | "crowd" | "favorite"
+      type SeedPrize = {
         name: string
         judgingStyle: PrizeJudgingStyle
         description: string
-      }>> = {
+        value?: string
+        type?: PrizeType
+        rank?: number | null
+        kind?: string
+        monetaryValue?: number
+        currency?: string
+      }
+
+      const { data: criteriaRows } = await db
+        .from("judging_criteria")
+        .select("id")
+        .eq("hackathon_id", params.id)
+        .order("display_order")
+      const firstCriteriaId = criteriaRows?.[0]?.id ?? null
+
+      const PRESETS: Record<string, SeedPrize[]> = {
         standard: [
-          { name: "Grand Prize", judgingStyle: "bucket_sort", description: "Best project overall" },
-          { name: "Most Innovative", judgingStyle: "judges_pick", description: "Creative and novel approach" },
-          { name: "People's Choice", judgingStyle: "crowd_vote", description: "Audience vote winner" },
+          { name: "Grand Prize", judgingStyle: "bucket_sort", description: "Best project overall", value: "$10,000", type: "score", rank: 1, kind: "cash", monetaryValue: 10000, currency: "USD" },
+          { name: "Most Innovative", judgingStyle: "judges_pick", description: "Creative and novel approach", value: "$500 API Credits", type: "criteria", kind: "credit" },
+          { name: "People's Choice", judgingStyle: "crowd_vote", description: "Audience vote winner", value: "Swag Pack", type: "crowd", kind: "swag" },
         ],
         sponsor_heavy: [
-          { name: "Grand Prize", judgingStyle: "bucket_sort", description: "Top project across all criteria" },
-          { name: "Best AI/ML", judgingStyle: "bucket_sort", description: "Sponsored by TechCorp — best use of machine learning" },
-          { name: "Best Developer Tool", judgingStyle: "judges_pick", description: "Sponsored by DevHub — most useful dev tool" },
-          { name: "Best Social Impact", judgingStyle: "judges_pick", description: "Sponsored by GoodCause — biggest real-world impact" },
-          { name: "Crowd Favorite", judgingStyle: "crowd_vote", description: "Voted by all attendees" },
+          { name: "Grand Prize", judgingStyle: "bucket_sort", description: "Top project across all criteria", value: "$10,000", type: "score", rank: 1, kind: "cash", monetaryValue: 10000, currency: "USD" },
+          { name: "Best AI/ML", judgingStyle: "bucket_sort", description: "Sponsored by TechCorp — best use of machine learning", value: "$5,000", type: "score", rank: 2, kind: "cash", monetaryValue: 5000, currency: "USD" },
+          { name: "Best Developer Tool", judgingStyle: "judges_pick", description: "Sponsored by DevHub — most useful dev tool", value: "$2,500", type: "criteria", kind: "cash", monetaryValue: 2500, currency: "USD" },
+          { name: "Best Social Impact", judgingStyle: "judges_pick", description: "Sponsored by GoodCause — biggest real-world impact", value: "$2,500", type: "criteria", kind: "cash", monetaryValue: 2500, currency: "USD" },
+          { name: "Crowd Favorite", judgingStyle: "crowd_vote", description: "Voted by all attendees", value: "Swag Pack", type: "crowd", kind: "swag" },
         ],
         minimal: [
-          { name: "Winner", judgingStyle: "bucket_sort", description: "Single prize, bucket sort style" },
+          { name: "Winner", judgingStyle: "bucket_sort", description: "Single prize, bucket sort style", value: "$5,000", type: "score", rank: 1, kind: "cash", monetaryValue: 5000, currency: "USD" },
         ],
         kitchen_sink: [
-          { name: "Grand Prize", judgingStyle: "bucket_sort", description: "Best overall project" },
-          { name: "Best AI Agent", judgingStyle: "bucket_sort", description: "Most capable autonomous agent" },
-          { name: "Best UX", judgingStyle: "judges_pick", description: "Best user experience and design" },
-          { name: "Most Innovative", judgingStyle: "judges_pick", description: "Creative and novel approach" },
-          { name: "Best Use of MCP", judgingStyle: "gate_check", description: "Best Model Context Protocol integration" },
-          { name: "People's Choice", judgingStyle: "crowd_vote", description: "Live audience voting" },
+          { name: "Grand Prize", judgingStyle: "bucket_sort", description: "Best overall project", value: "$10,000", type: "score", rank: 1, kind: "cash", monetaryValue: 10000, currency: "USD" },
+          { name: "Best AI Agent", judgingStyle: "bucket_sort", description: "Most capable autonomous agent", value: "$5,000", type: "score", rank: 2, kind: "cash", monetaryValue: 5000, currency: "USD" },
+          { name: "Best UX", judgingStyle: "judges_pick", description: "Best user experience and design", value: "$2,500", type: "criteria", kind: "cash", monetaryValue: 2500, currency: "USD" },
+          { name: "Most Innovative", judgingStyle: "judges_pick", description: "Creative and novel approach", value: "$500 API Credits", type: "criteria", kind: "credit" },
+          { name: "Best Use of MCP", judgingStyle: "gate_check", description: "Best Model Context Protocol integration", value: "Swag Pack", type: "score", rank: 3, kind: "swag" },
+          { name: "People's Choice", judgingStyle: "crowd_vote", description: "Live audience voting", value: "Swag Pack", type: "crowd", kind: "swag" },
         ],
       }
 
@@ -763,7 +790,6 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
         return { error: `Unknown preset: ${preset}. Available: ${Object.keys(PRESETS).join(", ")}` }
       }
 
-      // Clear existing prizes
       await db.from("prizes").delete().eq("hackathon_id", params.id)
 
       const created: string[] = []
@@ -774,6 +800,13 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
           description: p.description,
           judgingStyle: p.judgingStyle,
           displayOrder: i,
+          value: p.value,
+          type: p.type,
+          rank: p.rank,
+          kind: p.kind,
+          monetaryValue: p.monetaryValue,
+          currency: p.currency,
+          criteriaId: p.type === "criteria" ? firstCriteriaId : undefined,
         })
         if (prizeResult.success) created.push(prizeResult.prize.id)
       }

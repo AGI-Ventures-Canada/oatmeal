@@ -140,7 +140,8 @@ export async function deletePrize(
 
 export async function assignPrize(
   prizeId: string,
-  submissionId: string
+  submissionId: string,
+  { skipNotifications = false }: { skipNotifications?: boolean } = {}
 ): Promise<PrizeAssignment | null> {
   const client = getSupabase() as unknown as SupabaseClient
   const { data, error } = await client
@@ -161,7 +162,37 @@ export async function assignPrize(
     return null
   }
 
-  return data as unknown as PrizeAssignment
+  const assignment = data as unknown as PrizeAssignment
+
+  if (!skipNotifications) {
+    try {
+      const { data: prize } = await client
+        .from("prizes")
+        .select("hackathon_id")
+        .eq("id", prizeId)
+        .single()
+
+      if (prize) {
+        const { data: hackathon } = await client
+          .from("hackathons")
+          .select("results_published_at")
+          .eq("id", prize.hackathon_id)
+          .single()
+
+        if (hackathon?.results_published_at) {
+          const { initializeFulfillments } = await import("@/lib/services/prize-fulfillment")
+          await initializeFulfillments(prize.hackathon_id)
+
+          const { sendPrizeClaimEmail } = await import("@/lib/email/winner-notifications")
+          void sendPrizeClaimEmail(prize.hackathon_id, assignment.id).catch(console.error)
+        }
+      }
+    } catch (err) {
+      console.error("Failed to send prize claim email (non-blocking):", err)
+    }
+  }
+
+  return assignment
 }
 
 export async function removePrizeAssignment(
@@ -237,7 +268,7 @@ export async function autoAssignPrizes(hackathonId: string): Promise<void> {
       for (const prize of scorePrizes) {
         const submissionId = rankToSubmission[prize.rank as number]
         if (submissionId) {
-          await assignPrize(prize.id, submissionId)
+          await assignPrize(prize.id, submissionId, { skipNotifications: true })
         }
       }
     }
@@ -267,7 +298,7 @@ export async function autoAssignPrizes(hackathonId: string): Promise<void> {
 
     const sorted = Object.entries(submissionScores).sort(([, a], [, b]) => b - a)
     if (sorted.length > 0) {
-      await assignPrize(prize.id, sorted[0][0])
+      await assignPrize(prize.id, sorted[0][0], { skipNotifications: true })
     }
   }
 
@@ -280,7 +311,7 @@ export async function autoAssignPrizes(hackathonId: string): Promise<void> {
     const winnerId = await getCrowdFavoriteWinner(hackathonId)
     if (winnerId) {
       for (const prize of crowdPrizes) {
-        await assignPrize(prize.id, winnerId)
+        await assignPrize(prize.id, winnerId, { skipNotifications: true })
       }
     }
   }
@@ -321,7 +352,7 @@ export async function autoAssignPrizes(hackathonId: string): Promise<void> {
       })
 
       if (sorted.length > 0) {
-        await assignPrize(prize.id, sorted[0][0])
+        await assignPrize(prize.id, sorted[0][0], { skipNotifications: true })
       }
     }
   }

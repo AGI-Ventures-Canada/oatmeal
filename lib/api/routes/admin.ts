@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requireAdmin, requireAdminScopes, AuthError } from "@/lib/auth/principal"
 import { isValidUuid } from "@/lib/utils/uuid"
-import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
+import { checkRateLimit, RateLimitError } from "@/lib/services/rate-limit"
 import { logAudit, listAllAuditLogs } from "@/lib/services/audit"
 import {
   getPlatformStats,
