@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, Search, Check, UserPlus, Mail } from "lucide-react"
+import { Loader2, Search, Check, Mail } from "lucide-react"
 
 type JudgeData = {
   participantId: string
@@ -57,7 +57,8 @@ export function AssignJudgesDialog({
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<SearchUser[]>([])
   const [searching, setSearching] = useState(false)
-  const [addingUser, setAddingUser] = useState<string | null>(null)
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
+  const [addingBatch, setAddingBatch] = useState(false)
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviting, setInviting] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -70,6 +71,7 @@ export function AssignJudgesDialog({
     if (!nextOpen) {
       setSearchQuery("")
       setSearchResults([])
+      setSelectedUsers(new Set())
       setFeedback(null)
       setInviteEmail("")
       if (hasChanges.current) {
@@ -103,6 +105,7 @@ export function AssignJudgesDialog({
     (query: string) => {
       setSearchQuery(query)
       setFeedback(null)
+      setSelectedUsers(new Set())
 
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current)
@@ -145,45 +148,64 @@ export function AssignJudgesDialog({
     )
   }
 
-  async function handleAddAndAssign(user: SearchUser) {
-    setAddingUser(user.id)
+  function toggleUserSelection(userId: string) {
+    setSelectedUsers((prev) => {
+      const next = new Set(prev)
+      if (next.has(userId)) {
+        next.delete(userId)
+      } else {
+        next.add(userId)
+      }
+      return next
+    })
+  }
+
+  async function handleAddSelected() {
+    if (selectedUsers.size === 0) return
+    setAddingBatch(true)
     setFeedback(null)
 
-    try {
-      const res = await fetch(`${base}/judges`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clerkUserId: user.id }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Failed to add judge")
-      }
-      const data = await res.json()
+    let added = 0
+    let failed = 0
 
-      if (data.participant?.id) {
-        const assignRes = await fetch(`/api/dashboard/hackathons/${hackathonId}/prizes/${prizeId}/assign-judge`, {
+    for (const userId of selectedUsers) {
+      try {
+        const res = await fetch(`${base}/judges`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ judgeParticipantId: data.participant.id }),
+          body: JSON.stringify({ clerkUserId: userId }),
         })
-        if (!assignRes.ok) {
-          setFeedback(`${getDisplayName(user)} added as judge but couldn't be assigned to this prize`)
-        } else {
-          setFeedback(`${getDisplayName(user)} added and assigned`)
+        if (!res.ok) {
+          failed++
+          continue
         }
-      } else {
-        setFeedback(`${getDisplayName(user)} added as judge`)
-      }
+        const data = await res.json()
 
-      hasChanges.current = true
-      setSearchQuery("")
-      setSearchResults([])
-    } catch (err) {
-      setFeedback(err instanceof Error ? err.message : "Something went wrong")
-    } finally {
-      setAddingUser(null)
+        if (data.participant?.id) {
+          await fetch(`/api/dashboard/hackathons/${hackathonId}/prizes/${prizeId}/assign-judge`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ judgeParticipantId: data.participant.id }),
+          })
+        }
+        added++
+      } catch {
+        failed++
+      }
     }
+
+    hasChanges.current = true
+    setSearchQuery("")
+    setSearchResults([])
+    setSelectedUsers(new Set())
+
+    if (failed === 0) {
+      setFeedback(`${added} judge${added !== 1 ? "s" : ""} added and assigned`)
+    } else {
+      setFeedback(`${added} added, ${failed} failed`)
+    }
+
+    setAddingBatch(false)
   }
 
   async function handleInviteByEmail(e: React.FormEvent) {
@@ -206,7 +228,7 @@ export function AssignJudgesDialog({
       }
       const data = await res.json()
       setFeedback(
-        data.invited ? `Invitation sent to ${email}` : `${email} added as judge`
+        data.invitation ? `Invitation sent to ${email}` : `${email} added as judge`
       )
       hasChanges.current = true
       setInviteEmail("")
@@ -291,36 +313,54 @@ export function AssignJudgesDialog({
             )}
 
             {!searching && searchResults.length > 0 && (
-              <div className="space-y-1 max-h-40 overflow-y-auto">
-                {searchResults.map((user) => {
-                  const displayName = getDisplayName(user)
-                  return (
-                    <button
-                      key={user.id}
-                      type="button"
-                      onClick={() => handleAddAndAssign(user)}
-                      disabled={addingUser === user.id}
-                      className="flex items-center gap-3 w-full rounded-lg p-2 text-left hover:bg-muted transition-colors disabled:opacity-50"
-                    >
-                      <Avatar size="sm">
-                        {user.imageUrl && <AvatarImage src={user.imageUrl} alt={displayName} />}
-                        <AvatarFallback className="text-[10px]">
-                          {displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{displayName}</p>
-                        {user.email && <p className="text-xs text-muted-foreground truncate">{user.email}</p>}
-                      </div>
-                      {addingUser === user.id ? (
-                        <Loader2 className="size-4 animate-spin text-muted-foreground shrink-0" />
-                      ) : (
-                        <UserPlus className="size-4 text-muted-foreground shrink-0" />
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
+              <>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {searchResults.map((user) => {
+                    const displayName = getDisplayName(user)
+                    const isSelected = selectedUsers.has(user.id)
+                    return (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => toggleUserSelection(user.id)}
+                        disabled={addingBatch}
+                        className="flex items-center gap-3 w-full rounded-lg p-2 text-left hover:bg-muted transition-colors disabled:opacity-50"
+                      >
+                        <Avatar size="sm">
+                          {user.imageUrl && <AvatarImage src={user.imageUrl} alt={displayName} />}
+                          <AvatarFallback className="text-[10px]">
+                            {displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{displayName}</p>
+                          {user.email && <p className="text-xs text-muted-foreground truncate">{user.email}</p>}
+                        </div>
+                        {isSelected ? (
+                          <div className="flex items-center justify-center size-5 rounded bg-primary text-primary-foreground shrink-0">
+                            <Check className="size-3" />
+                          </div>
+                        ) : (
+                          <div className="size-5 rounded border shrink-0" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  disabled={selectedUsers.size === 0 || addingBatch}
+                  onClick={handleAddSelected}
+                >
+                  {addingBatch ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : null}
+                  {selectedUsers.size === 0
+                    ? "Select judges to add"
+                    : `Add ${selectedUsers.size} judge${selectedUsers.size !== 1 ? "s" : ""}`}
+                </Button>
+              </>
             )}
 
             {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
