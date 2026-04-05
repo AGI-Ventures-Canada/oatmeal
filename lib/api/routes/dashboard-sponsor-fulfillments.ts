@@ -38,7 +38,7 @@ export const dashboardSponsorFulfillmentRoutes = new Elysia()
       })
     }
 
-    const { trackingNumber } = body as { trackingNumber?: string }
+    const { trackingNumber } = body
 
     const { markSponsorFulfilled } = await import("@/lib/services/sponsor-fulfillments")
     const success = await markSponsorFulfilled(
@@ -58,7 +58,7 @@ export const dashboardSponsorFulfillmentRoutes = new Elysia()
     return { success: true }
   }, {
     body: t.Object({
-      trackingNumber: t.Optional(t.String({ description: "Shipping tracking number" })),
+      trackingNumber: t.Optional(t.String({ maxLength: 100, description: "Shipping tracking number" })),
     }),
     detail: {
       summary: "Mark sponsor prize as fulfilled",

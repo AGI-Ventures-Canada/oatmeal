@@ -410,7 +410,7 @@ export async function claimPrize(
 
   const { data: fulfillment, error } = await client
     .from("prize_fulfillments")
-    .select("id, status, hackathon_id, claim_token_expires_at")
+    .select("id, status, hackathon_id, prize_assignment_id, claim_token_expires_at")
     .eq("claim_token", token)
     .single()
 
@@ -454,29 +454,22 @@ export async function claimPrize(
     return { success: false, error: "Failed to claim prize", code: "update_failed" }
   }
 
-  void notifySponsorOnClaim(fulfillment.id, data.recipientName, client).catch(console.error)
-  void notifyOrganizerOnClaim(fulfillment.id, data.recipientName, client).catch(console.error)
+  void notifySponsorOnClaim(fulfillment.prize_assignment_id, fulfillment.hackathon_id, data.recipientName, client).catch(console.error)
+  void notifyOrganizerOnClaim(fulfillment.prize_assignment_id, fulfillment.hackathon_id, data.recipientName, client).catch(console.error)
 
   return { success: true }
 }
 
 async function notifySponsorOnClaim(
-  fulfillmentId: string,
+  prizeAssignmentId: string,
+  hackathonId: string,
   winnerName: string,
   client: SupabaseClient
 ): Promise<void> {
-  const { data: fulfillmentRow } = await client
-    .from("prize_fulfillments")
-    .select("prize_assignment_id, hackathon_id")
-    .eq("id", fulfillmentId)
-    .single()
-
-  if (!fulfillmentRow) return
-
   const { data: assignment } = await client
     .from("prize_assignments")
     .select("prize:prizes!prize_id(name, prize_track_id)")
-    .eq("id", fulfillmentRow.prize_assignment_id)
+    .eq("id", prizeAssignmentId)
     .single()
 
   if (!assignment) return
@@ -503,7 +496,7 @@ async function notifySponsorOnClaim(
   const { data: hackathon } = await client
     .from("hackathons")
     .select("name")
-    .eq("id", fulfillmentRow.hackathon_id)
+    .eq("id", hackathonId)
     .single()
 
   if (!hackathon) return
@@ -518,22 +511,15 @@ async function notifySponsorOnClaim(
 }
 
 async function notifyOrganizerOnClaim(
-  fulfillmentId: string,
+  prizeAssignmentId: string,
+  hackathonId: string,
   winnerName: string,
   client: SupabaseClient
 ): Promise<void> {
-  const { data: fulfillmentRow } = await client
-    .from("prize_fulfillments")
-    .select("prize_assignment_id, hackathon_id")
-    .eq("id", fulfillmentId)
-    .single()
-
-  if (!fulfillmentRow) return
-
   const { data: assignment } = await client
     .from("prize_assignments")
     .select("prize:prizes!prize_id(name)")
-    .eq("id", fulfillmentRow.prize_assignment_id)
+    .eq("id", prizeAssignmentId)
     .single()
 
   if (!assignment) return
@@ -543,7 +529,7 @@ async function notifyOrganizerOnClaim(
   const { data: hackathon } = await client
     .from("hackathons")
     .select("name")
-    .eq("id", fulfillmentRow.hackathon_id)
+    .eq("id", hackathonId)
     .single()
 
   if (!hackathon) return
@@ -553,7 +539,7 @@ async function notifyOrganizerOnClaim(
     prizeName: pa.prize.name,
     hackathonName: hackathon.name,
     winnerName,
-    hackathonId: fulfillmentRow.hackathon_id,
+    hackathonId: hackathonId,
   })
 }
 
