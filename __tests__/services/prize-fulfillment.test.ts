@@ -374,12 +374,13 @@ describe("Prize Fulfillment Service", () => {
               id: "f1",
               status: "assigned",
               hackathon_id: "h1",
+              prize_assignment_id: "pa1",
               claim_token_expires_at: "2027-01-01T00:00:00Z",
             },
             error: null,
           })
         }
-        return createChainableMock({ data: null, error: null })
+        return createChainableMock({ data: [{ id: "f1" }], error: null })
       })
 
       const result = await claimPrize("valid-token", {
@@ -400,12 +401,13 @@ describe("Prize Fulfillment Service", () => {
               id: "f1",
               status: "assigned",
               hackathon_id: "h1",
+              prize_assignment_id: "pa1",
               claim_token_expires_at: "2027-01-01T00:00:00Z",
             },
             error: null,
           })
         }
-        return createChainableMock({ data: null, error: null })
+        return createChainableMock({ data: [{ id: "f1" }], error: null })
       })
 
       const result = await claimPrize("valid-token", {

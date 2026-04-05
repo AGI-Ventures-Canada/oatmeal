@@ -454,11 +454,15 @@ export async function claimPrize(
     query = query.gt("claim_token_expires_at", new Date().toISOString())
   }
 
-  const { error: updateError } = await query
+  const { data: updated, error: updateError } = await query.select("id")
 
   if (updateError) {
     console.error("Failed to claim prize:", updateError)
     return { success: false, error: "Failed to claim prize", code: "update_failed" }
+  }
+
+  if (!updated || updated.length === 0) {
+    return { success: false, error: "This prize has already been claimed", code: "already_claimed" }
   }
 
   void notifySponsorOnClaim(fulfillment.prize_assignment_id, fulfillment.hackathon_id, data.recipientName, client).catch(console.error)

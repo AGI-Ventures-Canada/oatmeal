@@ -48,7 +48,10 @@ export async function sendSponsorClaimNotification(params: {
     if (email) emails.push(email)
   }
 
-  if (emails.length === 0) return 0
+  if (emails.length === 0) {
+    console.warn(`[sponsor-notification] No emails resolved for tenant ${sponsorTenantId}`)
+    return 0
+  }
 
   const html = `
     <!DOCTYPE html>

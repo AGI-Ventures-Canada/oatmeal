@@ -56,7 +56,10 @@ export async function sendOrganizerClaimNotification(params: {
     if (email) emails.push(email)
   }
 
-  if (emails.length === 0) return 0
+  if (emails.length === 0) {
+    console.warn(`[organizer-notification] No emails resolved for hackathon ${hackathonId}`)
+    return 0
+  }
 
   const html = `
     <!DOCTYPE html>
