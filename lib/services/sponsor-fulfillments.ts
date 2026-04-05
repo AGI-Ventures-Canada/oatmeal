@@ -1,6 +1,7 @@
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { PrizeFulfillmentStatus } from "@/lib/db/hackathon-types"
+import { safeDecrypt } from "@/lib/services/encryption"
 
 export type SponsorFulfillmentView = {
   fulfillmentId: string
@@ -110,7 +111,7 @@ export async function listSponsorFulfillments(
       recipientEmail: isClaimed ? (f.recipient_email as string | null) : null,
       shippingAddress: isClaimed ? (f.shipping_address as string | null) : null,
       paymentMethod: isClaimed ? (f.payment_method as string | null) : null,
-      paymentDetail: isClaimed ? (f.payment_detail as string | null) : null,
+      paymentDetail: isClaimed && f.payment_detail ? safeDecrypt(f.payment_detail as string) : null,
       trackingNumber: f.tracking_number as string | null,
       claimedAt: f.claimed_at as string | null,
     }

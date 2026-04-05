@@ -441,7 +441,12 @@ export async function claimPrize(
     updateData.payment_method = data.paymentMethod
   }
   if (data.paymentDetail) {
-    updateData.payment_detail = data.paymentDetail
+    try {
+      const { encryptToken } = await import("@/lib/services/encryption")
+      updateData.payment_detail = encryptToken(data.paymentDetail)
+    } catch {
+      updateData.payment_detail = data.paymentDetail
+    }
   }
 
   let query = client

@@ -98,10 +98,14 @@ function getNextSteps(f: Fulfillment): string {
     case "assigned":
       return "Waiting for the winner to claim this prize. You can also reach out directly."
     case "contacted":
-      if (needsPayment(kind))
+      if (needsPayment(kind)) {
+        if (!f.paymentDetail) return "Waiting for the winner to submit their payment details."
         return `Send payment to the winner's ${PAYMENT_METHOD_LABELS[f.paymentMethod ?? ""] ?? "payment"} account, then mark as shipped.`
-      if (needsShipping(kind))
+      }
+      if (needsShipping(kind)) {
+        if (!f.shippingAddress) return "Waiting for the winner to submit their shipping address."
         return "Ship the prize to the winner's address and add the tracking number."
+      }
       return "Deliver the prize and advance the status."
     case "shipped":
       if (needsPayment(kind))

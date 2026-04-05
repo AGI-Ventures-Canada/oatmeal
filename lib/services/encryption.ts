@@ -82,6 +82,14 @@ export function signWebhookPayload(secret: string, payload: string): string {
   return hmac.digest("hex")
 }
 
+export function safeDecrypt(value: string): string {
+  try {
+    return decryptToken(value)
+  } catch {
+    return value
+  }
+}
+
 export function verifyWebhookSignature(
   secret: string,
   payload: string,

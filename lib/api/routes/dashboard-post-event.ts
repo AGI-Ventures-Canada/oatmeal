@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requirePrincipal } from "@/lib/auth/principal"
 import { logAudit } from "@/lib/services/audit"
+import { safeDecrypt } from "@/lib/services/encryption"
 
 export const dashboardPostEventRoutes = new Elysia()
   .derive(async ({ request }) => {
@@ -47,7 +48,7 @@ export const dashboardPostEventRoutes = new Elysia()
         shippingAddress: f.shipping_address,
         trackingNumber: f.tracking_number,
         paymentMethod: f.payment_method,
-        paymentDetail: f.payment_detail,
+        paymentDetail: f.payment_detail ? safeDecrypt(f.payment_detail) : null,
         notes: f.notes,
         contactedAt: f.contacted_at,
         shippedAt: f.shipped_at,
