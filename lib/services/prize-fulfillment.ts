@@ -315,6 +315,12 @@ export type SiblingClaim = {
  * `recipientName` is intentionally kept — siblings are teammates who claimed
  * prizes for the same submission, so names are not sensitive in this context.
  * `recipientEmail` and `shippingAddress` are stripped as PII.
+ *
+ * `token` is intentionally kept — it enables the multi-prize claim queue
+ * where a single team member can claim all of their submission's prizes in
+ * one session. All tokens belong to the same submission's prize assignments,
+ * so cross-member token access is by design (any team member may claim on
+ * behalf of the team).
  */
 export type SiblingClaimPublic = Omit<SiblingClaim, "recipientEmail" | "shippingAddress">
 

@@ -34,6 +34,7 @@ export async function sendOrganizerClaimNotification(params: {
   if (tenant.clerk_org_id) {
     const memberships = await clerk.organizations.getOrganizationMembershipList({
       organizationId: tenant.clerk_org_id,
+      limit: 500,
     })
 
     for (const m of memberships.data) {
