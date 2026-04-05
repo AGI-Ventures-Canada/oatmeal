@@ -32,6 +32,8 @@ export async function sendOrganizerClaimNotification(params: {
   const emails: string[] = []
 
   if (tenant.clerk_org_id) {
+    // Capped at 500 — sufficient for hackathon orgs. If an org exceeds this,
+    // some members won't receive the notification email.
     const memberships = await clerk.organizations.getOrganizationMembershipList({
       organizationId: tenant.clerk_org_id,
       limit: 500,

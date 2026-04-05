@@ -10,6 +10,8 @@ export function serializeAddress(address: StructuredAddress): string {
   return JSON.stringify(address)
 }
 
+// Handles both new JSON format and legacy plain-text addresses.
+// Returns null for legacy plain-text values — callers should fall back to raw string.
 export function parseAddress(raw: string): StructuredAddress | null {
   try {
     const parsed = JSON.parse(raw)

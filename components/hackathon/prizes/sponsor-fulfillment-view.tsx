@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { parseAddress, formatAddress } from "@/lib/utils/address"
 import { Package, Check, Clock, Mail } from "lucide-react"
 import type { PrizeFulfillmentStatus } from "@/lib/db/hackathon-types"
 
@@ -166,9 +167,11 @@ export function SponsorFulfillmentView({
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    {f.shippingAddress && (
-                      <p className="text-xs text-muted-foreground truncate max-w-48">{f.shippingAddress}</p>
-                    )}
+                    {f.shippingAddress && (() => {
+                      const parsed = parseAddress(f.shippingAddress)
+                      const display = parsed ? formatAddress(parsed) : f.shippingAddress
+                      return <p className="text-xs text-muted-foreground truncate max-w-48">{display}</p>
+                    })()}
                     {f.paymentMethod && (
                       <p className="text-xs text-muted-foreground">
                         {f.paymentMethod}{f.paymentDetail ? `: ${f.paymentDetail}` : ""}
