@@ -14,24 +14,31 @@ export async function sendSponsorClaimNotification(params: {
 
   const { data: tenant } = await client
     .from("tenants")
-    .select("clerk_org_id")
+    .select("clerk_org_id, clerk_user_id")
     .eq("id", sponsorTenantId)
     .single()
 
-  if (!tenant?.clerk_org_id) return 0
+  if (!tenant) return 0
 
   const clerk = await clerkClient()
-  const memberships = await clerk.organizations.getOrganizationMembershipList({
-    organizationId: tenant.clerk_org_id,
-  })
-
   const emails: string[] = []
-  for (const m of memberships.data) {
-    if (m.publicUserData?.userId) {
-      const user = await clerk.users.getUser(m.publicUserData.userId)
-      const email = user.primaryEmailAddress?.emailAddress
-      if (email) emails.push(email)
+
+  if (tenant.clerk_org_id) {
+    const memberships = await clerk.organizations.getOrganizationMembershipList({
+      organizationId: tenant.clerk_org_id,
+    })
+
+    for (const m of memberships.data) {
+      if (m.publicUserData?.userId) {
+        const user = await clerk.users.getUser(m.publicUserData.userId)
+        const email = user.primaryEmailAddress?.emailAddress
+        if (email) emails.push(email)
+      }
     }
+  } else if (tenant.clerk_user_id) {
+    const user = await clerk.users.getUser(tenant.clerk_user_id)
+    const email = user.primaryEmailAddress?.emailAddress
+    if (email) emails.push(email)
   }
 
   if (emails.length === 0) return 0

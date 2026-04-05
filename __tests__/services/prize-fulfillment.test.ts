@@ -13,6 +13,7 @@ const {
   getClaimByToken,
   claimPrize,
   getClaimTokensForHackathon,
+  getSiblingClaims,
 } = await import("@/lib/services/prize-fulfillment")
 
 describe("Prize Fulfillment Service", () => {
@@ -477,6 +478,127 @@ describe("Prize Fulfillment Service", () => {
 
       const result = await getClaimTokensForHackathon("11111111-1111-1111-1111-111111111111")
       expect(result).toEqual({})
+    })
+  })
+
+  describe("getSiblingClaims", () => {
+    it("returns siblings for the same submission", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({
+            data: { prize_assignment: { submission_id: "sub-1" } },
+            error: null,
+          })
+        }
+        if (callCount === 2) {
+          return createChainableMock({
+            data: [{ id: "a1" }, { id: "a2" }],
+            error: null,
+          })
+        }
+        return createChainableMock({
+          data: [
+            {
+              id: "f1",
+              status: "assigned",
+              claim_token: "tok-1",
+              claim_token_expires_at: new Date(Date.now() + 86400000).toISOString(),
+              recipient_name: null,
+              recipient_email: null,
+              shipping_address: null,
+              prize_assignment: {
+                prize: { name: "Grand Prize", value: "$1000", kind: "cash", distribution_method: null },
+              },
+            },
+            {
+              id: "f2",
+              status: "claimed",
+              claim_token: "tok-2",
+              claim_token_expires_at: null,
+              recipient_name: "Alice",
+              recipient_email: "alice@example.com",
+              shipping_address: null,
+              prize_assignment: {
+                prize: { name: "Runner Up", value: "$500", kind: "cash", distribution_method: null },
+              },
+            },
+          ],
+          error: null,
+        })
+      })
+
+      const result = await getSiblingClaims("tok-1")
+      expect(result).toHaveLength(2)
+      expect(result[0].token).toBe("tok-1")
+      expect(result[0].prizeName).toBe("Grand Prize")
+      expect(result[0].isExpired).toBe(false)
+      expect(result[1].token).toBe("tok-2")
+      expect(result[1].status).toBe("claimed")
+    })
+
+    it("returns empty array when fulfillment not found", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: null, error: null })
+      )
+
+      const result = await getSiblingClaims("nonexistent-token")
+      expect(result).toEqual([])
+    })
+
+    it("returns empty array when no assignments exist", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({
+            data: { prize_assignment: { submission_id: "sub-1" } },
+            error: null,
+          })
+        }
+        return createChainableMock({ data: [], error: null })
+      })
+
+      const result = await getSiblingClaims("tok-1")
+      expect(result).toEqual([])
+    })
+
+    it("marks expired tokens correctly", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({
+            data: { prize_assignment: { submission_id: "sub-1" } },
+            error: null,
+          })
+        }
+        if (callCount === 2) {
+          return createChainableMock({ data: [{ id: "a1" }], error: null })
+        }
+        return createChainableMock({
+          data: [
+            {
+              id: "f1",
+              status: "assigned",
+              claim_token: "tok-expired",
+              claim_token_expires_at: new Date(Date.now() - 86400000).toISOString(),
+              recipient_name: null,
+              recipient_email: null,
+              shipping_address: null,
+              prize_assignment: {
+                prize: { name: "Expired Prize", value: null, kind: "swag", distribution_method: null },
+              },
+            },
+          ],
+          error: null,
+        })
+      })
+
+      const result = await getSiblingClaims("tok-expired")
+      expect(result).toHaveLength(1)
+      expect(result[0].isExpired).toBe(true)
     })
   })
 })
