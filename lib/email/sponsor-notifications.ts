@@ -1,5 +1,5 @@
 import { sendEmail } from "./resend"
-import { escapeHtml } from "./utils"
+import { escapeHtml, resolveEmailsForTenant } from "./utils"
 
 export async function sendSponsorClaimNotification(params: {
   prizeName: string
@@ -9,7 +9,6 @@ export async function sendSponsorClaimNotification(params: {
 }): Promise<number> {
   const { prizeName, hackathonName, winnerName, sponsorTenantId } = params
   const { supabase: getSupabase } = await import("@/lib/db/client")
-  const { clerkClient } = await import("@clerk/nextjs/server")
   const client = (getSupabase as () => import("@supabase/supabase-js").SupabaseClient)()
 
   const { data: tenant } = await client
@@ -20,33 +19,7 @@ export async function sendSponsorClaimNotification(params: {
 
   if (!tenant) return 0
 
-  const clerk = await clerkClient()
-  const emails: string[] = []
-
-  if (tenant.clerk_org_id) {
-    // Capped at 500 — sufficient for hackathon orgs. If an org exceeds this,
-    // some members won't receive the notification email.
-    const memberships = await clerk.organizations.getOrganizationMembershipList({
-      organizationId: tenant.clerk_org_id,
-      limit: 500,
-    })
-
-    const memberIds = memberships.data
-      .map((m) => m.publicUserData?.userId)
-      .filter((id): id is string => !!id)
-
-    if (memberIds.length > 0) {
-      const users = await clerk.users.getUserList({ userId: memberIds, limit: 500 })
-      for (const user of users.data) {
-        const email = user.primaryEmailAddress?.emailAddress
-        if (email) emails.push(email)
-      }
-    }
-  } else if (tenant.clerk_user_id) {
-    const user = await clerk.users.getUser(tenant.clerk_user_id)
-    const email = user.primaryEmailAddress?.emailAddress
-    if (email) emails.push(email)
-  }
+  const emails = await resolveEmailsForTenant(tenant)
 
   if (emails.length === 0) {
     console.warn(`[sponsor-notification] No emails resolved for tenant ${sponsorTenantId}`)
