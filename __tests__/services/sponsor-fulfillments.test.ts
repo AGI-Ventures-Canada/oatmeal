@@ -1,9 +1,13 @@
-import { describe, it, expect, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach, mock } from "bun:test"
 import {
   createChainableMock,
   resetSupabaseMocks,
   setMockFromImplementation,
 } from "../lib/supabase-mock"
+
+mock.module("@/lib/services/encryption", () => ({
+  safeDecrypt: (value: string) => value,
+}))
 
 const { listSponsorFulfillments, markSponsorFulfilled } = await import("@/lib/services/sponsor-fulfillments")
 
