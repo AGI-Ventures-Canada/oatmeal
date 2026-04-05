@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,10 +49,12 @@ import {
   ListChecks,
   ArrowUpDown,
   Award,
+  X,
 } from "lucide-react"
 import { AddJudgeDialog } from "./add-judge-dialog"
 import { AddPrizeDialog } from "./add-prize-dialog"
 import { AssignJudgesDialog } from "./assign-judges-dialog"
+import { JudgePill } from "./judge-pill"
 
 type PrizeData = {
   id: string
@@ -140,13 +141,25 @@ export function JudgingTabClient({
   const router = useRouter()
   const [showAddJudge, setShowAddJudge] = useState(false)
   const [showAddPrize, setShowAddPrize] = useState(false)
-  const [deletingPrize, setDeletingPrize] = useState<string | null>(null)
-  const [removingJudge, setRemovingJudge] = useState<string | null>(null)
   const [calculating, setCalculating] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [results, setResults] = useState(initialResults)
   const [isPublished, setIsPublished] = useState(initialIsPublished)
   const [error, setError] = useState<string | null>(null)
+
+  const [hiddenJudges, setHiddenJudges] = useState<Set<string>>(new Set())
+  const [hiddenPrizes, setHiddenPrizes] = useState<Set<string>>(new Set())
+  const [hiddenInvitations, setHiddenInvitations] = useState<Set<string>>(new Set())
+  const [hiddenPrizeJudges, setHiddenPrizeJudges] = useState<Set<string>>(new Set())
+
+  const judges = initialJudges
+    .filter(j => !hiddenJudges.has(j.participantId))
+    .map(j => ({
+      ...j,
+      prizeIds: j.prizeIds.filter(pid => !hiddenPrizeJudges.has(`${pid}:${j.participantId}`)),
+    }))
+  const prizes = initialPrizes.filter(p => !hiddenPrizes.has(p.id))
+  const invitations = initialInvitations.filter(i => !hiddenInvitations.has(i.id))
 
   const base = `/api/dashboard/hackathons/${hackathonId}`
 
@@ -155,37 +168,37 @@ export function JudgingTabClient({
     : 0
 
   async function handleDeletePrize(prizeId: string) {
-    setDeletingPrize(prizeId)
+    setHiddenPrizes(prev => new Set(prev).add(prizeId))
     try {
       const res = await fetch(`${base}/prizes/${prizeId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to delete")
       router.refresh()
     } catch {
+      setHiddenPrizes(prev => { const next = new Set(prev); next.delete(prizeId); return next })
       setError("Failed to delete prize")
-    } finally {
-      setDeletingPrize(null)
     }
   }
 
   async function handleRemoveJudge(participantId: string) {
-    setRemovingJudge(participantId)
+    setHiddenJudges(prev => new Set(prev).add(participantId))
     try {
       const res = await fetch(`${base}/judging/judges/${participantId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to remove")
       router.refresh()
     } catch {
+      setHiddenJudges(prev => { const next = new Set(prev); next.delete(participantId); return next })
       setError("Failed to remove judge")
-    } finally {
-      setRemovingJudge(null)
     }
   }
 
   async function handleCancelInvitation(invitationId: string) {
+    setHiddenInvitations(prev => new Set(prev).add(invitationId))
     try {
       const res = await fetch(`${base}/judging/invitations/${invitationId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to cancel")
       router.refresh()
     } catch {
+      setHiddenInvitations(prev => { const next = new Set(prev); next.delete(invitationId); return next })
       setError("Failed to cancel invitation")
     }
   }
@@ -200,10 +213,18 @@ export function JudgingTabClient({
   }
 
   async function unassignJudgeFromPrize(prizeId: string, judgeParticipantId: string) {
-    const res = await fetch(`${base}/prizes/${prizeId}/judges/${judgeParticipantId}`, {
-      method: "DELETE",
-    })
-    if (!res.ok) throw new Error("Failed to unassign")
+    const key = `${prizeId}:${judgeParticipantId}`
+    setHiddenPrizeJudges(prev => new Set(prev).add(key))
+    try {
+      const res = await fetch(`${base}/prizes/${prizeId}/judges/${judgeParticipantId}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) throw new Error("Failed to unassign")
+      router.refresh()
+    } catch (err) {
+      setHiddenPrizeJudges(prev => { const next = new Set(prev); next.delete(key); return next })
+      throw err
+    }
   }
 
   async function handleCalculateResults() {
@@ -274,29 +295,27 @@ export function JudgingTabClient({
       )}
 
       <JudgesSection
-        judges={initialJudges}
-        invitations={initialInvitations}
+        judges={judges}
+        invitations={invitations}
         hackathonId={hackathonId}
         onAddJudge={() => setShowAddJudge(true)}
         onRemoveJudge={handleRemoveJudge}
         onCancelInvitation={handleCancelInvitation}
-        removingJudge={removingJudge}
       />
 
       <PrizesSection
         hackathonId={hackathonId}
-        prizes={initialPrizes}
-        judges={initialJudges}
+        prizes={prizes}
+        judges={judges}
         rounds={rounds}
         onAddPrize={() => setShowAddPrize(true)}
         onDeletePrize={handleDeletePrize}
         onAssignJudge={assignJudgeToPrize}
         onUnassignJudge={unassignJudgeFromPrize}
         onRefresh={() => router.refresh()}
-        deletingPrize={deletingPrize}
       />
 
-      {(initialPrizes.length > 0 || results.length > 0) && (
+      {(prizes.length > 0 || results.length > 0) && (
         <ResultsSection
           hackathonId={hackathonId}
           results={results}
@@ -334,7 +353,6 @@ function JudgesSection({
   onAddJudge,
   onRemoveJudge,
   onCancelInvitation,
-  removingJudge,
 }: {
   judges: JudgeData[]
   invitations: InvitationData[]
@@ -342,7 +360,6 @@ function JudgesSection({
   onAddJudge: () => void
   onRemoveJudge: (id: string) => void
   onCancelInvitation: (id: string) => void
-  removingJudge: string | null
 }) {
   return (
     <Card>
@@ -368,36 +385,34 @@ function JudgesSection({
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {judges.map((judge) => (
-                <div
+                <JudgePill
                   key={judge.participantId}
-                  className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm"
-                >
-                  <Avatar size="sm">
-                    {judge.imageUrl && <AvatarImage src={judge.imageUrl} alt={judge.displayName} />}
-                    <AvatarFallback>{judge.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">{judge.displayName}</span>
-                  {judge.prizeIds.length > 0 && (
-                    <Badge variant="secondary" className="text-xs">{judge.prizeIds.length} prize{judge.prizeIds.length !== 1 ? "s" : ""}</Badge>
-                  )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-6">
-                        <MoreHorizontal className="size-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        disabled={removingJudge === judge.participantId}
-                        onClick={() => onRemoveJudge(judge.participantId)}
-                      >
-                        <Trash2 className="mr-2 size-4" />
-                        Remove Judge
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                  imageUrl={judge.imageUrl}
+                  displayName={judge.displayName}
+                  badge={
+                    judge.prizeIds.length > 0 ? (
+                      <Badge variant="secondary" className="text-xs">{judge.prizeIds.length} prize{judge.prizeIds.length !== 1 ? "s" : ""}</Badge>
+                    ) : undefined
+                  }
+                  action={
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-6">
+                          <MoreHorizontal className="size-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => onRemoveJudge(judge.participantId)}
+                        >
+                          <Trash2 className="mr-2 size-4" />
+                          Remove Judge
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  }
+                />
               ))}
               {invitations.map((inv) => (
                 <div
@@ -438,7 +453,6 @@ function PrizesSection({
   onAssignJudge,
   onUnassignJudge,
   onRefresh,
-  deletingPrize,
 }: {
   hackathonId: string
   prizes: PrizeData[]
@@ -449,9 +463,16 @@ function PrizesSection({
   onAssignJudge: (prizeId: string, judgeParticipantId: string) => Promise<void>
   onUnassignJudge: (prizeId: string, judgeParticipantId: string) => Promise<void>
   onRefresh: () => void
-  deletingPrize: string | null
 }) {
   const [assignDialogPrize, setAssignDialogPrize] = useState<{ id: string; name: string } | null>(null)
+  const [removingFromPrize, setRemovingFromPrize] = useState<{ prizeId: string; prizeName: string; judge: JudgeData } | null>(null)
+
+  function handleConfirmRemoveFromPrize() {
+    if (!removingFromPrize) return
+    const { prizeId, judge } = removingFromPrize
+    setRemovingFromPrize(null)
+    onUnassignJudge(prizeId, judge.participantId)
+  }
 
   return (
     <div className="space-y-3">
@@ -560,13 +581,7 @@ function PrizesSection({
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => onDeletePrize(prize.id)}
-                              disabled={deletingPrize === prize.id}
-                            >
-                              {deletingPrize === prize.id ? (
-                                <Loader2 className="mr-2 size-4 animate-spin" />
-                              ) : null}
+                            <AlertDialogAction onClick={() => onDeletePrize(prize.id)}>
                               Delete
                             </AlertDialogAction>
                           </AlertDialogFooter>
@@ -578,16 +593,20 @@ function PrizesSection({
                   {!isCrowdVote && (
                     <div className="flex items-center gap-2 flex-wrap">
                       {assignedJudges.map((j) => (
-                        <div
+                        <JudgePill
                           key={j.participantId}
-                          className="flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs"
-                        >
-                          <Avatar size="sm">
-                            {j.imageUrl && <AvatarImage src={j.imageUrl} alt={j.displayName} />}
-                            <AvatarFallback className="text-[10px]">{j.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <span className="truncate max-w-[100px]">{j.displayName}</span>
-                        </div>
+                          imageUrl={j.imageUrl}
+                          displayName={j.displayName}
+                          action={
+                            <button
+                              type="button"
+                              onClick={() => setRemovingFromPrize({ prizeId: prize.id, prizeName: prize.name, judge: j })}
+                              className="flex items-center justify-center size-4 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          }
+                        />
                       ))}
 
                       <Button
@@ -623,6 +642,24 @@ function PrizesSection({
           onRefresh={onRefresh}
         />
       )}
+
+      <AlertDialog open={!!removingFromPrize} onOpenChange={(open) => { if (!open) setRemovingFromPrize(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove judge from prize?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove {removingFromPrize?.judge.displayName} from &ldquo;{removingFromPrize?.prizeName}&rdquo;.
+              This will also delete any scores they&apos;ve submitted for this prize.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmRemoveFromPrize}>
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

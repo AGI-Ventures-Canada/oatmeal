@@ -406,6 +406,34 @@ When a feature references a user by email and the user doesn't exist in Clerk, s
 <div className="relative w-64">
 ```
 
+### Optimistic Rendering
+
+**Default to optimistic UI updates for all user-initiated mutations.** The user should see the result of their action instantly — never wait for an API round-trip to update the UI.
+
+Pattern: track "hidden" or "pending" sets in component state. Apply them as filters/overlays on the server-provided data. On API failure, revert the optimistic state and show an error.
+
+```typescript
+// Optimistic removal: hide immediately, revert on failure
+const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
+const visibleItems = serverItems.filter(item => !hiddenIds.has(item.id))
+
+async function handleRemove(id: string) {
+  setHiddenIds(prev => new Set(prev).add(id))
+  try {
+    const res = await fetch(`/api/items/${id}`, { method: "DELETE" })
+    if (!res.ok) throw new Error("Failed")
+    router.refresh()
+  } catch {
+    setHiddenIds(prev => { const next = new Set(prev); next.delete(id); return next })
+    setError("Failed to remove item")
+  }
+}
+```
+
+- Remove loading spinners on buttons/items that disappear instantly — there's nothing left to show a spinner on
+- Keep `router.refresh()` after success for eventual consistency with server state
+- Re-throw errors when the optimistic function is called by child components that also handle errors
+
 ### Code Style
 
 - Do not write comments above code
