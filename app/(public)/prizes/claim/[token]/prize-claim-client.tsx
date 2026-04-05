@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { parseAddress, serializeAddress, COUNTRIES } from "@/lib/utils/address"
+import { needsShipping, needsPayment, isDigitalOnly } from "@/lib/utils/prize-kinds"
 import {
   Select,
   SelectContent,
@@ -53,18 +54,6 @@ const PAYMENT_METHODS = [
   { value: "bank_transfer", label: "Bank Transfer" },
   { value: "other", label: "Other" },
 ]
-
-function needsShipping(kind: string): boolean {
-  return kind === "swag" || kind === "experience"
-}
-
-function needsPayment(kind: string): boolean {
-  return kind === "cash"
-}
-
-function isDigitalOnly(kind: string): boolean {
-  return kind === "credit"
-}
 
 export function PrizeClaimClient({ token, claim, siblings }: PrizeClaimClientProps) {
   const totalCount = siblings.length

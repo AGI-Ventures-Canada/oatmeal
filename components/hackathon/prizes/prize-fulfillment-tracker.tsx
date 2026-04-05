@@ -30,6 +30,7 @@ import {
 import { Copyable } from "@/components/ui/copyable"
 import { Separator } from "@/components/ui/separator"
 import { parseAddress, formatAddress } from "@/lib/utils/address"
+import { needsShipping, needsPayment } from "@/lib/utils/prize-kinds"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -90,13 +91,6 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   other: "Other",
 }
 
-function needsShipping(kind: string): boolean {
-  return kind === "swag" || kind === "experience"
-}
-
-function needsPayment(kind: string): boolean {
-  return kind === "cash"
-}
 
 function getNextSteps(f: Fulfillment): string {
   const kind = f.prizeKind

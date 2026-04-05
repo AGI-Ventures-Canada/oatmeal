@@ -310,6 +310,12 @@ export type SiblingClaim = {
   isExpired: boolean
 }
 
+/**
+ * Public projection of SiblingClaim for client-side use.
+ * `recipientName` is intentionally kept — siblings are teammates who claimed
+ * prizes for the same submission, so names are not sensitive in this context.
+ * `recipientEmail` and `shippingAddress` are stripped as PII.
+ */
 export type SiblingClaimPublic = Omit<SiblingClaim, "recipientEmail" | "shippingAddress">
 
 export async function getSiblingClaims(token: string): Promise<SiblingClaim[]> {
