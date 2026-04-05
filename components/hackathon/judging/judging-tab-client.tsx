@@ -25,11 +25,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
   Table,
   TableBody,
   TableCell,
@@ -55,10 +50,10 @@ import {
   ListChecks,
   ArrowUpDown,
   Award,
-  UserMinus,
 } from "lucide-react"
 import { AddJudgeDialog } from "./add-judge-dialog"
 import { AddPrizeDialog } from "./add-prize-dialog"
+import { AssignJudgesDialog } from "./assign-judges-dialog"
 
 type PrizeData = {
   id: string
@@ -195,30 +190,20 @@ export function JudgingTabClient({
     }
   }
 
-  async function handleAssignJudge(prizeId: string, judgeParticipantId: string) {
-    try {
-      const res = await fetch(`${base}/prizes/${prizeId}/assign-judge`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ judgeParticipantId }),
-      })
-      if (!res.ok) throw new Error("Failed to assign")
-      router.refresh()
-    } catch {
-      setError("Failed to assign judge to prize")
-    }
+  async function assignJudgeToPrize(prizeId: string, judgeParticipantId: string) {
+    const res = await fetch(`${base}/prizes/${prizeId}/assign-judge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ judgeParticipantId }),
+    })
+    if (!res.ok) throw new Error("Failed to assign")
   }
 
-  async function handleUnassignJudge(prizeId: string, judgeParticipantId: string) {
-    try {
-      const res = await fetch(`${base}/prizes/${prizeId}/judges/${judgeParticipantId}`, {
-        method: "DELETE",
-      })
-      if (!res.ok) throw new Error("Failed to unassign")
-      router.refresh()
-    } catch {
-      setError("Failed to remove judge from prize")
-    }
+  async function unassignJudgeFromPrize(prizeId: string, judgeParticipantId: string) {
+    const res = await fetch(`${base}/prizes/${prizeId}/judges/${judgeParticipantId}`, {
+      method: "DELETE",
+    })
+    if (!res.ok) throw new Error("Failed to unassign")
   }
 
   async function handleCalculateResults() {
@@ -299,13 +284,15 @@ export function JudgingTabClient({
       />
 
       <PrizesSection
+        hackathonId={hackathonId}
         prizes={initialPrizes}
         judges={initialJudges}
         rounds={rounds}
         onAddPrize={() => setShowAddPrize(true)}
         onDeletePrize={handleDeletePrize}
-        onAssignJudge={handleAssignJudge}
-        onUnassignJudge={handleUnassignJudge}
+        onAssignJudge={assignJudgeToPrize}
+        onUnassignJudge={unassignJudgeFromPrize}
+        onRefresh={() => router.refresh()}
         deletingPrize={deletingPrize}
       />
 
@@ -442,6 +429,7 @@ function JudgesSection({
 }
 
 function PrizesSection({
+  hackathonId,
   prizes,
   judges,
   rounds,
@@ -449,17 +437,22 @@ function PrizesSection({
   onDeletePrize,
   onAssignJudge,
   onUnassignJudge,
+  onRefresh,
   deletingPrize,
 }: {
+  hackathonId: string
   prizes: PrizeData[]
   judges: JudgeData[]
   rounds: RoundData[]
   onAddPrize: () => void
   onDeletePrize: (id: string) => void
-  onAssignJudge: (prizeId: string, judgeParticipantId: string) => void
-  onUnassignJudge: (prizeId: string, judgeParticipantId: string) => void
+  onAssignJudge: (prizeId: string, judgeParticipantId: string) => Promise<void>
+  onUnassignJudge: (prizeId: string, judgeParticipantId: string) => Promise<void>
+  onRefresh: () => void
   deletingPrize: string | null
 }) {
+  const [assignDialogPrize, setAssignDialogPrize] = useState<{ id: string; name: string } | null>(null)
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -585,60 +578,29 @@ function PrizesSection({
                   {!isCrowdVote && (
                     <div className="flex items-center gap-2 flex-wrap">
                       {assignedJudges.map((j) => (
-                        <button
+                        <div
                           key={j.participantId}
-                          type="button"
-                          onClick={() => onUnassignJudge(prize.id, j.participantId)}
-                          className="group flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs transition-colors hover:border-destructive hover:bg-destructive/10"
+                          className="flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs"
                         >
                           <Avatar size="sm">
                             {j.imageUrl && <AvatarImage src={j.imageUrl} alt={j.displayName} />}
                             <AvatarFallback className="text-[10px]">{j.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <span className="truncate max-w-[100px]">{j.displayName}</span>
-                          <UserMinus className="size-3 text-muted-foreground group-hover:text-destructive" />
-                        </button>
+                        </div>
                       ))}
 
-                      {judges.length > 0 && (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-7 rounded-full gap-1.5">
-                              <Plus className="size-3" />
-                              <span className="hidden sm:inline">
-                                {assignedJudges.length === 0 ? "Assign Judges" : "Add"}
-                              </span>
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-56 p-1" align="start">
-                            {judges
-                              .filter((j) => !j.prizeIds.includes(prize.id))
-                              .map((judge) => (
-                                <button
-                                  key={judge.participantId}
-                                  type="button"
-                                  onClick={() => onAssignJudge(prize.id, judge.participantId)}
-                                  className="flex items-center gap-2 w-full rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-                                >
-                                  <Avatar size="sm">
-                                    {judge.imageUrl && <AvatarImage src={judge.imageUrl} alt={judge.displayName} />}
-                                    <AvatarFallback className="text-[10px]">{judge.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                                  </Avatar>
-                                  <span className="truncate">{judge.displayName}</span>
-                                </button>
-                              ))}
-                            {judges.filter((j) => !j.prizeIds.includes(prize.id)).length === 0 && (
-                              <p className="px-2 py-3 text-sm text-muted-foreground text-center">
-                                All judges assigned
-                              </p>
-                            )}
-                          </PopoverContent>
-                        </Popover>
-                      )}
-
-                      {judges.length === 0 && (
-                        <span className="text-xs text-muted-foreground">Add judges above first</span>
-                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 rounded-full gap-1.5"
+                        onClick={() => setAssignDialogPrize({ id: prize.id, name: prize.name })}
+                      >
+                        <Plus className="size-3" />
+                        <span className="hidden sm:inline">
+                          {assignedJudges.length === 0 ? "Assign Judges" : "Edit"}
+                        </span>
+                      </Button>
                     </div>
                   )}
                 </CardContent>
@@ -646,6 +608,20 @@ function PrizesSection({
             )
           })}
         </div>
+      )}
+
+      {assignDialogPrize && (
+        <AssignJudgesDialog
+          hackathonId={hackathonId}
+          prizeId={assignDialogPrize.id}
+          prizeName={assignDialogPrize.name}
+          judges={judges}
+          open={!!assignDialogPrize}
+          onOpenChange={(open) => { if (!open) setAssignDialogPrize(null) }}
+          onAssignJudge={onAssignJudge}
+          onUnassignJudge={onUnassignJudge}
+          onRefresh={onRefresh}
+        />
       )}
     </div>
   )
