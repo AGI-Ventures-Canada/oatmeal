@@ -23,11 +23,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Table,
   TableBody,
@@ -54,9 +55,7 @@ import {
   ListChecks,
   ArrowUpDown,
   Award,
-  UserCheck,
   UserMinus,
-  Check,
 } from "lucide-react"
 import { AddJudgeDialog } from "./add-judge-dialog"
 import { AddPrizeDialog } from "./add-prize-dialog"
@@ -511,134 +510,137 @@ function PrizesSection({
               ? Math.round((prize.completedAssignments / prize.totalAssignments) * 100)
               : 0
             const assignedJudges = judges.filter((j) => j.prizeIds.includes(prize.id))
+            const isCrowdVote = prize.judgingStyle === "crowd_vote"
 
             return (
               <Card key={prize.id}>
-                <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold">{prize.name}</span>
-                      {prize.value && (
-                        <Badge variant="secondary">{prize.value}</Badge>
-                      )}
-                      {style && (
-                        <Badge variant="outline" className={style.color}>
-                          <StyleIcon className="mr-1 size-3" />
-                          {style.label}
-                        </Badge>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold">{prize.name}</span>
+                        {prize.value && (
+                          <Badge variant="secondary">{prize.value}</Badge>
+                        )}
+                        {style && (
+                          <Badge variant="outline" className={style.color}>
+                            <StyleIcon className="mr-1 size-3" />
+                            {style.label}
+                          </Badge>
+                        )}
+                      </div>
+                      {prize.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">{prize.description}</p>
                       )}
                     </div>
-                    {prize.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-1">{prize.description}</p>
-                    )}
-                  </div>
 
-                  <div className="flex items-center gap-4 shrink-0">
-                    {prize.judgingStyle !== "crowd_vote" && (
-                      assignedJudges.length > 0 ? (
-                        <div className="flex items-center gap-1.5">
-                          <div className="flex -space-x-2">
-                            {assignedJudges.slice(0, 3).map((j) => (
-                              <Avatar key={j.participantId} size="sm" className="border-2 border-background">
-                                {j.imageUrl && <AvatarImage src={j.imageUrl} alt={j.displayName} />}
-                                <AvatarFallback className="text-[10px]">{j.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                              </Avatar>
-                            ))}
-                            {assignedJudges.length > 3 && (
-                              <div className="flex items-center justify-center size-6 rounded-full bg-muted border-2 border-background text-[10px] font-medium">
-                                +{assignedJudges.length - 3}
-                              </div>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground hidden sm:inline">
-                            {assignedJudges.length} judge{assignedJudges.length !== 1 ? "s" : ""}
-                          </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {prize.totalAssignments > 0 && (
+                        <div className="flex items-center gap-2 w-24">
+                          <Progress value={pct} className="h-1.5" />
+                          <span className="text-xs text-muted-foreground w-8 text-right">{pct}%</span>
                         </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No judges</span>
-                      )
-                    )}
+                      )}
 
-                    {prize.totalAssignments > 0 && (
-                      <div className="flex items-center gap-2 w-24">
-                        <Progress value={pct} className="h-1.5" />
-                        <span className="text-xs text-muted-foreground w-8 text-right">{pct}%</span>
-                      </div>
-                    )}
-
-                    <AlertDialog>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-8">
-                            <MoreHorizontal className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {judges.length > 0 && prize.judgingStyle !== "crowd_vote" && (
-                            <>
-                              <DropdownMenuSub>
-                                <DropdownMenuSubTrigger>
-                                  <UserCheck className="mr-2 size-4" />
-                                  Assign Judges
-                                </DropdownMenuSubTrigger>
-                                <DropdownMenuSubContent>
-                                  {judges.map((judge) => {
-                                    const isAssigned = judge.prizeIds.includes(prize.id)
-                                    return (
-                                      <DropdownMenuItem
-                                        key={judge.participantId}
-                                        onClick={() =>
-                                          isAssigned
-                                            ? onUnassignJudge(prize.id, judge.participantId)
-                                            : onAssignJudge(prize.id, judge.participantId)
-                                        }
-                                      >
-                                        <div className="flex items-center gap-2 w-full">
-                                          <Avatar size="sm">
-                                            {judge.imageUrl && <AvatarImage src={judge.imageUrl} alt={judge.displayName} />}
-                                            <AvatarFallback className="text-[10px]">{judge.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                                          </Avatar>
-                                          <span className="flex-1 truncate">{judge.displayName}</span>
-                                          {isAssigned && <Check className="size-4 text-primary" />}
-                                        </div>
-                                      </DropdownMenuItem>
-                                    )
-                                  })}
-                                </DropdownMenuSubContent>
-                              </DropdownMenuSub>
-                              <DropdownMenuSeparator />
-                            </>
-                          )}
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem className="text-destructive">
-                              <Trash2 className="mr-2 size-4" />
-                              Delete Prize
-                            </DropdownMenuItem>
-                          </AlertDialogTrigger>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete &ldquo;{prize.name}&rdquo;?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will delete the prize and all its judge assignments, bucket definitions, and results. This cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => onDeletePrize(prize.id)}
-                            disabled={deletingPrize === prize.id}
-                          >
-                            {deletingPrize === prize.id ? (
-                              <Loader2 className="mr-2 size-4 animate-spin" />
-                            ) : null}
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                      <AlertDialog>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem className="text-destructive">
+                                <Trash2 className="mr-2 size-4" />
+                                Delete Prize
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete &ldquo;{prize.name}&rdquo;?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will delete the prize and all its judge assignments, bucket definitions, and results. This cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => onDeletePrize(prize.id)}
+                              disabled={deletingPrize === prize.id}
+                            >
+                              {deletingPrize === prize.id ? (
+                                <Loader2 className="mr-2 size-4 animate-spin" />
+                              ) : null}
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
+
+                  {!isCrowdVote && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {assignedJudges.map((j) => (
+                        <button
+                          key={j.participantId}
+                          type="button"
+                          onClick={() => onUnassignJudge(prize.id, j.participantId)}
+                          className="group flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs transition-colors hover:border-destructive hover:bg-destructive/10"
+                        >
+                          <Avatar size="sm">
+                            {j.imageUrl && <AvatarImage src={j.imageUrl} alt={j.displayName} />}
+                            <AvatarFallback className="text-[10px]">{j.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <span className="truncate max-w-[100px]">{j.displayName}</span>
+                          <UserMinus className="size-3 text-muted-foreground group-hover:text-destructive" />
+                        </button>
+                      ))}
+
+                      {judges.length > 0 && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-7 rounded-full gap-1.5">
+                              <Plus className="size-3" />
+                              <span className="hidden sm:inline">
+                                {assignedJudges.length === 0 ? "Assign Judges" : "Add"}
+                              </span>
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 p-1" align="start">
+                            {judges
+                              .filter((j) => !j.prizeIds.includes(prize.id))
+                              .map((judge) => (
+                                <button
+                                  key={judge.participantId}
+                                  type="button"
+                                  onClick={() => onAssignJudge(prize.id, judge.participantId)}
+                                  className="flex items-center gap-2 w-full rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                                >
+                                  <Avatar size="sm">
+                                    {judge.imageUrl && <AvatarImage src={judge.imageUrl} alt={judge.displayName} />}
+                                    <AvatarFallback className="text-[10px]">{judge.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="truncate">{judge.displayName}</span>
+                                </button>
+                              ))}
+                            {judges.filter((j) => !j.prizeIds.includes(prize.id)).length === 0 && (
+                              <p className="px-2 py-3 text-sm text-muted-foreground text-center">
+                                All judges assigned
+                              </p>
+                            )}
+                          </PopoverContent>
+                        </Popover>
+                      )}
+
+                      {judges.length === 0 && (
+                        <span className="text-xs text-muted-foreground">Add judges above first</span>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )

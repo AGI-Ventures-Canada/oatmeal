@@ -215,6 +215,10 @@ export const dashboardJudgingRoutes = new Elysia()
       const { assignJudgeToPrize } = await import("@/lib/services/judging")
       const assigned = await assignJudgeToPrize(params.id, body.judgeParticipantId, params.prizeId)
 
+      if (!assigned.success) {
+        return new Response(JSON.stringify({ error: assigned.error ?? "Failed to assign judge" }), { status: 400, headers: { "Content-Type": "application/json" } })
+      }
+
       return assigned
     },
     {

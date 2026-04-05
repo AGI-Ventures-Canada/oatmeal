@@ -652,6 +652,12 @@ export async function listJudges(hackathonId: string): Promise<JudgeInfo[]> {
     .eq("hackathon_id", hackathonId)
     .in("judge_participant_id", judgeIds)
 
+  const { data: prizeLinks } = await client
+    .from("judge_prize_assignments")
+    .select("judge_participant_id, prize_id")
+    .eq("hackathon_id", hackathonId)
+    .in("judge_participant_id", judgeIds)
+
   const countMap: Record<string, { total: number; completed: number; prizeIds: Set<string> }> = {}
   for (const a of assignments ?? []) {
     if (!countMap[a.judge_participant_id]) {
@@ -660,6 +666,13 @@ export async function listJudges(hackathonId: string): Promise<JudgeInfo[]> {
     countMap[a.judge_participant_id].total++
     if (a.is_complete) countMap[a.judge_participant_id].completed++
     if (a.prize_id) countMap[a.judge_participant_id].prizeIds.add(a.prize_id)
+  }
+
+  for (const link of prizeLinks ?? []) {
+    if (!countMap[link.judge_participant_id]) {
+      countMap[link.judge_participant_id] = { total: 0, completed: 0, prizeIds: new Set() }
+    }
+    countMap[link.judge_participant_id].prizeIds.add(link.prize_id)
   }
 
   const userMap: Record<string, { displayName: string; email: string | null; imageUrl: string | null }> = {}
@@ -744,7 +757,7 @@ export async function assignJudgeToPrize(
   hackathonId: string,
   judgeParticipantId: string,
   prizeId: string
-): Promise<{ assignedCount: number }> {
+): Promise<{ success: boolean; assignedCount: number; error?: string }> {
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data: prize } = await client
@@ -754,10 +767,22 @@ export async function assignJudgeToPrize(
     .eq("hackathon_id", hackathonId)
     .single()
 
-  if (!prize) return { assignedCount: 0 }
+  if (!prize) return { success: false, assignedCount: 0, error: "Prize not found" }
+
+  const { error: linkError } = await client
+    .from("judge_prize_assignments")
+    .upsert(
+      { hackathon_id: hackathonId, judge_participant_id: judgeParticipantId, prize_id: prizeId },
+      { onConflict: "judge_participant_id,prize_id" }
+    )
+
+  if (linkError) {
+    console.error("[judging] Failed to link judge to prize:", linkError)
+    return { success: false, assignedCount: 0, error: "Failed to assign judge" }
+  }
 
   const pool = await getRoundPool(hackathonId, prize.round_id)
-  if (pool.length === 0) return { assignedCount: 0 }
+  if (pool.length === 0) return { success: true, assignedCount: 0 }
 
   const { data: judge } = await client
     .from("hackathon_participants")
@@ -789,15 +814,15 @@ export async function assignJudgeToPrize(
       round_id: prize.round_id,
     }))
 
-  if (newAssignments.length === 0) return { assignedCount: 0 }
+  if (newAssignments.length === 0) return { success: true, assignedCount: 0 }
 
   const { error } = await client.from("judge_assignments").insert(newAssignments)
   if (error) {
-    console.error("Failed to assign judge to prize:", error)
-    return { assignedCount: 0 }
+    console.error("[judging] Failed to create per-submission assignments:", error)
+    return { success: true, assignedCount: 0 }
   }
 
-  return { assignedCount: newAssignments.length }
+  return { success: true, assignedCount: newAssignments.length }
 }
 
 export async function verifyAssignmentOwnership(
@@ -822,6 +847,12 @@ export async function removeJudgeFromPrize(
   prizeId: string
 ): Promise<{ removedCount: number }> {
   const client = getSupabase() as unknown as SupabaseClient
+
+  await client
+    .from("judge_prize_assignments")
+    .delete()
+    .eq("judge_participant_id", judgeParticipantId)
+    .eq("prize_id", prizeId)
 
   const { data: toDelete } = await client
     .from("judge_assignments")
