@@ -23,6 +23,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import {
   Table,
@@ -50,6 +54,9 @@ import {
   ListChecks,
   ArrowUpDown,
   Award,
+  UserCheck,
+  UserMinus,
+  Check,
 } from "lucide-react"
 import { AddJudgeDialog } from "./add-judge-dialog"
 import { AddPrizeDialog } from "./add-prize-dialog"
@@ -169,7 +176,7 @@ export function JudgingTabClient({
   async function handleRemoveJudge(participantId: string) {
     setRemovingJudge(participantId)
     try {
-      const res = await fetch(`${base}/judging/judges?participantId=${participantId}`, { method: "DELETE" })
+      const res = await fetch(`${base}/judging/judges/${participantId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to remove")
       router.refresh()
     } catch {
@@ -181,11 +188,37 @@ export function JudgingTabClient({
 
   async function handleCancelInvitation(invitationId: string) {
     try {
-      const res = await fetch(`${base}/judging/invitations?invitationId=${invitationId}`, { method: "DELETE" })
+      const res = await fetch(`${base}/judging/invitations/${invitationId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to cancel")
       router.refresh()
     } catch {
       setError("Failed to cancel invitation")
+    }
+  }
+
+  async function handleAssignJudge(prizeId: string, judgeParticipantId: string) {
+    try {
+      const res = await fetch(`${base}/prizes/${prizeId}/assign-judge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ judgeParticipantId }),
+      })
+      if (!res.ok) throw new Error("Failed to assign")
+      router.refresh()
+    } catch {
+      setError("Failed to assign judge to prize")
+    }
+  }
+
+  async function handleUnassignJudge(prizeId: string, judgeParticipantId: string) {
+    try {
+      const res = await fetch(`${base}/prizes/${prizeId}/judges/${judgeParticipantId}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) throw new Error("Failed to unassign")
+      router.refresh()
+    } catch {
+      setError("Failed to remove judge from prize")
     }
   }
 
@@ -270,8 +303,11 @@ export function JudgingTabClient({
         prizes={initialPrizes}
         judges={initialJudges}
         rounds={rounds}
+        hackathonId={hackathonId}
         onAddPrize={() => setShowAddPrize(true)}
         onDeletePrize={handleDeletePrize}
+        onAssignJudge={handleAssignJudge}
+        onUnassignJudge={handleUnassignJudge}
         deletingPrize={deletingPrize}
       />
 
@@ -411,15 +447,21 @@ function PrizesSection({
   prizes,
   judges,
   rounds,
+  hackathonId,
   onAddPrize,
   onDeletePrize,
+  onAssignJudge,
+  onUnassignJudge,
   deletingPrize,
 }: {
   prizes: PrizeData[]
   judges: JudgeData[]
   rounds: RoundData[]
+  hackathonId: string
   onAddPrize: () => void
   onDeletePrize: (id: string) => void
+  onAssignJudge: (prizeId: string, judgeParticipantId: string) => void
+  onUnassignJudge: (prizeId: string, judgeParticipantId: string) => void
   deletingPrize: string | null
 }) {
   return (
@@ -495,20 +537,29 @@ function PrizesSection({
                   </div>
 
                   <div className="flex items-center gap-4 shrink-0">
-                    {assignedJudges.length > 0 && (
-                      <div className="flex -space-x-2">
-                        {assignedJudges.slice(0, 3).map((j) => (
-                          <Avatar key={j.participantId} size="sm" className="border-2 border-background">
-                            {j.imageUrl && <AvatarImage src={j.imageUrl} alt={j.displayName} />}
-                            <AvatarFallback className="text-[10px]">{j.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                        ))}
-                        {assignedJudges.length > 3 && (
-                          <div className="flex items-center justify-center size-6 rounded-full bg-muted border-2 border-background text-[10px] font-medium">
-                            +{assignedJudges.length - 3}
+                    {prize.judgingStyle !== "crowd_vote" && (
+                      assignedJudges.length > 0 ? (
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex -space-x-2">
+                            {assignedJudges.slice(0, 3).map((j) => (
+                              <Avatar key={j.participantId} size="sm" className="border-2 border-background">
+                                {j.imageUrl && <AvatarImage src={j.imageUrl} alt={j.displayName} />}
+                                <AvatarFallback className="text-[10px]">{j.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                            ))}
+                            {assignedJudges.length > 3 && (
+                              <div className="flex items-center justify-center size-6 rounded-full bg-muted border-2 border-background text-[10px] font-medium">
+                                +{assignedJudges.length - 3}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                          <span className="text-xs text-muted-foreground hidden sm:inline">
+                            {assignedJudges.length} judge{assignedJudges.length !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No judges</span>
+                      )
                     )}
 
                     {prize.totalAssignments > 0 && (
@@ -526,6 +577,41 @@ function PrizesSection({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {judges.length > 0 && prize.judgingStyle !== "crowd_vote" && (
+                            <>
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <UserCheck className="mr-2 size-4" />
+                                  Assign Judges
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                  {judges.map((judge) => {
+                                    const isAssigned = judge.prizeIds.includes(prize.id)
+                                    return (
+                                      <DropdownMenuItem
+                                        key={judge.participantId}
+                                        onClick={() =>
+                                          isAssigned
+                                            ? onUnassignJudge(prize.id, judge.participantId)
+                                            : onAssignJudge(prize.id, judge.participantId)
+                                        }
+                                      >
+                                        <div className="flex items-center gap-2 w-full">
+                                          <Avatar size="sm">
+                                            {judge.imageUrl && <AvatarImage src={judge.imageUrl} alt={judge.displayName} />}
+                                            <AvatarFallback className="text-[10px]">{judge.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                          </Avatar>
+                                          <span className="flex-1 truncate">{judge.displayName}</span>
+                                          {isAssigned && <Check className="size-4 text-primary" />}
+                                        </div>
+                                      </DropdownMenuItem>
+                                    )
+                                  })}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
                           <AlertDialogTrigger asChild>
                             <DropdownMenuItem className="text-destructive">
                               <Trash2 className="mr-2 size-4" />
@@ -600,14 +686,14 @@ function ResultsSection({
             <AlertDialogTrigger asChild>
               <Button size="sm" variant="outline" disabled={calculating}>
                 {calculating ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Calculator className="mr-2 size-4" />}
-                Calculate
+                Recalculate
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Recalculate Results?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will recalculate all rankings based on current scores. Previous rankings will be replaced.
+                  Rankings update automatically as judges score. Use this to force a full recalculation if results look stale.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

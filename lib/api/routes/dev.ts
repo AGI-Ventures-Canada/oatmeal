@@ -468,13 +468,13 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
       const prizeIds: string[] = []
       for (let i = 0; i < standardPrizes.length; i++) {
         const p = standardPrizes[i]
-        const prize = await createPrize(params.id, {
+        const result = await createPrize(params.id, {
           name: p.name,
           description: p.description,
           judgingStyle: p.judgingStyle,
           displayOrder: i,
         })
-        if (prize) prizeIds.push(prize.id)
+        if (result.success) prizeIds.push(result.prize.id)
       }
 
       for (const prizeId of prizeIds) {
@@ -769,13 +769,13 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
       const created: string[] = []
       for (let i = 0; i < prizes.length; i++) {
         const p = prizes[i]
-        const prize = await createPrize(params.id, {
+        const prizeResult = await createPrize(params.id, {
           name: p.name,
           description: p.description,
           judgingStyle: p.judgingStyle,
           displayOrder: i,
         })
-        if (prize) created.push(prize.id)
+        if (prizeResult.success) created.push(prizeResult.prize.id)
       }
 
       // If judging is set up, auto-assign judges to prizes

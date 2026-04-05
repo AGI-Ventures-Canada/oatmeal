@@ -106,10 +106,14 @@ export async function listPrizes(hackathonId: string): Promise<PrizeWithProgress
   }))
 }
 
+export type CreatePrizeResult =
+  | { success: true; prize: Prize }
+  | { success: false; error: string }
+
 export async function createPrize(
   hackathonId: string,
   input: CreatePrizeInput
-): Promise<Prize | null> {
+): Promise<CreatePrizeResult> {
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data: prize, error } = await client
@@ -130,14 +134,14 @@ export async function createPrize(
 
   if (error || !prize) {
     console.error("Failed to create prize:", error)
-    return null
+    return { success: false, error: error?.message ?? "Database insert failed" }
   }
 
   if (input.judgingStyle === "bucket_sort") {
     await createDefaultBucketsForPrize(prize.id)
   }
 
-  return prize as unknown as Prize
+  return { success: true, prize: prize as unknown as Prize }
 }
 
 export async function updatePrize(
@@ -1380,6 +1384,23 @@ async function insertRankedResults(
   }
 
   return { success: true, count: inserts.length }
+}
+
+// ============================================================
+// Auto-recalculate after scoring
+// ============================================================
+
+export async function recalculateForAssignment(assignmentId: string): Promise<void> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data } = await client
+    .from("judge_assignments")
+    .select("hackathon_id, prize_id")
+    .eq("id", assignmentId)
+    .single()
+
+  if (data?.hackathon_id && data?.prize_id) {
+    await calculatePrizeResults(data.hackathon_id, data.prize_id)
+  }
 }
 
 // ============================================================

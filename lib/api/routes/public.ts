@@ -1153,6 +1153,9 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         )
       }
 
+      const { calculatePrizeResults } = await import("@/lib/services/judging")
+      calculatePrizeResults(hackathon.id, typedBody.prizeId).catch(console.error)
+
       return { id: result.pick.id }
     },
     {
@@ -1204,6 +1207,9 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         { status: 404, headers: { "Content-Type": "application/json" } }
       )
     }
+
+    const { calculatePrizeResults } = await import("@/lib/services/judging")
+    calculatePrizeResults(hackathon.id, params.prizeId).catch(console.error)
 
     return { success: true }
   }, {
@@ -1299,6 +1305,9 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         )
       }
 
+      const { recalculateForAssignment } = await import("@/lib/services/judging")
+      recalculateForAssignment(params.assignmentId).catch(console.error)
+
       return { success: true }
     },
     {
@@ -1361,6 +1370,9 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
           { status: 400, headers: { "Content-Type": "application/json" } }
         )
       }
+
+      const { recalculateForAssignment } = await import("@/lib/services/judging")
+      recalculateForAssignment(params.assignmentId).catch(console.error)
 
       return { success: true }
     },

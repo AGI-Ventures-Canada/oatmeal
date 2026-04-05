@@ -50,7 +50,7 @@ export const dashboardJudgingRoutes = new Elysia()
       }
 
       const { createPrize } = await import("@/lib/services/judging")
-      const prize = await createPrize(params.id, {
+      const createResult = await createPrize(params.id, {
         name: body.name,
         description: body.description,
         value: body.value,
@@ -61,9 +61,11 @@ export const dashboardJudgingRoutes = new Elysia()
         displayOrder: body.displayOrder,
       })
 
-      if (!prize) {
-        return new Response(JSON.stringify({ error: "Failed to create prize" }), { status: 500, headers: { "Content-Type": "application/json" } })
+      if (!createResult.success) {
+        return new Response(JSON.stringify({ error: createResult.error }), { status: 500, headers: { "Content-Type": "application/json" } })
       }
+
+      const prize = createResult.prize
 
       logAudit({
         principal,
