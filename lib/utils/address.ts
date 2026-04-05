@@ -33,8 +33,8 @@ export function parseAddress(raw: string): StructuredAddress | null {
 }
 
 export function formatAddress(address: StructuredAddress): string {
-  const cityLine = [address.city, address.state].filter(Boolean).join(", ")
-  const cityPostal = [cityLine, address.postalCode].filter(Boolean).join(" ")
+  const cityLine = [address.city, address.state].filter((x) => x?.trim()).join(", ")
+  const cityPostal = [cityLine, address.postalCode].filter((x) => x?.trim()).join(" ")
   const lines = [address.street, cityPostal, address.country]
   return lines.filter(Boolean).join("\n")
 }

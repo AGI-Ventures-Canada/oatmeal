@@ -444,10 +444,17 @@ export async function claimPrize(
     updateData.payment_detail = data.paymentDetail
   }
 
-  const { error: updateError } = await client
+  let query = client
     .from("prize_fulfillments")
     .update(updateData)
     .eq("id", fulfillment.id)
+    .neq("status", "claimed")
+
+  if (fulfillment.claim_token_expires_at) {
+    query = query.gt("claim_token_expires_at", new Date().toISOString())
+  }
+
+  const { error: updateError } = await query
 
   if (updateError) {
     console.error("Failed to claim prize:", updateError)
