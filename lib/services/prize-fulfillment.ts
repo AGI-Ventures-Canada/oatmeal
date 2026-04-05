@@ -19,7 +19,7 @@ const VALID_TRANSITIONS: Record<PrizeFulfillmentStatus, PrizeFulfillmentStatus[]
   assigned: ["contacted", "shipped", "claimed"],
   contacted: ["shipped", "claimed"],
   shipped: ["claimed"],
-  claimed: [],
+  claimed: ["shipped"],
 }
 
 export async function initializeFulfillments(hackathonId: string): Promise<number> {
