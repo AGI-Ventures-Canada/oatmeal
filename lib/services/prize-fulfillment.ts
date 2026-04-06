@@ -17,6 +17,7 @@ export type FulfillmentSummary = Record<PrizeFulfillmentStatus, number>
 
 // Forward flow: assigned → contacted → claimed → shipped
 // claimed→shipped: winner claims first (fills in details), then sponsor ships/fulfills.
+// assigned→shipped: allows sponsors to mark fulfillment without a winner claim (e.g. digital codes sent directly).
 // Used by markSponsorFulfilled in sponsor-fulfillments.ts.
 const VALID_TRANSITIONS: Record<PrizeFulfillmentStatus, PrizeFulfillmentStatus[]> = {
   assigned: ["contacted", "shipped", "claimed"],

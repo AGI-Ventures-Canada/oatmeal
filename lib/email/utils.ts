@@ -42,6 +42,12 @@ export async function resolveEmailsForTenant(tenant: {
       limit: 500,
     })
 
+    if (memberships.data.length === 500) {
+      console.warn(
+        `[email] Org ${tenant.clerk_org_id} has 500+ members — notification emails will be truncated`
+      )
+    }
+
     const memberIds = memberships.data
       .map((m) => m.publicUserData?.userId)
       .filter((id): id is string => !!id)

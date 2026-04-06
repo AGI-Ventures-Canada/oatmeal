@@ -75,6 +75,7 @@ export function PrizeClaimClient({ token, claim, siblings }: PrizeClaimClientPro
   const [claimedThisSession, setClaimedThisSession] = useState<string[]>([])
   const [allDone, setAllDone] = useState(false)
 
+  // Seeded from the first claim's stored values; user edits persist across the sibling queue
   const [name, setName] = useState(claim.recipientName ?? "")
   const [email, setEmail] = useState(claim.recipientEmail ?? "")
   const existingAddress = claim.shippingAddress ? parseAddress(claim.shippingAddress) : null
