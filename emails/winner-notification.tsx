@@ -26,8 +26,6 @@ export default function WinnerNotificationEmail({
   prizes,
   primaryClaimUrl,
 }: WinnerNotificationEmailProps) {
-  const hasClaimablePrizes = !!primaryClaimUrl
-
   return (
     <OatmealLayout
       heading="Congratulations!"
@@ -91,13 +89,13 @@ export default function WinnerNotificationEmail({
         </Section>
       )}
 
-      {hasClaimablePrizes && (
+      {primaryClaimUrl && (
         <>
-          <CTAButton href={primaryClaimUrl!}>Claim Your Prize</CTAButton>
+          <CTAButton href={primaryClaimUrl}>Claim Your Prize</CTAButton>
           <Text
             style={{
               fontSize: "12px",
-              color: colors.textSecondary,
+              color: colors.textMuted,
               marginTop: "24px",
               lineHeight: "1.5",
             }}
@@ -109,7 +107,7 @@ export default function WinnerNotificationEmail({
 
       <CTAButton
         href={resultsUrl}
-        variant={hasClaimablePrizes ? "secondary" : "primary"}
+        variant={primaryClaimUrl ? "secondary" : "primary"}
       >
         View Results
       </CTAButton>

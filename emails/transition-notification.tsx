@@ -1,13 +1,8 @@
 import { Text } from "@react-email/components"
+import type { TransitionEvent } from "@/lib/db/hackathon-types"
 import { OatmealLayout } from "./_components/oatmeal-layout"
 import { InfoBox } from "./_components/info-box"
 import { CTAButton } from "./_components/cta-button"
-
-type TransitionEvent =
-  | "hackathon_started"
-  | "judging_started"
-  | "results_published"
-  | "registration_opened"
 
 interface TransitionNotificationEmailProps {
   event: TransitionEvent

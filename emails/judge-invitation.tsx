@@ -39,7 +39,7 @@ export default function JudgeInvitationEmail({
       <Text
         style={{
           fontSize: "12px",
-          color: colors.textSecondary,
+          color: colors.textMuted,
           marginTop: "24px",
           lineHeight: "1.5",
         }}

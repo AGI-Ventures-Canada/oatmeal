@@ -6,7 +6,6 @@ export const colors = {
   border: "#E7E5E4",
   infoBoxBg: "#F5F5F4",
   textPrimary: "#1C1917",
-  textSecondary: "#78716C",
   textMuted: "#78716C",
   textFooter: "#A8A29E",
   white: "#FFFFFF",
