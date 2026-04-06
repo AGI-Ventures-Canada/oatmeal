@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, mock, spyOn } from "bun:test"
 const mockGetUser = mock(() =>
   Promise.resolve({ primaryEmailAddress: { emailAddress: "solo@test.com" } })
 )
-const mockGetUserList = mock(() =>
+const mockGetUserList = mock((_params?: unknown) =>
   Promise.resolve({
     data: [{ primaryEmailAddress: { emailAddress: "user@test.com" } }],
   })
@@ -97,8 +97,8 @@ describe("resolveEmailsForTenant", () => {
       Promise.resolve({
         data: [
           { publicUserData: { userId: "user_1" } },
-          { publicUserData: null },
-          { publicUserData: { userId: undefined } },
+          { publicUserData: null as unknown as { userId: string } },
+          { publicUserData: { userId: undefined as unknown as string } },
         ],
       })
     )
@@ -131,28 +131,37 @@ describe("resolveEmailsForTenant", () => {
     expect(truncationWarns).toHaveLength(0)
   })
 
-  it("warns when membership list hits 500 limit", async () => {
-    const members = Array.from({ length: 500 }, (_, i) => ({
-      publicUserData: { userId: `user_${i}` },
-    }))
-    mockGetOrgMembers.mockImplementation(() => Promise.resolve({ data: members }))
+  it("paginates when membership list hits page size", async () => {
+    let callCount = 0
+    mockGetOrgMembers.mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return Promise.resolve({
+          data: Array.from({ length: 500 }, (_, i) => ({
+            publicUserData: { userId: `user_${i}` },
+          })),
+        })
+      }
+      return Promise.resolve({
+        data: [{ publicUserData: { userId: "user_500" } }],
+      })
+    })
 
-    const users = Array.from({ length: 500 }, (_, i) => ({
-      primaryEmailAddress: { emailAddress: `user${i}@test.com` },
-    }))
-    mockGetUserList.mockImplementation(() => Promise.resolve({ data: users }))
+    mockGetUserList.mockImplementation((params: unknown) => {
+      const { userId } = params as { userId: string[] }
+      return Promise.resolve({
+        data: userId.map((id: string) => ({
+          primaryEmailAddress: { emailAddress: `${id}@test.com` },
+        })),
+      })
+    })
 
     const emails = await resolveEmailsForTenant({
       clerk_org_id: "org_large",
       clerk_user_id: null,
     })
 
-    expect(emails).toHaveLength(500)
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("org_large has 500+ members")
-    )
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("getUserList hit 500 limit")
-    )
+    expect(emails).toHaveLength(501)
+    expect(callCount).toBe(2)
   })
 })
