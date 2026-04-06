@@ -6,7 +6,15 @@ import {
 } from "../lib/supabase-mock"
 
 mock.module("@/lib/services/encryption", () => ({
+  encryptToken: (plaintext: string) => `encrypted_${plaintext}`,
+  decryptToken: (ciphertext: string) => ciphertext.replace(/^encrypted_/, ""),
+  encryptJson: (data: Record<string, unknown>) => `encrypted_${JSON.stringify(data)}`,
+  decryptJson: (ciphertext: string) => JSON.parse(ciphertext.replace(/^encrypted_/, "")),
+  generateWebhookSecret: () => "mock-webhook-secret",
+  generateToken: () => "mock-token",
+  signWebhookPayload: (_secret: string, payload: string) => `sig_${payload}`,
   safeDecrypt: (value: string) => value,
+  verifyWebhookSignature: () => true,
 }))
 
 const { listSponsorFulfillments, markSponsorFulfilled } = await import("@/lib/services/sponsor-fulfillments")
