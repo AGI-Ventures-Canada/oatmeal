@@ -35,7 +35,7 @@ export function buildOrganizerFulfillmentReminderContent(
     heading: "Prizes Awaiting Fulfillment",
     body: `you have ${unfulfilledCount} prize${unfulfilledCount === 1 ? "" : "s"} still awaiting fulfillment for ${hackathonName}. Keep your winners happy by completing prize delivery.`,
     ctaLabel: "Manage Fulfillment",
-    ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL}/e/${hackathonSlug}/manage?tab=prizes&ptab=fulfillment`,
+    ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL}/e/${hackathonSlug}/manage?tab=post-event`,
   }
 }
 
@@ -60,7 +60,7 @@ export function buildWinnerUnresponsiveContent(
     heading: "Winners Need Follow-Up",
     body: `${unclaimedCount} prize winner${unclaimedCount === 1 ? " has" : "s have"} not claimed ${unclaimedCount === 1 ? "a" : "their"} prize${unclaimedCount === 1 ? "" : "s"} after 10 days: ${unclaimedDetails}. Consider reaching out directly or reassigning.`,
     ctaLabel: "Review Fulfillment",
-    ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL}/e/${hackathonSlug}/manage?tab=prizes&ptab=fulfillment`,
+    ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL}/e/${hackathonSlug}/manage?tab=post-event`,
   }
 }
 

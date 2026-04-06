@@ -56,7 +56,7 @@ export async function sendOrganizerClaimNotification(params: {
           Their contact and delivery details are now available in the fulfillment tracker.
         </p>
 
-        ${process.env.NEXT_PUBLIC_APP_URL ? `<a href="${process.env.NEXT_PUBLIC_APP_URL}/e/${escapeHtml(hackathonSlug)}/manage?tab=prizes&ptab=fulfillment" style="display: inline-block; background: #18181b; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">View Fulfillment Tracker</a>` : ""}
+        ${process.env.NEXT_PUBLIC_APP_URL ? `<a href="${process.env.NEXT_PUBLIC_APP_URL}/e/${escapeHtml(hackathonSlug)}/manage?tab=post-event" style="display: inline-block; background: #18181b; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">View Fulfillment Tracker</a>` : ""}
 
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
 
@@ -72,7 +72,7 @@ export async function sendOrganizerClaimNotification(params: {
 
 ${winnerName} has claimed the ${prizeName} prize from ${hackathonName}.
 
-Their contact and delivery details are now available in the fulfillment tracker.${process.env.NEXT_PUBLIC_APP_URL ? `\n\nView fulfillment tracker: ${process.env.NEXT_PUBLIC_APP_URL}/e/${hackathonSlug}/manage?tab=prizes&ptab=fulfillment` : ""}
+Their contact and delivery details are now available in the fulfillment tracker.${process.env.NEXT_PUBLIC_APP_URL ? `\n\nView fulfillment tracker: ${process.env.NEXT_PUBLIC_APP_URL}/e/${hackathonSlug}/manage?tab=post-event` : ""}
 
 You're receiving this because you organize ${hackathonName}.`.trim()
 

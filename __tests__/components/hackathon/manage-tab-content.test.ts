@@ -31,32 +31,8 @@ mock.module("@/lib/services/prizes", () => ({
   listPrizeAssignments: mock(() => Promise.resolve([])),
 }))
 
-const mockListFulfillments = mock(() => Promise.resolve([]))
-const mockGetFulfillmentSummary = mock(() =>
-  Promise.resolve({ total: 0, pending: 0, contacted: 0, shipped: 0, claimed: 0 })
-)
-
-mock.module("@/lib/services/prize-fulfillment", () => ({
-  listFulfillments: mockListFulfillments,
-  getFulfillmentSummary: mockGetFulfillmentSummary,
-}))
-
-const mockListReminders = mock(() => Promise.resolve([]))
-
-mock.module("@/lib/services/post-event-reminders", () => ({
-  listReminders: mockListReminders,
-}))
-
 mock.module("@/components/hackathon/judging/judging-tab-client", () => ({
   JudgingTabClient: (props: Record<string, unknown>) => props,
-}))
-
-mock.module("@/components/hackathon/prizes/prize-fulfillment-tracker", () => ({
-  PrizeFulfillmentTracker: () => null,
-}))
-
-mock.module("@/components/hackathon/post-event-panel", () => ({
-  PostEventPanel: () => null,
 }))
 
 const { JudgingTabContent } = await import(
@@ -67,14 +43,11 @@ const baseProps = {
   hackathonId: "11111111-1111-1111-1111-111111111111",
   submissions: [],
   resultsPublishedAt: null,
-  incompleteAssignments: 0,
-  feedbackSurveySentAt: null,
-  feedbackSurveyUrl: null,
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getJudgingClientProps(element: any): Record<string, unknown> {
-  return element.props.children[0].props
+  return element.props
 }
 
 describe("JudgingTabContent", () => {
@@ -85,9 +58,6 @@ describe("JudgingTabContent", () => {
     mockListRounds.mockClear()
     mockListJudgeInvitations.mockClear()
     mockGetResults.mockClear()
-    mockListFulfillments.mockClear()
-    mockGetFulfillmentSummary.mockClear()
-    mockListReminders.mockClear()
   })
 
   it("fetches all data for the given hackathonId", async () => {
