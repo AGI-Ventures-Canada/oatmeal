@@ -1,5 +1,6 @@
 import { sendEmail } from "./resend"
-import { escapeHtml, resolveEmailsForTenant } from "./utils"
+import { renderEmail, sanitizeTag, resolveEmailsForTenant } from "./utils"
+import OrganizerClaimNotificationEmail from "@/emails/organizer-claim-notification"
 
 export async function sendOrganizerClaimNotification(params: {
   prizeName: string
@@ -35,50 +36,20 @@ export async function sendOrganizerClaimNotification(params: {
     return 0
   }
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: #18181b; padding: 32px; border-radius: 12px 12px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Prize Claimed</h1>
-      </div>
+  const fulfillmentUrl = process.env.NEXT_PUBLIC_APP_URL
+    ? `${process.env.NEXT_PUBLIC_APP_URL}/e/${hackathonSlug}/manage?tab=post-event`
+    : null
 
-      <div style="background: #ffffff; padding: 32px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-        <p style="font-size: 16px; margin-bottom: 16px;">
-          <strong>${escapeHtml(winnerName)}</strong> has claimed the <strong>${escapeHtml(prizeName)}</strong> prize from ${escapeHtml(hackathonName)}.
-        </p>
+  const { html, text } = await renderEmail(
+    OrganizerClaimNotificationEmail({
+      winnerName,
+      prizeName,
+      hackathonName,
+      fulfillmentUrl,
+    })
+  )
 
-        <p style="font-size: 14px; color: #6b7280; margin-bottom: 24px;">
-          Their contact and delivery details are now available in the fulfillment tracker.
-        </p>
-
-        ${process.env.NEXT_PUBLIC_APP_URL ? `<a href="${process.env.NEXT_PUBLIC_APP_URL}/e/${escapeHtml(hackathonSlug)}/manage?tab=post-event" style="display: inline-block; background: #18181b; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">View Fulfillment Tracker</a>` : ""}
-
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-
-        <p style="font-size: 12px; color: #9ca3af; margin: 0;">
-          You're receiving this because you organize ${escapeHtml(hackathonName)}.
-        </p>
-      </div>
-    </body>
-    </html>
-  `
-
-  const text = `Prize Claimed
-
-${winnerName} has claimed the ${prizeName} prize from ${hackathonName}.
-
-Their contact and delivery details are now available in the fulfillment tracker.${process.env.NEXT_PUBLIC_APP_URL ? `\n\nView fulfillment tracker: ${process.env.NEXT_PUBLIC_APP_URL}/e/${hackathonSlug}/manage?tab=post-event` : ""}
-
-You're receiving this because you organize ${hackathonName}.`.trim()
-
-  const sanitizedTag = hackathonName
-    .replace(/[^a-zA-Z0-9_-]/g, "_")
-    .slice(0, 100)
+  const tag = sanitizeTag(hackathonName)
 
   let sent = 0
   for (const email of emails) {
@@ -89,7 +60,7 @@ You're receiving this because you organize ${hackathonName}.`.trim()
       text,
       tags: [
         { name: "type", value: "organizer_claim_notification" },
-        { name: "hackathon", value: sanitizedTag },
+        { name: "hackathon", value: tag },
       ],
     })
     if (result) sent++

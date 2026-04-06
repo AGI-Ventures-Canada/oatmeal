@@ -11,6 +11,11 @@ mock.module("@/lib/email/resend", () => ({
 const mockGetUser = mock(() =>
   Promise.resolve({ primaryEmailAddress: { emailAddress: "org@test.com" } })
 )
+const mockGetUserList = mock(() =>
+  Promise.resolve({
+    data: [{ primaryEmailAddress: { emailAddress: "org@test.com" } }],
+  })
+)
 const mockGetOrgMembers = mock(() =>
   Promise.resolve({
     data: [{ publicUserData: { userId: "user_1" } }],
@@ -20,7 +25,7 @@ const mockGetOrgMembers = mock(() =>
 mock.module("@clerk/nextjs/server", () => ({
   clerkClient: () =>
     Promise.resolve({
-      users: { getUser: mockGetUser },
+      users: { getUser: mockGetUser, getUserList: mockGetUserList },
       organizations: { getOrganizationMembershipList: mockGetOrgMembers },
     }),
 }))
@@ -44,6 +49,7 @@ describe("sendOrganizerClaimNotification", () => {
   beforeEach(() => {
     mockSendEmail.mockClear()
     mockGetUser.mockClear()
+    mockGetUserList.mockClear()
     mockGetOrgMembers.mockClear()
     mockFrom.mockClear()
     mockSelect.mockClear()
@@ -68,6 +74,7 @@ describe("sendOrganizerClaimNotification", () => {
     const sent = await sendOrganizerClaimNotification({
       prizeName: "Best Demo",
       hackathonName: "Test Hackathon",
+      hackathonSlug: "test-hackathon",
       winnerName: "Alice",
       hackathonId: "hack_1",
     })
@@ -101,6 +108,7 @@ describe("sendOrganizerClaimNotification", () => {
     const sent = await sendOrganizerClaimNotification({
       prizeName: "Top Prize",
       hackathonName: "Solo Hack",
+      hackathonSlug: "solo-hack",
       winnerName: "Bob",
       hackathonId: "hack_2",
     })
@@ -118,6 +126,7 @@ describe("sendOrganizerClaimNotification", () => {
     const sent = await sendOrganizerClaimNotification({
       prizeName: "Prize",
       hackathonName: "Hack",
+      hackathonSlug: "hack",
       winnerName: "Nobody",
       hackathonId: "missing",
     })
@@ -144,6 +153,7 @@ describe("sendOrganizerClaimNotification", () => {
     const sent = await sendOrganizerClaimNotification({
       prizeName: "Prize",
       hackathonName: "Hack",
+      hackathonSlug: "hack",
       winnerName: "Alice",
       hackathonId: "hack_1",
     })
@@ -167,6 +177,7 @@ describe("sendOrganizerClaimNotification", () => {
     await sendOrganizerClaimNotification({
       prizeName: "Prize",
       hackathonName: "My Hack!@#",
+      hackathonSlug: "my-hack",
       winnerName: "Alice",
       hackathonId: "hack_1",
     })
@@ -177,6 +188,6 @@ describe("sendOrganizerClaimNotification", () => {
       name: "type",
       value: "organizer_claim_notification",
     })
-    expect(tags.find((t) => t.name === "hackathon")?.value).toBe("My_Hack___")
+    expect(tags.find((t) => t.name === "hackathon")?.value).toBe("My_Hack_")
   })
 })

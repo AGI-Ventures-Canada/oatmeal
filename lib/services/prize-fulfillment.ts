@@ -319,6 +319,9 @@ export type SiblingClaim = {
  * Public projection of SiblingClaim for client-side use.
  * `recipientName` is intentionally kept — siblings are teammates who claimed
  * prizes for the same submission, so names are not sensitive in this context.
+ * Any teammate opening a prize link can see names entered by other teammates;
+ * this is acceptable because the claim page is scoped to a single submission's
+ * team and names are already visible on the public results page.
  * `recipientEmail` and `shippingAddress` are stripped as PII.
  *
  * `token` is intentionally kept — it enables the multi-prize claim queue
@@ -416,7 +419,14 @@ export async function claimPrize(
       id, status, hackathon_id, prize_assignment_id, claim_token_expires_at,
       recipient_email,
       prize_assignment:prize_assignments!prize_assignment_id(
-        prize:prizes!prize_id(kind)
+        prize:prizes!prize_id(
+          name, kind,
+          prize_track:prize_tracks!prize_track_id(
+            sponsor:hackathon_sponsors!sponsor_id(
+              sponsor_tenant_id
+            )
+          )
+        )
       )
     `)
     .eq("claim_token", token)
@@ -430,14 +440,26 @@ export async function claimPrize(
     return { success: false, error: "This claim link has expired. Contact the organizer for a new one.", code: "expired" }
   }
 
+  type ClaimPrizeAssignment = {
+    prize: {
+      name: string
+      kind: string
+      prize_track: { sponsor: { sponsor_tenant_id: string | null } } | null
+    }
+  }
+  const pa = (fulfillment as Record<string, unknown>).prize_assignment as ClaimPrizeAssignment | null
+
   if (fulfillment.status === "claimed") {
-    const pa = (fulfillment as Record<string, unknown>).prize_assignment as
-      { prize: { kind: string } } | null
     const isCash = pa?.prize?.kind === "cash"
-    if (isCash && fulfillment.recipient_email && fulfillment.recipient_email !== data.recipientEmail) {
+
+    if (!isCash) {
+      return { success: false, error: "This prize has already been claimed", code: "already_claimed" }
+    }
+    if (fulfillment.recipient_email && fulfillment.recipient_email !== data.recipientEmail) {
       return { success: false, error: "This cash prize has already been claimed by another recipient", code: "already_claimed" }
     }
-    return { success: false, error: "This prize has already been claimed", code: "already_claimed" }
+
+    return updateCashPrizePayment(fulfillment.id, data, client)
   }
 
   const now = new Date().toISOString()
@@ -491,94 +513,100 @@ export async function claimPrize(
     return { success: false, error: "This prize has already been claimed", code: "already_claimed" }
   }
 
-  void notifySponsorOnClaim(fulfillment.prize_assignment_id, fulfillment.hackathon_id, data.recipientName, client).catch(console.error)
-  void notifyOrganizerOnClaim(fulfillment.prize_assignment_id, fulfillment.hackathon_id, data.recipientName, client).catch(console.error)
+  void sendClaimNotifications({
+    prizeName: pa?.prize?.name ?? "Prize",
+    sponsorTenantId: pa?.prize?.prize_track?.sponsor?.sponsor_tenant_id ?? null,
+    winnerName: data.recipientName,
+    hackathonId: fulfillment.hackathon_id,
+    client,
+  }).catch(console.error)
 
   return { success: true }
 }
 
-async function notifySponsorOnClaim(
-  prizeAssignmentId: string,
-  hackathonId: string,
-  winnerName: string,
+async function updateCashPrizePayment(
+  fulfillmentId: string,
+  data: {
+    recipientName: string
+    paymentMethod?: string
+    paymentDetail?: string
+  },
   client: SupabaseClient<Database>
-): Promise<void> {
-  const { data: assignment } = await client
-    .from("prize_assignments")
-    .select("prize:prizes!prize_id(name, prize_track_id)")
-    .eq("id", prizeAssignmentId)
-    .single()
+): Promise<ClaimPrizeResult> {
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+    recipient_name: data.recipientName,
+  }
 
-  if (!assignment) return
+  const hasPaymentMethod = !!data.paymentMethod
+  const hasPaymentDetail = !!data.paymentDetail
+  if (hasPaymentMethod !== hasPaymentDetail) {
+    return { success: false, error: "Payment method and payment detail must both be provided", code: "invalid_payment" }
+  }
 
-  const pa = assignment as unknown as { prize: { name: string; prize_track_id: string | null } }
-  if (!pa.prize.prize_track_id) return
+  if (data.paymentMethod) {
+    updateData.payment_method = data.paymentMethod
+  }
+  if (data.paymentDetail) {
+    try {
+      const { encryptToken } = await import("@/lib/services/encryption")
+      updateData.payment_detail = encryptToken(data.paymentDetail)
+    } catch (err) {
+      console.error("[claimPrize] Failed to encrypt payment_detail:", err)
+      return { success: false, error: "Unable to securely store payment details. Please try again.", code: "encryption_failed" }
+    }
+  }
 
-  const { data: track } = await client
-    .from("prize_tracks")
-    .select("sponsor_id")
-    .eq("id", pa.prize.prize_track_id)
-    .single()
+  const { error: updateError } = await client
+    .from("prize_fulfillments")
+    .update(updateData)
+    .eq("id", fulfillmentId)
 
-  if (!track?.sponsor_id) return
+  if (updateError) {
+    console.error("Failed to update cash prize claim:", updateError)
+    return { success: false, error: "Failed to update claim details", code: "update_failed" }
+  }
 
-  const { data: sponsor } = await client
-    .from("hackathon_sponsors")
-    .select("sponsor_tenant_id")
-    .eq("id", track.sponsor_id)
-    .single()
-
-  if (!sponsor?.sponsor_tenant_id) return
-
-  const { data: hackathon } = await client
-    .from("hackathons")
-    .select("name")
-    .eq("id", hackathonId)
-    .single()
-
-  if (!hackathon) return
-
-  const { sendSponsorClaimNotification } = await import("@/lib/email/sponsor-notifications")
-  await sendSponsorClaimNotification({
-    prizeName: pa.prize.name,
-    hackathonName: hackathon.name,
-    winnerName,
-    sponsorTenantId: sponsor.sponsor_tenant_id,
-  })
+  return { success: true }
 }
 
-async function notifyOrganizerOnClaim(
-  prizeAssignmentId: string,
-  hackathonId: string,
-  winnerName: string,
+async function sendClaimNotifications(params: {
+  prizeName: string
+  sponsorTenantId: string | null
+  winnerName: string
+  hackathonId: string
   client: SupabaseClient<Database>
-): Promise<void> {
-  const { data: assignment } = await client
-    .from("prize_assignments")
-    .select("prize:prizes!prize_id(name)")
-    .eq("id", prizeAssignmentId)
-    .single()
-
-  if (!assignment) return
-
-  const pa = assignment as unknown as { prize: { name: string } }
-
-  const { data: hackathon } = await client
+}): Promise<void> {
+  const { data: hackathon } = await params.client
     .from("hackathons")
     .select("name, slug")
-    .eq("id", hackathonId)
+    .eq("id", params.hackathonId)
     .single()
 
   if (!hackathon) return
 
+  const promises: Promise<unknown>[] = []
+
+  if (params.sponsorTenantId) {
+    const { sendSponsorClaimNotification } = await import("@/lib/email/sponsor-notifications")
+    promises.push(sendSponsorClaimNotification({
+      prizeName: params.prizeName,
+      hackathonName: hackathon.name,
+      winnerName: params.winnerName,
+      sponsorTenantId: params.sponsorTenantId,
+    }))
+  }
+
   const { sendOrganizerClaimNotification } = await import("@/lib/email/organizer-notifications")
-  await sendOrganizerClaimNotification({
-    prizeName: pa.prize.name,
+  promises.push(sendOrganizerClaimNotification({
+    prizeName: params.prizeName,
     hackathonName: hackathon.name,
     hackathonSlug: hackathon.slug,
-    winnerName,
-    hackathonId,
-  })
+    winnerName: params.winnerName,
+    hackathonId: params.hackathonId,
+  }))
+
+  await Promise.allSettled(promises)
 }
 
 export async function getClaimTokensForHackathon(
