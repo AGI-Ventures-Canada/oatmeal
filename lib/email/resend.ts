@@ -1,4 +1,6 @@
 import { Resend } from "resend"
+import { renderEmail } from "./utils"
+import AgentNotificationEmail from "@/emails/agent-notification"
 
 let resendClient: Resend | null = null
 
@@ -169,9 +171,6 @@ export async function sendAgentNotification(
   type: AgentNotificationType,
   details?: { output?: string; error?: string }
 ): Promise<SendEmailResult | null> {
-  const { renderEmail } = await import("./utils")
-  const { default: AgentNotificationEmail } = await import("@/emails/agent-notification")
-
   const subjects: Record<AgentNotificationType, string> = {
     started: `Agent "${agentName}" has started`,
     completed: `Agent "${agentName}" completed successfully`,
