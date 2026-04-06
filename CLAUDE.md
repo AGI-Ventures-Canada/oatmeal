@@ -526,7 +526,7 @@ it("includes the accept URL", async () => {
 })
 ```
 
-**Email tests must run separately** (`bun test:email`) — they use `mock.module` at the email layer which conflicts with other test suites.
+**Email integration tests must run separately** (`bun test:email`) — they use `mock.module` at the email layer which conflicts with other test suites. Template smoke tests (`__tests__/lib/email-templates.test.ts`) have no mock conflicts and also run as part of `bun run test`.
 
 ## Git Workflow
 
