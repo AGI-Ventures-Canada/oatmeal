@@ -169,7 +169,7 @@ export async function sendAgentNotification(
   type: AgentNotificationType,
   details?: { output?: string; error?: string }
 ): Promise<SendEmailResult | null> {
-  const { render } = await import("@react-email/components")
+  const { renderEmail } = await import("./utils")
   const { default: AgentNotificationEmail } = await import("@/emails/agent-notification")
 
   const subjects: Record<AgentNotificationType, string> = {
@@ -178,7 +178,7 @@ export async function sendAgentNotification(
     failed: `Agent "${agentName}" failed`,
   }
 
-  const html = await render(
+  const { html, text } = await renderEmail(
     AgentNotificationEmail({
       agentName,
       runId,
@@ -192,5 +192,6 @@ export async function sendAgentNotification(
     to: email,
     subject: subjects[type],
     html,
+    text,
   })
 }

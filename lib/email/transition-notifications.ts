@@ -1,5 +1,4 @@
-import { render } from "@react-email/components"
-import { sanitizeTag } from "./utils"
+import { sanitizeTag, renderEmail } from "./utils"
 import type { TransitionEvent } from "@/lib/db/hackathon-types"
 import TransitionNotificationEmail from "@/emails/transition-notification"
 
@@ -26,12 +25,8 @@ export async function buildTransitionEmail(
   const eventUrl = `${appUrl}/e/${hackathonSlug}`
   const tag = sanitizeTag(hackathonName)
 
-  const html = await render(
+  const { html, text } = await renderEmail(
     TransitionNotificationEmail({ event, hackathonName, eventUrl })
-  )
-  const text = await render(
-    TransitionNotificationEmail({ event, hackathonName, eventUrl }),
-    { plainText: true }
   )
 
   return { subject: subjectMap[event](hackathonName), html, text, tag }

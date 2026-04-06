@@ -1,6 +1,5 @@
-import { render } from "@react-email/components"
 import { sendEmail } from "./resend"
-import { sanitizeTag } from "./utils"
+import { sanitizeTag, renderEmail } from "./utils"
 import TeamInvitationEmail from "@/emails/team-invitation"
 
 export type SendTeamInvitationInput = {
@@ -28,7 +27,7 @@ export async function sendTeamInvitationEmail(
     day: "numeric",
   })
 
-  const html = await render(
+  const { html, text } = await renderEmail(
     TeamInvitationEmail({
       inviterName: input.inviterName,
       teamName: input.teamName,
@@ -36,16 +35,6 @@ export async function sendTeamInvitationEmail(
       acceptUrl,
       expiresDate,
     })
-  )
-  const text = await render(
-    TeamInvitationEmail({
-      inviterName: input.inviterName,
-      teamName: input.teamName,
-      hackathonName: input.hackathonName,
-      acceptUrl,
-      expiresDate,
-    }),
-    { plainText: true }
   )
 
   const result = await sendEmail({

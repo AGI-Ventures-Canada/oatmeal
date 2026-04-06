@@ -1,6 +1,5 @@
-import { render } from "@react-email/components"
 import { sendEmail } from "./resend"
-import { sanitizeTag } from "./utils"
+import { sanitizeTag, renderEmail } from "./utils"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { clerkClient } from "@clerk/nextjs/server"
@@ -162,7 +161,7 @@ export async function sendWinnerEmails(hackathonId: string): Promise<number> {
         const firstClaimToken = (prizeMap[info.submissionId] ?? []).find((p) => p.claimToken)?.claimToken
         const primaryClaimUrl = firstClaimToken ? `${baseUrl}/prizes/claim/${firstClaimToken}` : null
 
-        const html = await render(
+        const { html, text } = await renderEmail(
           WinnerNotificationEmail({
             submissionTitle: info.title,
             rank: ordinal(info.rank),
@@ -171,17 +170,6 @@ export async function sendWinnerEmails(hackathonId: string): Promise<number> {
             prizes,
             primaryClaimUrl,
           })
-        )
-        const text = await render(
-          WinnerNotificationEmail({
-            submissionTitle: info.title,
-            rank: ordinal(info.rank),
-            hackathonName: hackathon.name,
-            resultsUrl,
-            prizes,
-            primaryClaimUrl,
-          }),
-          { plainText: true }
         )
 
         return sendEmail({

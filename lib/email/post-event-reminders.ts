@@ -1,6 +1,5 @@
-import { render } from "@react-email/components"
 import { sendEmail } from "./resend"
-import { sanitizeTag } from "./utils"
+import { sanitizeTag, renderEmail } from "./utils"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { clerkClient } from "@clerk/nextjs/server"
@@ -136,7 +135,7 @@ export async function sendReminderEmails(
 
       const content = contentBuilder(displayName, email)
 
-      const html = await render(
+      const { html, text } = await renderEmail(
         PostEventReminderEmail({
           heading: content.heading,
           participantName: displayName,
@@ -145,17 +144,6 @@ export async function sendReminderEmails(
           ctaUrl: content.ctaUrl,
           hackathonName: hackathon.name,
         })
-      )
-      const text = await render(
-        PostEventReminderEmail({
-          heading: content.heading,
-          participantName: displayName,
-          body: content.body,
-          ctaLabel: content.ctaLabel,
-          ctaUrl: content.ctaUrl,
-          hackathonName: hackathon.name,
-        }),
-        { plainText: true }
       )
 
       const result = await sendEmail({

@@ -1,6 +1,5 @@
-import { render } from "@react-email/components"
 import { sendEmail } from "./resend"
-import { sanitizeTag } from "./utils"
+import { sanitizeTag, renderEmail } from "./utils"
 import JudgeAddedEmail from "@/emails/judge-added"
 import JudgeInvitationEmail from "@/emails/judge-invitation"
 
@@ -29,20 +28,12 @@ export async function sendJudgeAddedNotification(
 
   const eventUrl = `${process.env.NEXT_PUBLIC_APP_URL}/e/${input.hackathonSlug}`
 
-  const html = await render(
+  const { html, text } = await renderEmail(
     JudgeAddedEmail({
       addedByName: input.addedByName,
       hackathonName: input.hackathonName,
       eventUrl,
     })
-  )
-  const text = await render(
-    JudgeAddedEmail({
-      addedByName: input.addedByName,
-      hackathonName: input.hackathonName,
-      eventUrl,
-    }),
-    { plainText: true }
   )
 
   const result = await sendEmail({
@@ -75,22 +66,13 @@ export async function sendJudgeInvitationEmail(
     day: "numeric",
   })
 
-  const html = await render(
+  const { html, text } = await renderEmail(
     JudgeInvitationEmail({
       inviterName: input.inviterName,
       hackathonName: input.hackathonName,
       acceptUrl,
       expiresDate,
     })
-  )
-  const text = await render(
-    JudgeInvitationEmail({
-      inviterName: input.inviterName,
-      hackathonName: input.hackathonName,
-      acceptUrl,
-      expiresDate,
-    }),
-    { plainText: true }
   )
 
   const result = await sendEmail({

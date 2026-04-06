@@ -1,6 +1,5 @@
-import { render } from "@react-email/components"
 import { sendEmail } from "./resend"
-import { sanitizeTag } from "./utils"
+import { sanitizeTag, renderEmail } from "./utils"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { clerkClient } from "@clerk/nextjs/server"
@@ -85,20 +84,12 @@ export async function sendResultsAnnouncementEmails(hackathonId: string): Promis
         ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
         : user.username || email.split("@")[0]
 
-      const html = await render(
+      const { html, text } = await renderEmail(
         ResultsAnnouncementEmail({
           participantName: displayName,
           hackathonName: hackathon.name,
           resultsUrl,
         })
-      )
-      const text = await render(
-        ResultsAnnouncementEmail({
-          participantName: displayName,
-          hackathonName: hackathon.name,
-          resultsUrl,
-        }),
-        { plainText: true }
       )
 
       return sendEmail({
