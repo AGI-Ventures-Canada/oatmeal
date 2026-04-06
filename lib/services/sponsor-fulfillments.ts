@@ -18,8 +18,6 @@ export type SponsorFulfillmentView = {
   claimedAt: string | null
 }
 
-// 5 sequential queries: sponsor → tracks → prizes → assignments → fulfillments.
-// Each step filters by the previous result's IDs, so they can't be parallelized.
 export async function listSponsorFulfillments(
   tenantId: string,
   hackathonId: string
@@ -37,30 +35,17 @@ export async function listSponsorFulfillments(
 
   const { data: tracks } = await client
     .from("prize_tracks")
-    .select("id")
+    .select("prizes(prize_assignments(id))")
     .eq("sponsor_id", sponsor.id)
 
   if (!tracks || tracks.length === 0) return []
 
-  const trackIds = tracks.map((t) => t.id)
+  const assignmentIds = (tracks as Array<{ prizes: Array<{ prize_assignments: Array<{ id: string }> }> }>)
+    .flatMap((t) => t.prizes)
+    .flatMap((p) => p.prize_assignments)
+    .map((a) => a.id)
 
-  const { data: prizes } = await client
-    .from("prizes")
-    .select("id")
-    .in("prize_track_id", trackIds)
-
-  if (!prizes || prizes.length === 0) return []
-
-  const prizeIds = prizes.map((p) => p.id)
-
-  const { data: assignments } = await client
-    .from("prize_assignments")
-    .select("id")
-    .in("prize_id", prizeIds)
-
-  if (!assignments || assignments.length === 0) return []
-
-  const assignmentIds = assignments.map((a) => a.id)
+  if (assignmentIds.length === 0) return []
 
   const { data: fulfillments, error } = await client
     .from("prize_fulfillments")

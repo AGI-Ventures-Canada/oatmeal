@@ -952,6 +952,15 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     },
   })
   .post("/prize-claims/:token/claim", async ({ params, body }) => {
+    const { checkRateLimit, RateLimitError } = await import("@/lib/services/rate-limit")
+    const rateLimit = await checkRateLimit(`prize_claim:${params.token}`, {
+      maxRequests: 10,
+      windowMs: 60_000,
+    })
+    if (!rateLimit.allowed) {
+      throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
+    }
+
     const { recipientName, recipientEmail, shippingAddress, paymentMethod, paymentDetail } = body as {
       recipientName: string
       recipientEmail: string

@@ -11,7 +11,7 @@ export async function sendOrganizerClaimNotification(params: {
 }): Promise<number> {
   const { prizeName, hackathonName, hackathonSlug, winnerName, hackathonId } = params
   const { supabase: getSupabase } = await import("@/lib/db/client")
-  const client = (getSupabase as () => import("@supabase/supabase-js").SupabaseClient)()
+  const client = getSupabase()
 
   const { data: hackathon } = await client
     .from("hackathons")

@@ -56,7 +56,7 @@ describe("Sponsor Fulfillments Service", () => {
           return createChainableMock({ data: { id: "sponsor-1" }, error: null })
         }
         if (callCount === 2) {
-          return createChainableMock({ data: [{ id: "track-1" }], error: null })
+          return createChainableMock({ data: [{ prizes: [] }], error: null })
         }
         return createChainableMock({ data: [], error: null })
       })
@@ -73,15 +73,12 @@ describe("Sponsor Fulfillments Service", () => {
           return createChainableMock({ data: { id: "sponsor-1" }, error: null })
         }
         if (callCount === 2) {
-          return createChainableMock({ data: [{ id: "track-1" }], error: null })
+          return createChainableMock({
+            data: [{ prizes: [{ prize_assignments: [{ id: "assign-1" }] }] }],
+            error: null,
+          })
         }
         if (callCount === 3) {
-          return createChainableMock({ data: [{ id: "prize-1" }], error: null })
-        }
-        if (callCount === 4) {
-          return createChainableMock({ data: [{ id: "assign-1" }], error: null })
-        }
-        if (callCount === 5) {
           return createChainableMock({
             data: [
               {

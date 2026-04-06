@@ -557,14 +557,20 @@ async function updateCashPrizePayment(
     }
   }
 
-  const { error: updateError } = await client
+  const { data: updated, error: updateError } = await client
     .from("prize_fulfillments")
     .update(updateData)
     .eq("id", fulfillmentId)
+    .eq("status", "claimed")
+    .select("id")
 
   if (updateError) {
     console.error("Failed to update cash prize claim:", updateError)
     return { success: false, error: "Failed to update claim details", code: "update_failed" }
+  }
+
+  if (!updated || updated.length === 0) {
+    return { success: false, error: "This prize has already been claimed", code: "already_claimed" }
   }
 
   return { success: true }
