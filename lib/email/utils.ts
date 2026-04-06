@@ -54,6 +54,11 @@ export async function resolveEmailsForTenant(tenant: {
 
     if (memberIds.length > 0) {
       const users = await clerk.users.getUserList({ userId: memberIds, limit: 500 })
+      if (users.data.length === 500) {
+        console.warn(
+          `[email] Org ${tenant.clerk_org_id} getUserList hit 500 limit — some user emails may be missing`
+        )
+      }
       for (const user of users.data) {
         const email = user.primaryEmailAddress?.emailAddress
         if (email) emails.push(email)

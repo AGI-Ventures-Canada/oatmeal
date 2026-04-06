@@ -23,7 +23,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { parseAddress, formatAddress } from "@/lib/utils/address"
-import { Package, Check, Clock, Mail } from "lucide-react"
+import { Package, Check, Clock, Mail, Eye, EyeOff } from "lucide-react"
 import type { PrizeFulfillmentStatus } from "@/lib/db/hackathon-types"
 
 type SponsorFulfillment = {
@@ -62,6 +62,7 @@ export function SponsorFulfillmentView({
   const [trackingNumber, setTrackingNumber] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [revealedPayments, setRevealedPayments] = useState<Set<string>>(new Set())
 
   function openFulfillDialog(id: string) {
     setSelectedId(id)
@@ -173,8 +174,26 @@ export function SponsorFulfillmentView({
                       return <p className="text-xs text-muted-foreground truncate max-w-48">{display}</p>
                     })()}
                     {f.paymentMethod && (
-                      <p className="text-xs text-muted-foreground">
-                        {f.paymentMethod}{f.paymentDetail ? `: ${f.paymentDetail}` : ""}
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span>{f.paymentMethod}</span>
+                        {f.paymentDetail && (
+                          <>
+                            <span>: {revealedPayments.has(f.fulfillmentId) ? f.paymentDetail : "••••••••"}</span>
+                            <button
+                              type="button"
+                              onClick={() => setRevealedPayments((prev) => {
+                                const next = new Set(prev)
+                                if (next.has(f.fulfillmentId)) next.delete(f.fulfillmentId)
+                                else next.add(f.fulfillmentId)
+                                return next
+                              })}
+                              className="inline-flex items-center text-muted-foreground hover:text-foreground"
+                              aria-label={revealedPayments.has(f.fulfillmentId) ? "Hide payment detail" : "Show payment detail"}
+                            >
+                              {revealedPayments.has(f.fulfillmentId) ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+                            </button>
+                          </>
+                        )}
                       </p>
                     )}
                     {f.trackingNumber && (

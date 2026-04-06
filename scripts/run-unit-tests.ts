@@ -71,6 +71,13 @@ const groups: Group[] = [
     name: "workflows",
     args: ["__tests__/workflows"],
   },
+  {
+    name: "email",
+    args: [
+      "__tests__/email/resolve-emails.test.ts",
+      "__tests__/email/sponsor-notifications.test.ts",
+    ],
+  },
 ]
 
 for (const group of groups) {

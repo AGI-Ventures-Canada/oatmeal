@@ -1,5 +1,4 @@
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { SupabaseClient } from "@supabase/supabase-js"
 import type { PrizeFulfillmentStatus } from "@/lib/db/hackathon-types"
 import { safeDecrypt } from "@/lib/services/encryption"
 
@@ -25,7 +24,7 @@ export async function listSponsorFulfillments(
   tenantId: string,
   hackathonId: string
 ): Promise<SponsorFulfillmentView[]> {
-  const client = getSupabase() as unknown as SupabaseClient
+  const client = getSupabase()
 
   const { data: sponsor } = await client
     .from("hackathon_sponsors")
@@ -124,7 +123,7 @@ export async function markSponsorFulfilled(
   fulfillmentId: string,
   trackingNumber?: string
 ): Promise<boolean> {
-  const client = getSupabase() as unknown as SupabaseClient
+  const client = getSupabase()
 
   const { data: sponsor } = await client
     .from("hackathon_sponsors")

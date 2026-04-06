@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/db/types"
 import type { PrizeFulfillment, PrizeFulfillmentStatus } from "@/lib/db/hackathon-types"
 
 const CLAIM_TOKEN_EXPIRY_DAYS = 30
@@ -27,7 +28,7 @@ const VALID_TRANSITIONS: Record<PrizeFulfillmentStatus, PrizeFulfillmentStatus[]
 }
 
 export async function initializeFulfillments(hackathonId: string): Promise<number> {
-  const client = getSupabase() as unknown as SupabaseClient
+  const client = getSupabase()
 
   const { data: prizes } = await client
     .from("prizes")
@@ -77,7 +78,7 @@ export async function initializeFulfillments(hackathonId: string): Promise<numbe
 }
 
 export async function listFulfillments(hackathonId: string): Promise<FulfillmentWithDetails[]> {
-  const client = getSupabase() as unknown as SupabaseClient
+  const client = getSupabase()
 
   const { data: fulfillments, error } = await client
     .from("prize_fulfillments")
@@ -141,7 +142,7 @@ export async function updateFulfillmentStatus(
     recipientName?: string
   }
 ): Promise<PrizeFulfillment | null> {
-  const client = getSupabase() as unknown as SupabaseClient
+  const client = getSupabase()
 
   const { data: existing } = await client
     .from("prize_fulfillments")
@@ -198,7 +199,7 @@ export async function updateFulfillmentStatus(
 async function notifyWinnerOfShipment(
   fulfillment: PrizeFulfillment,
   hackathonId: string,
-  client: SupabaseClient
+  client: SupabaseClient<Database>
 ): Promise<void> {
   const { data: assignment } = await client
     .from("prize_assignments")
@@ -244,7 +245,7 @@ export type ClaimWithDetails = {
 }
 
 export async function getClaimByToken(token: string): Promise<ClaimWithDetails | null> {
-  const client = getSupabase() as unknown as SupabaseClient
+  const client = getSupabase()
 
   const { data: fulfillment, error } = await client
     .from("prize_fulfillments")
@@ -329,7 +330,7 @@ export type SiblingClaim = {
 export type SiblingClaimPublic = Omit<SiblingClaim, "recipientEmail" | "shippingAddress">
 
 export async function getSiblingClaims(token: string): Promise<SiblingClaim[]> {
-  const client = getSupabase() as unknown as SupabaseClient
+  const client = getSupabase()
 
   const { data: fulfillment } = await client
     .from("prize_fulfillments")
@@ -407,7 +408,7 @@ export async function claimPrize(
     paymentDetail?: string
   }
 ): Promise<ClaimPrizeResult> {
-  const client = getSupabase() as unknown as SupabaseClient
+  const client = getSupabase()
 
   const { data: fulfillment, error } = await client
     .from("prize_fulfillments")
@@ -488,7 +489,7 @@ async function notifySponsorOnClaim(
   prizeAssignmentId: string,
   hackathonId: string,
   winnerName: string,
-  client: SupabaseClient
+  client: SupabaseClient<Database>
 ): Promise<void> {
   const { data: assignment } = await client
     .from("prize_assignments")
@@ -538,7 +539,7 @@ async function notifyOrganizerOnClaim(
   prizeAssignmentId: string,
   hackathonId: string,
   winnerName: string,
-  client: SupabaseClient
+  client: SupabaseClient<Database>
 ): Promise<void> {
   const { data: assignment } = await client
     .from("prize_assignments")
@@ -571,7 +572,7 @@ async function notifyOrganizerOnClaim(
 export async function getClaimTokensForHackathon(
   hackathonId: string
 ): Promise<Record<string, string>> {
-  const client = getSupabase() as unknown as SupabaseClient
+  const client = getSupabase()
 
   const { data, error } = await client
     .from("prize_fulfillments")
@@ -587,7 +588,7 @@ export async function getClaimTokensForHackathon(
 }
 
 export async function getFulfillmentSummary(hackathonId: string): Promise<FulfillmentSummary> {
-  const client = getSupabase() as unknown as SupabaseClient
+  const client = getSupabase()
 
   const { data, error } = await client
     .from("prize_fulfillments")
