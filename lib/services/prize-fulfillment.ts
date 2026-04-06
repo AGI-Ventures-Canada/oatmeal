@@ -412,7 +412,13 @@ export async function claimPrize(
 
   const { data: fulfillment, error } = await client
     .from("prize_fulfillments")
-    .select("id, status, hackathon_id, prize_assignment_id, claim_token_expires_at")
+    .select(`
+      id, status, hackathon_id, prize_assignment_id, claim_token_expires_at,
+      recipient_email,
+      prize_assignment:prize_assignments!prize_assignment_id(
+        prize:prizes!prize_id(kind)
+      )
+    `)
     .eq("claim_token", token)
     .single()
 
@@ -425,6 +431,12 @@ export async function claimPrize(
   }
 
   if (fulfillment.status === "claimed") {
+    const pa = (fulfillment as Record<string, unknown>).prize_assignment as
+      { prize: { kind: string } } | null
+    const isCash = pa?.prize?.kind === "cash"
+    if (isCash && fulfillment.recipient_email && fulfillment.recipient_email !== data.recipientEmail) {
+      return { success: false, error: "This cash prize has already been claimed by another recipient", code: "already_claimed" }
+    }
     return { success: false, error: "This prize has already been claimed", code: "already_claimed" }
   }
 

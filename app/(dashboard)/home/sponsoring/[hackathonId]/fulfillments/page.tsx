@@ -5,7 +5,6 @@ import { listSponsorFulfillments } from "@/lib/services/sponsor-fulfillments"
 import { isValidUuid } from "@/lib/utils/uuid"
 import { SponsorFulfillmentView } from "@/components/hackathon/prizes/sponsor-fulfillment-view"
 import { supabase as getSupabase } from "@/lib/db/client"
-import type { SupabaseClient } from "@supabase/supabase-js"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
@@ -23,7 +22,7 @@ export default async function SponsorFulfillmentsPage({ params }: PageProps) {
   if (!isValidUuid(hackathonId)) notFound()
 
   const tenant = await resolvePageTenant()
-  const client = getSupabase() as unknown as SupabaseClient
+  const client = getSupabase()
 
   const { data: hackathon } = await client
     .from("hackathons")

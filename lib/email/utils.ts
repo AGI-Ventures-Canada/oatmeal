@@ -26,8 +26,6 @@ export function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;")
 }
 
-// Capped at 500 members — sufficient for hackathon orgs.
-// If an org exceeds this, some members won't receive notifications.
 export async function resolveEmailsForTenant(tenant: {
   clerk_org_id: string | null
   clerk_user_id: string | null
@@ -37,28 +35,27 @@ export async function resolveEmailsForTenant(tenant: {
   const emails: string[] = []
 
   if (tenant.clerk_org_id) {
-    const memberships = await clerk.organizations.getOrganizationMembershipList({
-      organizationId: tenant.clerk_org_id,
-      limit: 500,
-    })
+    const PAGE_SIZE = 500
+    let offset = 0
+    const allMemberIds: string[] = []
 
-    if (memberships.data.length === 500) {
-      console.warn(
-        `[email] Org ${tenant.clerk_org_id} has 500+ members — notification emails will be truncated`
-      )
+    for (;;) {
+      const memberships = await clerk.organizations.getOrganizationMembershipList({
+        organizationId: tenant.clerk_org_id,
+        limit: PAGE_SIZE,
+        offset,
+      })
+      for (const m of memberships.data) {
+        const uid = m.publicUserData?.userId
+        if (uid) allMemberIds.push(uid)
+      }
+      if (memberships.data.length < PAGE_SIZE) break
+      offset += PAGE_SIZE
     }
 
-    const memberIds = memberships.data
-      .map((m) => m.publicUserData?.userId)
-      .filter((id): id is string => !!id)
-
-    if (memberIds.length > 0) {
-      const users = await clerk.users.getUserList({ userId: memberIds, limit: 500 })
-      if (users.data.length === 500) {
-        console.warn(
-          `[email] Org ${tenant.clerk_org_id} getUserList hit 500 limit — some user emails may be missing`
-        )
-      }
+    for (let i = 0; i < allMemberIds.length; i += PAGE_SIZE) {
+      const batch = allMemberIds.slice(i, i + PAGE_SIZE)
+      const users = await clerk.users.getUserList({ userId: batch, limit: PAGE_SIZE })
       for (const user of users.data) {
         const email = user.primaryEmailAddress?.emailAddress
         if (email) emails.push(email)
