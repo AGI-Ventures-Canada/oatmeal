@@ -38,9 +38,13 @@ export async function calculateResults(
 
   const { data: hackathon } = await client
     .from("hackathons")
-    .select("judging_mode")
+    .select("judging_mode, results_published_at")
     .eq("id", hackathonId)
     .single()
+
+  if (hackathon?.results_published_at) {
+    return { success: true, count: -1 }
+  }
 
   if (hackathon?.judging_mode === "subjective") {
     return calculateSubjectiveResults(hackathonId)

@@ -22,9 +22,11 @@ mock.module("@/lib/services/judge-invitations", () => ({
 }))
 
 const mockGetResults = mock(() => Promise.resolve([]))
+const mockCalculateResults = mock(() => Promise.resolve({ success: true, count: 0 }))
 
 mock.module("@/lib/services/results", () => ({
   getResults: mockGetResults,
+  calculateResults: mockCalculateResults,
 }))
 
 mock.module("@/lib/services/prizes", () => ({
