@@ -60,7 +60,7 @@ export async function sendTransitionEmail(
   )
   const { sendEmail } = await import("@/lib/email/resend")
 
-  const { subject, html, text, tag } = buildTransitionEmail(
+  const { subject, html, text, tag } = await buildTransitionEmail(
     input.event,
     input.hackathonName,
     input.hackathonSlug

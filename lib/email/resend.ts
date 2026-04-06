@@ -169,34 +169,28 @@ export async function sendAgentNotification(
   type: AgentNotificationType,
   details?: { output?: string; error?: string }
 ): Promise<SendEmailResult | null> {
+  const { render } = await import("@react-email/components")
+  const { default: AgentNotificationEmail } = await import("@/emails/agent-notification")
+
   const subjects: Record<AgentNotificationType, string> = {
     started: `Agent "${agentName}" has started`,
     completed: `Agent "${agentName}" completed successfully`,
     failed: `Agent "${agentName}" failed`,
   }
 
-  const getHtmlContent = () => {
-    const base = `
-      <h2>Agent Run Notification</h2>
-      <p><strong>Agent:</strong> ${agentName}</p>
-      <p><strong>Run ID:</strong> ${runId}</p>
-      <p><strong>Status:</strong> ${type}</p>
-    `
-
-    if (type === "completed" && details?.output) {
-      return `${base}<h3>Output</h3><pre>${details.output}</pre>`
-    }
-
-    if (type === "failed" && details?.error) {
-      return `${base}<h3>Error</h3><pre>${details.error}</pre>`
-    }
-
-    return base
-  }
+  const html = await render(
+    AgentNotificationEmail({
+      agentName,
+      runId,
+      type,
+      output: details?.output,
+      error: details?.error,
+    })
+  )
 
   return sendEmail({
     to: email,
     subject: subjects[type],
-    html: getHtmlContent(),
+    html,
   })
 }

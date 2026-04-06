@@ -1,71 +1,10 @@
+import { render } from "@react-email/components"
 import { sendEmail } from "./resend"
+import { sanitizeTag } from "./utils"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { clerkClient } from "@clerk/nextjs/server"
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;")
-}
-
-type AnnouncementInfo = {
-  hackathonName: string
-  hackathonSlug: string
-  participantName: string
-}
-
-function buildResultsAnnouncementEmail(info: AnnouncementInfo) {
-  const resultsUrl = `${process.env.NEXT_PUBLIC_APP_URL}/e/${info.hackathonSlug}`
-
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: #18181b; padding: 32px; border-radius: 12px 12px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Results Are In!</h1>
-      </div>
-
-      <div style="background: #ffffff; padding: 32px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-        <p style="font-size: 16px; margin-bottom: 24px;">
-          Hi ${escapeHtml(info.participantName)}, the results for <strong>${escapeHtml(info.hackathonName)}</strong> have been published! Check out how everyone did.
-        </p>
-
-        <a href="${resultsUrl}"
-           style="display: inline-block; background: #18181b; color: white; padding: 14px 28px;
-                  text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-          View Results
-        </a>
-
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-
-        <p style="font-size: 12px; color: #9ca3af; margin: 0;">
-          You're receiving this because you participated in ${escapeHtml(info.hackathonName)}.
-        </p>
-      </div>
-    </body>
-    </html>
-  `
-
-  const text = `
-Results Are In!
-
-Hi ${info.participantName}, the results for ${info.hackathonName} have been published! Check out how everyone did.
-
-View results: ${resultsUrl}
-
-You're receiving this because you participated in ${info.hackathonName}.
-  `.trim()
-
-  return { html, text }
-}
+import ResultsAnnouncementEmail from "@/emails/results-announcement"
 
 export async function sendResultsAnnouncementEmails(hackathonId: string): Promise<number> {
   if (!process.env.NEXT_PUBLIC_APP_URL) {
@@ -129,10 +68,8 @@ export async function sendResultsAnnouncementEmails(hackathonId: string): Promis
   if (nonWinnerIds.length === 0) return 0
 
   const clerk = await clerkClient()
-  const sanitizedTag = hackathon.name
-    .replace(/[^a-zA-Z0-9_-]/g, "_")
-    .replace(/_+/g, "_")
-    .slice(0, 100)
+  const tag = sanitizeTag(hackathon.name)
+  const resultsUrl = `${process.env.NEXT_PUBLIC_APP_URL}/e/${hackathon.slug}`
 
   let sent = 0
 
@@ -140,7 +77,7 @@ export async function sendResultsAnnouncementEmails(hackathonId: string): Promis
     const batch = nonWinnerIds.slice(i, i + 100)
     const users = await clerk.users.getUserList({ userId: batch })
 
-    const emailPromises = users.data.map((user) => {
+    const emailPromises = users.data.map(async (user) => {
       const email = user.primaryEmailAddress?.emailAddress
       if (!email) return null
 
@@ -148,11 +85,21 @@ export async function sendResultsAnnouncementEmails(hackathonId: string): Promis
         ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
         : user.username || email.split("@")[0]
 
-      const { html, text } = buildResultsAnnouncementEmail({
-        hackathonName: hackathon.name,
-        hackathonSlug: hackathon.slug,
-        participantName: displayName,
-      })
+      const html = await render(
+        ResultsAnnouncementEmail({
+          participantName: displayName,
+          hackathonName: hackathon.name,
+          resultsUrl,
+        })
+      )
+      const text = await render(
+        ResultsAnnouncementEmail({
+          participantName: displayName,
+          hackathonName: hackathon.name,
+          resultsUrl,
+        }),
+        { plainText: true }
+      )
 
       return sendEmail({
         to: email,
@@ -161,7 +108,7 @@ export async function sendResultsAnnouncementEmails(hackathonId: string): Promis
         text,
         tags: [
           { name: "type", value: "results_announcement" },
-          { name: "hackathon", value: sanitizedTag },
+          { name: "hackathon", value: tag },
         ],
       })
     }).filter(Boolean)

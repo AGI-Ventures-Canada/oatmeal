@@ -16,8 +16,8 @@ describe("Transition Email Templates", () => {
     }
   })
 
-  it("builds hackathon_started email", () => {
-    const email = buildTransitionEmail("hackathon_started", "AI Hackathon", "ai-hackathon")
+  it("builds hackathon_started email", async () => {
+    const email = await buildTransitionEmail("hackathon_started", "AI Hackathon", "ai-hackathon")
 
     expect(email.subject).toContain("AI Hackathon")
     expect(email.subject).toContain("live")
@@ -28,8 +28,8 @@ describe("Transition Email Templates", () => {
     expect(email.tag).toBe("AI_Hackathon")
   })
 
-  it("builds judging_started email", () => {
-    const email = buildTransitionEmail("judging_started", "Code Jam", "code-jam")
+  it("builds judging_started email", async () => {
+    const email = await buildTransitionEmail("judging_started", "Code Jam", "code-jam")
 
     expect(email.subject).toContain("Judging")
     expect(email.html).toContain("Judging Has Begun")
@@ -37,8 +37,8 @@ describe("Transition Email Templates", () => {
     expect(email.text).toContain("Judging is now underway")
   })
 
-  it("builds results_published email", () => {
-    const email = buildTransitionEmail("results_published", "Hack Day", "hack-day")
+  it("builds results_published email", async () => {
+    const email = await buildTransitionEmail("results_published", "Hack Day", "hack-day")
 
     expect(email.subject).toContain("Results")
     expect(email.html).toContain("Results Are In!")
@@ -46,23 +46,23 @@ describe("Transition Email Templates", () => {
     expect(email.text).toContain("Results have been published")
   })
 
-  it("builds registration_opened email", () => {
-    const email = buildTransitionEmail("registration_opened", "Open Hack", "open-hack")
+  it("builds registration_opened email", async () => {
+    const email = await buildTransitionEmail("registration_opened", "Open Hack", "open-hack")
 
     expect(email.subject).toContain("Registration")
     expect(email.html).toContain("Registration Is Open")
     expect(email.html).toContain("Register Now")
   })
 
-  it("escapes HTML in hackathon names", () => {
-    const email = buildTransitionEmail("hackathon_started", '<script>alert("xss")</script>', "xss-hack")
+  it("escapes HTML in hackathon names", async () => {
+    const email = await buildTransitionEmail("hackathon_started", '<script>alert("xss")</script>', "xss-hack")
 
     expect(email.html).not.toContain("<script>")
     expect(email.html).toContain("&lt;script&gt;")
   })
 
-  it("sanitizes hackathon name for email tag", () => {
-    const email = buildTransitionEmail("hackathon_started", "AI & ML Hackathon 2026!", "ai-ml-hack")
+  it("sanitizes hackathon name for email tag", async () => {
+    const email = await buildTransitionEmail("hackathon_started", "AI & ML Hackathon 2026!", "ai-ml-hack")
 
     expect(email.tag).toBe("AI_ML_Hackathon_2026_")
   })
