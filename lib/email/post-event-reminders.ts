@@ -1,16 +1,9 @@
 import { sendEmail } from "./resend"
+import { sanitizeTag, renderEmail } from "./utils"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { clerkClient } from "@clerk/nextjs/server"
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;")
-}
+import PostEventReminderEmail from "@/emails/post-event-reminder"
 
 type ReminderEmailInfo = {
   hackathonName: string
@@ -20,53 +13,6 @@ type ReminderEmailInfo = {
   heading: string
   body: string
   ctaLabel: string
-}
-
-function buildReminderEmail(info: ReminderEmailInfo) {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: #18181b; padding: 32px; border-radius: 12px 12px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">${escapeHtml(info.heading)}</h1>
-      </div>
-
-      <div style="background: #ffffff; padding: 32px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-        <p style="font-size: 16px; margin-bottom: 24px;">
-          Hi ${escapeHtml(info.participantName)}, ${escapeHtml(info.body)}
-        </p>
-
-        <a href="${escapeHtml(info.ctaUrl)}"
-           style="display: inline-block; background: #18181b; color: white; padding: 14px 28px;
-                  text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-          ${escapeHtml(info.ctaLabel)}
-        </a>
-
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-
-        <p style="font-size: 12px; color: #9ca3af; margin: 0;">
-          You're receiving this because of your involvement in ${escapeHtml(info.hackathonName)}.
-        </p>
-      </div>
-    </body>
-    </html>
-  `
-
-  const text = `
-${info.heading}
-
-Hi ${info.participantName}, ${info.body}
-
-${info.ctaLabel}: ${info.ctaUrl}
-
-You're receiving this because of your involvement in ${info.hackathonName}.
-  `.trim()
-
-  return { html, text }
 }
 
 export function buildPrizeClaimReminderContent(hackathonName: string, hackathonSlug: string) {
@@ -171,10 +117,7 @@ export async function sendReminderEmails(
   if (clerkUserIds.length === 0) return 0
 
   const clerk = await clerkClient()
-  const sanitizedTag = hackathon.name
-    .replace(/[^a-zA-Z0-9_-]/g, "_")
-    .replace(/_+/g, "_")
-    .slice(0, 100)
+  const tag = sanitizeTag(hackathon.name)
 
   let sent = 0
 
@@ -191,7 +134,17 @@ export async function sendReminderEmails(
         : user.username || email.split("@")[0]
 
       const content = contentBuilder(displayName, email)
-      const { html, text } = buildReminderEmail(content)
+
+      const { html, text } = await renderEmail(
+        PostEventReminderEmail({
+          heading: content.heading,
+          participantName: displayName,
+          body: content.body,
+          ctaLabel: content.ctaLabel,
+          ctaUrl: content.ctaUrl,
+          hackathonName: hackathon.name,
+        })
+      )
 
       const result = await sendEmail({
         to: email,
@@ -200,7 +153,7 @@ export async function sendReminderEmails(
         text,
         tags: [
           { name: "type", value: `reminder_${reminderType}` },
-          { name: "hackathon", value: sanitizedTag },
+          { name: "hackathon", value: tag },
         ],
       })
 

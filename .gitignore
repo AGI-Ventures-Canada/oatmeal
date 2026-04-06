@@ -79,3 +79,5 @@ supabase/.temp
 # production env backup
 .env.local.production
 .playwright-mcp/
+
+/tmp

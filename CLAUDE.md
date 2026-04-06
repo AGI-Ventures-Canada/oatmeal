@@ -453,7 +453,8 @@ async function handleRemove(id: string) {
 ```bash
 bun test              # Run unit tests (api, lib, services)
 bun test:integration  # Run integration tests separately
-bun test:all          # Run both sequentially
+bun test:email        # Run email template tests separately
+bun test:all          # Run all tests sequentially
 bun test --coverage   # Run with coverage report
 ```
 
@@ -500,6 +501,32 @@ it("example test", async () => {
 ```
 
 For RPC calls, use `setMockRpcImplementation()` instead.
+
+#### Email Templates (React Email)
+
+Email templates live in `emails/` as React Email components. Send logic stays in `lib/email/*.ts`, which renders components to HTML/text via `render()` from `@react-email/components`.
+
+```bash
+bun email:dev         # Preview all templates at http://localhost:3001
+```
+
+**Testing email templates:** Email tests mock `sendEmail` from `@/lib/email/resend` and assert on the `html`, `text`, `subject`, and `tags` passed to it. Use `.toContain()` for content assertions — never assert on exact HTML structure since React Email controls the markup.
+
+```typescript
+let sendEmailImpl = () => Promise.resolve({ id: "email_123" })
+const mockSendEmail = mock((input: SendEmailInput) => sendEmailImpl(input))
+mock.module("@/lib/email/resend", () => ({ sendEmail: mockSendEmail }))
+const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
+
+it("includes the accept URL", async () => {
+  await sendTeamInvitationEmail(input)
+  const call = mockSendEmail.mock.calls[0][0]
+  expect(call.html).toContain("/invite/token123")
+  expect(call.tags).toContainEqual({ name: "type", value: "team_invitation" })
+})
+```
+
+**Email integration tests must run separately** (`bun test:email`) — they use `mock.module` at the email layer which conflicts with other test suites. Template smoke tests (`__tests__/lib/email-templates.test.ts`) have no mock conflicts and also run as part of `bun run test`.
 
 ## Git Workflow
 
