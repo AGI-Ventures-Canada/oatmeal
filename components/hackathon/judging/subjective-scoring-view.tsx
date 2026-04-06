@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -22,7 +22,6 @@ import {
   Eye,
   EyeOff,
   X,
-  Loader2,
   ChevronLeft,
   ChevronRight,
   Maximize2,
@@ -379,6 +378,7 @@ export function SubjectiveScoringView({
         <Dialog open={!!screenshotOpen} onOpenChange={() => setScreenshotOpen(null)}>
           <DialogContent className="max-w-6xl w-full p-2">
             <DialogTitle className="sr-only">Screenshot</DialogTitle>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={screenshotOpen} alt="Screenshot" className="w-full h-auto rounded-md" />
           </DialogContent>
         </Dialog>
@@ -391,7 +391,7 @@ function PickCard({
   prize,
   pick,
   pickedSubmission,
-  hackathonSlug,
+  hackathonSlug: _hackathonSlug,
   saving,
   onRemove,
   onUpdateReason,
@@ -455,13 +455,13 @@ function PickCard({
 
 function SubmissionDetail({
   submission,
-  hackathonSlug,
+  hackathonSlug: _hackathonSlug,
   prizes,
   picks,
   saving,
   onPick,
   onRemovePick,
-  onUpdateReason,
+  onUpdateReason: _onUpdateReason,
 }: {
   submission: Submission
   hackathonSlug: string

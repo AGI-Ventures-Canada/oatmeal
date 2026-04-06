@@ -438,6 +438,7 @@ export interface PrizeTrack {
   name: string
   description: string | null
   intent: TrackIntent
+  sponsor_id: string | null
   display_order: number
   created_at: string
   updated_at: string
@@ -588,6 +589,8 @@ export interface PrizeFulfillment {
   shipping_address: string | null
   tracking_number: string | null
   notes: string | null
+  payment_method: string | null
+  payment_detail: string | null
   claim_token: string | null
   claim_token_expires_at: string | null
   contacted_at: string | null
@@ -597,7 +600,7 @@ export interface PrizeFulfillment {
   updated_at: string
 }
 
-export type PostEventReminderType = "prize_claim" | "organizer_fulfillment" | "feedback_followup"
+export type PostEventReminderType = "prize_claim" | "prize_claim_followup" | "organizer_fulfillment" | "feedback_followup" | "winner_unresponsive"
 
 export interface PostEventReminder {
   id: string

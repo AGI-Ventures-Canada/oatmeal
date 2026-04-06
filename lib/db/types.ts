@@ -1638,6 +1638,8 @@ export type Database = {
           hackathon_id: string
           id: string
           notes: string | null
+          payment_detail: string | null
+          payment_method: string | null
           prize_assignment_id: string
           recipient_email: string | null
           recipient_name: string | null
@@ -1656,6 +1658,8 @@ export type Database = {
           hackathon_id: string
           id?: string
           notes?: string | null
+          payment_detail?: string | null
+          payment_method?: string | null
           prize_assignment_id: string
           recipient_email?: string | null
           recipient_name?: string | null
@@ -1674,6 +1678,8 @@ export type Database = {
           hackathon_id?: string
           id?: string
           notes?: string | null
+          payment_detail?: string | null
+          payment_method?: string | null
           prize_assignment_id?: string
           recipient_email?: string | null
           recipient_name?: string | null
@@ -1709,6 +1715,7 @@ export type Database = {
           id: string
           intent: Database["public"]["Enums"]["track_intent"]
           name: string
+          sponsor_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1719,6 +1726,7 @@ export type Database = {
           id?: string
           intent?: Database["public"]["Enums"]["track_intent"]
           name: string
+          sponsor_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1729,6 +1737,7 @@ export type Database = {
           id?: string
           intent?: Database["public"]["Enums"]["track_intent"]
           name?: string
+          sponsor_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1737,6 +1746,13 @@ export type Database = {
             columns: ["hackathon_id"]
             isOneToOne: false
             referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prize_tracks_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_sponsors"
             referencedColumns: ["id"]
           },
         ]

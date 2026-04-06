@@ -121,6 +121,7 @@ export const dashboardPrizeTracksRoutes = new Elysia()
         intent: body.intent as "overall_winner" | "sponsor_prize" | "crowd_favorite" | "quick_comparison" | "custom" | undefined,
         style: body.style as "bucket_sort" | "gate_check" | "head_to_head" | "top_n" | "compliance" | "crowd" | "points" | "subjective" | undefined,
         displayOrder: body.displayOrder,
+        sponsorId: body.sponsorId,
       })
 
       if (!track) {
@@ -168,6 +169,7 @@ export const dashboardPrizeTracksRoutes = new Elysia()
           t.Literal("crowd"),
         ])),
         displayOrder: t.Optional(t.Number()),
+        sponsorId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()], { description: "ID of the hackathon_sponsors record to link this track to" })),
       }),
     }
   )

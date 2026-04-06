@@ -424,6 +424,7 @@ function SocialSubTab({ hackathonId }: { hackathonId: string }) {
             <div key={sub.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 min-w-0">
                 {sub.og_image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={sub.og_image_url}
                     alt=""

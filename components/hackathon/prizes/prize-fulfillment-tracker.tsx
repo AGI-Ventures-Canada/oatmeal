@@ -19,6 +19,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet"
+import { Copyable } from "@/components/ui/copyable"
+import { Separator } from "@/components/ui/separator"
+import { parseAddress, formatAddress } from "@/lib/utils/address"
+import { needsShipping, needsPayment } from "@/lib/utils/prize-kinds"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -30,7 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { PackageCheck, Mail, Truck, CheckCircle2, Loader2, ChevronRight, CircleCheck } from "lucide-react"
+import { PackageCheck, Mail, Truck, CheckCircle2, Loader2, ChevronRight, CircleCheck, User, MapPin, CreditCard, Lightbulb, Copy, Check } from "lucide-react"
 
 type FulfillmentStatus = "assigned" | "contacted" | "shipped" | "claimed"
 
@@ -39,6 +51,7 @@ type Fulfillment = {
   prizeAssignmentId: string
   prizeName: string
   prizeValue: string | null
+  prizeKind: string
   submissionTitle: string
   teamName: string | null
   status: FulfillmentStatus
@@ -46,6 +59,8 @@ type Fulfillment = {
   recipientName: string | null
   shippingAddress: string | null
   trackingNumber: string | null
+  paymentMethod: string | null
+  paymentDetail: string | null
   notes: string | null
   contactedAt: string | null
   shippedAt: string | null
@@ -67,6 +82,42 @@ const NEXT_STATUS: Record<FulfillmentStatus, FulfillmentStatus | null> = {
   contacted: "shipped",
   shipped: "claimed",
   claimed: null,
+}
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  venmo: "Venmo",
+  paypal: "PayPal",
+  bank_transfer: "Bank Transfer",
+  other: "Other",
+}
+
+
+function getNextSteps(f: Fulfillment): string {
+  const kind = f.prizeKind
+  switch (f.status) {
+    case "assigned":
+      return "Waiting for the winner to claim this prize. You can also reach out directly."
+    case "contacted":
+      if (needsPayment(kind)) {
+        if (!f.paymentDetail) return "Waiting for the winner to submit their payment details."
+        return `Send payment to the winner's ${PAYMENT_METHOD_LABELS[f.paymentMethod ?? ""] ?? "payment"} account, then mark as shipped.`
+      }
+      if (needsShipping(kind)) {
+        if (!f.shippingAddress) return "Waiting for the winner to submit their shipping address."
+        return "Ship the prize to the winner's address and add the tracking number."
+      }
+      return "Deliver the prize and advance the status."
+    case "shipped":
+      if (needsPayment(kind))
+        return "Payment sent. Confirm with the winner that they received it."
+      if (needsShipping(kind))
+        return "Prize is in transit. Confirm delivery with the winner."
+      return "Prize has been sent. Confirm receipt with the winner."
+    case "claimed":
+      return "All done! The winner has received their prize."
+    default:
+      return ""
+  }
 }
 
 export function PrizeFulfillmentTracker({
@@ -92,6 +143,9 @@ export function PrizeFulfillmentTracker({
   const [recipientEmail, setRecipientEmail] = useState("")
   const [recipientName, setRecipientName] = useState("")
   const [updating, setUpdating] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [detailFulfillment, setDetailFulfillment] = useState<Fulfillment | null>(null)
+  const [copiedAddress, setCopiedAddress] = useState(false)
 
   const total = summary.assigned + summary.contacted + summary.shipped + summary.claimed
 
@@ -101,8 +155,12 @@ export function PrizeFulfillmentTracker({
       const data = await res.json()
       setFulfillments(data.fulfillments)
       setSummary(data.summary)
+      if (detailFulfillment) {
+        const updated = data.fulfillments.find((f: Fulfillment) => f.id === detailFulfillment.id)
+        if (updated) setDetailFulfillment(updated)
+      }
     }
-  }, [hackathonId])
+  }, [hackathonId, detailFulfillment])
 
   const handleInitialize = async () => {
     setLoading(true)
@@ -225,8 +283,11 @@ export function PrizeFulfillmentTracker({
               return (
                 <TableRow
                 key={f.id}
-                className={next ? "cursor-pointer" : undefined}
-                onClick={next ? () => openUpdateDialog(f) : undefined}
+                className="cursor-pointer"
+                onClick={() => {
+                  setDetailFulfillment(f)
+                  setDetailOpen(true)
+                }}
               >
                   <TableCell>
                     <div>
@@ -251,7 +312,7 @@ export function PrizeFulfillmentTracker({
                   </TableCell>
                   <TableCell>
                     {next ? (
-                      <Button size="sm" onClick={() => openUpdateDialog(f)}>
+                      <Button size="sm" onClick={(e) => { e.stopPropagation(); openUpdateDialog(f) }}>
                         {STATUS_CONFIG[next].label}
                         <ChevronRight className="ml-1 h-3 w-3" />
                       </Button>
@@ -268,6 +329,172 @@ export function PrizeFulfillmentTracker({
           </TableBody>
         </Table>
       </div>
+
+      <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
+        <SheetContent className="sm:max-w-md overflow-y-auto">
+          {detailFulfillment && (
+            <>
+              <SheetHeader>
+                <SheetTitle>
+                  {detailFulfillment.prizeName}
+                  {detailFulfillment.prizeValue && (
+                    <span className="text-muted-foreground font-normal ml-2">
+                      ({detailFulfillment.prizeValue})
+                    </span>
+                  )}
+                </SheetTitle>
+                <SheetDescription>Prize fulfillment details</SheetDescription>
+                <div>
+                  <Badge variant={STATUS_CONFIG[detailFulfillment.status].variant}>
+                    {(() => { const Icon = STATUS_CONFIG[detailFulfillment.status].icon; return <Icon className="mr-1 size-3" /> })()}
+                    {STATUS_CONFIG[detailFulfillment.status].label}
+                  </Badge>
+                </div>
+              </SheetHeader>
+
+              <div className="space-y-6 px-4 pb-4">
+                <section className="space-y-2">
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    <PackageCheck className="size-4" /> Winner
+                  </h4>
+                  <div className="text-sm space-y-1">
+                    <p>{detailFulfillment.submissionTitle}</p>
+                    <p className="text-muted-foreground">{detailFulfillment.teamName ?? "Individual"}</p>
+                  </div>
+                </section>
+
+                <Separator />
+
+                <section className="space-y-2">
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    <User className="size-4" /> Recipient
+                  </h4>
+                  {detailFulfillment.recipientName || detailFulfillment.recipientEmail ? (
+                    <div className="text-sm space-y-2">
+                      {detailFulfillment.recipientName && <p>{detailFulfillment.recipientName}</p>}
+                      {detailFulfillment.recipientEmail && (
+                        <Copyable value={detailFulfillment.recipientEmail} />
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Not yet provided</p>
+                  )}
+                </section>
+
+                {needsPayment(detailFulfillment.prizeKind) && (
+                  <>
+                    <Separator />
+                    <section className="space-y-2">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <CreditCard className="size-4" /> Payment Info
+                      </h4>
+                      {detailFulfillment.paymentMethod ? (
+                        <div className="text-sm space-y-2">
+                          <p>{PAYMENT_METHOD_LABELS[detailFulfillment.paymentMethod] ?? detailFulfillment.paymentMethod}</p>
+                          {detailFulfillment.paymentDetail && (
+                            <Copyable value={detailFulfillment.paymentDetail} masked revealable />
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Not yet provided</p>
+                      )}
+                    </section>
+                  </>
+                )}
+
+                {needsShipping(detailFulfillment.prizeKind) && (
+                  <>
+                    <Separator />
+                    <section className="space-y-2">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <MapPin className="size-4" /> Shipping Address
+                      </h4>
+                      {detailFulfillment.shippingAddress ? (() => {
+                        const structured = parseAddress(detailFulfillment.shippingAddress)
+                        if (structured) {
+                          const formatted = formatAddress(structured)
+                          return (
+                            <div className="flex items-start gap-2">
+                              <div className="text-sm space-y-1 min-w-0">
+                                <p>{structured.street}</p>
+                                <p>{structured.city}{structured.state ? `, ${structured.state}` : ""} {structured.postalCode}</p>
+                                <p className="text-muted-foreground">{structured.country}</p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8 shrink-0"
+                                onClick={async () => {
+                                  await navigator.clipboard.writeText(formatted)
+                                  setCopiedAddress(true)
+                                  setTimeout(() => setCopiedAddress(false), 2000)
+                                }}
+                              >
+                                {copiedAddress ? <Check className="size-4" /> : <Copy className="size-4" />}
+                              </Button>
+                            </div>
+                          )
+                        }
+                        return <Copyable value={detailFulfillment.shippingAddress} />
+                      })() : (
+                        <p className="text-sm text-muted-foreground">Not yet provided</p>
+                      )}
+                    </section>
+                  </>
+                )}
+
+                {detailFulfillment.trackingNumber && (
+                  <>
+                    <Separator />
+                    <section className="space-y-2">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <Truck className="size-4" /> Tracking
+                      </h4>
+                      <Copyable value={detailFulfillment.trackingNumber} />
+                    </section>
+                  </>
+                )}
+
+                {detailFulfillment.notes && (
+                  <>
+                    <Separator />
+                    <section className="space-y-2">
+                      <h4 className="text-sm font-medium">Notes</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{detailFulfillment.notes}</p>
+                    </section>
+                  </>
+                )}
+
+                <Separator />
+
+                <section className="space-y-2">
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    <Lightbulb className="size-4" /> Next Steps
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {getNextSteps(detailFulfillment)}
+                  </p>
+                </section>
+              </div>
+
+              {NEXT_STATUS[detailFulfillment.status] && (
+                <SheetFooter className="px-4 pb-4">
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      setDetailOpen(false)
+                      openUpdateDialog(detailFulfillment)
+                    }}
+                  >
+                    {STATUS_CONFIG[NEXT_STATUS[detailFulfillment.status]!].label}
+                    <ChevronRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </SheetFooter>
+              )}
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
         <DialogContent>

@@ -135,15 +135,14 @@ export function JudgingTabClient({
   rounds,
   pendingInvitations: initialInvitations,
   results: initialResults,
-  submissions,
+  submissions: _submissions,
   isPublished: initialIsPublished,
 }: JudgingTabClientProps) {
   const router = useRouter()
   const [showAddJudge, setShowAddJudge] = useState(false)
   const [showAddPrize, setShowAddPrize] = useState(false)
-  const [calculating, setCalculating] = useState(false)
   const [publishing, setPublishing] = useState(false)
-  const [results, setResults] = useState(initialResults)
+  const results = initialResults
   const [isPublished, setIsPublished] = useState(initialIsPublished)
   const [error, setError] = useState<string | null>(null)
 
@@ -227,31 +226,11 @@ export function JudgingTabClient({
     }
   }
 
-  async function handleCalculateResults() {
-    setCalculating(true)
-    setError(null)
-    try {
-      const res = await fetch(`${base}/results/calculate`, { method: "POST" })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Failed to calculate")
-      }
-      const resultsRes = await fetch(`${base}/results`)
-      if (resultsRes.ok) {
-        const data = await resultsRes.json()
-        setResults(data.results)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to calculate results")
-    } finally {
-      setCalculating(false)
-    }
-  }
-
   async function handlePublish() {
     setPublishing(true)
     setError(null)
     try {
+      await fetch(`${base}/results/calculate`, { method: "POST" })
       const res = await fetch(`${base}/results/publish`, { method: "POST" })
       if (!res.ok) throw new Error("Failed to publish")
       setIsPublished(true)
@@ -320,9 +299,7 @@ export function JudgingTabClient({
           hackathonId={hackathonId}
           results={results}
           isPublished={isPublished}
-          calculating={calculating}
           publishing={publishing}
-          onCalculate={handleCalculateResults}
           onPublish={handlePublish}
           onUnpublish={handleUnpublish}
           incompleteAssignments={initialProgress.totalAssignments - initialProgress.completedAssignments}
@@ -349,7 +326,7 @@ export function JudgingTabClient({
 function JudgesSection({
   judges,
   invitations,
-  hackathonId,
+  hackathonId: _hackathonId,
   onAddJudge,
   onRemoveJudge,
   onCancelInvitation,
@@ -665,12 +642,10 @@ function PrizesSection({
 }
 
 function ResultsSection({
-  hackathonId,
+  hackathonId: _hackathonId,
   results,
   isPublished,
-  calculating,
   publishing,
-  onCalculate,
   onPublish,
   onUnpublish,
   incompleteAssignments,
@@ -678,9 +653,7 @@ function ResultsSection({
   hackathonId: string
   results: ResultData[]
   isPublished: boolean
-  calculating: boolean
   publishing: boolean
-  onCalculate: () => void
   onPublish: () => void
   onUnpublish: () => void
   incompleteAssignments: number
@@ -691,30 +664,13 @@ function ResultsSection({
         <h3 className="text-base font-semibold flex items-center gap-2">
           <Calculator className="size-4" />
           Results
-          {isPublished && <Badge>Published</Badge>}
+          {isPublished ? (
+            <Badge>Published</Badge>
+          ) : results.length > 0 ? (
+            <Badge variant="outline">Live</Badge>
+          ) : null}
         </h3>
         <div className="flex items-center gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" variant="outline" disabled={calculating}>
-                {calculating ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Calculator className="mr-2 size-4" />}
-                Recalculate
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Recalculate Results?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Rankings update automatically as judges score. Use this to force a full recalculation if results look stale.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onCalculate}>Calculate</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
           {isPublished ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -769,7 +725,7 @@ function ResultsSection({
         <Card className="border-dashed">
           <CardContent className="py-8 text-center">
             <p className="text-sm text-muted-foreground">
-              No results yet. Calculate results after judges have submitted their scores.
+              No scored submissions yet. Results will appear here as judges submit their scores.
             </p>
           </CardContent>
         </Card>

@@ -3,10 +3,8 @@ import {
   createChainableMock,
   resetSupabaseMocks,
   setMockFromImplementation,
-  mockMultiTableQuery,
   mockSuccess,
   mockError,
-  mockCount,
 } from "../lib/supabase-mock"
 
 const { getPlatformStats, listAllHackathons, getHackathonById, updateHackathonAsAdmin, deleteHackathon } =

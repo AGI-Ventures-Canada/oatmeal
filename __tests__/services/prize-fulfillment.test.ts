@@ -3,9 +3,6 @@ import {
   createChainableMock,
   resetSupabaseMocks,
   setMockFromImplementation,
-  mockMultiTableQuery,
-  mockSuccess,
-  mockError,
 } from "../lib/supabase-mock"
 
 const {
@@ -16,6 +13,7 @@ const {
   getClaimByToken,
   claimPrize,
   getClaimTokensForHackathon,
+  getSiblingClaims,
 } = await import("@/lib/services/prize-fulfillment")
 
 describe("Prize Fulfillment Service", () => {
@@ -257,7 +255,7 @@ describe("Prize Fulfillment Service", () => {
       expect(result).toBeNull()
     })
 
-    it("returns claim details for valid token", async () => {
+    it("returns claim details for valid token including prizeKind", async () => {
       let callCount = 0
       setMockFromImplementation(() => {
         callCount++
@@ -272,7 +270,7 @@ describe("Prize Fulfillment Service", () => {
               claimed_at: null,
               claim_token_expires_at: "2026-05-01T00:00:00Z",
               prize_assignment: {
-                prize: { name: "Best Demo", value: "$500" },
+                prize: { name: "Best Demo", value: "$500", kind: "cash", distribution_method: null },
                 submission: { title: "Cool Project", team_id: "t1", hackathon_id: "h1" },
               },
             },
@@ -295,6 +293,8 @@ describe("Prize Fulfillment Service", () => {
       expect(result).not.toBeNull()
       expect(result!.prizeName).toBe("Best Demo")
       expect(result!.prizeValue).toBe("$500")
+      expect(result!.prizeKind).toBe("cash")
+      expect(result!.distributionMethod).toBeNull()
       expect(result!.hackathonName).toBe("Test Hackathon")
       expect(result!.submissionTitle).toBe("Cool Project")
       expect(result!.teamName).toBe("Team Alpha")
@@ -374,18 +374,47 @@ describe("Prize Fulfillment Service", () => {
               id: "f1",
               status: "assigned",
               hackathon_id: "h1",
+              prize_assignment_id: "pa1",
               claim_token_expires_at: "2027-01-01T00:00:00Z",
             },
             error: null,
           })
         }
-        return createChainableMock({ data: null, error: null })
+        return createChainableMock({ data: [{ id: "f1" }], error: null })
       })
 
       const result = await claimPrize("valid-token", {
         recipientName: "Alice",
         recipientEmail: "alice@test.com",
         shippingAddress: "123 Main St",
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it("successfully claims with payment fields", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({
+            data: {
+              id: "f1",
+              status: "assigned",
+              hackathon_id: "h1",
+              prize_assignment_id: "pa1",
+              claim_token_expires_at: "2027-01-01T00:00:00Z",
+            },
+            error: null,
+          })
+        }
+        return createChainableMock({ data: [{ id: "f1" }], error: null })
+      })
+
+      const result = await claimPrize("valid-token", {
+        recipientName: "Bob",
+        recipientEmail: "bob@test.com",
+        paymentMethod: "venmo",
+        paymentDetail: "@bob123",
       })
       expect(result.success).toBe(true)
     })
@@ -451,6 +480,127 @@ describe("Prize Fulfillment Service", () => {
 
       const result = await getClaimTokensForHackathon("11111111-1111-1111-1111-111111111111")
       expect(result).toEqual({})
+    })
+  })
+
+  describe("getSiblingClaims", () => {
+    it("returns siblings for the same submission", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({
+            data: { prize_assignment: { submission_id: "sub-1" } },
+            error: null,
+          })
+        }
+        if (callCount === 2) {
+          return createChainableMock({
+            data: [{ id: "a1" }, { id: "a2" }],
+            error: null,
+          })
+        }
+        return createChainableMock({
+          data: [
+            {
+              id: "f1",
+              status: "assigned",
+              claim_token: "tok-1",
+              claim_token_expires_at: new Date(Date.now() + 86400000).toISOString(),
+              recipient_name: null,
+              recipient_email: null,
+              shipping_address: null,
+              prize_assignment: {
+                prize: { name: "Grand Prize", value: "$1000", kind: "cash", distribution_method: null },
+              },
+            },
+            {
+              id: "f2",
+              status: "claimed",
+              claim_token: "tok-2",
+              claim_token_expires_at: null,
+              recipient_name: "Alice",
+              recipient_email: "alice@example.com",
+              shipping_address: null,
+              prize_assignment: {
+                prize: { name: "Runner Up", value: "$500", kind: "cash", distribution_method: null },
+              },
+            },
+          ],
+          error: null,
+        })
+      })
+
+      const result = await getSiblingClaims("tok-1")
+      expect(result).toHaveLength(2)
+      expect(result[0].token).toBe("tok-1")
+      expect(result[0].prizeName).toBe("Grand Prize")
+      expect(result[0].isExpired).toBe(false)
+      expect(result[1].token).toBe("tok-2")
+      expect(result[1].status).toBe("claimed")
+    })
+
+    it("returns empty array when fulfillment not found", async () => {
+      setMockFromImplementation(() =>
+        createChainableMock({ data: null, error: null })
+      )
+
+      const result = await getSiblingClaims("nonexistent-token")
+      expect(result).toEqual([])
+    })
+
+    it("returns empty array when no assignments exist", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({
+            data: { prize_assignment: { submission_id: "sub-1" } },
+            error: null,
+          })
+        }
+        return createChainableMock({ data: [], error: null })
+      })
+
+      const result = await getSiblingClaims("tok-1")
+      expect(result).toEqual([])
+    })
+
+    it("marks expired tokens correctly", async () => {
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({
+            data: { prize_assignment: { submission_id: "sub-1" } },
+            error: null,
+          })
+        }
+        if (callCount === 2) {
+          return createChainableMock({ data: [{ id: "a1" }], error: null })
+        }
+        return createChainableMock({
+          data: [
+            {
+              id: "f1",
+              status: "assigned",
+              claim_token: "tok-expired",
+              claim_token_expires_at: new Date(Date.now() - 86400000).toISOString(),
+              recipient_name: null,
+              recipient_email: null,
+              shipping_address: null,
+              prize_assignment: {
+                prize: { name: "Expired Prize", value: null, kind: "swag", distribution_method: null },
+              },
+            },
+          ],
+          error: null,
+        })
+      })
+
+      const result = await getSiblingClaims("tok-expired")
+      expect(result).toHaveLength(1)
+      expect(result[0].isExpired).toBe(true)
     })
   })
 })

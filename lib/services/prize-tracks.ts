@@ -33,6 +33,7 @@ export type CreatePrizeTrackInput = {
   intent?: TrackIntent
   style?: JudgingStyle
   displayOrder?: number
+  sponsorId?: string | null
 }
 
 export type UpdatePrizeTrackInput = {
@@ -85,6 +86,7 @@ export async function createPrizeTrack(
       name: input.name,
       description: input.description ?? null,
       intent,
+      sponsor_id: input.sponsorId ?? null,
       display_order: input.displayOrder ?? 0,
     })
     .select()

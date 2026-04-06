@@ -10,7 +10,7 @@ type PageProps = {
 
 export default async function JudgePage({ params }: PageProps) {
   const { slug } = await params
-  const { userId, orgId } = await auth()
+  const { userId } = await auth()
 
   if (!userId) {
     redirect(`/e/${slug}`)

@@ -1,5 +1,10 @@
 import { Glob } from "bun"
 
+const ENCRYPTION_MOCK_TESTS = [
+  "__tests__/services/sponsor-fulfillments.test.ts",
+]
+const encryptionMockSet = new Set(ENCRYPTION_MOCK_TESTS)
+
 const RADIX_ISOLATED_TESTS = [
   "__tests__/components/hackathon/submission-button.test.tsx",
   "__tests__/components/hackathon/prizes-manager.test.tsx",
@@ -35,6 +40,11 @@ const groups: Group[] = [
   {
     name: "api + lib + services",
     args: ["__tests__/api", "__tests__/lib/*.test.ts", "__tests__/services"],
+    exclude: encryptionMockSet,
+  },
+  {
+    name: "services (encryption-mock isolated)",
+    args: ENCRYPTION_MOCK_TESTS,
   },
   {
     name: "components",
@@ -60,6 +70,13 @@ const groups: Group[] = [
   {
     name: "workflows",
     args: ["__tests__/workflows"],
+  },
+  {
+    name: "email",
+    args: [
+      "__tests__/email/resolve-emails.test.ts",
+      "__tests__/email/sponsor-notifications.test.ts",
+    ],
   },
 ]
 

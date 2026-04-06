@@ -16,3 +16,47 @@ export async function renderEmail(
   ])
   return { html, text }
 }
+
+export async function resolveEmailsForTenant(tenant: {
+  clerk_org_id: string | null
+  clerk_user_id: string | null
+}): Promise<string[]> {
+  const { clerkClient } = await import("@clerk/nextjs/server")
+  const clerk = await clerkClient()
+  const emails: string[] = []
+
+  if (tenant.clerk_org_id) {
+    const PAGE_SIZE = 500
+    let offset = 0
+    const allMemberIds: string[] = []
+
+    for (;;) {
+      const memberships = await clerk.organizations.getOrganizationMembershipList({
+        organizationId: tenant.clerk_org_id,
+        limit: PAGE_SIZE,
+        offset,
+      })
+      for (const m of memberships.data) {
+        const uid = m.publicUserData?.userId
+        if (uid) allMemberIds.push(uid)
+      }
+      if (memberships.data.length < PAGE_SIZE) break
+      offset += PAGE_SIZE
+    }
+
+    for (let i = 0; i < allMemberIds.length; i += PAGE_SIZE) {
+      const batch = allMemberIds.slice(i, i + PAGE_SIZE)
+      const users = await clerk.users.getUserList({ userId: batch, limit: PAGE_SIZE })
+      for (const user of users.data) {
+        const email = user.primaryEmailAddress?.emailAddress
+        if (email) emails.push(email)
+      }
+    }
+  } else if (tenant.clerk_user_id) {
+    const user = await clerk.users.getUser(tenant.clerk_user_id)
+    const email = user.primaryEmailAddress?.emailAddress
+    if (email) emails.push(email)
+  }
+
+  return emails
+}

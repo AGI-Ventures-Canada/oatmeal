@@ -17,7 +17,7 @@ globalThis.localStorage = {
   key: () => null,
 } as Storage
 
-import { clerkState, clerkMock, resetClerkState } from "../../lib/clerk-mock"
+import { clerkState, clerkMock } from "../../lib/clerk-mock"
 
 mock.module("@clerk/nextjs", () => clerkMock)
 
@@ -27,6 +27,7 @@ const mockClipboardWriteText = mock(() => Promise.resolve())
 mock.module("next/image", () => ({
   default: (props: Record<string, unknown>) => {
     const { src, alt, width, height, ...rest } = props
+    // eslint-disable-next-line @next/next/no-img-element
     return <img src={src as string} alt={alt as string} width={width as number} height={height as number} {...rest} />
   },
 }))

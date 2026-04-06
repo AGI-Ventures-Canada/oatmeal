@@ -202,8 +202,6 @@ describe("cli-auth service", () => {
         },
         error: null,
       })
-      const updateChain = createChainableMock({ data: null, error: null })
-
       setMockFromImplementation(() => selectChain)
 
       await completeCliAuthSession("abc123", "tenant-1")

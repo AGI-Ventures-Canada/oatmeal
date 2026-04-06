@@ -1,5 +1,3 @@
-import { mock } from "bun:test"
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const g = globalThis as any
 

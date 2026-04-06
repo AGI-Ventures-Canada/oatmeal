@@ -78,6 +78,7 @@ export function TeamsTab({ hackathonId }: TeamsTabProps) {
 
   useEffect(() => {
     fetchTeams()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchTeams recreates on every render; hackathonId is the real trigger
   }, [hackathonId])
 
   function handleKeyDown(e: React.KeyboardEvent) {

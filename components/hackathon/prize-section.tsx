@@ -2,7 +2,7 @@ import { PrizeCard } from "./prize-card"
 import { Button } from "@/components/ui/button"
 import { Vote } from "lucide-react"
 import Link from "next/link"
-import type { PrizeType, HackathonStatus } from "@/lib/db/hackathon-types"
+import type { HackathonStatus } from "@/lib/db/hackathon-types"
 import type { PublicPrize } from "@/lib/services/public-hackathons"
 
 type PrizeWithWinner = PublicPrize & {

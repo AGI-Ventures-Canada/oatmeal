@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import { resolvePrincipal, requirePrincipal } from "@/lib/auth/principal"
 import { logAudit } from "@/lib/services/audit"
+import { safeDecrypt } from "@/lib/services/encryption"
 
 export const dashboardPostEventRoutes = new Elysia()
   .derive(async ({ request }) => {
@@ -38,6 +39,7 @@ export const dashboardPostEventRoutes = new Elysia()
         prizeAssignmentId: f.prize_assignment_id,
         prizeName: f.prizeName,
         prizeValue: f.prizeValue,
+        prizeKind: f.prizeKind,
         submissionTitle: f.submissionTitle,
         teamName: f.teamName,
         status: f.status,
@@ -45,6 +47,8 @@ export const dashboardPostEventRoutes = new Elysia()
         recipientName: f.recipient_name,
         shippingAddress: f.shipping_address,
         trackingNumber: f.tracking_number,
+        paymentMethod: f.payment_method,
+        paymentDetail: f.payment_detail ? safeDecrypt(f.payment_detail) : null,
         notes: f.notes,
         contactedAt: f.contacted_at,
         shippedAt: f.shipped_at,

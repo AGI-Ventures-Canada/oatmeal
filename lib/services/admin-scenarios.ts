@@ -189,24 +189,50 @@ async function createSubmission(
   return data.id
 }
 
+const CRITERIA_PRESETS = [
+  { name: "Innovation", description: "Novelty and creativity of the solution", max_score: 10, weight: 1.5, category: "core" as const },
+  { name: "Technical Execution", description: "Code quality, architecture, and reliability", max_score: 10, weight: 1.0, category: "core" as const },
+  { name: "Presentation", description: "Demo clarity, documentation, and communication", max_score: 10, weight: 0.5, category: "bonus" as const },
+]
+
+const DEFAULT_RUBRIC_LEVELS = [
+  { level_number: 1, label: "Far Below Expectations" },
+  { level_number: 2, label: "Below Expectations" },
+  { level_number: 3, label: "Meets Expectations" },
+  { level_number: 4, label: "Exceeds Expectations" },
+  { level_number: 5, label: "Far Exceeds Expectations" },
+]
+
 async function addJudgingCriteria(hackathonId: string): Promise<string[]> {
   const db = getSupabase()
-  const presets = [
-    { name: "Innovation", description: "Novelty and creativity", max_score: 10, weight: 1.5 },
-    { name: "Technical Execution", description: "Code quality and reliability", max_score: 10, weight: 1.0 },
-    { name: "Presentation", description: "Demo clarity and communication", max_score: 10, weight: 0.5 },
-  ]
 
   const ids: string[] = []
-  for (let i = 0; i < presets.length; i++) {
+  for (let i = 0; i < CRITERIA_PRESETS.length; i++) {
+    const c = CRITERIA_PRESETS[i]
     const { data, error } = await db
       .from("judging_criteria")
-      .insert({ hackathon_id: hackathonId, ...presets[i], display_order: i })
+      .insert({
+        hackathon_id: hackathonId,
+        name: c.name,
+        description: c.description,
+        max_score: c.max_score,
+        weight: c.weight,
+        display_order: i,
+        category: c.category,
+      })
       .select("id")
       .single()
 
     if (error || !data) throw new Error(`Failed to create criteria: ${error?.message}`)
     ids.push(data.id)
+
+    for (const level of DEFAULT_RUBRIC_LEVELS) {
+      await db.from("rubric_levels").insert({
+        criteria_id: data.id,
+        level_number: level.level_number,
+        label: level.label,
+      })
+    }
   }
 
   return ids
@@ -449,6 +475,27 @@ const scenarioRunners: Record<string, (tenantId?: string, principalOrgId?: strin
       }
     }
 
+    const { data: ipCriteria } = await db
+      .from("judging_criteria")
+      .select("id")
+      .eq("hackathon_id", result.hackathonId)
+      .order("display_order")
+
+    const ipFirstCriteriaId = ipCriteria?.[0]?.id ?? null
+
+    const ipPrizes = [
+      { name: "Grand Prize", description: "Best overall project", value: "$10,000", type: "score" as const, rank: 1, kind: "cash", judging_style: "bucket_sort", monetary_value: 10000, currency: "USD", display_order: 0 },
+      { name: "Runner Up", description: "Second place", value: "Swag Pack", type: "score" as const, rank: 2, kind: "swag", judging_style: "bucket_sort", display_order: 1 },
+      { name: "Innovation Award", description: "Most creative solution", value: "$500 API Credits", type: "criteria" as const, criteria_id: ipFirstCriteriaId, kind: "credit", judging_style: "judges_pick", display_order: 2 },
+    ]
+
+    for (const prize of ipPrizes) {
+      await db.from("prizes").insert({
+        hackathon_id: result.hackathonId,
+        ...prize,
+      })
+    }
+
     return { hackathonId: result.hackathonId, slug, tenantId: result.tenantId }
   },
 
@@ -486,10 +533,20 @@ const scenarioRunners: Record<string, (tenantId?: string, principalOrgId?: strin
       }
     }
 
+    await db.rpc("calculate_results", { p_hackathon_id: result.hackathonId })
+
+    const { data: criteriaRows } = await db
+      .from("judging_criteria")
+      .select("id")
+      .eq("hackathon_id", result.hackathonId)
+      .order("display_order")
+
+    const firstCriteriaId = criteriaRows?.[0]?.id ?? null
+
     const prizes = [
-      { name: "Grand Prize", description: "Best overall project", position: 1 },
-      { name: "Runner Up", description: "Second place", position: 2 },
-      { name: "Innovation Award", description: "Most creative solution", position: 3 },
+      { name: "Grand Prize", description: "Best overall project", value: "$10,000", type: "score" as const, rank: 1, kind: "cash", judging_style: "bucket_sort", monetary_value: 10000, currency: "USD", display_order: 0 },
+      { name: "Runner Up", description: "Second place", value: "Swag Pack", type: "score" as const, rank: 2, kind: "swag", judging_style: "bucket_sort", display_order: 1 },
+      { name: "Innovation Award", description: "Most creative solution", value: "$500 API Credits", type: "criteria" as const, criteria_id: firstCriteriaId, kind: "credit", judging_style: "judges_pick", display_order: 2 },
     ]
 
     for (const prize of prizes) {
@@ -498,6 +555,12 @@ const scenarioRunners: Record<string, (tenantId?: string, principalOrgId?: strin
         ...prize,
       })
     }
+
+    const { autoAssignPrizes } = await import("@/lib/services/prizes")
+    await autoAssignPrizes(result.hackathonId)
+
+    const { initializeFulfillments } = await import("@/lib/services/prize-fulfillment")
+    await initializeFulfillments(result.hackathonId)
 
     return { hackathonId: result.hackathonId, slug, tenantId: result.tenantId }
   },

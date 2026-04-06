@@ -38,12 +38,10 @@ describe("rooms service", () => {
       ]
       const teams = [{ id: TEAM_ID, name: "Team Alpha" }]
 
-      let callCount = 0
       setMockFromImplementation((table) => {
         if (table === "rooms") return createChainableMock(mockSuccess(rooms))
         if (table === "room_teams") return createChainableMock(mockSuccess(roomTeams))
         if (table === "teams") return createChainableMock(mockSuccess(teams))
-        callCount++
         return createChainableMock(mockSuccess(null))
       })
 

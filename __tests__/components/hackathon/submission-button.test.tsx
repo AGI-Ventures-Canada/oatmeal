@@ -12,7 +12,7 @@ const mockFetch = mock(() =>
   )
 )
 
-import { clerkState, clerkMock, resetClerkState } from "../../lib/clerk-mock"
+import { clerkState, clerkMock } from "../../lib/clerk-mock"
 
 mock.module("@clerk/nextjs", () => clerkMock)
 

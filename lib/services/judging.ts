@@ -29,6 +29,12 @@ export type CreatePrizeInput = {
   assignmentMode?: PrizeAssignmentMode
   maxPicks?: number
   displayOrder?: number
+  type?: "score" | "favorite" | "crowd" | "criteria"
+  rank?: number | null
+  kind?: string
+  monetaryValue?: number | null
+  currency?: string | null
+  criteriaId?: string | null
 }
 
 export type UpdatePrizeInput = {
@@ -116,19 +122,27 @@ export async function createPrize(
 ): Promise<CreatePrizeResult> {
   const client = getSupabase() as unknown as SupabaseClient
 
+  const row: Record<string, unknown> = {
+    hackathon_id: hackathonId,
+    name: input.name,
+    description: input.description ?? null,
+    value: input.value ?? null,
+    judging_style: input.judgingStyle,
+    round_id: input.roundId ?? null,
+    assignment_mode: input.assignmentMode ?? "organizer_assigned",
+    max_picks: input.maxPicks ?? 3,
+    display_order: input.displayOrder ?? 0,
+  }
+  if (input.type !== undefined) row.type = input.type
+  if (input.rank !== undefined) row.rank = input.rank
+  if (input.kind !== undefined) row.kind = input.kind
+  if (input.monetaryValue !== undefined) row.monetary_value = input.monetaryValue
+  if (input.currency !== undefined) row.currency = input.currency
+  if (input.criteriaId !== undefined) row.criteria_id = input.criteriaId
+
   const { data: prize, error } = await client
     .from("prizes")
-    .insert({
-      hackathon_id: hackathonId,
-      name: input.name,
-      description: input.description ?? null,
-      value: input.value ?? null,
-      judging_style: input.judgingStyle,
-      round_id: input.roundId ?? null,
-      assignment_mode: input.assignmentMode ?? "organizer_assigned",
-      max_picks: input.maxPicks ?? 3,
-      display_order: input.displayOrder ?? 0,
-    })
+    .insert(row)
     .select()
     .single()
 

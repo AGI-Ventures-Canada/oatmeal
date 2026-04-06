@@ -952,10 +952,21 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     },
   })
   .post("/prize-claims/:token/claim", async ({ params, body }) => {
-    const { recipientName, recipientEmail, shippingAddress } = body as {
+    const { checkRateLimit, RateLimitError } = await import("@/lib/services/rate-limit")
+    const rateLimit = await checkRateLimit(`prize_claim:${params.token}`, {
+      maxRequests: 10,
+      windowMs: 60_000,
+    })
+    if (!rateLimit.allowed) {
+      throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
+    }
+
+    const { recipientName, recipientEmail, shippingAddress, paymentMethod, paymentDetail } = body as {
       recipientName: string
       recipientEmail: string
       shippingAddress?: string
+      paymentMethod?: string
+      paymentDetail?: string
     }
 
     if (!recipientName || !recipientEmail) {
@@ -966,7 +977,7 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
     }
 
     const { claimPrize } = await import("@/lib/services/prize-fulfillment")
-    const result = await claimPrize(params.token, { recipientName, recipientEmail, shippingAddress })
+    const result = await claimPrize(params.token, { recipientName, recipientEmail, shippingAddress, paymentMethod, paymentDetail })
 
     if (!result.success) {
       const statusCode = result.code === "not_found" ? 404 : 400
@@ -976,12 +987,23 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       )
     }
 
-    return { success: true }
+    // Product decision: sibling tokens are intentionally returned to enable
+    // one team member to claim all of their submission's prizes in a single
+    // session. The claim token is the authorization — no additional auth is
+    // required. All tokens belong to the same submission, so cross-member
+    // claiming is by design (any teammate can fulfill on behalf of the team).
+    const { getSiblingClaims } = await import("@/lib/services/prize-fulfillment")
+    const siblings = await getSiblingClaims(params.token)
+    const publicSiblings = siblings.map(({ recipientEmail: _email, shippingAddress: _addr, ...rest }) => rest)
+
+    return { success: true, siblings: publicSiblings }
   }, {
     body: t.Object({
       recipientName: t.String({ minLength: 1, description: "Full name of the prize recipient" }),
       recipientEmail: t.String({ format: "email", description: "Email address of the prize recipient" }),
-      shippingAddress: t.Optional(t.String({ description: "Shipping address for physical prizes" })),
+      shippingAddress: t.Optional(t.String({ maxLength: 500, description: "Shipping address for physical prizes" })),
+      paymentMethod: t.Optional(t.Union([t.Literal("venmo"), t.Literal("paypal"), t.Literal("bank_transfer"), t.Literal("other")], { description: "Payment method for cash prizes" })),
+      paymentDetail: t.Optional(t.String({ maxLength: 500, description: "Payment handle or account details (e.g., @username, email)" })),
     }),
     detail: {
       summary: "Claim a prize",
