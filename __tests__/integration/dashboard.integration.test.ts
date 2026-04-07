@@ -32,6 +32,7 @@ mock.module("@/lib/services/jobs", () => ({
 
 mock.module("@/lib/services/audit", () => ({
   logAudit: mockLogAudit,
+  listAllAuditLogs: mock(() => Promise.resolve({ logs: [], total: 0 })),
 }))
 
 const mockResolvePrincipal = mock(() =>

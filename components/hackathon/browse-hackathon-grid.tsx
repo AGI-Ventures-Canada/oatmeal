@@ -118,6 +118,7 @@ export function BrowseHackathonGrid({
         clearTimeout(debounceRef.current)
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- page excluded to avoid re-fetching when page changes (handled by goToPage)
   }, [query, initialHackathons, initialPage, initialTotalPages, fetchPage])
 
   function goToPage(targetPage: number) {

@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Loader2, Play, ExternalLink } from "lucide-react"
+import { Loader2, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { SCENARIOS, CATEGORY_LABELS, type ScenarioDef, type ScenarioCategory } from "@/lib/dev/scenarios"
 
 type ActiveScenario = {
@@ -24,8 +23,6 @@ type RoleCard = {
 export function ScenariosTab() {
   const [activeScenarios, setActiveScenarios] = useState<ActiveScenario[]>([])
   const [running, setRunning] = useState<string | null>(null)
-  const [roleCards, setRoleCards] = useState<RoleCard[]>([])
-  const [lastRunSlug, setLastRunSlug] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loadingActive, setLoadingActive] = useState(true)
 
@@ -38,47 +35,6 @@ export function ScenariosTab() {
       .catch(() => {})
       .finally(() => setLoadingActive(false))
   }, [])
-
-  async function runScenario(scenario: ScenarioDef) {
-    setRunning(scenario.name)
-    setError(null)
-    setRoleCards([])
-    setLastRunSlug(null)
-
-    try {
-      const res = await fetch(`/api/admin/scenario-run/${scenario.name}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        setError(data?.error ?? "Failed to run scenario")
-        setRunning(null)
-        return
-      }
-
-      const data = await res.json()
-      setLastRunSlug(data.slug)
-
-      if (data.roles?.length) {
-        setRoleCards(data.roles)
-      }
-
-      setActiveScenarios((prev) => {
-        const filtered = prev.filter((s) => s.scenarioName !== scenario.name)
-        return [
-          { scenarioName: scenario.name, hackathonId: data.hackathonId, slug: data.slug, createdAt: new Date().toISOString() },
-          ...filtered,
-        ]
-      })
-    } catch {
-      setError("Network error")
-    } finally {
-      setRunning(null)
-    }
-  }
 
   async function quickLaunch(scenario: ScenarioDef) {
     setRunning(scenario.name)
@@ -149,34 +105,6 @@ export function ScenariosTab() {
           onClick={() => setError(null)}
         >
           {error}
-        </div>
-      )}
-
-      {roleCards.length > 0 && lastRunSlug && (
-        <div className="space-y-2 rounded-md border border-primary/20 bg-primary/5 p-3">
-          <p className="text-xs font-medium">Scenario ready — pick a role:</p>
-          <div className="space-y-1">
-            {roleCards.map((card) => (
-              <Button
-                key={card.personaKey}
-                variant="ghost"
-                size="sm"
-                className="h-auto w-full justify-between px-2 py-1.5 text-xs"
-                onClick={() => window.location.assign(card.loginUrl)}
-              >
-                <span className="flex items-center gap-2">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
-                    {card.name[0]}
-                  </span>
-                  <span>{card.name}</span>
-                  <Badge variant="secondary" className="text-[10px] capitalize">
-                    {card.role}
-                  </Badge>
-                </span>
-                <ExternalLink className="size-3 text-muted-foreground" />
-              </Button>
-            ))}
-          </div>
         </div>
       )}
 

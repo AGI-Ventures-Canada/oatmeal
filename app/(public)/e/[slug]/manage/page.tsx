@@ -21,6 +21,7 @@ import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TabCount } from "@/components/ui/tab-count"
 import { TabsUrlSync } from "./_tabs-url-sync"
 import { JudgingTabContent } from "./_judging-tab"
+import { PostEventTabContent } from "./_post-event-tab"
 import { EventTabContent } from "./_event-tab"
 import { RoomsTab } from "./_rooms-tab"
 import { TeamsTab } from "./_teams-tab"
@@ -67,7 +68,6 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
   ])
 
   const submissionCount = submissions.length
-  const incompleteAssignments = judgingProgress.totalAssignments - judgingProgress.completedAssignments
   const actionItems = getOrganizerActionItems({
     status: hackathon.status,
     phase: hackathon.phase,
@@ -119,6 +119,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               <TabsTrigger value="rooms">Rooms</TabsTrigger>
               <TabsTrigger value="submissions">Submissions{submissionCount > 0 && <TabCount>{submissionCount}</TabCount>}</TabsTrigger>
               <TabsTrigger value="judging">Judging &amp; Prizes{prizes.length > 0 && <TabCount>{prizes.length}</TabCount>}</TabsTrigger>
+              <TabsTrigger value="post-event">Post-Event</TabsTrigger>
               <TabsTrigger value="event">Engage</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
@@ -190,6 +191,17 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               hackathonId={hackathon.id}
               submissions={submissionsForSelect}
               resultsPublishedAt={hackathon.results_published_at}
+            />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="post-event" forceMount className="data-[state=inactive]:hidden">
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <PostEventTabContent
+              hackathonId={hackathon.id}
+              resultsPublishedAt={hackathon.results_published_at}
+              feedbackSurveySentAt={hackathon.feedback_survey_sent_at ?? null}
+              feedbackSurveyUrl={hackathon.feedback_survey_url ?? null}
             />
           </Suspense>
         </TabsContent>

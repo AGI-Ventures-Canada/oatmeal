@@ -24,6 +24,7 @@ mock.module("@/components/ui/optimized-image", () => ({
   }: {
     alt: string
     className?: string
+  // eslint-disable-next-line @next/next/no-img-element
   }) => <img alt={alt} className={className} />,
 }))
 

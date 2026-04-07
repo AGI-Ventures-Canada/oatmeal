@@ -224,6 +224,7 @@ export function ScoringPanel({
           <Dialog open={screenshotOpen} onOpenChange={setScreenshotOpen}>
             <DialogContent className="max-w-6xl w-full p-2">
               <DialogTitle className="sr-only">{detail.submissionTitle} screenshot</DialogTitle>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={detail.submissionScreenshotUrl}
                 alt={detail.submissionTitle}

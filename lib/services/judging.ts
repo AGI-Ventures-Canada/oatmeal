@@ -29,6 +29,12 @@ export type CreatePrizeInput = {
   assignmentMode?: PrizeAssignmentMode
   maxPicks?: number
   displayOrder?: number
+  type?: "score" | "favorite" | "crowd" | "criteria"
+  rank?: number | null
+  kind?: string
+  monetaryValue?: number | null
+  currency?: string | null
+  criteriaId?: string | null
 }
 
 export type UpdatePrizeInput = {
@@ -106,38 +112,50 @@ export async function listPrizes(hackathonId: string): Promise<PrizeWithProgress
   }))
 }
 
+export type CreatePrizeResult =
+  | { success: true; prize: Prize }
+  | { success: false; error: string }
+
 export async function createPrize(
   hackathonId: string,
   input: CreatePrizeInput
-): Promise<Prize | null> {
+): Promise<CreatePrizeResult> {
   const client = getSupabase() as unknown as SupabaseClient
+
+  const row: Record<string, unknown> = {
+    hackathon_id: hackathonId,
+    name: input.name,
+    description: input.description ?? null,
+    value: input.value ?? null,
+    judging_style: input.judgingStyle,
+    round_id: input.roundId ?? null,
+    assignment_mode: input.assignmentMode ?? "organizer_assigned",
+    max_picks: input.maxPicks ?? 3,
+    display_order: input.displayOrder ?? 0,
+  }
+  if (input.type !== undefined) row.type = input.type
+  if (input.rank !== undefined) row.rank = input.rank
+  if (input.kind !== undefined) row.kind = input.kind
+  if (input.monetaryValue !== undefined) row.monetary_value = input.monetaryValue
+  if (input.currency !== undefined) row.currency = input.currency
+  if (input.criteriaId !== undefined) row.criteria_id = input.criteriaId
 
   const { data: prize, error } = await client
     .from("prizes")
-    .insert({
-      hackathon_id: hackathonId,
-      name: input.name,
-      description: input.description ?? null,
-      value: input.value ?? null,
-      judging_style: input.judgingStyle,
-      round_id: input.roundId ?? null,
-      assignment_mode: input.assignmentMode ?? "organizer_assigned",
-      max_picks: input.maxPicks ?? 3,
-      display_order: input.displayOrder ?? 0,
-    })
+    .insert(row)
     .select()
     .single()
 
   if (error || !prize) {
     console.error("Failed to create prize:", error)
-    return null
+    return { success: false, error: error?.message ?? "Database insert failed" }
   }
 
   if (input.judgingStyle === "bucket_sort") {
     await createDefaultBucketsForPrize(prize.id)
   }
 
-  return prize as unknown as Prize
+  return { success: true, prize: prize as unknown as Prize }
 }
 
 export async function updatePrize(
@@ -648,6 +666,12 @@ export async function listJudges(hackathonId: string): Promise<JudgeInfo[]> {
     .eq("hackathon_id", hackathonId)
     .in("judge_participant_id", judgeIds)
 
+  const { data: prizeLinks } = await client
+    .from("judge_prize_assignments")
+    .select("judge_participant_id, prize_id")
+    .eq("hackathon_id", hackathonId)
+    .in("judge_participant_id", judgeIds)
+
   const countMap: Record<string, { total: number; completed: number; prizeIds: Set<string> }> = {}
   for (const a of assignments ?? []) {
     if (!countMap[a.judge_participant_id]) {
@@ -656,6 +680,13 @@ export async function listJudges(hackathonId: string): Promise<JudgeInfo[]> {
     countMap[a.judge_participant_id].total++
     if (a.is_complete) countMap[a.judge_participant_id].completed++
     if (a.prize_id) countMap[a.judge_participant_id].prizeIds.add(a.prize_id)
+  }
+
+  for (const link of prizeLinks ?? []) {
+    if (!countMap[link.judge_participant_id]) {
+      countMap[link.judge_participant_id] = { total: 0, completed: 0, prizeIds: new Set() }
+    }
+    countMap[link.judge_participant_id].prizeIds.add(link.prize_id)
   }
 
   const userMap: Record<string, { displayName: string; email: string | null; imageUrl: string | null }> = {}
@@ -740,7 +771,7 @@ export async function assignJudgeToPrize(
   hackathonId: string,
   judgeParticipantId: string,
   prizeId: string
-): Promise<{ assignedCount: number }> {
+): Promise<{ success: boolean; assignedCount: number; error?: string }> {
   const client = getSupabase() as unknown as SupabaseClient
 
   const { data: prize } = await client
@@ -750,10 +781,22 @@ export async function assignJudgeToPrize(
     .eq("hackathon_id", hackathonId)
     .single()
 
-  if (!prize) return { assignedCount: 0 }
+  if (!prize) return { success: false, assignedCount: 0, error: "Prize not found" }
+
+  const { error: linkError } = await client
+    .from("judge_prize_assignments")
+    .upsert(
+      { hackathon_id: hackathonId, judge_participant_id: judgeParticipantId, prize_id: prizeId },
+      { onConflict: "judge_participant_id,prize_id" }
+    )
+
+  if (linkError) {
+    console.error("[judging] Failed to link judge to prize:", linkError)
+    return { success: false, assignedCount: 0, error: "Failed to assign judge" }
+  }
 
   const pool = await getRoundPool(hackathonId, prize.round_id)
-  if (pool.length === 0) return { assignedCount: 0 }
+  if (pool.length === 0) return { success: true, assignedCount: 0 }
 
   const { data: judge } = await client
     .from("hackathon_participants")
@@ -785,15 +828,15 @@ export async function assignJudgeToPrize(
       round_id: prize.round_id,
     }))
 
-  if (newAssignments.length === 0) return { assignedCount: 0 }
+  if (newAssignments.length === 0) return { success: true, assignedCount: 0 }
 
   const { error } = await client.from("judge_assignments").insert(newAssignments)
   if (error) {
-    console.error("Failed to assign judge to prize:", error)
-    return { assignedCount: 0 }
+    console.error("[judging] Failed to create per-submission assignments:", error)
+    return { success: true, assignedCount: 0 }
   }
 
-  return { assignedCount: newAssignments.length }
+  return { success: true, assignedCount: newAssignments.length }
 }
 
 export async function verifyAssignmentOwnership(
@@ -818,6 +861,12 @@ export async function removeJudgeFromPrize(
   prizeId: string
 ): Promise<{ removedCount: number }> {
   const client = getSupabase() as unknown as SupabaseClient
+
+  await client
+    .from("judge_prize_assignments")
+    .delete()
+    .eq("judge_participant_id", judgeParticipantId)
+    .eq("prize_id", prizeId)
 
   const { data: toDelete } = await client
     .from("judge_assignments")
@@ -1380,6 +1429,23 @@ async function insertRankedResults(
   }
 
   return { success: true, count: inserts.length }
+}
+
+// ============================================================
+// Auto-recalculate after scoring
+// ============================================================
+
+export async function recalculateForAssignment(assignmentId: string): Promise<void> {
+  const client = getSupabase() as unknown as SupabaseClient
+  const { data } = await client
+    .from("judge_assignments")
+    .select("hackathon_id, prize_id")
+    .eq("id", assignmentId)
+    .single()
+
+  if (data?.hackathon_id && data?.prize_id) {
+    await calculatePrizeResults(data.hackathon_id, data.prize_id)
+  }
 }
 
 // ============================================================

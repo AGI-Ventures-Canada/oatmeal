@@ -7,6 +7,8 @@ import {
   addJudgingCriteria,
   assignJudges,
   submitRandomScores,
+  buildDefaultPrizes,
+  createPrizes,
   DEV_USER_ID,
   SEED_USERS,
   supabase,
@@ -80,8 +82,12 @@ async function run() {
     await submitRandomScores(assignmentIds[i], criteriaIds)
   }
 
+  const prizes = buildDefaultPrizes(criteriaIds)
+  await createPrizes(hackathonId, prizes)
+
   console.log(`Created 5 teams, 5 submissions, 3 judges, ${assignmentIds.length} assignments.`)
   console.log(`${halfPoint} assignments scored, ${assignmentIds.length - halfPoint} remaining.`)
+  console.log("3 prizes defined (not assigned — results not calculated yet).")
   printReady(SLUG)
 }
 

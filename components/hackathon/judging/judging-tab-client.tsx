@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,9 +49,12 @@ import {
   ListChecks,
   ArrowUpDown,
   Award,
+  X,
 } from "lucide-react"
 import { AddJudgeDialog } from "./add-judge-dialog"
 import { AddPrizeDialog } from "./add-prize-dialog"
+import { AssignJudgesDialog } from "./assign-judges-dialog"
+import { JudgePill } from "./judge-pill"
 
 type PrizeData = {
   id: string
@@ -133,19 +135,31 @@ export function JudgingTabClient({
   rounds,
   pendingInvitations: initialInvitations,
   results: initialResults,
-  submissions,
+  submissions: _submissions,
   isPublished: initialIsPublished,
 }: JudgingTabClientProps) {
   const router = useRouter()
   const [showAddJudge, setShowAddJudge] = useState(false)
   const [showAddPrize, setShowAddPrize] = useState(false)
-  const [deletingPrize, setDeletingPrize] = useState<string | null>(null)
-  const [removingJudge, setRemovingJudge] = useState<string | null>(null)
-  const [calculating, setCalculating] = useState(false)
   const [publishing, setPublishing] = useState(false)
-  const [results, setResults] = useState(initialResults)
+  const results = initialResults
   const [isPublished, setIsPublished] = useState(initialIsPublished)
   const [error, setError] = useState<string | null>(null)
+
+  const [hiddenJudges, setHiddenJudges] = useState<Set<string>>(new Set())
+  const [hiddenPrizes, setHiddenPrizes] = useState<Set<string>>(new Set())
+  const [hiddenInvitations, setHiddenInvitations] = useState<Set<string>>(new Set())
+  const [hiddenPrizeJudges, setHiddenPrizeJudges] = useState<Set<string>>(new Set())
+
+  const judges = initialJudges
+    .filter(j => !hiddenJudges.has(j.participantId))
+    .map(j => ({
+      ...j,
+      prizeIds: j.prizeIds.filter(pid => !hiddenPrizeJudges.has(`${pid}:${j.participantId}`)),
+    }))
+  const prizes = initialPrizes.filter(p => !hiddenPrizes.has(p.id))
+  const invitations = initialInvitations.filter(i => !hiddenInvitations.has(i.id))
+
 
   const base = `/api/dashboard/hackathons/${hackathonId}`
 
@@ -154,59 +168,62 @@ export function JudgingTabClient({
     : 0
 
   async function handleDeletePrize(prizeId: string) {
-    setDeletingPrize(prizeId)
+    setHiddenPrizes(prev => new Set(prev).add(prizeId))
     try {
       const res = await fetch(`${base}/prizes/${prizeId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to delete")
       router.refresh()
     } catch {
+      setHiddenPrizes(prev => { const next = new Set(prev); next.delete(prizeId); return next })
       setError("Failed to delete prize")
-    } finally {
-      setDeletingPrize(null)
     }
   }
 
   async function handleRemoveJudge(participantId: string) {
-    setRemovingJudge(participantId)
+    setHiddenJudges(prev => new Set(prev).add(participantId))
     try {
-      const res = await fetch(`${base}/judging/judges?participantId=${participantId}`, { method: "DELETE" })
+      const res = await fetch(`${base}/judging/judges/${participantId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to remove")
       router.refresh()
     } catch {
+      setHiddenJudges(prev => { const next = new Set(prev); next.delete(participantId); return next })
       setError("Failed to remove judge")
-    } finally {
-      setRemovingJudge(null)
     }
   }
 
   async function handleCancelInvitation(invitationId: string) {
+    setHiddenInvitations(prev => new Set(prev).add(invitationId))
     try {
-      const res = await fetch(`${base}/judging/invitations?invitationId=${invitationId}`, { method: "DELETE" })
+      const res = await fetch(`${base}/judging/invitations/${invitationId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to cancel")
       router.refresh()
     } catch {
+      setHiddenInvitations(prev => { const next = new Set(prev); next.delete(invitationId); return next })
       setError("Failed to cancel invitation")
     }
   }
 
-  async function handleCalculateResults() {
-    setCalculating(true)
-    setError(null)
+  async function assignJudgeToPrize(prizeId: string, judgeParticipantId: string) {
+    const res = await fetch(`${base}/prizes/${prizeId}/assign-judge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ judgeParticipantId }),
+    })
+    if (!res.ok) throw new Error("Failed to assign")
+  }
+
+  async function unassignJudgeFromPrize(prizeId: string, judgeParticipantId: string) {
+    const key = `${prizeId}:${judgeParticipantId}`
+    setHiddenPrizeJudges(prev => new Set(prev).add(key))
     try {
-      const res = await fetch(`${base}/results/calculate`, { method: "POST" })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Failed to calculate")
-      }
-      const resultsRes = await fetch(`${base}/results`)
-      if (resultsRes.ok) {
-        const data = await resultsRes.json()
-        setResults(data.results)
-      }
+      const res = await fetch(`${base}/prizes/${prizeId}/judges/${judgeParticipantId}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) throw new Error("Failed to unassign")
+      router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to calculate results")
-    } finally {
-      setCalculating(false)
+      setHiddenPrizeJudges(prev => { const next = new Set(prev); next.delete(key); return next })
+      throw err
     }
   }
 
@@ -214,6 +231,7 @@ export function JudgingTabClient({
     setPublishing(true)
     setError(null)
     try {
+      await fetch(`${base}/results/calculate`, { method: "POST" })
       const res = await fetch(`${base}/results/publish`, { method: "POST" })
       if (!res.ok) throw new Error("Failed to publish")
       setIsPublished(true)
@@ -257,32 +275,32 @@ export function JudgingTabClient({
       )}
 
       <JudgesSection
-        judges={initialJudges}
-        invitations={initialInvitations}
+        judges={judges}
+        invitations={invitations}
         hackathonId={hackathonId}
         onAddJudge={() => setShowAddJudge(true)}
         onRemoveJudge={handleRemoveJudge}
         onCancelInvitation={handleCancelInvitation}
-        removingJudge={removingJudge}
       />
 
       <PrizesSection
-        prizes={initialPrizes}
-        judges={initialJudges}
+        hackathonId={hackathonId}
+        prizes={prizes}
+        judges={judges}
         rounds={rounds}
         onAddPrize={() => setShowAddPrize(true)}
         onDeletePrize={handleDeletePrize}
-        deletingPrize={deletingPrize}
+        onAssignJudge={assignJudgeToPrize}
+        onUnassignJudge={unassignJudgeFromPrize}
+        onRefresh={() => router.refresh()}
       />
 
-      {(initialPrizes.length > 0 || results.length > 0) && (
+      {(prizes.length > 0 || results.length > 0) && (
         <ResultsSection
           hackathonId={hackathonId}
           results={results}
           isPublished={isPublished}
-          calculating={calculating}
           publishing={publishing}
-          onCalculate={handleCalculateResults}
           onPublish={handlePublish}
           onUnpublish={handleUnpublish}
           incompleteAssignments={initialProgress.totalAssignments - initialProgress.completedAssignments}
@@ -309,11 +327,10 @@ export function JudgingTabClient({
 function JudgesSection({
   judges,
   invitations,
-  hackathonId,
+  hackathonId: _hackathonId,
   onAddJudge,
   onRemoveJudge,
   onCancelInvitation,
-  removingJudge,
 }: {
   judges: JudgeData[]
   invitations: InvitationData[]
@@ -321,7 +338,6 @@ function JudgesSection({
   onAddJudge: () => void
   onRemoveJudge: (id: string) => void
   onCancelInvitation: (id: string) => void
-  removingJudge: string | null
 }) {
   return (
     <Card>
@@ -347,36 +363,34 @@ function JudgesSection({
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {judges.map((judge) => (
-                <div
+                <JudgePill
                   key={judge.participantId}
-                  className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm"
-                >
-                  <Avatar size="sm">
-                    {judge.imageUrl && <AvatarImage src={judge.imageUrl} alt={judge.displayName} />}
-                    <AvatarFallback>{judge.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">{judge.displayName}</span>
-                  {judge.prizeIds.length > 0 && (
-                    <Badge variant="secondary" className="text-xs">{judge.prizeIds.length} prize{judge.prizeIds.length !== 1 ? "s" : ""}</Badge>
-                  )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-6">
-                        <MoreHorizontal className="size-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        disabled={removingJudge === judge.participantId}
-                        onClick={() => onRemoveJudge(judge.participantId)}
-                      >
-                        <Trash2 className="mr-2 size-4" />
-                        Remove Judge
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                  imageUrl={judge.imageUrl}
+                  displayName={judge.displayName}
+                  badge={
+                    judge.prizeIds.length > 0 ? (
+                      <Badge variant="secondary" className="text-xs">{judge.prizeIds.length} prize{judge.prizeIds.length !== 1 ? "s" : ""}</Badge>
+                    ) : undefined
+                  }
+                  action={
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-6">
+                          <MoreHorizontal className="size-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => onRemoveJudge(judge.participantId)}
+                        >
+                          <Trash2 className="mr-2 size-4" />
+                          Remove Judge
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  }
+                />
               ))}
               {invitations.map((inv) => (
                 <div
@@ -408,20 +422,37 @@ function JudgesSection({
 }
 
 function PrizesSection({
+  hackathonId,
   prizes,
   judges,
   rounds,
   onAddPrize,
   onDeletePrize,
-  deletingPrize,
+  onAssignJudge,
+  onUnassignJudge,
+  onRefresh,
 }: {
+  hackathonId: string
   prizes: PrizeData[]
   judges: JudgeData[]
   rounds: RoundData[]
   onAddPrize: () => void
   onDeletePrize: (id: string) => void
-  deletingPrize: string | null
+  onAssignJudge: (prizeId: string, judgeParticipantId: string) => Promise<void>
+  onUnassignJudge: (prizeId: string, judgeParticipantId: string) => Promise<void>
+  onRefresh: () => void
 }) {
+  const [assignDialogPrize, setAssignDialogPrize] = useState<{ id: string; name: string } | null>(null)
+  const [removingFromPrize, setRemovingFromPrize] = useState<{ prizeId: string; prizeName: string; judge: JudgeData } | null>(null)
+
+  function handleConfirmRemoveFromPrize() {
+    if (!removingFromPrize) return
+    const { prizeId, judge } = removingFromPrize
+    setRemovingFromPrize(null)
+    onUnassignJudge(prizeId, judge.participantId)
+  }
+
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -472,107 +503,151 @@ function PrizesSection({
               ? Math.round((prize.completedAssignments / prize.totalAssignments) * 100)
               : 0
             const assignedJudges = judges.filter((j) => j.prizeIds.includes(prize.id))
+            const isCrowdVote = prize.judgingStyle === "crowd_vote"
 
             return (
               <Card key={prize.id}>
-                <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold">{prize.name}</span>
-                      {prize.value && (
-                        <Badge variant="secondary">{prize.value}</Badge>
-                      )}
-                      {style && (
-                        <Badge variant="outline" className={style.color}>
-                          <StyleIcon className="mr-1 size-3" />
-                          {style.label}
-                        </Badge>
-                      )}
-                    </div>
-                    {prize.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-1">{prize.description}</p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-4 shrink-0">
-                    {assignedJudges.length > 0 && (
-                      <div className="flex -space-x-2">
-                        {assignedJudges.slice(0, 3).map((j) => (
-                          <Avatar key={j.participantId} size="sm" className="border-2 border-background">
-                            {j.imageUrl && <AvatarImage src={j.imageUrl} alt={j.displayName} />}
-                            <AvatarFallback className="text-[10px]">{j.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                        ))}
-                        {assignedJudges.length > 3 && (
-                          <div className="flex items-center justify-center size-6 rounded-full bg-muted border-2 border-background text-[10px] font-medium">
-                            +{assignedJudges.length - 3}
-                          </div>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold">{prize.name}</span>
+                        {prize.value && (
+                          <Badge variant="secondary">{prize.value}</Badge>
+                        )}
+                        {style && (
+                          <Badge variant="outline" className={style.color}>
+                            <StyleIcon className="mr-1 size-3" />
+                            {style.label}
+                          </Badge>
                         )}
                       </div>
-                    )}
+                      {prize.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">{prize.description}</p>
+                      )}
+                    </div>
 
-                    {prize.totalAssignments > 0 && (
-                      <div className="flex items-center gap-2 w-24">
-                        <Progress value={pct} className="h-1.5" />
-                        <span className="text-xs text-muted-foreground w-8 text-right">{pct}%</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {prize.totalAssignments > 0 && (
+                        <div className="flex items-center gap-2 w-24">
+                          <Progress value={pct} className="h-1.5" />
+                          <span className="text-xs text-muted-foreground w-8 text-right">{pct}%</span>
+                        </div>
+                      )}
 
-                    <AlertDialog>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-8">
-                            <MoreHorizontal className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem className="text-destructive">
-                              <Trash2 className="mr-2 size-4" />
-                              Delete Prize
-                            </DropdownMenuItem>
-                          </AlertDialogTrigger>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete &ldquo;{prize.name}&rdquo;?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will delete the prize and all its judge assignments, bucket definitions, and results. This cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => onDeletePrize(prize.id)}
-                            disabled={deletingPrize === prize.id}
-                          >
-                            {deletingPrize === prize.id ? (
-                              <Loader2 className="mr-2 size-4 animate-spin" />
-                            ) : null}
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                      <AlertDialog>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem className="text-destructive">
+                                <Trash2 className="mr-2 size-4" />
+                                Delete Prize
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete &ldquo;{prize.name}&rdquo;?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will delete the prize and all its judge assignments, bucket definitions, and results. This cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onDeletePrize(prize.id)}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
+
+                  {!isCrowdVote && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {assignedJudges.map((j) => (
+                        <JudgePill
+                          key={j.participantId}
+                          imageUrl={j.imageUrl}
+                          displayName={j.displayName}
+                          action={
+                            <button
+                              type="button"
+                              onClick={() => setRemovingFromPrize({ prizeId: prize.id, prizeName: prize.name, judge: j })}
+                              className="flex items-center justify-center size-4 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          }
+                        />
+                      ))}
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 rounded-full gap-1.5"
+                        onClick={() => setAssignDialogPrize({ id: prize.id, name: prize.name })}
+                      >
+                        <Plus className="size-3" />
+                        <span className="hidden sm:inline">
+                          {assignedJudges.length === 0 ? "Assign Judges" : "Edit"}
+                        </span>
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )
           })}
         </div>
       )}
+
+      {assignDialogPrize && (
+        <AssignJudgesDialog
+          hackathonId={hackathonId}
+          prizeId={assignDialogPrize.id}
+          prizeName={assignDialogPrize.name}
+          judges={judges}
+          open={!!assignDialogPrize}
+          onOpenChange={(open) => { if (!open) setAssignDialogPrize(null) }}
+          onAssignJudge={onAssignJudge}
+          onUnassignJudge={onUnassignJudge}
+          onRefresh={onRefresh}
+        />
+      )}
+
+      <AlertDialog open={!!removingFromPrize} onOpenChange={(open) => { if (!open) setRemovingFromPrize(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove judge from prize?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove {removingFromPrize?.judge.displayName} from &ldquo;{removingFromPrize?.prizeName}&rdquo;.
+              This will also delete any scores they&apos;ve submitted for this prize.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmRemoveFromPrize}>
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
 
 function ResultsSection({
-  hackathonId,
+  hackathonId: _hackathonId,
   results,
   isPublished,
-  calculating,
   publishing,
-  onCalculate,
   onPublish,
   onUnpublish,
   incompleteAssignments,
@@ -580,9 +655,7 @@ function ResultsSection({
   hackathonId: string
   results: ResultData[]
   isPublished: boolean
-  calculating: boolean
   publishing: boolean
-  onCalculate: () => void
   onPublish: () => void
   onUnpublish: () => void
   incompleteAssignments: number
@@ -593,30 +666,13 @@ function ResultsSection({
         <h3 className="text-base font-semibold flex items-center gap-2">
           <Calculator className="size-4" />
           Results
-          {isPublished && <Badge>Published</Badge>}
+          {isPublished ? (
+            <Badge>Published</Badge>
+          ) : results.length > 0 ? (
+            <Badge variant="outline">Live</Badge>
+          ) : null}
         </h3>
         <div className="flex items-center gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" variant="outline" disabled={calculating}>
-                {calculating ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Calculator className="mr-2 size-4" />}
-                Calculate
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Recalculate Results?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will recalculate all rankings based on current scores. Previous rankings will be replaced.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onCalculate}>Calculate</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
           {isPublished ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -671,7 +727,7 @@ function ResultsSection({
         <Card className="border-dashed">
           <CardContent className="py-8 text-center">
             <p className="text-sm text-muted-foreground">
-              No results yet. Calculate results after judges have submitted their scores.
+              No scored submissions yet. Results will appear here as judges submit their scores.
             </p>
           </CardContent>
         </Card>

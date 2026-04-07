@@ -1,13 +1,15 @@
 import { Elysia, t } from "elysia"
 import { normalizeOptionalUrl, normalizeUrl } from "@/lib/utils/url"
-import { resolvePrincipal, requirePrincipal, AuthError } from "@/lib/auth/principal"
+import { resolvePrincipal, requirePrincipal } from "@/lib/auth/principal"
 import { createApiKey, listApiKeys, revokeApiKey, getApiKeyById } from "@/lib/services/api-keys"
 import { listJobs, getJobById } from "@/lib/services/jobs"
 import { logAudit } from "@/lib/services/audit"
-import { checkRateLimit, getRateLimitHeaders, RateLimitError } from "@/lib/services/rate-limit"
+import { checkRateLimit, RateLimitError } from "@/lib/services/rate-limit"
 import { dashboardJudgingRoutes } from "./dashboard-judging"
 import { dashboardResultsRoutes } from "./dashboard-results"
 import { dashboardJudgeDisplayRoutes } from "./dashboard-judge-display"
+import { dashboardPostEventRoutes } from "./dashboard-post-event"
+import { dashboardSponsorFulfillmentRoutes } from "./dashboard-sponsor-fulfillments"
 import { getEffectiveStatus } from "@/lib/utils/timeline"
 import type { Scope } from "@/lib/auth/types"
 import { ALL_SCOPES } from "@/lib/auth/types"
@@ -2253,3 +2255,5 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .use(dashboardJudgingRoutes)
   .use(dashboardResultsRoutes)
   .use(dashboardJudgeDisplayRoutes)
+  .use(dashboardPostEventRoutes)
+  .use(dashboardSponsorFulfillmentRoutes)

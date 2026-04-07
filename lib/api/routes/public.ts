@@ -933,6 +933,83 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
       description: "Declines a team invitation. Requires Clerk session.",
     },
   })
+  .get("/prize-claims/:token", async ({ params }) => {
+    const { getClaimByToken } = await import("@/lib/services/prize-fulfillment")
+    const claim = await getClaimByToken(params.token)
+
+    if (!claim) {
+      return new Response(
+        JSON.stringify({ error: "Prize claim not found", code: "not_found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    return claim
+  }, {
+    detail: {
+      summary: "Get prize claim details",
+      description: "Returns prize claim details by token. No authentication required.",
+    },
+  })
+  .post("/prize-claims/:token/claim", async ({ params, body }) => {
+    const { checkRateLimit, RateLimitError } = await import("@/lib/services/rate-limit")
+    const rateLimit = await checkRateLimit(`prize_claim:${params.token}`, {
+      maxRequests: 10,
+      windowMs: 60_000,
+    })
+    if (!rateLimit.allowed) {
+      throw new RateLimitError(rateLimit.resetAt, rateLimit.remaining)
+    }
+
+    const { recipientName, recipientEmail, shippingAddress, paymentMethod, paymentDetail } = body as {
+      recipientName: string
+      recipientEmail: string
+      shippingAddress?: string
+      paymentMethod?: string
+      paymentDetail?: string
+    }
+
+    if (!recipientName || !recipientEmail) {
+      return new Response(
+        JSON.stringify({ error: "Name and email are required", code: "validation" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    const { claimPrize } = await import("@/lib/services/prize-fulfillment")
+    const result = await claimPrize(params.token, { recipientName, recipientEmail, shippingAddress, paymentMethod, paymentDetail })
+
+    if (!result.success) {
+      const statusCode = result.code === "not_found" ? 404 : 400
+      return new Response(
+        JSON.stringify({ error: result.error, code: result.code }),
+        { status: statusCode, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    // Product decision: sibling tokens are intentionally returned to enable
+    // one team member to claim all of their submission's prizes in a single
+    // session. The claim token is the authorization — no additional auth is
+    // required. All tokens belong to the same submission, so cross-member
+    // claiming is by design (any teammate can fulfill on behalf of the team).
+    const { getSiblingClaims } = await import("@/lib/services/prize-fulfillment")
+    const siblings = await getSiblingClaims(params.token)
+    const publicSiblings = siblings.map(({ recipientEmail: _email, shippingAddress: _addr, ...rest }) => rest)
+
+    return { success: true, siblings: publicSiblings }
+  }, {
+    body: t.Object({
+      recipientName: t.String({ minLength: 1, description: "Full name of the prize recipient" }),
+      recipientEmail: t.String({ format: "email", description: "Email address of the prize recipient" }),
+      shippingAddress: t.Optional(t.String({ maxLength: 500, description: "Shipping address for physical prizes" })),
+      paymentMethod: t.Optional(t.Union([t.Literal("venmo"), t.Literal("paypal"), t.Literal("bank_transfer"), t.Literal("other")], { description: "Payment method for cash prizes" })),
+      paymentDetail: t.Optional(t.String({ maxLength: 500, description: "Payment handle or account details (e.g., @username, email)" })),
+    }),
+    detail: {
+      summary: "Claim a prize",
+      description: "Submits a prize claim with recipient details. No authentication required — the token is the authorization.",
+    },
+  })
   .get("/hackathons/:slug/judging/assignments", async ({ params }) => {
     const { userId } = await auth()
 
@@ -1098,6 +1175,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         )
       }
 
+      const { calculatePrizeResults } = await import("@/lib/services/judging")
+      calculatePrizeResults(hackathon.id, typedBody.prizeId).catch((err) => {
+        console.error(`[judging] auto-recalculate failed for prize ${typedBody.prizeId}:`, err)
+      })
+
       return { id: result.pick.id }
     },
     {
@@ -1149,6 +1231,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         { status: 404, headers: { "Content-Type": "application/json" } }
       )
     }
+
+    const { calculatePrizeResults } = await import("@/lib/services/judging")
+    calculatePrizeResults(hackathon.id, params.prizeId).catch((err) => {
+      console.error(`[judging] auto-recalculate failed for prize ${params.prizeId}:`, err)
+    })
 
     return { success: true }
   }, {
@@ -1244,6 +1331,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
         )
       }
 
+      const { recalculateForAssignment } = await import("@/lib/services/judging")
+      recalculateForAssignment(params.assignmentId).catch((err) => {
+        console.error(`[judging] auto-recalculate failed for assignment ${params.assignmentId}:`, err)
+      })
+
       return { success: true }
     },
     {
@@ -1306,6 +1398,11 @@ export const publicRoutes = new Elysia({ prefix: "/public" })
           { status: 400, headers: { "Content-Type": "application/json" } }
         )
       }
+
+      const { recalculateForAssignment } = await import("@/lib/services/judging")
+      recalculateForAssignment(params.assignmentId).catch((err) => {
+        console.error(`[judging] auto-recalculate failed for assignment ${params.assignmentId}:`, err)
+      })
 
       return { success: true }
     },

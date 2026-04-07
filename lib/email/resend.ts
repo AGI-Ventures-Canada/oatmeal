@@ -1,4 +1,6 @@
 import { Resend } from "resend"
+import { renderEmail } from "./utils"
+import AgentNotificationEmail from "@/emails/agent-notification"
 
 let resendClient: Resend | null = null
 
@@ -175,28 +177,20 @@ export async function sendAgentNotification(
     failed: `Agent "${agentName}" failed`,
   }
 
-  const getHtmlContent = () => {
-    const base = `
-      <h2>Agent Run Notification</h2>
-      <p><strong>Agent:</strong> ${agentName}</p>
-      <p><strong>Run ID:</strong> ${runId}</p>
-      <p><strong>Status:</strong> ${type}</p>
-    `
-
-    if (type === "completed" && details?.output) {
-      return `${base}<h3>Output</h3><pre>${details.output}</pre>`
-    }
-
-    if (type === "failed" && details?.error) {
-      return `${base}<h3>Error</h3><pre>${details.error}</pre>`
-    }
-
-    return base
-  }
+  const { html, text } = await renderEmail(
+    AgentNotificationEmail({
+      agentName,
+      runId,
+      type,
+      output: details?.output,
+      error: details?.error,
+    })
+  )
 
   return sendEmail({
     to: email,
     subject: subjects[type],
-    html: getHtmlContent(),
+    html,
+    text,
   })
 }

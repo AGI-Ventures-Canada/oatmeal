@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/command"
 import { Field, FieldLabel, FieldGroup } from "@/components/ui/field"
 import { useEdit } from "@/components/hackathon/preview/edit-context"
-import { Badge } from "@/components/ui/badge"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import {
   HoverCard,
@@ -186,18 +185,6 @@ const KIND_PRESETS = [
   { value: "experience", label: "Experience" },
   { value: "other", label: "Other" },
 ]
-
-const typeLabels: Record<PrizeType, string> = {
-  score: "Score-based",
-  criteria: "Best in Category",
-  favorite: "Organizer's Pick",
-  crowd: "Crowd's Favorite",
-}
-
-function getTypeLabel(type: PrizeType, judgingMode?: JudgingMode): string {
-  if (type === "favorite" && judgingMode === "subjective") return "Judge's Choice"
-  return typeLabels[type]
-}
 
 function getTypeInfo(type: PrizeType, judgingMode?: JudgingMode, criterionName?: string): string {
   switch (type) {

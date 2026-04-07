@@ -15,8 +15,10 @@ describe("VALID_TABS", () => {
     expect(VALID_TABS).toContain("rooms")
     expect(VALID_TABS).toContain("submissions")
     expect(VALID_TABS).toContain("judging")
+    expect(VALID_TABS).toContain("post-event")
     expect(VALID_TABS).toContain("event")
-    expect(VALID_TABS).toHaveLength(8)
+    expect(VALID_TABS).toContain("activity")
+    expect(VALID_TABS).toHaveLength(9)
   })
 
   it("does not contain old judges or prizes tabs", () => {
@@ -66,6 +68,10 @@ describe("resolveTab", () => {
 
   it("redirects old prizes tab to judging", () => {
     expect(resolveTab("prizes", VALID_TABS, "overview")).toBe("judging")
+  })
+
+  it("redirects fulfillment tab to post-event", () => {
+    expect(resolveTab("fulfillment", VALID_TABS, "overview")).toBe("post-event")
   })
 })
 

@@ -38,9 +38,13 @@ export async function calculateResults(
 
   const { data: hackathon } = await client
     .from("hackathons")
-    .select("judging_mode")
+    .select("judging_mode, results_published_at")
     .eq("id", hackathonId)
     .single()
+
+  if (hackathon?.results_published_at) {
+    return { success: true, count: -1 }
+  }
 
   if (hackathon?.judging_mode === "subjective") {
     return calculateSubjectiveResults(hackathonId)
@@ -211,7 +215,7 @@ export async function publishResults(
 
   const { data: hackathon } = await client
     .from("hackathons")
-    .select("id, status, tenant_id, winner_emails_sent_at")
+    .select("id, name, slug, status, tenant_id, winner_emails_sent_at")
     .eq("id", hackathonId)
     .eq("tenant_id", tenantId)
     .single()
@@ -278,6 +282,20 @@ export async function publishResults(
     }
   }
 
+  try {
+    const { autoAssignPrizes } = await import("@/lib/services/prizes")
+    await autoAssignPrizes(hackathonId)
+  } catch (err) {
+    console.error("Failed to auto-assign prizes (non-blocking):", err)
+  }
+
+  try {
+    const { initializeFulfillments } = await import("@/lib/services/prize-fulfillment")
+    await initializeFulfillments(hackathonId)
+  } catch (err) {
+    console.error("Failed to initialize fulfillments (non-blocking):", err)
+  }
+
   if (!hackathon.winner_emails_sent_at) {
     try {
       const { sendWinnerEmails } = await import("@/lib/email/winner-notifications")
@@ -291,6 +309,27 @@ export async function publishResults(
     } catch (err) {
       console.error("Failed to send winner emails (non-blocking):", err)
     }
+  }
+
+  try {
+    const { sendResultsAnnouncementEmails } = await import("@/lib/email/results-announcement")
+    await sendResultsAnnouncementEmails(hackathonId)
+  } catch (err) {
+    console.error("Failed to send results announcement (non-blocking):", err)
+  }
+
+  try {
+    const { start } = await import("workflow/api")
+    const { postEventRemindersWorkflow } = await import("@/lib/workflows/post-event-reminders")
+    start(postEventRemindersWorkflow, [{
+      hackathonId,
+      hackathonName: hackathon.name,
+      hackathonSlug: hackathon.slug,
+    }]).catch((err) => {
+      console.error("Failed to start post-event reminders workflow:", err)
+    })
+  } catch (err) {
+    console.error("Failed to start post-event reminders workflow (non-blocking):", err)
   }
 
   return { success: true }

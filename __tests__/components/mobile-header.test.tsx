@@ -24,6 +24,7 @@ mock.module("next/image", () => ({
   default: (props: Record<string, unknown>) => {
     const { src, alt, width, height, ...rest } = props
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src as string}
         alt={alt as string}

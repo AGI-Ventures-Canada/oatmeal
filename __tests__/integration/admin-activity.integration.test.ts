@@ -20,6 +20,8 @@ mock.module("@/lib/services/admin", () => ({
 mock.module("@/lib/services/admin-scenarios", () => ({
   listScenarios: mock(() => []),
   runScenario: mock(() => Promise.resolve({ hackathonId: "h-1", slug: "s", tenantId: "t-1" })),
+  getActiveScenarios: mock(() => Promise.resolve([])),
+  generateRoleTokens: mock(() => Promise.resolve([])),
 }))
 
 mock.module("@/lib/db/client", () => ({

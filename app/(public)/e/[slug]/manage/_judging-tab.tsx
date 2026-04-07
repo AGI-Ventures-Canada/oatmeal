@@ -1,6 +1,6 @@
 import { listPrizes, listJudges, getJudgingProgress, listRounds } from "@/lib/services/judging"
 import { listJudgeInvitations } from "@/lib/services/judge-invitations"
-import { getResults } from "@/lib/services/results"
+import { calculateResults, getResults } from "@/lib/services/results"
 import { JudgingTabClient } from "@/components/hackathon/judging/judging-tab-client"
 
 export type JudgingTabContentProps = {
@@ -14,6 +14,11 @@ export async function JudgingTabContent({
   submissions,
   resultsPublishedAt,
 }: JudgingTabContentProps) {
+  if (!resultsPublishedAt) {
+    await calculateResults(hackathonId)
+  }
+
+
   const [prizes, judges, progress, rounds, pendingInvitations, results] = await Promise.all([
     listPrizes(hackathonId),
     listJudges(hackathonId),

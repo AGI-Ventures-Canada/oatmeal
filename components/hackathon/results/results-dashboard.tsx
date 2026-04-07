@@ -161,7 +161,7 @@ export function ResultsDashboard({
         <div>
           <h3 className="text-lg font-semibold">Results</h3>
           <p className="text-sm text-muted-foreground">
-            Calculate rankings and publish results
+            Rankings update automatically as judges score. Publish when ready.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -173,14 +173,14 @@ export function ResultsDashboard({
                 ) : (
                   <Calculator className="mr-2 size-4" />
                 )}
-                Calculate Results
+                Recalculate
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Recalculate Results?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will recalculate all rankings based on current scores. Previous rankings will be replaced.
+                  Rankings already update automatically as judges score. Use this to force a full recalculation if results look stale.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

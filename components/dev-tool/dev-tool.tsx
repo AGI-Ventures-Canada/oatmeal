@@ -125,6 +125,7 @@ export function DevTool() {
       ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
       setIsSnapping(false)
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- expanded intentionally excluded to avoid re-binding during drag
     [position]
   )
 

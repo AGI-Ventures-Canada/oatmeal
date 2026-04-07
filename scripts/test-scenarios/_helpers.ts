@@ -45,9 +45,9 @@ const SUBMISSION_DATA = [
 ]
 
 const CRITERIA_PRESETS = [
-  { name: "Innovation", description: "Novelty and creativity of the solution", max_score: 10, weight: 1.5, category: "core" },
-  { name: "Technical Execution", description: "Code quality, architecture, and reliability", max_score: 10, weight: 1.0, category: "core" },
-  { name: "Presentation", description: "Demo clarity, documentation, and communication", max_score: 10, weight: 0.5, category: "bonus" },
+  { name: "Innovation", description: "Novelty and creativity of the solution", max_score: 10, weight: 1.5, category: "core" as const },
+  { name: "Technical Execution", description: "Code quality, architecture, and reliability", max_score: 10, weight: 1.0, category: "core" as const },
+  { name: "Presentation", description: "Demo clarity, documentation, and communication", max_score: 10, weight: 0.5, category: "bonus" as const },
 ]
 
 const DEFAULT_RUBRIC_LEVELS = [
@@ -356,6 +356,119 @@ export async function submitRandomScores(
       notes: "Scored via test scenario script.",
     })
     .eq("id", assignmentId)
+}
+
+export type SeedPrize = {
+  name: string
+  description: string
+  value: string
+  type: "score" | "criteria" | "crowd" | "favorite"
+  kind: string
+  judging_style: "bucket_sort" | "gate_check" | "crowd_vote" | "judges_pick"
+  rank?: number
+  criteria_id?: string
+  monetary_value?: number
+  currency?: string
+  display_order: number
+}
+
+export function buildDefaultPrizes(criteriaIds: string[]): SeedPrize[] {
+  return [
+    {
+      name: "Grand Prize",
+      description: "Overall best project",
+      value: "$10,000",
+      type: "score",
+      rank: 1,
+      kind: "cash",
+      judging_style: "bucket_sort",
+      monetary_value: 10000,
+      currency: "USD",
+      display_order: 0,
+    },
+    {
+      name: "Runner Up",
+      description: "Second place",
+      value: "Swag Pack",
+      type: "score",
+      rank: 2,
+      kind: "swag",
+      judging_style: "bucket_sort",
+      display_order: 1,
+    },
+    {
+      name: "Best Innovation",
+      description: "Most creative and novel solution",
+      value: "$500 API Credits",
+      type: "criteria",
+      criteria_id: criteriaIds[0],
+      kind: "credit",
+      judging_style: "judges_pick",
+      display_order: 2,
+    },
+  ]
+}
+
+export async function createPrizes(
+  hackathonId: string,
+  prizes: SeedPrize[]
+): Promise<string[]> {
+  const prizeIds: string[] = []
+
+  for (const p of prizes) {
+    const { data, error } = await supabase
+      .from("prizes")
+      .insert({
+        hackathon_id: hackathonId,
+        name: p.name,
+        description: p.description,
+        value: p.value,
+        type: p.type,
+        rank: p.rank ?? null,
+        kind: p.kind,
+        judging_style: p.judging_style,
+        criteria_id: p.criteria_id ?? null,
+        monetary_value: p.monetary_value ?? null,
+        currency: p.currency ?? null,
+        display_order: p.display_order,
+      })
+      .select("id")
+      .single()
+
+    if (error || !data) {
+      console.error(`Failed to create prize "${p.name}":`, error)
+      process.exit(1)
+    }
+
+    prizeIds.push(data.id)
+  }
+
+  return prizeIds
+}
+
+export async function autoAssignAndInitFulfillments(hackathonId: string): Promise<{
+  assigned: number
+  fulfillments: number
+}> {
+  const { autoAssignPrizes } = await import("@/lib/services/prizes")
+  await autoAssignPrizes(hackathonId)
+
+  const { data: assignments } = await supabase
+    .from("prize_assignments")
+    .select("id")
+    .in(
+      "prize_id",
+      (await supabase.from("prizes").select("id").eq("hackathon_id", hackathonId)).data?.map(
+        (p) => p.id
+      ) ?? []
+    )
+
+  const assigned = assignments?.length ?? 0
+
+  const { initializeFulfillments } = await import("@/lib/services/prize-fulfillment")
+  const fulfillments = await initializeFulfillments(hackathonId)
+
+  return { assigned, fulfillments }
 }
 
 export function printReady(slug: string) {

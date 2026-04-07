@@ -8,23 +8,25 @@ This project uses **bun** as the package manager.
 
 **CRITICAL: NEVER use npm, yarn, or pnpm commands in this repository.**
 
+**CRITICAL: Always use `bun run test`, never `bun test`.** The `bun test` command invokes Bun's built-in test runner directly, which can behave differently from the project's configured test script. Always use `bun run test` (and `bun run test:integration`, `bun run test:all`, etc.) to ensure the correct test configuration is used.
+
 ## Commands
 
 ```bash
-bun dev              # Start dev server (auto-starts local Supabase)
-bun dev:fresh        # Reset database + start dev server (clean slate)
-bun run build        # Production build
-bun start            # Start production server
-bun lint             # Run ESLint
-bun test             # Run unit tests (api, lib, services)
-bun test:integration # Run integration tests separately
-bun test:all         # Run all tests (unit + integration)
-bun db:sync          # Reset DB + regenerate types
-bun db:diff name     # Capture Studio changes as migration
-bun update-types     # Regenerate TypeScript types from DB
-bun cli <args>       # Run CLI package (dev mode, TypeScript)
-bun cli:test         # Run CLI tests
-bun cli:build        # Build CLI for npm distribution
+bun dev                  # Start dev server (auto-starts local Supabase)
+bun dev:fresh            # Reset database + start dev server (clean slate)
+bun run build            # Production build
+bun start                # Start production server
+bun lint                 # Run ESLint
+bun run test             # Run unit tests (api, lib, services)
+bun run test:integration # Run integration tests separately
+bun run test:all         # Run all tests (unit + integration)
+bun db:sync              # Reset DB + regenerate types
+bun db:diff name         # Capture Studio changes as migration
+bun update-types         # Regenerate TypeScript types from DB
+bun cli <args>           # Run CLI package (dev mode, TypeScript)
+bun cli:test             # Run CLI tests
+bun cli:build            # Build CLI for npm distribution
 ```
 
 ### Test Scenarios
@@ -406,6 +408,47 @@ When a feature references a user by email and the user doesn't exist in Clerk, s
 <div className="relative w-64">
 ```
 
+### Optimistic Rendering
+
+**Default to optimistic UI updates for all user-initiated mutations.** The user should see the result of their action instantly — never wait for an API round-trip to update the UI.
+
+Pattern: track "hidden" or "pending" sets in component state. Apply them as filters/overlays on the server-provided data. On API failure, revert the optimistic state and show an error.
+
+```typescript
+// Optimistic removal: hide immediately, revert on failure
+const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
+const visibleItems = serverItems.filter(item => !hiddenIds.has(item.id))
+
+async function handleRemove(id: string) {
+  setHiddenIds(prev => new Set(prev).add(id))
+  try {
+    const res = await fetch(`/api/items/${id}`, { method: "DELETE" })
+    if (!res.ok) throw new Error("Failed")
+    router.refresh()
+  } catch {
+    setHiddenIds(prev => { const next = new Set(prev); next.delete(id); return next })
+    setError("Failed to remove item")
+  }
+}
+```
+
+- Remove loading spinners on buttons/items that disappear instantly — there's nothing left to show a spinner on
+- Keep `router.refresh()` after success for eventual consistency with server state
+- Re-throw errors when the optimistic function is called by child components that also handle errors
+
+### Keep Seed Data in Sync
+
+**When adding new columns, types, or features that affect database tables used in seed data, update ALL seed sources to include the new fields.** Stale seed data causes silent failures where seeded records fall through service logic that depends on the new fields.
+
+Seed sources to check:
+- `scripts/test-scenarios/_helpers.ts` — shared builders (`buildDefaultPrizes`, `addJudgingCriteria`, etc.)
+- `scripts/test-scenarios/*.ts` — individual scenario scripts
+- `lib/services/admin-scenarios.ts` — admin UI scenario runners
+- `lib/api/routes/dev.ts` — dev API seed endpoints (`seed-all`, `seed-judging`, `seed-prizes`)
+- `components/dev-tool/` — dev toolbar buttons that trigger seed endpoints
+
+When a service function like `createPrize()` gains new parameters, update its type and pass-through logic so all callers (including seed code) can use the new fields. Raw `db.from().insert()` calls in seed code must include all required and functionally important columns — don't rely on DB defaults when the default value (e.g., `type = 'favorite'`) would cause downstream logic to skip the record.
+
 ### Code Style
 
 - Do not write comments above code
@@ -423,10 +466,11 @@ When a feature references a user by email and the user doesn't exist in Clerk, s
 #### Test Commands
 
 ```bash
-bun test              # Run unit tests (api, lib, services)
-bun test:integration  # Run integration tests separately
-bun test:all          # Run both sequentially
-bun test --coverage   # Run with coverage report
+bun run test              # Run unit tests (api, lib, services)
+bun run test:integration  # Run integration tests separately
+bun run test:email        # Run email template tests separately
+bun run test:all          # Run all tests sequentially
+bun run test --coverage   # Run with coverage report
 ```
 
 **IMPORTANT: Integration tests must run separately.** They use `mock.module` at the service layer, which conflicts with service tests that mock at the database layer. Running all tests together causes mock isolation failures.
@@ -473,6 +517,32 @@ it("example test", async () => {
 
 For RPC calls, use `setMockRpcImplementation()` instead.
 
+#### Email Templates (React Email)
+
+Email templates live in `emails/` as React Email components. Send logic stays in `lib/email/*.ts`, which renders components to HTML/text via `render()` from `@react-email/components`.
+
+```bash
+bun email:dev         # Preview all templates at http://localhost:3001
+```
+
+**Testing email templates:** Email tests mock `sendEmail` from `@/lib/email/resend` and assert on the `html`, `text`, `subject`, and `tags` passed to it. Use `.toContain()` for content assertions — never assert on exact HTML structure since React Email controls the markup.
+
+```typescript
+let sendEmailImpl = () => Promise.resolve({ id: "email_123" })
+const mockSendEmail = mock((input: SendEmailInput) => sendEmailImpl(input))
+mock.module("@/lib/email/resend", () => ({ sendEmail: mockSendEmail }))
+const { sendTeamInvitationEmail } = await import("@/lib/email/team-invitations")
+
+it("includes the accept URL", async () => {
+  await sendTeamInvitationEmail(input)
+  const call = mockSendEmail.mock.calls[0][0]
+  expect(call.html).toContain("/invite/token123")
+  expect(call.tags).toContainEqual({ name: "type", value: "team_invitation" })
+})
+```
+
+**Email integration tests must run separately** (`bun test:email`) — they use `mock.module` at the email layer which conflicts with other test suites. Template smoke tests (`__tests__/lib/email-templates.test.ts`) have no mock conflicts and also run as part of `bun run test`.
+
 ## Git Workflow
 
 ### Starting New Work
@@ -497,12 +567,12 @@ Do all of this without being asked — the user shouldn't need to spell out thes
 **CRITICAL: Before pushing, run the same checks CI runs.** Catch failures locally instead of waiting for the pipeline.
 
 ```bash
-bun lint && bun run build && bun test:all && bun cli:build
+bun lint && bun run build && bun run test:all && bun cli:build
 ```
 
 - `bun lint` — ESLint (CI `lint` job)
 - `bun run build` — TypeScript type check + Next.js build (CI `test` job runs `tsc --noEmit`; build implies the same)
-- `bun test:all` — unit + integration tests (CI `test` job)
+- `bun run test:all` — unit + integration tests (CI `test` job)
 - `bun cli:build` — CLI bundle must produce `packages/cli/dist/cli.mjs` without errors
 
 If any command fails, fix the issue before pushing. Do not push code that doesn't pass all three.
@@ -671,7 +741,67 @@ This catches real production bugs — not just style issues. Skipping this step 
 
 ### Browser Verification
 
-**For any UI change, always verify the result with the `agent-browser` skill before considering the task done.** Do not rely only on static code review, screenshots, or tests when the interface can be exercised in the browser.
+**CRITICAL: For any UI change, you MUST verify the result in the browser with `agent-browser` before considering the task done.** Do not rely only on static code review, screenshots, or tests. If the interface can be exercised in the browser, exercise it.
+
+#### Setup and Updates
+
+Install: `brew install agent-browser` (or `npm i -g agent-browser` / `cargo install agent-browser`)
+Update: `agent-browser upgrade` (or `brew upgrade agent-browser`)
+Post-install: `agent-browser install` (downloads a bundled Chrome)
+
+#### Skill Reference
+
+Full command reference, authentication patterns, templates, and troubleshooting are in `.agents/skills/agent-browser/`. Use the `agent-browser` skill for detailed guidance on any command.
+
+#### Connecting to the User's Chrome
+
+The user keeps Chrome running with `--remote-debugging-port=9222`. Always connect to the existing session with `--auto-connect` instead of launching a headless browser.
+
+```bash
+# Auto-connect picks up the user's Chrome session automatically
+agent-browser --auto-connect --session oatmeal open http://localhost:3000
+```
+
+If `--auto-connect` targets the wrong tab, find the correct one explicitly:
+```bash
+# List all tabs
+curl -s http://127.0.0.1:9222/json/list | python3 -c "
+import json,sys
+tabs=json.load(sys.stdin)
+for t in tabs:
+  if t.get('type')=='page': print(f\"{t['id'][:12]}  {t['url'][:80]}\")
+"
+
+# Connect to a specific tab by WebSocket URL
+WS_URL=$(curl -s http://127.0.0.1:9222/json/list | python3 -c "
+import json,sys
+tabs=json.load(sys.stdin)
+for t in tabs:
+  if 'localhost:3000' in t.get('url',''): print(t['webSocketDebuggerUrl']); break
+")
+agent-browser --cdp "$WS_URL" --session oatmeal snapshot -i
+```
+
+#### Standard Workflow
+
+```bash
+# 1. Open a page (auto-connect to user's Chrome)
+agent-browser --auto-connect --session oatmeal open http://localhost:3000
+
+# 2. Wait for page load, snapshot, interact
+agent-browser --session oatmeal wait --load networkidle
+agent-browser --session oatmeal snapshot -i
+agent-browser --session oatmeal click @e1
+
+# 3. Take screenshots to verify
+agent-browser --session oatmeal screenshot /tmp/screenshot.png
+
+# 4. Check browser console for errors
+agent-browser --session oatmeal console
+
+# 5. Always close session when done
+agent-browser --session oatmeal close
+```
 
 ### Required Environment Variables
 

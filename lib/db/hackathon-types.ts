@@ -123,6 +123,9 @@ export interface Hackathon {
   judging_mode: JudgingMode
   results_published_at: string | null
   winner_emails_sent_at: string | null
+  results_announcement_sent_at: string | null
+  feedback_survey_sent_at: string | null
+  feedback_survey_url: string | null
   phase: HackathonPhase | null
   challenge_title: string | null
   challenge_body: string | null
@@ -435,6 +438,7 @@ export interface PrizeTrack {
   name: string
   description: string | null
   intent: TrackIntent
+  sponsor_id: string | null
   display_order: number
   created_at: string
   updated_at: string
@@ -571,4 +575,41 @@ export interface TenantProfile {
   website_url: string | null
   created_at: string
   updated_at: string
+}
+
+export type PrizeFulfillmentStatus = "assigned" | "contacted" | "shipped" | "claimed"
+
+export interface PrizeFulfillment {
+  id: string
+  prize_assignment_id: string
+  hackathon_id: string
+  status: PrizeFulfillmentStatus
+  recipient_email: string | null
+  recipient_name: string | null
+  shipping_address: string | null
+  tracking_number: string | null
+  notes: string | null
+  payment_method: string | null
+  payment_detail: string | null
+  claim_token: string | null
+  claim_token_expires_at: string | null
+  contacted_at: string | null
+  shipped_at: string | null
+  claimed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type PostEventReminderType = "prize_claim" | "prize_claim_followup" | "organizer_fulfillment" | "feedback_followup" | "winner_unresponsive"
+
+export interface PostEventReminder {
+  id: string
+  hackathon_id: string
+  type: PostEventReminderType
+  scheduled_for: string
+  sent_at: string | null
+  cancelled_at: string | null
+  recipient_filter: string
+  metadata: Json
+  created_at: string
 }

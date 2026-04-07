@@ -178,11 +178,11 @@ type HoverAction = {
 
 export function LifecycleStepper({
   hackathonId,
-  hackathonSlug,
+  hackathonSlug: _hackathonSlug,
   status,
   submissionCount = 0,
   judgingProgress,
-  judgingSetupStatus,
+  judgingSetupStatus: _judgingSetupStatus,
   startsAt,
   endsAt,
   registrationOpensAt,
@@ -195,7 +195,7 @@ export function LifecycleStepper({
   sponsorCount = 0,
   prizeCount = 0,
   judgeDisplayCount = 0,
-  criteriaCount = 0,
+  criteriaCount: _criteriaCount = 0,
   phase,
 }: LifecycleStepperProps) {
   const router = useRouter()

@@ -1,17 +1,13 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react"
 
-const mockPush = mock(() => {})
-const mockSetActive = mock(() => Promise.resolve())
-const mockSetOrgActive = mock(() => Promise.resolve())
-const mockCreateOrganization = mock(() =>
-  Promise.resolve({ id: "org_new" }),
-)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const g = globalThis as any
 
-let signUpCreateImpl: () => Promise<unknown> = () => Promise.resolve({})
-let signUpPrepareVerificationImpl: () => Promise<unknown> = () =>
+let signUpCreateImpl: (...args: unknown[]) => Promise<unknown> = () => Promise.resolve({})
+let signUpPrepareVerificationImpl: (...args: unknown[]) => Promise<unknown> = () =>
   Promise.resolve({})
-let signUpAttemptVerificationImpl: () => Promise<unknown> = () =>
+let signUpAttemptVerificationImpl: (...args: unknown[]) => Promise<unknown> = () =>
   Promise.resolve({ status: "complete", createdSessionId: "session_123" })
 
 const signUpCreate = mock((...args: unknown[]) => signUpCreateImpl(...args))
@@ -23,49 +19,10 @@ const signUpAttemptVerification = mock((...args: unknown[]) =>
 )
 const signUpAuthenticateWithRedirect = mock(() => Promise.resolve())
 
-let isSignUpLoaded = true
-
-mock.module("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
-}))
-
-mock.module("next/link", () => ({
-  default: ({
-    children,
-    href,
-  }: {
-    children: React.ReactNode
-    href: string
-  }) => <a href={href}>{children}</a>,
-}))
-
-mock.module("@clerk/nextjs", () => ({
-  useSignIn: () => ({ isLoaded: false, signIn: undefined, setActive: mock(() => Promise.resolve()) }),
-  useSignUp: () => ({
-    isLoaded: isSignUpLoaded,
-    signUp: isSignUpLoaded
-      ? {
-          create: signUpCreate,
-          prepareVerification: signUpPrepareVerification,
-          attemptVerification: signUpAttemptVerification,
-          authenticateWithRedirect: signUpAuthenticateWithRedirect,
-        }
-      : undefined,
-    setActive: mockSetActive,
-  }),
-  useOrganizationList: () => ({
-    createOrganization: mockCreateOrganization,
-    setActive: mockSetOrgActive,
-  }),
-}))
-
-mock.module("@clerk/nextjs/errors", () => ({
-  isClerkAPIResponseError: (err: unknown) =>
-    err !== null &&
-    typeof err === "object" &&
-    "errors" in (err as object) &&
-    Array.isArray((err as { errors: unknown }).errors),
-}))
+const mockSetActive = g.__clerkState.signUpSetActive
+const mockPush = g.__nextNavState.router.push
+const mockCreateOrganization = mock(() => Promise.resolve({ id: "org_new" }))
+const mockSetOrgActive = mock(() => Promise.resolve())
 
 global.fetch = mock(() =>
   Promise.resolve({
@@ -77,7 +34,16 @@ global.fetch = mock(() =>
 const { SignUpForm } = await import("@/components/auth/sign-up-form")
 
 beforeEach(() => {
-  isSignUpLoaded = true
+  g.__clerkState.signUpLoaded = true
+  g.__clerkState.signUp = {
+    create: signUpCreate,
+    prepareVerification: signUpPrepareVerification,
+    attemptVerification: signUpAttemptVerification,
+    authenticateWithRedirect: signUpAuthenticateWithRedirect,
+  }
+  g.__clerkState.createOrganization = mockCreateOrganization
+  g.__clerkState.setOrgActive = mockSetOrgActive
+
   signUpCreateImpl = () => Promise.resolve({})
   signUpPrepareVerificationImpl = () => Promise.resolve({})
   signUpAttemptVerificationImpl = () =>
@@ -93,6 +59,10 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  g.__clerkState.signUpLoaded = false
+  g.__clerkState.signUp = null
+  g.__clerkState.createOrganization = undefined
+  g.__clerkState.setOrgActive = undefined
   cleanup()
 })
 
@@ -116,7 +86,8 @@ describe("SignUpForm", () => {
     })
 
     it("shows loading spinner while Clerk is not loaded", () => {
-      isSignUpLoaded = false
+      g.__clerkState.signUpLoaded = false
+      g.__clerkState.signUp = undefined
       render(<SignUpForm />)
       expect(screen.queryByLabelText("Email")).toBeNull()
     })
@@ -271,7 +242,7 @@ describe("SignUpForm", () => {
         expect(signUpAuthenticateWithRedirect).toHaveBeenCalledWith({
           strategy: "oauth_github",
           redirectUrl: "/sso-callback",
-          redirectUrlComplete: "/home",
+          redirectUrlComplete: "/onboarding",
         })
       })
     })
@@ -283,7 +254,7 @@ describe("SignUpForm", () => {
         expect(signUpAuthenticateWithRedirect).toHaveBeenCalledWith({
           strategy: "oauth_linkedin_oidc",
           redirectUrl: "/sso-callback",
-          redirectUrlComplete: "/home",
+          redirectUrlComplete: "/onboarding",
         })
       })
     })

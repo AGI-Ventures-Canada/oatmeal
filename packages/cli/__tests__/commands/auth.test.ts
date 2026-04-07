@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, beforeEach, afterEach, spyOn } from "bun:test"
+import { describe, expect, it, mock, spyOn } from "bun:test"
 import { parseLoginOptions } from "../../src/commands/login"
 import { AUTH_TIMEOUT_MS } from "../../src/constants"
 

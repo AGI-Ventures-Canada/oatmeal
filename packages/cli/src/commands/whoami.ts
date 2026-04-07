@@ -1,4 +1,3 @@
-import * as p from "@clack/prompts"
 import type { OatmealClient } from "../client.js"
 import { formatDetail, formatJson } from "../output.js"
 import type { WhoAmIResponse } from "../types.js"
