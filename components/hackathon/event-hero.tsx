@@ -395,7 +395,7 @@ export function EventHero({
 
           return (
             <span className="text-sm text-muted-foreground">
-              Hosted by{" "}
+              Organized by{" "}
               {orgNameWrapper ? orgNameWrapper(orgNameEl) : orgNameEl}
             </span>
           )
