@@ -474,6 +474,7 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
         { name: "People's Choice", judgingStyle: "crowd_vote" as const, description: "Audience vote winner", value: "Swag Pack", type: "crowd" as const, kind: "swag" },
       ]
 
+
       await db.from("prizes").delete().eq("hackathon_id", params.id)
 
       const prizeIds: string[] = []
@@ -783,6 +784,7 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
           { name: "People's Choice", judgingStyle: "crowd_vote", description: "Live audience voting", value: "Swag Pack", type: "crowd", kind: "swag" },
         ],
       }
+
 
       const prizes = PRESETS[preset]
       if (!prizes) {

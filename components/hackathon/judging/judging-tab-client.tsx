@@ -160,6 +160,7 @@ export function JudgingTabClient({
   const prizes = initialPrizes.filter(p => !hiddenPrizes.has(p.id))
   const invitations = initialInvitations.filter(i => !hiddenInvitations.has(i.id))
 
+
   const base = `/api/dashboard/hackathons/${hackathonId}`
 
   const overallPercent = initialProgress.totalAssignments > 0
@@ -450,6 +451,7 @@ function PrizesSection({
     setRemovingFromPrize(null)
     onUnassignJudge(prizeId, judge.participantId)
   }
+
 
   return (
     <div className="space-y-3">

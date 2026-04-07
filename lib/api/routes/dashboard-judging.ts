@@ -67,6 +67,7 @@ export const dashboardJudgingRoutes = new Elysia()
 
       const prize = createResult.prize
 
+
       logAudit({
         principal,
         action: "prize.created",
@@ -218,6 +219,7 @@ export const dashboardJudgingRoutes = new Elysia()
       if (!assigned.success) {
         return new Response(JSON.stringify({ error: assigned.error ?? "Failed to assign judge" }), { status: 400, headers: { "Content-Type": "application/json" } })
       }
+
 
       return assigned
     },

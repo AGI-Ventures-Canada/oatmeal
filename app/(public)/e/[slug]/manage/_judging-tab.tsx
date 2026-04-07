@@ -18,6 +18,7 @@ export async function JudgingTabContent({
     await calculateResults(hackathonId)
   }
 
+
   const [prizes, judges, progress, rounds, pendingInvitations, results] = await Promise.all([
     listPrizes(hackathonId),
     listJudges(hackathonId),

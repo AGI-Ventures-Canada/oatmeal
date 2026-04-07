@@ -265,7 +265,7 @@ export function ScenarioRunner({
               </div>
             )}
             <Button onClick={handleRun} disabled={running} size="sm">
-              {running ? "Running…" : "Run"}
+              {running ? "Running..." : "Run"}
             </Button>
           </div>
         )}
@@ -282,7 +282,7 @@ export function ScenarioRunner({
             variant="ghost"
             className="text-xs"
           >
-            {running ? "Running…" : "Re-run"}
+            {running ? "Running..." : "Re-run"}
           </Button>
         )}
 
