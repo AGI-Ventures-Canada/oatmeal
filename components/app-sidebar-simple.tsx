@@ -313,7 +313,7 @@ export function AppSidebarSimple() {
                   <SidebarMenuItem>
                     <CreateHackathonMenu
                       trigger={
-                        <SidebarMenuButton className="h-10">
+                        <SidebarMenuButton className="h-10 bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground">
                           <Plus />
                           <span className="text-sm">Create Event</span>
                         </SidebarMenuButton>
