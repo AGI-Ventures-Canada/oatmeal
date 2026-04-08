@@ -121,6 +121,7 @@ export function SponsorsEditForm({
   const [optimisticUpdates, setOptimisticUpdates] = useState<
     Map<string, Partial<SponsorWithTenant>>
   >(new Map());
+  const savingCount = useRef(0);
   const tempIdCounter = useRef(0);
 
   const [localSponsors, setLocalSponsors] = useState<SponsorWithTenant[]>(
@@ -209,6 +210,7 @@ export function SponsorsEditForm({
 
     setAdding(true);
     setError(null);
+    savingCount.current++;
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/sponsors`,
@@ -235,6 +237,7 @@ export function SponsorsEditForm({
       setError(err instanceof Error ? err.message : "Failed to add sponsor");
     } finally {
       setAdding(false);
+      savingCount.current--;
     }
   }
 
@@ -266,6 +269,7 @@ export function SponsorsEditForm({
 
     setAdding(true);
     setError(null);
+    savingCount.current++;
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/sponsors`,
@@ -288,6 +292,7 @@ export function SponsorsEditForm({
       setError(err instanceof Error ? err.message : "Failed to add sponsor");
     } finally {
       setAdding(false);
+      savingCount.current--;
     }
   }
 
@@ -301,6 +306,7 @@ export function SponsorsEditForm({
 
     setHiddenIds((prev) => new Set(prev).add(sponsorId));
     setError(null);
+    savingCount.current++;
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
@@ -320,6 +326,8 @@ export function SponsorsEditForm({
       setError(
         err instanceof Error ? err.message : "Failed to remove sponsor",
       );
+    } finally {
+      savingCount.current--;
     }
   }
 
@@ -335,6 +343,7 @@ export function SponsorsEditForm({
 
     setOptimisticUpdates((prev) => new Map(prev).set(sponsorId, { ...prev.get(sponsorId), tier: newTier }));
     setError(null);
+    savingCount.current++;
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
@@ -352,6 +361,8 @@ export function SponsorsEditForm({
     } catch (err) {
       setOptimisticUpdates((prev) => { const next = new Map(prev); next.delete(sponsorId); return next; });
       setError(err instanceof Error ? err.message : "Failed to update tier");
+    } finally {
+      savingCount.current--;
     }
   }
 
@@ -370,6 +381,7 @@ export function SponsorsEditForm({
       }),
     );
     setError(null);
+    savingCount.current++;
 
     try {
       const res = await fetch(
@@ -392,6 +404,8 @@ export function SponsorsEditForm({
     } catch (err) {
       setOptimisticUpdates((prev) => { const next = new Map(prev); next.delete(sponsorId); return next; });
       setError(err instanceof Error ? err.message : "Failed to link sponsor");
+    } finally {
+      savingCount.current--;
     }
   }
 
@@ -405,6 +419,7 @@ export function SponsorsEditForm({
       new Map(prev).set(sponsorId, { ...prev.get(sponsorId), use_org_assets: nextUseOrgAssets }),
     );
     setError(null);
+    savingCount.current++;
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
@@ -424,6 +439,8 @@ export function SponsorsEditForm({
       setError(
         err instanceof Error ? err.message : "Failed to update asset source",
       );
+    } finally {
+      savingCount.current--;
     }
   }
 
@@ -434,7 +451,7 @@ export function SponsorsEditForm({
         handleAddManual();
       } else if (onSaveAndNext) {
         onSaveAndNext();
-      } else {
+      } else if (savingCount.current === 0) {
         closeDrawer();
       }
     }

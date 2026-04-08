@@ -104,8 +104,12 @@ mock.module("@/components/hackathon/edit-drawer/sponsor-logo-upload", () => ({
   SponsorLogoUpload: () => <div data-testid="sponsor-logo-upload" />,
 }));
 
+let _selectOnValueChange: ((v: string) => void) | undefined;
 mock.module("@/components/ui/select", () => ({
-  Select: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Select: ({ children, onValueChange }: { children: React.ReactNode; onValueChange?: (v: string) => void }) => {
+    _selectOnValueChange = onValueChange;
+    return <div>{children}</div>;
+  },
   SelectTrigger: ({
     children,
     className,
@@ -115,7 +119,9 @@ mock.module("@/components/ui/select", () => ({
   }) => <div className={className}>{children}</div>,
   SelectValue: () => null,
   SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SelectItem: ({ children }: { children: React.ReactNode; value: string }) => <div>{children}</div>,
+  SelectItem: ({ children, value }: { children: React.ReactNode; value: string; description?: string; disabled?: boolean }) => (
+    <button onClick={() => _selectOnValueChange?.(value)}>{children}</button>
+  ),
 }));
 
 mock.module("@/components/ui/kbd", () => ({
@@ -281,6 +287,54 @@ describe("SponsorsEditForm", () => {
       useOrgAssets: false,
       websiteUrl: "https://google.com",
     });
+  });
+
+  it("auto-saves when changing a sponsor tier", async () => {
+    render(
+      <SponsorsEditForm
+        hackathonId="h1"
+        initialSponsors={[
+          {
+            id: "s1",
+            hackathon_id: "h1",
+            sponsor_tenant_id: null,
+            tenant_sponsor_id: null,
+            use_org_assets: false,
+            name: "Test Sponsor",
+            logo_url: null,
+            logo_url_dark: null,
+            website_url: null,
+            tier: "none",
+            display_order: 0,
+            created_at: "2026-03-19T00:00:00.000Z",
+            tenant: null,
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Gold"));
+
+    await waitFor(() => {
+      const patchCall = mockFetch.mock.calls.find(
+        ([url, init]) =>
+          typeof url === "string" &&
+          url.includes("/sponsors/s1") &&
+          init?.method === "PATCH",
+      );
+
+      expect(patchCall).toBeDefined();
+      expect(mockRefresh).toHaveBeenCalledTimes(1);
+    });
+
+    const patchCall = mockFetch.mock.calls.find(
+      ([url, init]) =>
+        typeof url === "string" &&
+        url.includes("/sponsors/s1") &&
+        init?.method === "PATCH",
+    );
+    const body = JSON.parse(patchCall![1]!.body as string);
+    expect(body).toEqual({ tier: "gold" });
   });
 
   it("shows only Done button with no save/discard buttons", () => {
