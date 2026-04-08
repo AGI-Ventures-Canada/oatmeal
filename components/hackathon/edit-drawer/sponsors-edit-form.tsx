@@ -161,7 +161,9 @@ export function SponsorsEditForm({
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSaved, setShowSaved] = useState(false);
   const tempIdCounter = useRef(0);
+  const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentSponsors = useMemo(() => {
     let sponsors = [...initialSponsors];
@@ -246,6 +248,23 @@ export function SponsorsEditForm({
   const linkSearched = isLocalMode ? true : linkSearch.searched;
 
   const hasChanges = pendingChanges.length > 0;
+
+  useEffect(() => {
+    if (!hasChanges || saving) return;
+    if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    autoSaveRef.current = setTimeout(() => {
+      saveChanges().then((ok) => {
+        if (ok) {
+          setShowSaved(true);
+          setTimeout(() => setShowSaved(false), 2000);
+        }
+      });
+    }, 500);
+    return () => {
+      if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingChanges]);
 
   function handleAddOrg(org: OrgSearchResult) {
     const tempId = `temp-${++tempIdCounter.current}`;
@@ -827,15 +846,11 @@ export function SponsorsEditForm({
       if (query.trim() && !saving) {
         handleAddManual();
       } else if (!saving) {
-        saveChanges().then((ok) => {
-          if (ok) {
-            if (onSaveAndNext) {
-              onSaveAndNext();
-            } else {
-              closeDrawer();
-            }
-          }
-        });
+        if (onSaveAndNext) {
+          onSaveAndNext();
+        } else {
+          closeDrawer();
+        }
       }
     }
   }
@@ -964,18 +979,6 @@ export function SponsorsEditForm({
             <h4 className="text-sm font-medium">
               Sponsors ({currentSponsors.length})
             </h4>
-            {hasChanges && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleUndoAll}
-                className="h-7 text-xs"
-              >
-                <Undo2 className="size-3 mr-1" />
-                Undo all
-              </Button>
-            )}
           </div>
           <div className="space-y-2">
             {currentSponsors.map((sponsor) => {
@@ -1244,75 +1247,7 @@ export function SponsorsEditForm({
         </div>
       )}
 
-      {hasChanges && (
-        <div className="space-y-2 rounded-lg border border-dashed p-3">
-          <h4 className="text-xs font-medium text-muted-foreground">
-            Pending changes ({pendingChanges.length})
-          </h4>
-          <div className="space-y-1">
-            {pendingChanges.map((change, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between text-xs"
-              >
-                <span className="text-muted-foreground">
-                  {change.type === "add" &&
-                    `+ Add "${change.sponsor.name}"${
-                      change.logoFile || change.logoDarkFile
-                        ? ` (with ${[change.logoFile && "light", change.logoDarkFile && "dark"].filter(Boolean).join(" + ")} logo)`
-                        : ""
-                    }`}
-                  {change.type === "delete" &&
-                    `- Remove "${change.originalSponsor.name}"`}
-                  {change.type === "tier" &&
-                    `~ Change tier to ${change.newTier}`}
-                  {change.type === "logo" &&
-                    `~ Update ${change.variant} logo`}
-                  {change.type === "link" &&
-                    `~ Link to "${change.tenant?.name || change.sponsorTenantId}"`}
-                  {change.type === "source" &&
-                    `~ Use ${change.useOrgAssets ? "org" : "manual"} assets`}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleUndo(index)}
-                  className="h-6 w-6 p-0"
-                >
-                  <Undo2 className="size-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-3 pt-2">
-        <div className="flex gap-2">
-          {hasChanges ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  handleUndoAll();
-                  closeDrawer();
-                }}
-              >
-                Discard
-              </Button>
-              <Button type="button" onClick={handleSave} disabled={saving}>
-                {saving && <Loader2 className="size-4 mr-2 animate-spin" />}
-                Save changes
-              </Button>
-            </>
-          ) : (
-            <Button type="button" variant="outline" onClick={closeDrawer}>
-              Done
-            </Button>
-          )}
-        </div>
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <KbdGroup>
@@ -1322,6 +1257,15 @@ export function SponsorsEditForm({
             save & next
           </span>
         </div>
+        {saving && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Loader2 className="size-3 animate-spin" />
+            Saving...
+          </p>
+        )}
+        {showSaved && (
+          <p className="text-xs text-muted-foreground animate-in fade-in">Saved</p>
+        )}
       </div>
     </div>
   );
