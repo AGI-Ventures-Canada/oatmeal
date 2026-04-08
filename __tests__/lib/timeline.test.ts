@@ -9,7 +9,6 @@ function mockDateGlobal(originalDate: typeof Date, isoString: string) {
       if (args.length === 0) {
         super(mockNow)
       } else {
-        // @ts-expect-error - spreading args
         super(...args)
       }
     }

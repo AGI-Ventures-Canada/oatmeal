@@ -164,7 +164,7 @@ describe("getSubmissionDeadline", () => {
   })
 
   it("returns null when no submission_deadline item exists", async () => {
-    const chain = createChainableMock({ data: null, error: { code: "PGRST116" } })
+    const chain = createChainableMock({ data: null, error: { message: "not found", code: "PGRST116" } })
     setMockFromImplementation(() => chain)
 
     const result = await getSubmissionDeadline("hack-1")
@@ -190,7 +190,7 @@ describe("getTriggerItem", () => {
   })
 
   it("returns null when no trigger item exists", async () => {
-    const chain = createChainableMock({ data: null, error: { code: "PGRST116" } })
+    const chain = createChainableMock({ data: null, error: { message: "not found", code: "PGRST116" } })
     setMockFromImplementation(() => chain)
 
     const result = await getTriggerItem("hack-1", "challenge_release")
