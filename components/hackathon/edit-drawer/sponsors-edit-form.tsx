@@ -748,10 +748,10 @@ export function SponsorsEditForm({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="min-w-48">
-                        <SelectItem value="title" description="Headline sponsor">Title</SelectItem>
                         <SelectItem value="gold" description="Major sponsor">Gold</SelectItem>
                         <SelectItem value="silver" description="Supporting sponsor">Silver</SelectItem>
                         <SelectItem value="bronze" description="Contributing sponsor">Bronze</SelectItem>
+                        <SelectItem value="partner" description="Non-financial supporter">Partner</SelectItem>
                         <SelectItem value="none" description="Listed without a tier">No Tier</SelectItem>
                       </SelectContent>
                     </Select>

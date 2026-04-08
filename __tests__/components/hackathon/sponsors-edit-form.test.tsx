@@ -202,7 +202,7 @@ describe("SponsorsEditForm", () => {
             logo_url: null,
             logo_url_dark: null,
             website_url: "https://linked.example.com",
-            tier: "gold",
+            tier: "partner",
             display_order: 0,
             created_at: "2026-03-19T00:00:00.000Z",
             tenant: {
@@ -216,7 +216,7 @@ describe("SponsorsEditForm", () => {
       />,
     );
 
-    expect(screen.getByText("Title")).toBeDefined();
+    expect(screen.getByText("Partner")).toBeDefined();
     expect(screen.getByText("Gold")).toBeDefined();
   });
 
