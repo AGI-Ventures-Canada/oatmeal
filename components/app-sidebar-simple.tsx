@@ -25,7 +25,6 @@ import {
   Download,
   Compass,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import Image from "next/image"
 import Link from "next/link"
@@ -304,10 +303,10 @@ export function AppSidebarSimple() {
                   <SidebarMenuItem>
                     <CreateHackathonMenu
                       trigger={
-                        <Button className="w-full h-10 justify-start gap-2">
-                          <Plus className="size-4" />
+                        <SidebarMenuButton className="h-10">
+                          <Plus className="size-4 text-primary" />
                           <span className="text-sm">Create Event</span>
-                        </Button>
+                        </SidebarMenuButton>
                       }
                     />
                   </SidebarMenuItem>
