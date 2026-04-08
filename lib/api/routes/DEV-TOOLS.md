@@ -1,6 +1,6 @@
 # Dev Tools
 
-Development-only tools for testing the hackathon lifecycle. Guarded by `NODE_ENV === "development"` at both the mount point (`lib/api/index.ts`) and per-handler level (defence-in-depth).
+Tools for testing the hackathon lifecycle. Available in development (no auth) and on preview/staging deployments for admin users (`ADMIN_ENABLED=true` + Clerk admin metadata). Guarded at three levels: mount point (`lib/api/index.ts`), group-level `onBeforeHandle` (admin auth in non-dev), and per-handler `devGuard()` (defence-in-depth env check).
 
 ## Files
 
@@ -18,7 +18,7 @@ Development-only tools for testing the hackathon lifecycle. Guarded by `NODE_ENV
 
 ## Architecture
 
-The Dev Tool is a single client component mounted in `app/layout.tsx` with a `NODE_ENV === "development"` guard. It provides three tabs:
+The Dev Tool is a single client component mounted in `app/layout.tsx` when `NODE_ENV === "development"` or `ADMIN_ENABLED === "true"`. In non-dev environments, the component checks Clerk session metadata for `admin: true` before rendering. It provides three tabs:
 
 1. **Scenarios** — Run test scenarios from anywhere, with one-click launch that creates the scenario, switches persona, and navigates to the appropriate page
 2. **Personas** — Switch between test personas (organizer, test users). Shows role badges when inside an event

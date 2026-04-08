@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { useSession } from "@clerk/nextjs"
 import { FlaskConical } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DevToolPanel } from "./dev-tool-panel"
@@ -47,6 +48,10 @@ function defaultPosition() {
 const SESSION_KEY = "devtools-state"
 
 export function DevTool() {
+  const { session } = useSession()
+  const isDev = process.env.NODE_ENV === "development"
+  const isAdmin = isDev || (session?.user?.publicMetadata as Record<string, unknown>)?.admin === true
+
   const [expanded, setExpanded] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
@@ -159,7 +164,7 @@ export function DevTool() {
     }
   }, [expanded])
 
-  if (!mounted) return null
+  if (!mounted || !isAdmin) return null
 
   const [edgeY, edgeX] = edge.split("-") as [EdgeY, EdgeX]
 

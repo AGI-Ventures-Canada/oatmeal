@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia"
 import { HackathonStatusEnum } from "@/lib/api/validators"
 
 function devGuard(set: { status?: number | string }) {
-  if (process.env.NODE_ENV !== "development") {
+  if (process.env.NODE_ENV !== "development" && process.env.ADMIN_ENABLED !== "true") {
     set.status = 403
     return { error: "Forbidden" as const }
   }
@@ -64,6 +64,19 @@ const SUBMISSION_DATA = [
 const ROOM_NAMES = ["Room A", "Room B", "Room C", "Room D", "Room E"]
 
 export const devRoutes = new Elysia({ prefix: "/dev" })
+  .onBeforeHandle(async ({ set, request }) => {
+    if (process.env.NODE_ENV === "development") return
+    const { resolvePrincipal, isAdminEnabled } = await import("@/lib/auth/principal")
+    if (!isAdminEnabled()) {
+      set.status = 403
+      return { error: "Forbidden" }
+    }
+    const principal = await resolvePrincipal(request)
+    if (principal.kind !== "admin") {
+      set.status = 403
+      return { error: "Forbidden" }
+    }
+  })
   .get(
     "/config-status",
     ({ set }) => {
