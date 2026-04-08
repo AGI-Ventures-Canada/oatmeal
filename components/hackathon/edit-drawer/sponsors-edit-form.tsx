@@ -646,7 +646,7 @@ export function SponsorsEditForm({
                         }}
                         className="h-7 text-xs"
                       >
-                        Link to org
+                        Link to an existing org
                       </Button>
                     )}
                   </div>

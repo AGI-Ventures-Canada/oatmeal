@@ -183,7 +183,7 @@ describe("SponsorsEditForm", () => {
       />,
     );
 
-    expect(screen.getAllByRole("button", { name: "Link to org" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Link to an existing org" })).toHaveLength(1);
     expect(screen.getByText("Linked")).toBeDefined();
   });
 
@@ -244,7 +244,7 @@ describe("SponsorsEditForm", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Link to org" }));
+    fireEvent.click(screen.getByRole("button", { name: "Link to an existing org" }));
     fireEvent.change(screen.getByPlaceholderText("Search organizations..."), {
       target: { value: "go" },
     });
