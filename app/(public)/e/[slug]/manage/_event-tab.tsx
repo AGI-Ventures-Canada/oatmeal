@@ -1253,8 +1253,7 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
       body: JSON.stringify(payload),
     })
     if (!res.ok) {
-      setError("Failed to add agenda item")
-      return
+      throw new Error("Failed to add agenda item")
     }
     const saved = await res.json()
     setItems((prev) => [...prev, saved].sort((a: ScheduleItemData, b: ScheduleItemData) => a.starts_at.localeCompare(b.starts_at)))
@@ -1267,6 +1266,8 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
       for (const ghost of ghosts) {
         await handleAddGhostItem(ghost)
       }
+    } catch {
+      setError("Failed to add agenda item")
     } finally {
       setAddingGhosts(false)
     }
@@ -1308,7 +1309,7 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
           <AgendaGhostItems
             startsAt={eventStartsAt}
             endsAt={eventEndsAt}
-            onAddItem={handleAddGhostItem}
+            onAddItem={async (ghost) => { try { await handleAddGhostItem(ghost) } catch { setError("Failed to add agenda item") } }}
             onAddAll={handleAddAllGhostItems}
             disabled={addingGhosts}
           />
