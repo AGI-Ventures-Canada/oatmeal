@@ -90,6 +90,7 @@ interface EventTabContentProps {
   hackathonName: string
   startsAt: string | null
   endsAt: string | null
+  challengeReleasedAt: string | null
   activeEtab: string
   hackathonStatus: HackathonStatus
   hackathonPhase: HackathonPhase | null
@@ -1095,7 +1096,7 @@ function computeScheduleDefaults(items: ScheduleItemData[]): { startsAt: string;
   return { startsAt: toLocalDatetime(start), endsAt: toLocalDatetime(end) }
 }
 
-function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, endsAt: eventEndsAt }: { hackathonId: string; hackathonName: string; startsAt: string | null; endsAt: string | null }) {
+function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, endsAt: eventEndsAt, challengeReleasedAt }: { hackathonId: string; hackathonName: string; startsAt: string | null; endsAt: string | null; challengeReleasedAt: string | null }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<ScheduleItemData[]>([])
@@ -1228,13 +1229,7 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
         method: "POST",
       })
       if (!res.ok) throw new Error("Failed to release")
-      setItems((prev) =>
-        prev.map((i) =>
-          i.trigger_type === "challenge_release"
-            ? { ...i, _released: true } as ScheduleItemData
-            : i
-        )
-      )
+      setChallengeReleased(true)
     } catch {
       setError("Failed to release challenge")
     } finally {
@@ -1267,11 +1262,12 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
     }
   }
 
-  function getTriggerStatus(item: ScheduleItemData & { _released?: boolean }): "scheduled" | "released" | "closed" | null {
+  const [challengeReleased, setChallengeReleased] = useState(!!challengeReleasedAt)
+
+  function getTriggerStatus(item: ScheduleItemData): "scheduled" | "released" | "closed" | null {
     if (!item.trigger_type) return null
     if (item.trigger_type === "challenge_release") {
-      if (item._released) return "released"
-      return new Date(item.starts_at) <= new Date() ? "released" : "scheduled"
+      return challengeReleased || new Date(item.starts_at) <= new Date() ? "released" : "scheduled"
     }
     if (item.trigger_type === "submission_deadline") {
       return new Date(item.starts_at) <= new Date() ? "closed" : "scheduled"
@@ -1464,7 +1460,7 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
   )
 }
 
-export function EventTabContent({ hackathonId, hackathonName, startsAt, endsAt, activeEtab, hackathonStatus, hackathonPhase }: EventTabContentProps) {
+export function EventTabContent({ hackathonId, hackathonName, startsAt, endsAt, challengeReleasedAt, activeEtab, hackathonStatus, hackathonPhase }: EventTabContentProps) {
   return (
     <TabsUrlSync paramKey="etab" value={activeEtab} className="space-y-6">
       <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
@@ -1487,7 +1483,7 @@ export function EventTabContent({ hackathonId, hackathonName, startsAt, endsAt, 
       </TabsContent>
 
       <TabsContent value="schedule" forceMount className="data-[state=inactive]:hidden">
-        <ScheduleSubTab hackathonId={hackathonId} hackathonName={hackathonName} startsAt={startsAt} endsAt={endsAt} />
+        <ScheduleSubTab hackathonId={hackathonId} hackathonName={hackathonName} startsAt={startsAt} endsAt={endsAt} challengeReleasedAt={challengeReleasedAt} />
       </TabsContent>
 
       <TabsContent value="mentors" forceMount className="data-[state=inactive]:hidden">
