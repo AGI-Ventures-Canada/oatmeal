@@ -774,7 +774,7 @@ export function PrizesEditForm({
 
       <div className="space-y-3 pt-2">
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={closeDrawer}>
+          <Button type="button" onClick={closeDrawer}>
             Done
           </Button>
         </div>
