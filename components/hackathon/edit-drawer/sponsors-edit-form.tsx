@@ -22,7 +22,6 @@ import {
   Plus,
   Building2,
   Loader2,
-  Undo2,
   ExternalLink,
   Sun,
   Moon,
@@ -57,48 +56,6 @@ interface OrgSearchResult {
   websiteUrl: string | null;
   isSaved?: boolean;
 }
-
-type LogoVariant = "light" | "dark";
-
-type PendingChange =
-  | {
-      type: "add";
-      sponsor: SponsorWithTenant;
-      tempId: string;
-      logoFile?: File;
-      logoPreviewUrl?: string;
-      logoDarkFile?: File;
-      logoDarkPreviewUrl?: string;
-    }
-  | { type: "delete"; sponsorId: string; originalSponsor: SponsorWithTenant }
-  | {
-      type: "tier";
-      sponsorId: string;
-      newTier: SponsorTier;
-      oldTier: SponsorTier;
-    }
-  | {
-      type: "logo";
-      sponsorId: string;
-      variant: LogoVariant;
-      file: File;
-      previewUrl: string;
-      oldUrl: string | null;
-    }
-  | {
-      type: "link";
-      sponsorId: string;
-      sponsorTenantId: string;
-      tenant: SponsorWithTenant["tenant"];
-      websiteUrl: string | null;
-      useOrgAssets: boolean;
-    }
-  | {
-      type: "source";
-      sponsorId: string;
-      useOrgAssets: boolean;
-      oldUseOrgAssets: boolean;
-    };
 
 function useOrgSearch(excludeIdsString: string) {
   const [query, setQuery] = useState("");
@@ -158,75 +115,31 @@ export function SponsorsEditForm({
   const isLocalMode = !!onSave;
   const router = useRouter();
   const { closeDrawer } = useEdit();
-  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const tempIdCounter = useRef(0);
 
-  const currentSponsors = useMemo(() => {
-    let sponsors = [...initialSponsors];
+  const [localSponsors, setLocalSponsors] = useState<SponsorWithTenant[]>(
+    isLocalMode ? initialSponsors : [],
+  );
 
-    for (const change of pendingChanges) {
-      if (change.type === "add") {
-        const sponsorWithPreview = {
-          ...change.sponsor,
-          ...(change.logoPreviewUrl && { logo_url: change.logoPreviewUrl }),
-          ...(change.logoDarkPreviewUrl && {
-            logo_url_dark: change.logoDarkPreviewUrl,
-          }),
-        };
-        sponsors.push(sponsorWithPreview);
-      } else if (change.type === "delete") {
-        sponsors = sponsors.filter((s) => s.id !== change.sponsorId);
-      } else if (change.type === "tier") {
-        sponsors = sponsors.map((s) =>
-          s.id === change.sponsorId ? { ...s, tier: change.newTier } : s,
-        );
-      } else if (change.type === "logo") {
-        sponsors = sponsors.map((s) =>
-          s.id === change.sponsorId
-            ? {
-                ...s,
-                ...(change.variant === "light"
-                  ? { logo_url: change.previewUrl }
-                  : { logo_url_dark: change.previewUrl }),
-              }
-            : s,
-        );
-      } else if (change.type === "link") {
-        sponsors = sponsors.map((s) =>
-          s.id === change.sponsorId
-            ? {
-                ...s,
-                sponsor_tenant_id: change.sponsorTenantId,
-                tenant: change.tenant,
-                website_url: change.websiteUrl,
-                use_org_assets: change.useOrgAssets,
-              }
-            : s,
-        );
-      } else if (change.type === "source") {
-        sponsors = sponsors.map((s) =>
-          s.id === change.sponsorId
-            ? {
-                ...s,
-                use_org_assets: change.useOrgAssets,
-              }
-            : s,
-        );
-      }
-    }
+  useEffect(() => {
+    setHiddenIds(new Set());
+  }, [initialSponsors]);
 
-    return sponsors;
-  }, [initialSponsors, pendingChanges]);
+  const visibleSponsors = useMemo(() => {
+    const sponsors = isLocalMode ? localSponsors : initialSponsors;
+    return sponsors.filter((s) => !hiddenIds.has(s.id));
+  }, [isLocalMode, localSponsors, initialSponsors, hiddenIds]);
 
   const excludeIdsString = useMemo(
     () =>
-      currentSponsors
+      visibleSponsors
         .map((s) => s.sponsor_tenant_id)
         .filter((id): id is string => id !== null)
         .join(","),
-    [currentSponsors],
+    [visibleSponsors],
   );
 
   const orgSearch = useOrgSearch(isLocalMode ? "" : excludeIdsString);
@@ -245,623 +158,265 @@ export function SponsorsEditForm({
   const linkLoading = isLocalMode ? false : linkSearch.loading;
   const linkSearched = isLocalMode ? true : linkSearch.searched;
 
-  const hasChanges = pendingChanges.length > 0;
+  function saveLocalSponsors(sponsors: SponsorWithTenant[]) {
+    const sponsorsData = sponsors.map((s) => ({
+      name: s.name,
+      tier: s.tier === "none" ? null : s.tier,
+    }));
+    onSave?.({ sponsors: sponsorsData });
+  }
 
-  function handleAddOrg(org: OrgSearchResult) {
-    const tempId = `temp-${++tempIdCounter.current}`;
-    const newSponsor: SponsorWithTenant = {
-      id: tempId,
-      hackathon_id: hackathonId,
-      sponsor_tenant_id: org.isSaved ? null : org.id,
-      tenant_sponsor_id: null,
-      use_org_assets: !org.isSaved,
-      name: org.name,
-      logo_url: org.logoUrl,
-      logo_url_dark: org.logoUrlDark,
-      website_url: org.websiteUrl,
-      tier: "none",
-      display_order: currentSponsors.length,
-      created_at: new Date().toISOString(),
-      tenant: org.isSaved ? null : {
-        slug: org.slug,
+  async function handleAddOrg(org: OrgSearchResult) {
+    if (isLocalMode) {
+      const tempId = `temp-${++tempIdCounter.current}`;
+      const newSponsor: SponsorWithTenant = {
+        id: tempId,
+        hackathon_id: hackathonId,
+        sponsor_tenant_id: org.isSaved ? null : org.id,
+        tenant_sponsor_id: null,
+        use_org_assets: !org.isSaved,
         name: org.name,
         logo_url: org.logoUrl,
         logo_url_dark: org.logoUrlDark,
-      },
-    };
+        website_url: org.websiteUrl,
+        tier: "none",
+        display_order: localSponsors.length,
+        created_at: new Date().toISOString(),
+        tenant: org.isSaved
+          ? null
+          : {
+              slug: org.slug,
+              name: org.name,
+              logo_url: org.logoUrl,
+              logo_url_dark: org.logoUrlDark,
+            },
+      };
+      const updated = [...localSponsors, newSponsor];
+      setLocalSponsors(updated);
+      saveLocalSponsors(updated);
+      setQuery("");
+      return;
+    }
 
-    setPendingChanges([
-      ...pendingChanges,
-      { type: "add", sponsor: newSponsor, tempId },
-    ]);
-    setQuery("");
+    setAdding(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/dashboard/hackathons/${hackathonId}/sponsors`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: org.name,
+            tier: "none",
+            logoUrl: org.isSaved ? null : org.logoUrl,
+            websiteUrl: org.websiteUrl,
+            sponsorTenantId: org.isSaved ? null : org.id,
+            useOrgAssets: !org.isSaved,
+          }),
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Failed to add ${org.name}`);
+      }
+      setQuery("");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add sponsor");
+    } finally {
+      setAdding(false);
+    }
   }
 
-  function handleAddManual() {
+  async function handleAddManual() {
     if (!query.trim()) return;
 
-    const tempId = `temp-${++tempIdCounter.current}`;
-    const newSponsor: SponsorWithTenant = {
-      id: tempId,
-      hackathon_id: hackathonId,
-      sponsor_tenant_id: null,
-      tenant_sponsor_id: null,
-      use_org_assets: false,
-      name: query.trim(),
-      logo_url: null,
-      logo_url_dark: null,
-      website_url: null,
-      tier: "none",
-      display_order: currentSponsors.length,
-      created_at: new Date().toISOString(),
-    };
+    if (isLocalMode) {
+      const tempId = `temp-${++tempIdCounter.current}`;
+      const newSponsor: SponsorWithTenant = {
+        id: tempId,
+        hackathon_id: hackathonId,
+        sponsor_tenant_id: null,
+        tenant_sponsor_id: null,
+        use_org_assets: false,
+        name: query.trim(),
+        logo_url: null,
+        logo_url_dark: null,
+        website_url: null,
+        tier: "none",
+        display_order: localSponsors.length,
+        created_at: new Date().toISOString(),
+      };
+      const updated = [...localSponsors, newSponsor];
+      setLocalSponsors(updated);
+      saveLocalSponsors(updated);
+      setQuery("");
+      return;
+    }
 
-    setPendingChanges([
-      ...pendingChanges,
-      { type: "add", sponsor: newSponsor, tempId },
-    ]);
-    setQuery("");
+    setAdding(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/dashboard/hackathons/${hackathonId}/sponsors`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: query.trim(),
+            tier: "none",
+          }),
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to add sponsor");
+      }
+      setQuery("");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add sponsor");
+    } finally {
+      setAdding(false);
+    }
   }
 
-  function handleLinkOrg(sponsorId: string, org: OrgSearchResult) {
+  async function handleDeleteSponsor(sponsorId: string) {
+    if (isLocalMode) {
+      const updated = localSponsors.filter((s) => s.id !== sponsorId);
+      setLocalSponsors(updated);
+      saveLocalSponsors(updated);
+      return;
+    }
+
+    setHiddenIds((prev) => new Set(prev).add(sponsorId));
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to remove sponsor");
+      }
+      router.refresh();
+    } catch (err) {
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.delete(sponsorId);
+        return next;
+      });
+      setError(
+        err instanceof Error ? err.message : "Failed to remove sponsor",
+      );
+    }
+  }
+
+  async function handleUpdateTier(sponsorId: string, newTier: SponsorTier) {
+    if (isLocalMode) {
+      const updated = localSponsors.map((s) =>
+        s.id === sponsorId ? { ...s, tier: newTier } : s,
+      );
+      setLocalSponsors(updated);
+      saveLocalSponsors(updated);
+      return;
+    }
+
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tier: newTier }),
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update tier");
+      }
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update tier");
+    }
+  }
+
+  async function handleLinkOrg(sponsorId: string, org: OrgSearchResult) {
     if (org.isSaved) return;
 
-    const tenant = {
-      slug: org.slug,
-      name: org.name,
-      logo_url: org.logoUrl,
-      logo_url_dark: org.logoUrlDark,
-    };
-
-    const addChange = pendingChanges.find(
-      (c) => c.type === "add" && c.tempId === sponsorId,
-    ) as Extract<PendingChange, { type: "add" }> | undefined;
-
-    if (addChange) {
-      setPendingChanges(
-        pendingChanges.map((c) =>
-          c === addChange
-            ? {
-                ...c,
-                sponsor: {
-                  ...c.sponsor,
-                  sponsor_tenant_id: org.id,
-                  tenant,
-                  website_url: org.websiteUrl ?? c.sponsor.website_url,
-                  use_org_assets: c.sponsor.use_org_assets,
-                },
-              }
-            : c,
-        ),
-      );
-      linkSearch.setQuery("");
-      setLinkingSponsorId(null);
-      return;
-    }
-
-    const existingLinkChangeIndex = pendingChanges.findIndex(
-      (c) => c.type === "link" && c.sponsorId === sponsorId,
-    );
-
-    if (existingLinkChangeIndex >= 0) {
-      const updated = [...pendingChanges];
-      updated[existingLinkChangeIndex] = {
-        type: "link",
-        sponsorId,
-        sponsorTenantId: org.id,
-        tenant,
-        websiteUrl: org.websiteUrl,
-        useOrgAssets: false,
-      };
-      setPendingChanges(updated);
-      linkSearch.setQuery("");
-      setLinkingSponsorId(null);
-      return;
-    }
-
-    setPendingChanges([
-      ...pendingChanges,
-      {
-        type: "link",
-        sponsorId,
-        sponsorTenantId: org.id,
-        tenant,
-        websiteUrl: org.websiteUrl,
-        useOrgAssets: false,
-      },
-    ]);
     linkSearch.setQuery("");
     setLinkingSponsorId(null);
-  }
-
-  function handleUpdateAssetSource(sponsorId: string, nextUseOrgAssets: boolean) {
-    const addChange = pendingChanges.find(
-      (c) => c.type === "add" && c.tempId === sponsorId,
-    ) as Extract<PendingChange, { type: "add" }> | undefined;
-
-    if (addChange) {
-      setPendingChanges(
-        pendingChanges.map((c) =>
-          c === addChange
-            ? {
-                ...c,
-                sponsor: { ...c.sponsor, use_org_assets: nextUseOrgAssets },
-              }
-            : c,
-        ),
-      );
-      return;
-    }
-
-    const linkChangeIndex = pendingChanges.findIndex(
-      (c) => c.type === "link" && c.sponsorId === sponsorId,
-    );
-
-    if (linkChangeIndex >= 0) {
-      const updated = [...pendingChanges];
-      const linkChange = updated[linkChangeIndex] as Extract<
-        PendingChange,
-        { type: "link" }
-      >;
-      updated[linkChangeIndex] = { ...linkChange, useOrgAssets: nextUseOrgAssets };
-      setPendingChanges(updated);
-      return;
-    }
-
-    const existingSourceChangeIndex = pendingChanges.findIndex(
-      (c) => c.type === "source" && c.sponsorId === sponsorId,
-    );
-
-    if (existingSourceChangeIndex >= 0) {
-      const existingChange = pendingChanges[existingSourceChangeIndex] as Extract<
-        PendingChange,
-        { type: "source" }
-      >;
-
-      if (existingChange.oldUseOrgAssets === nextUseOrgAssets) {
-        setPendingChanges(
-          pendingChanges.filter((_, i) => i !== existingSourceChangeIndex),
-        );
-      } else {
-        const updated = [...pendingChanges];
-        updated[existingSourceChangeIndex] = {
-          ...existingChange,
-          useOrgAssets: nextUseOrgAssets,
-        };
-        setPendingChanges(updated);
-      }
-      return;
-    }
-
-    const currentSponsor = initialSponsors.find((s) => s.id === sponsorId);
-    if (!currentSponsor || currentSponsor.use_org_assets === nextUseOrgAssets) {
-      return;
-    }
-
-    setPendingChanges([
-      ...pendingChanges,
-      {
-        type: "source",
-        sponsorId,
-        useOrgAssets: nextUseOrgAssets,
-        oldUseOrgAssets: currentSponsor.use_org_assets,
-      },
-    ]);
-  }
-
-  function handleUpdateTier(sponsorId: string, newTier: SponsorTier) {
-    const existingTierChangeIndex = pendingChanges.findIndex(
-      (c) => c.type === "tier" && c.sponsorId === sponsorId,
-    );
-
-    if (existingTierChangeIndex >= 0) {
-      const existingChange = pendingChanges[existingTierChangeIndex] as Extract<
-        PendingChange,
-        { type: "tier" }
-      >;
-      if (existingChange.oldTier === newTier) {
-        setPendingChanges(
-          pendingChanges.filter((_, i) => i !== existingTierChangeIndex),
-        );
-      } else {
-        const updated = [...pendingChanges];
-        updated[existingTierChangeIndex] = { ...existingChange, newTier };
-        setPendingChanges(updated);
-      }
-      return;
-    }
-
-    const addChange = pendingChanges.find(
-      (c) => c.type === "add" && c.tempId === sponsorId,
-    ) as Extract<PendingChange, { type: "add" }> | undefined;
-
-    if (addChange) {
-      setPendingChanges(
-        pendingChanges.map((c) =>
-          c === addChange
-            ? { ...c, sponsor: { ...c.sponsor, tier: newTier } }
-            : c,
-        ),
-      );
-      return;
-    }
-
-    const currentSponsor = initialSponsors.find((s) => s.id === sponsorId);
-    if (!currentSponsor || currentSponsor.tier === newTier) return;
-
-    setPendingChanges([
-      ...pendingChanges,
-      {
-        type: "tier",
-        sponsorId,
-        newTier,
-        oldTier: currentSponsor.tier,
-      },
-    ]);
-  }
-
-  function handleDeleteSponsor(sponsorId: string) {
-    const addChange = pendingChanges.find(
-      (c) => c.type === "add" && c.tempId === sponsorId,
-    );
-
-    if (addChange) {
-      setPendingChanges(pendingChanges.filter((c) => c !== addChange));
-      return;
-    }
-
-    const originalSponsor = initialSponsors.find((s) => s.id === sponsorId);
-    if (!originalSponsor) return;
-
-    const filtered = pendingChanges.filter(
-      (c) =>
-        !(
-          (c.type === "tier" ||
-            c.type === "logo" ||
-            c.type === "link" ||
-            c.type === "source") &&
-          c.sponsorId === sponsorId
-        ),
-    );
-    setPendingChanges([
-      ...filtered,
-      { type: "delete", sponsorId, originalSponsor },
-    ]);
-  }
-
-  function handleLogoSelected(
-    sponsorId: string,
-    file: File,
-    variant: LogoVariant,
-  ) {
-    const previewUrl = URL.createObjectURL(file);
-
-    const addChange = pendingChanges.find(
-      (c) => c.type === "add" && c.tempId === sponsorId,
-    ) as Extract<PendingChange, { type: "add" }> | undefined;
-
-    if (addChange) {
-      if (variant === "light") {
-        if (addChange.logoPreviewUrl) {
-          URL.revokeObjectURL(addChange.logoPreviewUrl);
-        }
-        setPendingChanges(
-          pendingChanges.map((c) =>
-            c === addChange
-              ? { ...c, logoFile: file, logoPreviewUrl: previewUrl }
-              : c,
-          ),
-        );
-      } else {
-        if (addChange.logoDarkPreviewUrl) {
-          URL.revokeObjectURL(addChange.logoDarkPreviewUrl);
-        }
-        setPendingChanges(
-          pendingChanges.map((c) =>
-            c === addChange
-              ? { ...c, logoDarkFile: file, logoDarkPreviewUrl: previewUrl }
-              : c,
-          ),
-        );
-      }
-      return;
-    }
-
-    const existingLogoChange = pendingChanges.find(
-      (c) =>
-        c.type === "logo" &&
-        c.sponsorId === sponsorId &&
-        c.variant === variant,
-    ) as Extract<PendingChange, { type: "logo" }> | undefined;
-
-    if (existingLogoChange) {
-      URL.revokeObjectURL(existingLogoChange.previewUrl);
-      setPendingChanges(
-        pendingChanges.map((c) =>
-          c === existingLogoChange ? { ...c, file, previewUrl } : c,
-        ),
-      );
-      return;
-    }
-
-    const currentSponsor = initialSponsors.find((s) => s.id === sponsorId);
-    if (!currentSponsor) return;
-
-    setPendingChanges([
-      ...pendingChanges,
-      {
-        type: "logo",
-        sponsorId,
-        variant,
-        file,
-        previewUrl,
-        oldUrl:
-          variant === "light"
-            ? currentSponsor.logo_url
-            : currentSponsor.logo_url_dark,
-      },
-    ]);
-  }
-
-  function handleUndo(index: number) {
-    const change = pendingChanges[index];
-    if (change.type === "add") {
-      if (change.logoPreviewUrl) URL.revokeObjectURL(change.logoPreviewUrl);
-      if (change.logoDarkPreviewUrl)
-        URL.revokeObjectURL(change.logoDarkPreviewUrl);
-    }
-    if (change.type === "logo") {
-      URL.revokeObjectURL(change.previewUrl);
-    }
-    setPendingChanges(pendingChanges.filter((_, i) => i !== index));
-  }
-
-  function handleUndoAll() {
-    for (const change of pendingChanges) {
-      if (change.type === "add") {
-        if (change.logoPreviewUrl) URL.revokeObjectURL(change.logoPreviewUrl);
-        if (change.logoDarkPreviewUrl)
-          URL.revokeObjectURL(change.logoDarkPreviewUrl);
-      }
-      if (change.type === "logo") {
-        URL.revokeObjectURL(change.previewUrl);
-      }
-    }
-    setPendingChanges([]);
-    linkSearch.setQuery("");
-    setLinkingSponsorId(null);
-  }
-
-  async function saveChanges() {
-    if (!hasChanges) return true;
-
-    if (isLocalMode) {
-      const sponsorsData = currentSponsors.map((s) => ({
-        name: s.name,
-        tier: s.tier === "none" ? null : s.tier,
-      }));
-      const ok = await onSave!({ sponsors: sponsorsData });
-      if (ok) {
-        setPendingChanges([]);
-      }
-      return ok;
-    }
-
-    setSaving(true);
     setError(null);
 
     try {
-      for (const change of pendingChanges) {
-        if (change.type === "add") {
-          const res = await fetch(
-            `/api/dashboard/hackathons/${hackathonId}/sponsors`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: change.sponsor.name,
-                tier: change.sponsor.tier,
-                logoUrl: change.sponsor.sponsor_tenant_id
-                  ? change.sponsor.logo_url
-                  : null,
-                websiteUrl: change.sponsor.website_url,
-                sponsorTenantId: change.sponsor.sponsor_tenant_id,
-                useOrgAssets: change.sponsor.use_org_assets,
-              }),
-            },
-          );
-          if (!res.ok) {
-            const data = await res.json();
-            throw new Error(
-              data.error || `Failed to add ${change.sponsor.name}`,
-            );
-          }
-
-          if (change.logoFile || change.logoDarkFile) {
-            const sponsorData = await res.json();
-
-            if (change.logoFile) {
-              const formData = new FormData();
-              formData.append("file", change.logoFile);
-              formData.append("variant", "light");
-
-              const logoRes = await fetch(
-                `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorData.id}/logo`,
-                { method: "POST", body: formData },
-              );
-              if (!logoRes.ok) {
-                const logoData = await logoRes.json();
-                throw new Error(
-                  logoData.error ||
-                    `Failed to upload light logo for ${change.sponsor.name}`,
-                );
-              }
-            }
-
-            if (change.logoDarkFile) {
-              const formData = new FormData();
-              formData.append("file", change.logoDarkFile);
-              formData.append("variant", "dark");
-
-              const logoRes = await fetch(
-                `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorData.id}/logo`,
-                { method: "POST", body: formData },
-              );
-              if (!logoRes.ok) {
-                const logoData = await logoRes.json();
-                throw new Error(
-                  logoData.error ||
-                    `Failed to upload dark logo for ${change.sponsor.name}`,
-                );
-              }
-            }
-          }
-        } else if (change.type === "delete") {
-          const res = await fetch(
-            `/api/dashboard/hackathons/${hackathonId}/sponsors/${change.sponsorId}`,
-            {
-              method: "DELETE",
-            },
-          );
-          if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error || "Failed to remove sponsor");
-          }
-        } else if (change.type === "tier") {
-          const res = await fetch(
-            `/api/dashboard/hackathons/${hackathonId}/sponsors/${change.sponsorId}`,
-            {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ tier: change.newTier }),
-            },
-          );
-          if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error || "Failed to update tier");
-          }
-        } else if (change.type === "logo") {
-          const formData = new FormData();
-          formData.append("file", change.file);
-          formData.append("variant", change.variant);
-
-          const res = await fetch(
-            `/api/dashboard/hackathons/${hackathonId}/sponsors/${change.sponsorId}/logo`,
-            { method: "POST", body: formData },
-          );
-          if (!res.ok) {
-            const data = await res.json();
-            throw new Error(
-              data.error || `Failed to upload ${change.variant} logo`,
-            );
-          }
-        } else if (change.type === "link") {
-          const res = await fetch(
-            `/api/dashboard/hackathons/${hackathonId}/sponsors/${change.sponsorId}`,
-            {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                sponsorTenantId: change.sponsorTenantId,
-                websiteUrl: change.websiteUrl,
-                useOrgAssets: change.useOrgAssets,
-              }),
-            },
-          );
-          if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error || "Failed to link sponsor");
-          }
-        } else if (change.type === "source") {
-          const res = await fetch(
-            `/api/dashboard/hackathons/${hackathonId}/sponsors/${change.sponsorId}`,
-            {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                useOrgAssets: change.useOrgAssets,
-              }),
-            },
-          );
-          if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error || "Failed to update asset source");
-          }
-        }
+      const res = await fetch(
+        `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sponsorTenantId: org.id,
+            websiteUrl: org.websiteUrl,
+            useOrgAssets: false,
+          }),
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to link sponsor");
       }
-
-      for (const change of pendingChanges) {
-        if (change.type === "add") {
-          if (change.logoPreviewUrl) URL.revokeObjectURL(change.logoPreviewUrl);
-          if (change.logoDarkPreviewUrl)
-            URL.revokeObjectURL(change.logoDarkPreviewUrl);
-        }
-        if (change.type === "logo") {
-          URL.revokeObjectURL(change.previewUrl);
-        }
-      }
-
       router.refresh();
-      return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save changes");
-      return false;
-    } finally {
-      setSaving(false);
+      setError(err instanceof Error ? err.message : "Failed to link sponsor");
     }
   }
 
-  async function handleSave() {
-    if (!hasChanges) {
-      closeDrawer();
-      return;
-    }
+  async function handleUpdateAssetSource(
+    sponsorId: string,
+    nextUseOrgAssets: boolean,
+  ) {
+    if (isLocalMode) return;
 
-    const ok = await saveChanges();
-    if (ok) closeDrawer();
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ useOrgAssets: nextUseOrgAssets }),
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update asset source");
+      }
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to update asset source",
+      );
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
-      if (query.trim() && !saving) {
+      if (query.trim() && !adding) {
         handleAddManual();
-      } else if (!saving) {
-        saveChanges().then((ok) => {
-          if (ok) {
-            if (onSaveAndNext) {
-              onSaveAndNext();
-            } else {
-              closeDrawer();
-            }
-          }
-        });
+      } else if (onSaveAndNext) {
+        onSaveAndNext();
+      } else {
+        closeDrawer();
       }
     }
   }
 
   const showResults = query.length >= 2;
   const showAddManually = showResults && searched && !loading;
-
-  function isPending(sponsorId: string) {
-    return (
-      sponsorId.startsWith("temp-") ||
-      pendingChanges.some(
-        (c) =>
-          (c.type === "delete" && c.sponsorId === sponsorId) ||
-          (c.type === "tier" && c.sponsorId === sponsorId) ||
-          (c.type === "logo" && c.sponsorId === sponsorId) ||
-          (c.type === "link" && c.sponsorId === sponsorId) ||
-          (c.type === "source" && c.sponsorId === sponsorId),
-      )
-    );
-  }
-
-  function isDeleted(sponsorId: string) {
-    return pendingChanges.some(
-      (c) => c.type === "delete" && c.sponsorId === sponsorId,
-    );
-  }
 
   return (
     <div className="space-y-6" onKeyDown={handleKeyDown}>
@@ -873,12 +428,13 @@ export function SponsorsEditForm({
               placeholder="Sponsor organization name..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              disabled={adding}
               autoComplete="off"
               data-1p-ignore
               data-lpignore="true"
               data-form-type="other"
             />
-            {loading && (
+            {(loading || adding) && (
               <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground animate-spin" />
             )}
           </div>
@@ -890,6 +446,7 @@ export function SponsorsEditForm({
                   key={org.id}
                   type="button"
                   onClick={() => handleAddOrg(org)}
+                  disabled={adding}
                   className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left"
                 >
                   {org.logoUrl ? (
@@ -936,6 +493,7 @@ export function SponsorsEditForm({
                 <button
                   type="button"
                   onClick={handleAddManual}
+                  disabled={adding}
                   className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left"
                 >
                   <div className="size-8 rounded-md bg-muted flex items-center justify-center">
@@ -958,29 +516,13 @@ export function SponsorsEditForm({
         {error && <p className="text-destructive text-sm">{error}</p>}
       </FieldGroup>
 
-      {currentSponsors.length > 0 && (
+      {visibleSponsors.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">
-              Sponsors ({currentSponsors.length})
-            </h4>
-            {hasChanges && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleUndoAll}
-                className="h-7 text-xs"
-              >
-                <Undo2 className="size-3 mr-1" />
-                Undo all
-              </Button>
-            )}
-          </div>
+          <h4 className="text-sm font-medium">
+            Sponsors ({visibleSponsors.length})
+          </h4>
           <div className="space-y-2">
-            {currentSponsors.map((sponsor) => {
-              const pending = isPending(sponsor.id);
-              const deleted = isDeleted(sponsor.id);
+            {visibleSponsors.map((sponsor) => {
               const isLinked = !!sponsor.sponsor_tenant_id;
               const useOrgAssets = isLinked && sponsor.use_org_assets;
               const displayName =
@@ -993,16 +535,14 @@ export function SponsorsEditForm({
               return (
                 <div
                   key={sponsor.id}
-                  className={`rounded-lg border p-3 space-y-3 ${
-                    pending ? "border-dashed bg-muted/30" : ""
-                  } ${deleted ? "opacity-50" : ""}`}
+                  className="rounded-lg border p-3 space-y-3"
                 >
                   {!isLocalMode && (useOrgAssets ? (
                     <div className="flex gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                           <Sun className="size-2.5" />
-                          <span>Light</span>
+                          <span>Light logo</span>
                         </div>
                         <div className="bg-[#f5f5f4] border border-[#e5e5e5] p-2 flex items-center justify-center h-14 w-28">
                           {sponsor.tenant?.logo_url ? (
@@ -1023,7 +563,7 @@ export function SponsorsEditForm({
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                           <Moon className="size-2.5" />
-                          <span>Dark</span>
+                          <span>Dark logo</span>
                         </div>
                         <div className="bg-[#1a1a1a] border border-[#333] p-2 flex items-center justify-center h-14 w-28">
                           {sponsor.tenant?.logo_url ? (
@@ -1050,35 +590,27 @@ export function SponsorsEditForm({
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                           <Sun className="size-2.5" />
-                          <span>Light</span>
+                          <span>Light logo</span>
                         </div>
                         <SponsorLogoUpload
                           logoUrl={sponsor.logo_url}
                           hackathonId={hackathonId}
                           sponsorId={sponsor.id}
                           variant="light"
-                          onFileSelected={(file) =>
-                            handleLogoSelected(sponsor.id, file, "light")
-                          }
                           onUploaded={() => router.refresh()}
-                          disabled={deleted}
                         />
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                           <Moon className="size-2.5" />
-                          <span>Dark</span>
+                          <span>Dark logo</span>
                         </div>
                         <SponsorLogoUpload
                           logoUrl={sponsor.logo_url_dark}
                           hackathonId={hackathonId}
                           sponsorId={sponsor.id}
                           variant="dark"
-                          onFileSelected={(file) =>
-                            handleLogoSelected(sponsor.id, file, "dark")
-                          }
                           onUploaded={() => router.refresh()}
-                          disabled={deleted}
                         />
                       </div>
                     </div>
@@ -1101,7 +633,7 @@ export function SponsorsEditForm({
                         Linked
                       </Badge>
                     )}
-                    {!isLocalMode && !isLinked && !deleted && (
+                    {!isLocalMode && !isLinked && (
                       <Button
                         type="button"
                         variant="outline"
@@ -1118,7 +650,7 @@ export function SponsorsEditForm({
                       </Button>
                     )}
                   </div>
-                  {!isLocalMode && linkingSponsorId === sponsor.id && !deleted && (
+                  {!isLocalMode && linkingSponsorId === sponsor.id && (
                     <div className="space-y-2">
                       <div className="relative">
                         <Input
@@ -1182,7 +714,7 @@ export function SponsorsEditForm({
                             linkSearched &&
                             linkResults.length === 0 && (
                               <div className="p-3 text-xs text-muted-foreground">
-                        No matching organizations found.
+                                No matching organizations found.
                               </div>
                             )}
                         </div>
@@ -1196,7 +728,6 @@ export function SponsorsEditForm({
                         onValueChange={(value) =>
                           handleUpdateAssetSource(sponsor.id, value === "org")
                         }
-                        disabled={deleted}
                       >
                         <SelectTrigger className="w-32 h-8 text-xs">
                           <SelectValue />
@@ -1212,7 +743,6 @@ export function SponsorsEditForm({
                       onValueChange={(v) =>
                         handleUpdateTier(sponsor.id, v as SponsorTier)
                       }
-                      disabled={deleted}
                     >
                       <SelectTrigger className="w-24 h-8 text-xs">
                         <SelectValue />
@@ -1231,7 +761,6 @@ export function SponsorsEditForm({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteSponsor(sponsor.id)}
-                      disabled={deleted}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
                     >
                       <Trash2 className="size-4" />
@@ -1244,82 +773,17 @@ export function SponsorsEditForm({
         </div>
       )}
 
-      {hasChanges && (
-        <div className="space-y-2 rounded-lg border border-dashed p-3">
-          <h4 className="text-xs font-medium text-muted-foreground">
-            Pending changes ({pendingChanges.length})
-          </h4>
-          <div className="space-y-1">
-            {pendingChanges.map((change, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between text-xs"
-              >
-                <span className="text-muted-foreground">
-                  {change.type === "add" &&
-                    `+ Add "${change.sponsor.name}"${
-                      change.logoFile || change.logoDarkFile
-                        ? ` (with ${[change.logoFile && "light", change.logoDarkFile && "dark"].filter(Boolean).join(" + ")} logo)`
-                        : ""
-                    }`}
-                  {change.type === "delete" &&
-                    `- Remove "${change.originalSponsor.name}"`}
-                  {change.type === "tier" &&
-                    `~ Change tier to ${change.newTier}`}
-                  {change.type === "logo" &&
-                    `~ Update ${change.variant} logo`}
-                  {change.type === "link" &&
-                    `~ Link to "${change.tenant?.name || change.sponsorTenantId}"`}
-                  {change.type === "source" &&
-                    `~ Use ${change.useOrgAssets ? "org" : "manual"} assets`}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleUndo(index)}
-                  className="h-6 w-6 p-0"
-                >
-                  <Undo2 className="size-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="space-y-3 pt-2">
-        <div className="flex gap-2">
-          {hasChanges ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  handleUndoAll();
-                  closeDrawer();
-                }}
-              >
-                Discard
-              </Button>
-              <Button type="button" onClick={handleSave} disabled={saving}>
-                {saving && <Loader2 className="size-4 mr-2 animate-spin" />}
-                Save changes
-              </Button>
-            </>
-          ) : (
-            <Button type="button" variant="outline" onClick={closeDrawer}>
-              Done
-            </Button>
-          )}
-        </div>
+        <Button type="button" variant="outline" onClick={closeDrawer}>
+          Done
+        </Button>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <KbdGroup>
               <Kbd>⌘</Kbd>
               <Kbd>↵</Kbd>
             </KbdGroup>{" "}
-            save & next
+            {onSaveAndNext ? "next" : "done"}
           </span>
         </div>
       </div>

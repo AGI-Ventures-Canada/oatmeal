@@ -220,7 +220,7 @@ describe("SponsorsEditForm", () => {
     expect(screen.getByText("Partner")).toBeDefined();
   });
 
-  it("lets a manual sponsor search for an org and saves the selected link", async () => {
+  it("auto-saves when linking a manual sponsor to an org", async () => {
     render(
       <SponsorsEditForm
         hackathonId="h1"
@@ -258,13 +258,6 @@ describe("SponsorsEditForm", () => {
     fireEvent.click(screen.getByText("Google"));
 
     await waitFor(() => {
-      expect(screen.getByText("Linked")).toBeDefined();
-      expect(screen.getByText("Save changes")).toBeDefined();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
-
-    await waitFor(() => {
       const patchCall = mockFetch.mock.calls.find(
         ([url, init]) =>
           typeof url === "string" &&
@@ -274,7 +267,6 @@ describe("SponsorsEditForm", () => {
 
       expect(patchCall).toBeDefined();
       expect(mockRefresh).toHaveBeenCalledTimes(1);
-      expect(mockCloseDrawer).toHaveBeenCalledTimes(1);
     });
 
     const patchCall = mockFetch.mock.calls.find(
@@ -289,5 +281,34 @@ describe("SponsorsEditForm", () => {
       useOrgAssets: false,
       websiteUrl: "https://google.com",
     });
+  });
+
+  it("shows only Done button with no save/discard buttons", () => {
+    render(
+      <SponsorsEditForm
+        hackathonId="h1"
+        initialSponsors={[
+          {
+            id: "s1",
+            hackathon_id: "h1",
+            sponsor_tenant_id: null,
+            tenant_sponsor_id: null,
+            use_org_assets: false,
+            name: "Test Sponsor",
+            logo_url: null,
+            logo_url_dark: null,
+            website_url: null,
+            tier: "none",
+            display_order: 0,
+            created_at: "2026-03-19T00:00:00.000Z",
+            tenant: null,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Done" })).toBeDefined();
+    expect(screen.queryByText("Save changes")).toBeNull();
+    expect(screen.queryByText("Discard")).toBeNull();
   });
 });
