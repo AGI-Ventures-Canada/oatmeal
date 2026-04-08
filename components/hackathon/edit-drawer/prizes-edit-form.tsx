@@ -772,31 +772,20 @@ export function PrizesEditForm({
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-3 pt-2">
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={closeDrawer}>
             Done
           </Button>
         </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <KbdGroup>
-                <Kbd>&#x2318;</Kbd>
-                <Kbd>&#x21B5;</Kbd>
-              </KbdGroup>{" "}
-              save & next
-            </span>
-          </div>
-          {saving && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Loader2 className="size-3 animate-spin" />
-              Saving...
-            </p>
-          )}
-          {showSaved && (
-            <p className="text-xs text-muted-foreground animate-in fade-in">Saved</p>
-          )}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <KbdGroup>
+              <Kbd>&#x2318;</Kbd>
+              <Kbd>&#x21B5;</Kbd>
+            </KbdGroup>{" "}
+            save & next
+          </span>
         </div>
       </div>
     </div>

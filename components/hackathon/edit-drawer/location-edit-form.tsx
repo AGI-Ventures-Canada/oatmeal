@@ -326,8 +326,11 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
 
       <div className="space-y-3">
         <div className="flex gap-2">
+          <Button type="button" disabled={saving || !isDirty} onClick={() => save()}>
+            {saving ? "Saving..." : "Save"}
+          </Button>
           <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
-            Done
+            Cancel
           </Button>
           {isDirty && (
             <Button type="button" variant="ghost" onClick={handleReset} disabled={saving}>
@@ -336,22 +339,17 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
             </Button>
           )}
         </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Kbd>↵</Kbd> save
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <KbdGroup><Kbd>⌘</Kbd><Kbd>↵</Kbd></KbdGroup> save & next
+          </span>
+          {isDirty && (
             <span className="inline-flex items-center gap-1">
-              <KbdGroup><Kbd>⌘</Kbd><Kbd>↵</Kbd></KbdGroup> save & next
+              <Kbd>Esc</Kbd> reset
             </span>
-            {isDirty && (
-              <span className="inline-flex items-center gap-1">
-                <Kbd>Esc</Kbd> reset
-              </span>
-            )}
-          </div>
-          {saving && (
-            <p className="text-xs text-muted-foreground">Saving...</p>
-          )}
-          {showSaved && (
-            <p className="text-xs text-muted-foreground animate-in fade-in">Saved</p>
           )}
         </div>
       </div>

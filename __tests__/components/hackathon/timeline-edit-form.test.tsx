@@ -80,10 +80,15 @@ describe("TimelineEditForm", () => {
     ).toBeTruthy()
   })
 
-  it("does not show Save button (auto-save mode) but shows Done", () => {
+  it("renders Save button disabled when no changes", () => {
     render(<TimelineEditForm initialData={baseData} />)
-    expect(screen.queryByRole("button", { name: "Save" })).toBeNull()
-    expect(screen.getByText("Done")).toBeTruthy()
+    const saveButton = screen.getByText("Save")
+    expect(saveButton.closest("button")?.hasAttribute("disabled")).toBe(true)
+  })
+
+  it("renders Cancel button", () => {
+    render(<TimelineEditForm initialData={baseData} />)
+    expect(screen.getByText("Cancel")).toBeTruthy()
   })
 
   it("does not show Reset button when pristine", () => {
@@ -103,14 +108,22 @@ describe("TimelineEditForm", () => {
     expect(screen.getByText(/Mar 25 at 9:00 AM/)).toBeTruthy()
   })
 
+  it("calls onCancel when Cancel is clicked", () => {
+    const onCancel = mock(() => {})
+    render(<TimelineEditForm initialData={baseData} onCancel={onCancel} />)
+    fireEvent.click(screen.getByText("Cancel"))
+    expect(onCancel).toHaveBeenCalled()
+  })
+
   it("calls onSave with correct data structure", async () => {
     const onSave = mock(() => Promise.resolve(true))
     render(<TimelineEditForm initialData={emptyData} onSave={onSave} />)
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it("shows save & next keyboard shortcut hint", () => {
+  it("shows keyboard shortcut hints", () => {
     render(<TimelineEditForm initialData={baseData} />)
+    expect(screen.getByText("save")).toBeTruthy()
     expect(screen.getByText("save & next")).toBeTruthy()
   })
 })

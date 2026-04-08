@@ -649,41 +649,36 @@ export function JudgesEditForm({
       <div className="space-y-3 pt-2">
         <div className="flex gap-2">
           {hasChanges ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                handleUndoAll()
-                closeDrawer()
-              }}
-            >
-              Discard
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  handleUndoAll()
+                  closeDrawer()
+                }}
+              >
+                Discard
+              </Button>
+              <Button type="button" onClick={handleSave} disabled={saving}>
+                {saving && <Loader2 className="size-4 mr-2 animate-spin" />}
+                Save changes
+              </Button>
+            </>
           ) : (
             <Button type="button" variant="outline" onClick={closeDrawer}>
               Done
             </Button>
           )}
         </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <KbdGroup>
-                <Kbd>⌘</Kbd>
-                <Kbd>↵</Kbd>
-              </KbdGroup>{" "}
-              save & next
-            </span>
-          </div>
-          {saving && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Loader2 className="size-3 animate-spin" />
-              Saving...
-            </p>
-          )}
-          {showSaved && (
-            <p className="text-xs text-muted-foreground animate-in fade-in">Saved</p>
-          )}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <KbdGroup>
+              <Kbd>⌘</Kbd>
+              <Kbd>↵</Kbd>
+            </KbdGroup>{" "}
+            save & next
+          </span>
         </div>
       </div>
     </div>
