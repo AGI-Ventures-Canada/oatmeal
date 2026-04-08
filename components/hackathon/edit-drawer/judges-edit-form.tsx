@@ -209,33 +209,32 @@ export function JudgesEditForm({
     setEmailEntries([])
     setError(null)
 
-    const tempJudges: HackathonJudgeDisplay[] = entries.map((entry) => {
-      const name = entry.clerkUser
+    function resolveName(entry: EmailEntry) {
+      return entry.clerkUser
         ? [entry.clerkUser.firstName, entry.clerkUser.lastName].filter(Boolean).join(" ") || entry.email.split("@")[0]
         : entry.email.split("@")[0]
-      return {
-        id: `temp-${++tempIdCounter.current}`,
-        hackathon_id: hackathonId,
-        name,
-        title: null,
-        organization: null,
-        headshot_url: entry.clerkUser?.imageUrl ?? null,
-        clerk_user_id: entry.clerkUser?.id ?? null,
-        participant_id: null,
-        display_order: currentJudges.length,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-    })
+    }
+
+    const tempJudges: HackathonJudgeDisplay[] = entries.map((entry) => ({
+      id: `temp-${++tempIdCounter.current}`,
+      hackathon_id: hackathonId,
+      name: resolveName(entry),
+      title: null,
+      organization: null,
+      headshot_url: entry.clerkUser?.imageUrl ?? null,
+      clerk_user_id: entry.clerkUser?.id ?? null,
+      participant_id: null,
+      display_order: currentJudges.length,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }))
 
     setOptimisticAdds((prev) => [...prev, ...tempJudges])
     setSaving(true)
 
     try {
       for (const entry of entries) {
-        const name = entry.clerkUser
-          ? [entry.clerkUser.firstName, entry.clerkUser.lastName].filter(Boolean).join(" ") || entry.email.split("@")[0]
-          : entry.email.split("@")[0]
+        const name = resolveName(entry)
 
         const res = await fetch(
           `/api/dashboard/hackathons/${hackathonId}/judges/display`,
@@ -281,6 +280,7 @@ export function JudgesEditForm({
       router.refresh()
     } catch (err) {
       setOptimisticAdds((prev) => prev.filter((j) => !tempJudges.some((t) => t.id === j.id)))
+      router.refresh()
       setError(err instanceof Error ? err.message : "Failed to add judges")
     } finally {
       setSaving(false)
