@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { MarkdownEditor } from "@/components/ui/markdown-editor"
@@ -30,47 +30,29 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext, onSave,
   const closeDrawer = onCancel ?? editContext?.closeDrawer ?? (() => {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showSaved, setShowSaved] = useState(false)
 
   const [description, setDescription] = useState(initialData.description || "")
   const isDirty = description !== (initialData.description || "")
 
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const descriptionRef = useRef(description)
-  descriptionRef.current = description
-
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    }
-  }, [])
-
   function handleReset() {
     setDescription(initialData.description || "")
     setError(null)
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
   }
 
-  async function save(value?: string) {
-    const desc = value ?? descriptionRef.current
+  async function save() {
     setSaving(true)
     setError(null)
 
     try {
       if (onSave) {
-        const ok = await onSave({ description: desc || null })
-        if (ok) {
-          setShowSaved(true)
-          setTimeout(() => setShowSaved(false), 2000)
-        }
-        return ok
+        return await onSave({ description: description || null })
       }
 
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          description: desc || null,
+          description: description || null,
         }),
       })
 
@@ -80,8 +62,6 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext, onSave,
       }
 
       router.refresh()
-      setShowSaved(true)
-      setTimeout(() => setShowSaved(false), 2000)
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save")
@@ -91,21 +71,16 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext, onSave,
     }
   }
 
-  function handleChange(value: string) {
-    setDescription(value)
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    const isDiff = value !== (initialData.description || "")
-    if (isDiff) {
-      saveTimeoutRef.current = setTimeout(() => {
-        save(value)
-      }, 1500)
-    }
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!isDirty) return
+    const ok = await save()
+    if (ok) closeDrawer()
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
       e.preventDefault()
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
       if (!isDirty) {
         if (onSaveAndNext) { onSaveAndNext() } else { closeDrawer() }
         return
@@ -121,7 +96,7 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext, onSave,
   }
 
   return (
-    <div onKeyDown={handleKeyDown} className="space-y-4">
+    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6" autoComplete="off">
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="about-description">Description</FieldLabel>
@@ -130,7 +105,7 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext, onSave,
             rows={8}
             placeholder="Tell participants about your hackathon..."
             value={description}
-            onChange={handleChange}
+            onChange={setDescription}
           />
           <FieldDescription>
             Supports markdown: **bold**, _italic_, ## headings, lists, and [links](url)
@@ -144,8 +119,8 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext, onSave,
 
       <div className="space-y-3">
         <div className="flex gap-2">
-          <Button type="button" disabled={saving} onClick={() => { if (isDirty) { save().then(() => closeDrawer()) } else { closeDrawer() } }}>
-            {saving ? "Saving..." : "Done"}
+          <Button type="submit" disabled={saving || !isDirty}>
+            {saving ? "Saving..." : "Save"}
           </Button>
           <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
             Cancel
@@ -168,6 +143,6 @@ export function AboutEditForm({ hackathonId, initialData, onSaveAndNext, onSave,
           )}
         </div>
       </div>
-    </div>
+    </form>
   )
 }

@@ -27,7 +27,6 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
   const closeDrawer = onCancel ?? editContext?.closeDrawer ?? (() => {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showSaved, setShowSaved] = useState(false)
 
   const [name, setName] = useState(initialName)
   const isDirty = name !== initialName
@@ -43,12 +42,7 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
 
     try {
       if (onSave) {
-        const ok = await onSave({ name })
-        if (ok) {
-          setShowSaved(true)
-          setTimeout(() => setShowSaved(false), 2000)
-        }
-        return ok
+        return await onSave({ name })
       }
 
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
@@ -63,8 +57,6 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
       }
 
       router.refresh()
-      setShowSaved(true)
-      setTimeout(() => setShowSaved(false), 2000)
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save")
@@ -74,9 +66,11 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
     }
   }
 
-  async function handleBlurSave() {
-    if (!isDirty || !name.trim()) return
-    await save()
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!isDirty) return
+    const ok = await save()
+    if (ok) closeDrawer()
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -97,7 +91,7 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
   }
 
   return (
-    <div onKeyDown={handleKeyDown} className="space-y-4">
+    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6" autoComplete="off">
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="hackathon-name">Hackathon Name</FieldLabel>
@@ -107,7 +101,6 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onBlur={handleBlurSave}
             required
             autoComplete="off"
             data-1p-ignore
@@ -123,8 +116,8 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
 
       <div className="space-y-3">
         <div className="flex gap-2">
-          <Button type="button" disabled={saving} onClick={() => { if (isDirty && name.trim()) { save().then(() => closeDrawer()) } else { closeDrawer() } }}>
-            {saving ? "Saving..." : "Done"}
+          <Button type="submit" disabled={saving || !isDirty || !name.trim()}>
+            {saving ? "Saving..." : "Save"}
           </Button>
           <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
             Cancel
@@ -150,6 +143,6 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
           )}
         </div>
       </div>
-    </div>
+    </form>
   )
 }

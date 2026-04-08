@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useRef, useCallback } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -51,7 +51,6 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
   const closeDrawer = onCancel ?? editContext?.closeDrawer ?? (() => {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showSaved, setShowSaved] = useState(false)
 
   const [registrationRange, setRegistrationRange] = useState<DateTimeRange>({
     from: parseDate(initialData.registrationOpensAt),
@@ -61,11 +60,6 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
     from: parseDate(initialData.startsAt),
     to: parseDate(initialData.endsAt),
   })
-
-  const registrationRef = useRef(registrationRange)
-  registrationRef.current = registrationRange
-  const hackathonRef = useRef(hackathonRange)
-  hackathonRef.current = hackathonRange
 
   function rangeChanged(range: DateTimeRange, fromInitial: string | null, toInitial: string | null): boolean {
     const fromEqual = !range.from && !fromInitial ? true : range.from && fromInitial ? range.from.getTime() === new Date(fromInitial).getTime() : false
@@ -89,47 +83,40 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
     setError(null)
   }
 
-  const save = useCallback(async (regRange?: DateTimeRange, hackRange?: DateTimeRange) => {
-    const reg = regRange ?? registrationRef.current
-    const hack = hackRange ?? hackathonRef.current
-
-    const dateError = validateTimelineDates({
-      registrationOpensAt: reg.from,
-      registrationClosesAt: reg.to,
-      startsAt: hack.from,
-      endsAt: hack.to,
-    })
-    if (dateError) {
-      setError(dateError)
-      return false
-    }
-
+  async function save() {
     setSaving(true)
     setError(null)
 
+    const dateError = validateTimelineDates({
+      registrationOpensAt: registrationRange.from,
+      registrationClosesAt: registrationRange.to,
+      startsAt: hackathonRange.from,
+      endsAt: hackathonRange.to,
+    })
+    if (dateError) {
+      setError(dateError)
+      setSaving(false)
+      return false
+    }
+
     try {
       if (onSave) {
-        const ok = await onSave({
-          startsAt: hack.from || null,
-          endsAt: hack.to || null,
-          registrationOpensAt: reg.from || null,
-          registrationClosesAt: reg.to || null,
+        return await onSave({
+          startsAt: hackathonRange.from || null,
+          endsAt: hackathonRange.to || null,
+          registrationOpensAt: registrationRange.from || null,
+          registrationClosesAt: registrationRange.to || null,
         })
-        if (ok) {
-          setShowSaved(true)
-          setTimeout(() => setShowSaved(false), 2000)
-        }
-        return ok
       }
 
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          registrationOpensAt: reg.from || null,
-          registrationClosesAt: reg.to || null,
-          startsAt: hack.from || null,
-          endsAt: hack.to || null,
+          registrationOpensAt: registrationRange.from || null,
+          registrationClosesAt: registrationRange.to || null,
+          startsAt: hackathonRange.from || null,
+          endsAt: hackathonRange.to || null,
         }),
       })
 
@@ -139,8 +126,6 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
       }
 
       router.refresh()
-      setShowSaved(true)
-      setTimeout(() => setShowSaved(false), 2000)
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save")
@@ -148,16 +133,13 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
     } finally {
       setSaving(false)
     }
-  }, [hackathonId, onSave, router])
-
-  function handleRegistrationChange(range: DateTimeRange) {
-    setRegistrationRange(range)
-    save(range, hackathonRef.current)
   }
 
-  function handleHackathonChange(range: DateTimeRange) {
-    setHackathonRange(range)
-    save(registrationRef.current, range)
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!isDirty) return
+    const ok = await save()
+    if (ok) closeDrawer()
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -178,7 +160,7 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
   }
 
   return (
-    <div onKeyDown={handleKeyDown} className="space-y-4">
+    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6" autoComplete="off">
       <FieldGroup>
         {showRegistrationDates && (
           <Field>
@@ -186,7 +168,7 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
             <DateTimeRangePicker
               id="timeline-registration"
               value={registrationRange}
-              onChange={handleRegistrationChange}
+              onChange={setRegistrationRange}
               placeholder="Select registration dates"
               fromLabel="Opens"
               toLabel="Closes"
@@ -200,7 +182,7 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
             <DateTimeRangePicker
               id="timeline-hackathon"
               value={hackathonRange}
-              onChange={handleHackathonChange}
+              onChange={setHackathonRange}
               placeholder="Select hackathon dates"
               fromLabel="Start"
               toLabel="End"
@@ -224,8 +206,8 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
 
       <div className="space-y-3">
         <div className="flex gap-2">
-          <Button type="button" disabled={saving} onClick={() => { if (isDirty) { save().then(() => closeDrawer()) } else { closeDrawer() } }}>
-            {saving ? "Saving..." : "Done"}
+          <Button type="submit" disabled={saving || !isDirty}>
+            {saving ? "Saving..." : "Save"}
           </Button>
           <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
             Cancel
@@ -251,6 +233,6 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
           )}
         </div>
       </div>
-    </div>
+    </form>
   )
 }

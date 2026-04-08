@@ -5,7 +5,7 @@ mock.module("@/components/hackathon/preview/edit-context", () => ({
   useEditOptional: () => null,
   useEdit: () => { throw new Error("useEdit must be used within EditProvider") },
   EditProvider: ({ children }: { children: React.ReactNode }) => children,
-  SECTION_ORDER: ["name", "dates", "location", "sponsors", "judges", "prizes", "timeline", "about"],
+  SECTION_ORDER: ["name", "dates", "location", "sponsors", "judges", "prizes", "timeline", "about", "rules"],
 }))
 
 const { TimelineEditForm } = await import(
@@ -80,9 +80,15 @@ describe("TimelineEditForm", () => {
     ).toBeTruthy()
   })
 
-  it("renders Done button", () => {
+  it("renders Save button disabled when no changes", () => {
     render(<TimelineEditForm initialData={baseData} />)
-    expect(screen.getByText("Done")).toBeTruthy()
+    const saveButton = screen.getByText("Save")
+    expect(saveButton.hasAttribute("disabled")).toBe(true)
+  })
+
+  it("renders Cancel button", () => {
+    render(<TimelineEditForm initialData={baseData} />)
+    expect(screen.getByText("Cancel")).toBeTruthy()
   })
 
   it("does not show Reset button when pristine", () => {
@@ -102,10 +108,10 @@ describe("TimelineEditForm", () => {
     expect(screen.getByText(/Mar 25 at 9:00 AM/)).toBeTruthy()
   })
 
-  it("calls onCancel when Done is clicked with no changes", () => {
+  it("calls onCancel when Cancel is clicked", () => {
     const onCancel = mock(() => {})
     render(<TimelineEditForm initialData={baseData} onCancel={onCancel} />)
-    fireEvent.click(screen.getByText("Done"))
+    fireEvent.click(screen.getByText("Cancel"))
     expect(onCancel).toHaveBeenCalled()
   })
 
