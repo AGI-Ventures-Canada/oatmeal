@@ -115,6 +115,7 @@ describe("Tenants Service", () => {
 
       expect(result).not.toBeNull()
       expect(result?.name).toBe("Test Org")
+      expect(mockClerkClient).toHaveBeenCalled()
     })
 
     it("falls back to org id prefix when Clerk fetch fails", async () => {

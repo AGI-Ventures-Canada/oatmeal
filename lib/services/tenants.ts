@@ -13,6 +13,7 @@ async function fetchClerkOrgName(clerkOrgId: string): Promise<string | undefined
   }
 }
 
+// Must match the fallback format on the insert below: `Org ${clerkOrgId.slice(0, 8)}`
 const FALLBACK_NAME_RE = /^Org org_/
 
 export async function getOrCreateTenant(
