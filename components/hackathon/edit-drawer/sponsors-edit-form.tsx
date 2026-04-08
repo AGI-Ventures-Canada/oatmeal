@@ -118,6 +118,9 @@ export function SponsorsEditForm({
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [optimisticUpdates, setOptimisticUpdates] = useState<
+    Map<string, Partial<SponsorWithTenant>>
+  >(new Map());
   const tempIdCounter = useRef(0);
 
   const [localSponsors, setLocalSponsors] = useState<SponsorWithTenant[]>(
@@ -126,12 +129,18 @@ export function SponsorsEditForm({
 
   useEffect(() => {
     setHiddenIds(new Set());
+    setOptimisticUpdates(new Map());
   }, [initialSponsors]);
 
   const visibleSponsors = useMemo(() => {
     const sponsors = isLocalMode ? localSponsors : initialSponsors;
-    return sponsors.filter((s) => !hiddenIds.has(s.id));
-  }, [isLocalMode, localSponsors, initialSponsors, hiddenIds]);
+    return sponsors
+      .filter((s) => !hiddenIds.has(s.id))
+      .map((s) => {
+        const override = optimisticUpdates.get(s.id);
+        return override ? { ...s, ...override } : s;
+      });
+  }, [isLocalMode, localSponsors, initialSponsors, hiddenIds, optimisticUpdates]);
 
   const excludeIdsString = useMemo(
     () =>
@@ -324,6 +333,7 @@ export function SponsorsEditForm({
       return;
     }
 
+    setOptimisticUpdates((prev) => new Map(prev).set(sponsorId, { ...prev.get(sponsorId), tier: newTier }));
     setError(null);
     try {
       const res = await fetch(
@@ -340,6 +350,7 @@ export function SponsorsEditForm({
       }
       router.refresh();
     } catch (err) {
+      setOptimisticUpdates((prev) => { const next = new Map(prev); next.delete(sponsorId); return next; });
       setError(err instanceof Error ? err.message : "Failed to update tier");
     }
   }
@@ -349,6 +360,15 @@ export function SponsorsEditForm({
 
     linkSearch.setQuery("");
     setLinkingSponsorId(null);
+    setOptimisticUpdates((prev) =>
+      new Map(prev).set(sponsorId, {
+        ...prev.get(sponsorId),
+        sponsor_tenant_id: org.id,
+        tenant: { slug: org.slug, name: org.name, logo_url: org.logoUrl, logo_url_dark: org.logoUrlDark },
+        website_url: org.websiteUrl,
+        use_org_assets: false,
+      }),
+    );
     setError(null);
 
     try {
@@ -370,6 +390,7 @@ export function SponsorsEditForm({
       }
       router.refresh();
     } catch (err) {
+      setOptimisticUpdates((prev) => { const next = new Map(prev); next.delete(sponsorId); return next; });
       setError(err instanceof Error ? err.message : "Failed to link sponsor");
     }
   }
@@ -380,6 +401,9 @@ export function SponsorsEditForm({
   ) {
     if (isLocalMode) return;
 
+    setOptimisticUpdates((prev) =>
+      new Map(prev).set(sponsorId, { ...prev.get(sponsorId), use_org_assets: nextUseOrgAssets }),
+    );
     setError(null);
     try {
       const res = await fetch(
@@ -396,6 +420,7 @@ export function SponsorsEditForm({
       }
       router.refresh();
     } catch (err) {
+      setOptimisticUpdates((prev) => { const next = new Map(prev); next.delete(sponsorId); return next; });
       setError(
         err instanceof Error ? err.message : "Failed to update asset source",
       );
@@ -748,6 +773,9 @@ export function SponsorsEditForm({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="min-w-48">
+                        {sponsor.tier === "title" && (
+                          <SelectItem value="title" disabled>Title</SelectItem>
+                        )}
                         <SelectItem value="gold" description="Major sponsor">Gold</SelectItem>
                         <SelectItem value="silver" description="Supporting sponsor">Silver</SelectItem>
                         <SelectItem value="bronze" description="Contributing sponsor">Bronze</SelectItem>
