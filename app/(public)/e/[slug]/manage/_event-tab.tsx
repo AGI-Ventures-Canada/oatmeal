@@ -49,7 +49,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Calendar, MapPin, Clock, Zap, FileText, MessageCircle, Share2, Mail } from "lucide-react"
+import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Calendar, Zap, FileText, MessageCircle, Share2, Mail } from "lucide-react"
+import { AgendaItemRow } from "@/components/hackathon/agenda-item-row"
+import { AgendaGhostItems, type GhostItem } from "@/components/hackathon/agenda-ghost-items"
 import type { AnnouncementAudience } from "@/lib/services/announcements"
 import type { HackathonStatus, HackathonPhase } from "@/lib/db/hackathon-types"
 
@@ -1061,6 +1063,7 @@ type ScheduleItemData = {
   ends_at: string | null
   location: string | null
   sort_order: number
+  trigger_type: "challenge_release" | "submission_deadline" | null
 }
 
 const SCHEDULE_DURATION_PRESETS = [
@@ -1092,7 +1095,7 @@ function computeScheduleDefaults(items: ScheduleItemData[]): { startsAt: string;
   return { startsAt: toLocalDatetime(start), endsAt: toLocalDatetime(end) }
 }
 
-function ScheduleSubTab({ hackathonId, hackathonName, startsAt, endsAt }: { hackathonId: string; hackathonName: string; startsAt: string | null; endsAt: string | null }) {
+function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, endsAt: eventEndsAt }: { hackathonId: string; hackathonName: string; startsAt: string | null; endsAt: string | null }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<ScheduleItemData[]>([])
@@ -1215,13 +1218,63 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt, endsAt }: { hack
     }
   }
 
-  function formatTime(iso: string): string {
-    return new Date(iso).toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
+  const [releasing, setReleasing] = useState(false)
+
+  async function handleReleaseChallenge() {
+    setReleasing(true)
+    try {
+      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/challenge/release`, {
+        method: "POST",
+      })
+      if (!res.ok) throw new Error("Failed to release")
+      setItems((prev) =>
+        prev.map((i) =>
+          i.trigger_type === "challenge_release"
+            ? { ...i, _released: true } as ScheduleItemData
+            : i
+        )
+      )
+    } catch {
+      setError("Failed to release challenge")
+    } finally {
+      setReleasing(false)
+    }
+  }
+
+  async function handleAddGhostItem(ghost: GhostItem) {
+    const payload: Record<string, unknown> = {
+      title: ghost.title,
+      startsAt: ghost.startsAt,
+      endsAt: ghost.endsAt,
+    }
+    if (ghost.triggerType) payload.triggerType = ghost.triggerType
+
+    const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     })
+    if (res.ok) {
+      const saved = await res.json()
+      setItems((prev) => [...prev, saved].sort((a: ScheduleItemData, b: ScheduleItemData) => a.starts_at.localeCompare(b.starts_at)))
+    }
+  }
+
+  async function handleAddAllGhostItems(ghosts: GhostItem[]) {
+    for (const ghost of ghosts) {
+      await handleAddGhostItem(ghost)
+    }
+  }
+
+  function getTriggerStatus(item: ScheduleItemData): "scheduled" | "released" | "closed" | null {
+    if (!item.trigger_type) return null
+    if (item.trigger_type === "challenge_release") {
+      return new Date(item.starts_at) <= new Date() ? "released" : "scheduled"
+    }
+    if (item.trigger_type === "submission_deadline") {
+      return new Date(item.starts_at) <= new Date() ? "closed" : "scheduled"
+    }
+    return null
   }
 
   if (loading) {
@@ -1243,53 +1296,41 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt, endsAt }: { hack
       {error && <p className="text-destructive text-xs">{error}</p>}
 
       {items.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center text-muted-foreground">
-          <Calendar className="size-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">No agenda items yet</p>
-        </div>
+        eventStartsAt && eventEndsAt ? (
+          <AgendaGhostItems
+            startsAt={eventStartsAt}
+            endsAt={eventEndsAt}
+            onAddItem={handleAddGhostItem}
+            onAddAll={handleAddAllGhostItems}
+          />
+        ) : (
+          <div className="rounded-lg border p-8 text-center text-muted-foreground">
+            <Calendar className="size-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Set event dates to see suggested agenda items</p>
+          </div>
+        )
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
-            <div key={item.id} className="flex items-start gap-3 rounded-lg border p-3">
-              <div className="shrink-0 pt-0.5 text-muted-foreground">
-                <Clock className="size-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{item.title}</p>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-0.5">
-                  <span>{formatTime(item.starts_at)}{item.ends_at ? ` – ${formatTime(item.ends_at)}` : ""}</span>
-                  {item.location && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="size-3" />
-                      {item.location}
-                    </span>
-                  )}
-                </div>
-                {item.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{item.description}</p>}
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <Button size="sm" variant="ghost" onClick={() => openEdit(item)}>
-                  <Pencil className="size-4" />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="ghost">
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete agenda item?</AlertDialogTitle>
-                      <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDelete(item.id)}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
+            <AgendaItemRow
+              key={item.id}
+              item={item}
+              status={getTriggerStatus(item)}
+              actions={
+                item.trigger_type === "challenge_release" && getTriggerStatus(item) === "scheduled" ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleReleaseChallenge}
+                    disabled={releasing}
+                  >
+                    {releasing ? "Releasing..." : "Release Now"}
+                  </Button>
+                ) : undefined
+              }
+              onEdit={() => openEdit(item)}
+              onDelete={() => handleDelete(item.id)}
+            />
           ))}
         </div>
       )}
