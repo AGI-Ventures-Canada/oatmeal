@@ -83,4 +83,27 @@ describe("AgendaItemRow", () => {
     )
     expect(screen.getByText("Released")).toBeDefined()
   })
+
+  it("shows delete button for regular items", () => {
+    render(
+      <AgendaItemRow
+        item={regularItem}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+    )
+    expect(screen.getByText("Delete agenda item?")).toBeDefined()
+  })
+
+  it("hides delete button for trigger items", () => {
+    render(
+      <AgendaItemRow
+        item={challengeItem}
+        status="scheduled"
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+    )
+    expect(screen.queryByText("Delete agenda item?")).toBeNull()
+  })
 })

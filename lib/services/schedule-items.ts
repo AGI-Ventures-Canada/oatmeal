@@ -129,6 +129,31 @@ export async function getSubmissionDeadline(hackathonId: string): Promise<string
   return data.starts_at
 }
 
+export function buildDefaultAgendaItems(startsAt: string, endsAt: string): CreateScheduleItemInput[] {
+  const start = new Date(startsAt)
+  const end = new Date(endsAt)
+
+  function offset(base: Date, minutes: number): string {
+    return new Date(base.getTime() + minutes * 60_000).toISOString()
+  }
+
+  return [
+    { title: "Opening Kickoff", startsAt: start.toISOString(), endsAt: offset(start, 30) },
+    { title: "Challenge Release", startsAt: start.toISOString(), endsAt: start.toISOString(), triggerType: "challenge_release" },
+    { title: "Hacking Begins", startsAt: offset(start, 30), endsAt: offset(start, 60) },
+    { title: "Submissions Close", startsAt: offset(end, -60), endsAt: offset(end, -60), triggerType: "submission_deadline" },
+    { title: "Presentations", startsAt: offset(end, -30), endsAt: end.toISOString() },
+    { title: "Awards Ceremony", startsAt: end.toISOString(), endsAt: offset(end, 30) },
+  ]
+}
+
+export async function seedDefaultAgendaItems(hackathonId: string, startsAt: string, endsAt: string): Promise<void> {
+  const items = buildDefaultAgendaItems(startsAt, endsAt)
+  for (const item of items) {
+    await createScheduleItem(hackathonId, item)
+  }
+}
+
 export async function getTriggerItem(
   hackathonId: string,
   triggerType: "challenge_release" | "submission_deadline"

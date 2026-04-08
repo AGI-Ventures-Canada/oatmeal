@@ -51,7 +51,6 @@ import {
 } from "@/components/ui/select"
 import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Calendar, Zap, FileText, MessageCircle, Share2, Mail } from "lucide-react"
 import { AgendaItemRow } from "@/components/hackathon/agenda-item-row"
-import { AgendaGhostItems, type GhostItem } from "@/components/hackathon/agenda-ghost-items"
 import type { AnnouncementAudience } from "@/lib/services/announcements"
 import type { HackathonStatus, HackathonPhase } from "@/lib/db/hackathon-types"
 
@@ -1237,42 +1236,6 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
     }
   }
 
-  const [addingGhosts, setAddingGhosts] = useState(false)
-
-  async function handleAddGhostItem(ghost: GhostItem) {
-    const payload: Record<string, unknown> = {
-      title: ghost.title,
-      startsAt: ghost.startsAt,
-      endsAt: ghost.endsAt,
-    }
-    if (ghost.triggerType) payload.triggerType = ghost.triggerType
-
-    const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-    if (!res.ok) {
-      throw new Error("Failed to add agenda item")
-    }
-    const saved = await res.json()
-    setItems((prev) => [...prev, saved].sort((a: ScheduleItemData, b: ScheduleItemData) => a.starts_at.localeCompare(b.starts_at)))
-  }
-
-  async function handleAddAllGhostItems(ghosts: GhostItem[]) {
-    setAddingGhosts(true)
-    setError(null)
-    try {
-      for (const ghost of ghosts) {
-        await handleAddGhostItem(ghost)
-      }
-    } catch {
-      setError("Failed to add agenda item")
-    } finally {
-      setAddingGhosts(false)
-    }
-  }
-
   const [challengeReleased, setChallengeReleased] = useState(!!challengeReleasedAt)
 
   function getTriggerStatus(item: ScheduleItemData): "scheduled" | "released" | "closed" | null {
@@ -1305,20 +1268,10 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
       {error && <p className="text-destructive text-xs">{error}</p>}
 
       {items.length === 0 ? (
-        eventStartsAt && eventEndsAt ? (
-          <AgendaGhostItems
-            startsAt={eventStartsAt}
-            endsAt={eventEndsAt}
-            onAddItem={async (ghost) => { try { await handleAddGhostItem(ghost) } catch { setError("Failed to add agenda item") } }}
-            onAddAll={handleAddAllGhostItems}
-            disabled={addingGhosts}
-          />
-        ) : (
-          <div className="rounded-lg border p-8 text-center text-muted-foreground">
-            <Calendar className="size-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Set event dates to see suggested agenda items</p>
-          </div>
-        )
+        <div className="rounded-lg border p-8 text-center text-muted-foreground">
+          <Calendar className="size-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">Set event dates to generate your agenda</p>
+        </div>
       ) : (
         <div className="space-y-2">
           {items.map((item) => (

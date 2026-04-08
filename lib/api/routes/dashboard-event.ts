@@ -555,6 +555,9 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     if (!isValidUuid(params.itemId)) { set.status = 400; return { error: "Invalid schedule item ID" } }
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
+    const items = await listScheduleItems(params.id)
+    const item = items.find((i) => i.id === params.itemId)
+    if (item?.trigger_type) { set.status = 400; return { error: `Cannot delete ${item.trigger_type === "challenge_release" ? "challenge release" : "submission deadline"} — this item is required` } }
     const ok = await deleteScheduleItem(params.itemId, params.id)
     if (!ok) { set.status = 400; return { error: "Failed to delete schedule item" } }
     await logAudit({ principal, action: "schedule_item.deleted", resourceType: "schedule_item", resourceId: params.itemId, metadata: { hackathonId: params.id } })

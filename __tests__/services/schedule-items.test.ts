@@ -12,6 +12,7 @@ const {
   deleteScheduleItem,
   getSubmissionDeadline,
   getTriggerItem,
+  buildDefaultAgendaItems,
 } = await import("@/lib/services/schedule-items")
 
 const HACKATHON_ID = "11111111-1111-1111-1111-111111111111"
@@ -195,5 +196,30 @@ describe("getTriggerItem", () => {
 
     const result = await getTriggerItem("hack-1", "challenge_release")
     expect(result).toBeNull()
+  })
+})
+
+describe("buildDefaultAgendaItems", () => {
+  it("returns 6 items with correct trigger types", () => {
+    const items = buildDefaultAgendaItems("2026-04-10T09:00:00Z", "2026-04-10T18:00:00Z")
+    expect(items).toHaveLength(6)
+    expect(items[0].title).toBe("Opening Kickoff")
+    expect(items[1].title).toBe("Challenge Release")
+    expect(items[1].triggerType).toBe("challenge_release")
+    expect(items[3].title).toBe("Submissions Close")
+    expect(items[3].triggerType).toBe("submission_deadline")
+    expect(items[5].title).toBe("Awards Ceremony")
+  })
+
+  it("derives times from start and end dates", () => {
+    const items = buildDefaultAgendaItems("2026-04-10T09:00:00Z", "2026-04-10T18:00:00Z")
+    expect(items[0].startsAt).toBe("2026-04-10T09:00:00.000Z")
+    expect(items[3].startsAt).toBe("2026-04-10T17:00:00.000Z")
+  })
+
+  it("non-trigger items have no triggerType", () => {
+    const items = buildDefaultAgendaItems("2026-04-10T09:00:00Z", "2026-04-10T18:00:00Z")
+    const nonTrigger = items.filter((i) => !i.triggerType)
+    expect(nonTrigger).toHaveLength(4)
   })
 })

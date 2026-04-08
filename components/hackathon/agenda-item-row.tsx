@@ -93,27 +93,25 @@ export function AgendaItemRow({ item, status, actions, onEdit, onDelete }: Agend
         <Button size="sm" variant="ghost" onClick={onEdit}>
           <Pencil className="size-4" />
         </Button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button size="sm" variant="ghost">
-              <Trash2 className="size-4" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete agenda item?</AlertDialogTitle>
-              <AlertDialogDescription>
-                {isTrigger
-                  ? `This will remove the ${item.trigger_type === "challenge_release" ? "challenge release" : "submission deadline"} automation. You can add it back later.`
-                  : "This cannot be undone."}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {!isTrigger && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="ghost">
+                <Trash2 className="size-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete agenda item?</AlertDialogTitle>
+                <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
     </div>
   )
