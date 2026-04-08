@@ -140,6 +140,7 @@ describe("Tenants Service", () => {
       const result = await getOrCreateTenant("org_abc123xyz789")
 
       expect(result).not.toBeNull()
+      expect(result?.name).toMatch(/^Org org_/)
     })
 
     it("syncs fallback name from Clerk for existing tenant", async () => {

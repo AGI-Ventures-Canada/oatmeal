@@ -113,15 +113,7 @@ export async function resolvePageTenant(): Promise<Tenant> {
   let tenant: Tenant | null
 
   if (orgId) {
-    // Fetch org name from Clerk to sync
-    let orgName: string | undefined
-    try {
-      const client = await clerkClient()
-      const org = await client.organizations.getOrganization({ organizationId: orgId })
-      orgName = org.name
-    } catch {
-      // Ignore errors fetching org name
-    }
+    const orgName = await fetchClerkOrgName(orgId)
     tenant = await getOrCreateTenant(orgId, orgName)
   } else {
     tenant = await getOrCreatePersonalTenant(userId)
