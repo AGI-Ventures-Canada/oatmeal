@@ -383,18 +383,6 @@ function HackathonPreviewContent({
                   <div>
                     <h2 className="text-xl font-bold mb-4">Timeline</h2>
                     <div className="space-y-2 text-sm">
-                      {hackathon.registration_opens_at && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Registration Opens</span>
-                          <span>{formatDateTimeDisplay(hackathon.registration_opens_at)}</span>
-                        </div>
-                      )}
-                      {hackathon.registration_closes_at && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Registration Closes</span>
-                          <span>{formatDateTimeDisplay(hackathon.registration_closes_at)}</span>
-                        </div>
-                      )}
                       {hackathon.starts_at && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Hackathon Starts</span>
