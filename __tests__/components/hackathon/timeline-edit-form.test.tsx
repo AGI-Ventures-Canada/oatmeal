@@ -5,7 +5,7 @@ mock.module("@/components/hackathon/preview/edit-context", () => ({
   useEditOptional: () => null,
   useEdit: () => { throw new Error("useEdit must be used within EditProvider") },
   EditProvider: ({ children }: { children: React.ReactNode }) => children,
-  SECTION_ORDER: ["name", "dates", "location", "sponsors", "judges", "prizes", "timeline", "about", "rules"],
+  SECTION_ORDER: ["name", "dates", "location", "sponsors", "judges", "prizes", "timeline", "about"],
 }))
 
 const { TimelineEditForm } = await import(
@@ -80,19 +80,10 @@ describe("TimelineEditForm", () => {
     ).toBeTruthy()
   })
 
-  it("renders Save button disabled when no changes", () => {
+  it("does not show Save/Cancel/Reset buttons (auto-save mode)", () => {
     render(<TimelineEditForm initialData={baseData} />)
-    const saveButton = screen.getByText("Save")
-    expect(saveButton.hasAttribute("disabled")).toBe(true)
-  })
-
-  it("renders Cancel button", () => {
-    render(<TimelineEditForm initialData={baseData} />)
-    expect(screen.getByText("Cancel")).toBeTruthy()
-  })
-
-  it("does not show Reset button when pristine", () => {
-    render(<TimelineEditForm initialData={baseData} />)
+    expect(screen.queryByText("Save")).toBeNull()
+    expect(screen.queryByText("Cancel")).toBeNull()
     expect(screen.queryByText("Reset")).toBeNull()
   })
 
@@ -108,22 +99,14 @@ describe("TimelineEditForm", () => {
     expect(screen.getByText(/Mar 25 at 9:00 AM/)).toBeTruthy()
   })
 
-  it("calls onCancel when Cancel is clicked", () => {
-    const onCancel = mock(() => {})
-    render(<TimelineEditForm initialData={baseData} onCancel={onCancel} />)
-    fireEvent.click(screen.getByText("Cancel"))
-    expect(onCancel).toHaveBeenCalled()
-  })
-
   it("calls onSave with correct data structure", async () => {
     const onSave = mock(() => Promise.resolve(true))
     render(<TimelineEditForm initialData={emptyData} onSave={onSave} />)
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it("shows keyboard shortcut hints", () => {
+  it("shows save & next keyboard shortcut hint", () => {
     render(<TimelineEditForm initialData={baseData} />)
-    expect(screen.getByText("save")).toBeTruthy()
     expect(screen.getByText("save & next")).toBeTruthy()
   })
 })
