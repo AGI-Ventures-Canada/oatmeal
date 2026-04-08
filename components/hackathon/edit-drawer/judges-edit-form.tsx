@@ -165,6 +165,8 @@ export function JudgesEditForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [emailEntries, setEmailEntries] = useState<EmailEntry[]>([])
+  const [optimisticAdds, setOptimisticAdds] = useState<HackathonJudgeDisplay[]>([])
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
   const tempIdCounter = useRef(0)
 
   const existingEmails = useMemo(() => {
@@ -181,14 +183,7 @@ export function JudgesEditForm({
     let judges = [...initialJudges]
 
     for (const change of pendingChanges) {
-      if (change.type === "add") {
-        const judge = change.headshotPreviewUrl
-          ? { ...change.judge, headshot_url: change.headshotPreviewUrl }
-          : change.judge
-        judges.push(judge)
-      } else if (change.type === "delete") {
-        judges = judges.filter((j) => j.id !== change.judgeId)
-      } else if (change.type === "update") {
+      if (change.type === "update") {
         judges = judges.map((j) =>
           j.id === change.judgeId ? { ...j, [change.field]: change.newValue } : j
         )
@@ -199,18 +194,42 @@ export function JudgesEditForm({
       }
     }
 
+    judges = [...judges, ...optimisticAdds]
+    judges = judges.filter((j) => !hiddenIds.has(j.id))
+
     return judges
-  }, [initialJudges, pendingChanges])
+  }, [initialJudges, pendingChanges, optimisticAdds, hiddenIds])
 
   const hasChanges = pendingChanges.length > 0
 
   async function handleAddFromChips() {
-    if (emailEntries.length === 0) return
+    if (emailEntries.length === 0 || saving) return
 
     const entries = [...emailEntries]
     setEmailEntries([])
-    setSaving(true)
     setError(null)
+
+    const tempJudges: HackathonJudgeDisplay[] = entries.map((entry) => {
+      const name = entry.clerkUser
+        ? [entry.clerkUser.firstName, entry.clerkUser.lastName].filter(Boolean).join(" ") || entry.email.split("@")[0]
+        : entry.email.split("@")[0]
+      return {
+        id: `temp-${++tempIdCounter.current}`,
+        hackathon_id: hackathonId,
+        name,
+        title: null,
+        organization: null,
+        headshot_url: entry.clerkUser?.imageUrl ?? null,
+        clerk_user_id: entry.clerkUser?.id ?? null,
+        participant_id: null,
+        display_order: currentJudges.length,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    })
+
+    setOptimisticAdds((prev) => [...prev, ...tempJudges])
+    setSaving(true)
 
     try {
       for (const entry of entries) {
@@ -258,8 +277,10 @@ export function JudgesEditForm({
         }
       }
 
+      setOptimisticAdds((prev) => prev.filter((j) => !tempJudges.some((t) => t.id === j.id)))
       router.refresh()
     } catch (err) {
+      setOptimisticAdds((prev) => prev.filter((j) => !tempJudges.some((t) => t.id === j.id)))
       setError(err instanceof Error ? err.message : "Failed to add judges")
     } finally {
       setSaving(false)
@@ -267,6 +288,8 @@ export function JudgesEditForm({
   }
 
   async function handleDeleteJudge(judgeId: string) {
+    if (saving) return
+
     const relatedChanges = pendingChanges.filter(
       (c) =>
         (c.type === "update" && c.judgeId === judgeId) ||
@@ -279,17 +302,21 @@ export function JudgesEditForm({
       setPendingChanges(pendingChanges.filter((c) => !relatedChanges.includes(c)))
     }
 
+    setHiddenIds((prev) => new Set(prev).add(judgeId))
+
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/judges/display/${judgeId}`,
         { method: "DELETE" }
       )
       if (!res.ok) {
+        setHiddenIds((prev) => { const next = new Set(prev); next.delete(judgeId); return next })
         const data = await res.json()
         throw new Error(data.error || "Failed to remove judge")
       }
       router.refresh()
     } catch (err) {
+      setHiddenIds((prev) => { const next = new Set(prev); next.delete(judgeId); return next })
       setError(err instanceof Error ? err.message : "Failed to remove judge")
     }
   }

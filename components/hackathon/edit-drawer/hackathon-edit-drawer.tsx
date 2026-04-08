@@ -36,7 +36,7 @@ const sectionMeta: Record<Exclude<EditSection, null>, { title: string; descripti
     title: "Edit About",
     description: "Update the hackathon description",
   },
-timeline: {
+  timeline: {
     title: "Edit Timeline",
     description: "Update the hackathon schedule",
   },

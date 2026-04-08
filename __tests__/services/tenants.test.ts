@@ -306,6 +306,38 @@ describe("Tenants Service", () => {
       expect(result).not.toBeNull()
     })
 
+    it("updates name when existing tenant has fallback name and userName is provided", async () => {
+      const fallbackTenant = { ...mockPersonalTenant, name: "Personal Account" }
+      const updatedTenant = { ...fallbackTenant, name: "Jane Doe" }
+
+      let callCount = 0
+      setMockFromImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          return createChainableMock({ data: fallbackTenant, error: null })
+        }
+        return createChainableMock({ data: updatedTenant, error: null })
+      })
+
+      const result = await getOrCreatePersonalTenant("user_abc123", "Jane Doe")
+
+      expect(result).not.toBeNull()
+      expect(result?.name).toBe("Jane Doe")
+    })
+
+    it("does not update name when existing tenant has a real name", async () => {
+      const realNameTenant = { ...mockPersonalTenant, name: "Already Named" }
+
+      setMockFromImplementation(() =>
+        createChainableMock({ data: realNameTenant, error: null })
+      )
+
+      const result = await getOrCreatePersonalTenant("user_abc123", "New Name")
+
+      expect(result).not.toBeNull()
+      expect(result?.name).toBe("Already Named")
+    })
+
     it("retries on race condition", async () => {
       let callCount = 0
       setMockFromImplementation(() => {
