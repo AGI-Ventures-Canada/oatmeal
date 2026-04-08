@@ -80,10 +80,14 @@ describe("TimelineEditForm", () => {
     ).toBeTruthy()
   })
 
-  it("does not show Save/Cancel/Reset buttons (auto-save mode)", () => {
+  it("does not show Save button (auto-save mode) but shows Cancel", () => {
     render(<TimelineEditForm initialData={baseData} />)
-    expect(screen.queryByText("Save")).toBeNull()
-    expect(screen.queryByText("Cancel")).toBeNull()
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull()
+    expect(screen.getByText("Cancel")).toBeTruthy()
+  })
+
+  it("does not show Reset button when pristine", () => {
+    render(<TimelineEditForm initialData={baseData} />)
     expect(screen.queryByText("Reset")).toBeNull()
   })
 

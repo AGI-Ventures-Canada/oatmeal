@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
 import {
   DateTimeRangePicker,
   type DateTimeRange,
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/field"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { startOfDay } from "date-fns"
+import { Undo2 } from "lucide-react"
 import { useEditOptional } from "@/components/hackathon/preview/edit-context"
 import { validateTimelineDates } from "@/lib/utils/timeline"
 
@@ -220,23 +222,36 @@ export function TimelineEditForm({ hackathonId, initialData, showRegistrationDat
         )}
       </FieldGroup>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <KbdGroup><Kbd>⌘</Kbd><Kbd>↵</Kbd></KbdGroup> save & next
-          </span>
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
+            Cancel
+          </Button>
           {isDirty && (
-            <span className="inline-flex items-center gap-1">
-              <Kbd>Esc</Kbd> reset
-            </span>
+            <Button type="button" variant="ghost" onClick={handleReset} disabled={saving}>
+              <Undo2 className="size-4 mr-1" />
+              Reset
+            </Button>
           )}
         </div>
-        {saving && (
-          <p className="text-xs text-muted-foreground">Saving...</p>
-        )}
-        {showSaved && (
-          <p className="text-xs text-muted-foreground animate-in fade-in">Saved</p>
-        )}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <KbdGroup><Kbd>⌘</Kbd><Kbd>↵</Kbd></KbdGroup> save & next
+            </span>
+            {isDirty && (
+              <span className="inline-flex items-center gap-1">
+                <Kbd>Esc</Kbd> reset
+              </span>
+            )}
+          </div>
+          {saving && (
+            <p className="text-xs text-muted-foreground">Saving...</p>
+          )}
+          {showSaved && (
+            <p className="text-xs text-muted-foreground animate-in fade-in">Saved</p>
+          )}
+        </div>
       </div>
     </div>
   )
