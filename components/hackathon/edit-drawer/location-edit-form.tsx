@@ -329,6 +329,9 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
           <Button type="button" disabled={saving} onClick={() => { if (isDirty) { save().then(() => closeDrawer()) } else { closeDrawer() } }}>
             {saving ? "Saving..." : "Done"}
           </Button>
+          <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
+            Cancel
+          </Button>
           {isDirty && (
             <Button type="button" variant="ghost" onClick={handleReset} disabled={saving}>
               <Undo2 className="size-4 mr-1" />
