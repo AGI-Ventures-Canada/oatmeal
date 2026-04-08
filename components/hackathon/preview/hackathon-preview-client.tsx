@@ -159,6 +159,7 @@ function HackathonPreviewContent({
             teamId={teamInfo.team.id}
             hackathonId={hackathon.id}
             teamName={teamInfo.team.name}
+            maxTeamSize={hackathon.max_team_size ?? 5}
           />
         )}
       </div>
