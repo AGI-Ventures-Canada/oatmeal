@@ -1266,9 +1266,10 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
     }
   }
 
-  function getTriggerStatus(item: ScheduleItemData): "scheduled" | "released" | "closed" | null {
+  function getTriggerStatus(item: ScheduleItemData & { _released?: boolean }): "scheduled" | "released" | "closed" | null {
     if (!item.trigger_type) return null
     if (item.trigger_type === "challenge_release") {
+      if (item._released) return "released"
       return new Date(item.starts_at) <= new Date() ? "released" : "scheduled"
     }
     if (item.trigger_type === "submission_deadline") {
