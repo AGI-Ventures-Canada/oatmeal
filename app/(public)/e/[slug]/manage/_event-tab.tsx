@@ -1222,6 +1222,7 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
 
   async function handleReleaseChallenge() {
     setReleasing(true)
+    setError(null)
     try {
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/challenge/release`, {
         method: "POST",
