@@ -146,7 +146,7 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Calendar className="size-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Schedule</h3>
+          <h3 className="text-sm font-semibold">Agenda</h3>
         </div>
         <Button variant="ghost" size="sm" asChild>
           <Link href={`/e/${slug}/manage?tab=event&etab=schedule`}>
@@ -158,7 +158,7 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
 
       {display.length === 0 ? (
         <div className="text-center py-6">
-          <p className="text-sm text-muted-foreground mb-2">No schedule items</p>
+          <p className="text-sm text-muted-foreground mb-2">No agenda items</p>
           <Button variant="outline" size="sm" onClick={() => { prefillDefaults(); setDialogOpen(true) }}>
             <Plus className="size-4 mr-1" />
             Add item
@@ -212,7 +212,7 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm() }}>
         <DialogContent className="max-h-[85vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle>Add Schedule Item</DialogTitle>
+            <DialogTitle>Add agenda item</DialogTitle>
           </DialogHeader>
           <form autoComplete="off" onSubmit={(e) => { e.preventDefault(); handleAdd() }} onKeyDown={handleKeyDown} className="space-y-4">
             <div>

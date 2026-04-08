@@ -226,7 +226,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
         </TabsContent>
 
         <TabsContent value="event" forceMount className="data-[state=inactive]:hidden">
-          <EventTabContent hackathonId={hackathon.id} activeEtab={activeEtab} hackathonStatus={hackathon.status} hackathonPhase={hackathon.phase} />
+          <EventTabContent hackathonId={hackathon.id} hackathonName={hackathon.name} startsAt={hackathon.starts_at} endsAt={hackathon.ends_at} activeEtab={activeEtab} hackathonStatus={hackathon.status} hackathonPhase={hackathon.phase} />
         </TabsContent>
 
         <TabsContent value="activity" forceMount className="data-[state=inactive]:hidden">

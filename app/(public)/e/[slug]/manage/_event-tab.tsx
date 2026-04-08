@@ -85,6 +85,9 @@ type EmailResult = {
 
 interface EventTabContentProps {
   hackathonId: string
+  hackathonName: string
+  startsAt: string | null
+  endsAt: string | null
   activeEtab: string
   hackathonStatus: HackathonStatus
   hackathonPhase: HackathonPhase | null
@@ -1089,7 +1092,7 @@ function computeScheduleDefaults(items: ScheduleItemData[]): { startsAt: string;
   return { startsAt: toLocalDatetime(start), endsAt: toLocalDatetime(end) }
 }
 
-function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
+function ScheduleSubTab({ hackathonId, hackathonName, startsAt, endsAt }: { hackathonId: string; hackathonName: string; startsAt: string | null; endsAt: string | null }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<ScheduleItemData[]>([])
@@ -1189,7 +1192,7 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
       }
       setDialogOpen(false)
     } catch {
-      setError("Failed to save schedule item")
+      setError("Failed to save agenda item")
     } finally {
       setSaving(false)
     }
@@ -1201,7 +1204,7 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
       if (!res.ok) throw new Error("Failed to delete")
       setItems((prev) => prev.filter((i) => i.id !== id))
     } catch {
-      setError("Failed to delete schedule item")
+      setError("Failed to delete agenda item")
     }
   }
 
@@ -1229,8 +1232,7 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium">Schedule</h3>
-          <p className="text-xs text-muted-foreground">Manage the event agenda</p>
+          <h3 className="text-sm font-medium">{hackathonName} Agenda</h3>
         </div>
         <Button size="sm" onClick={openCreate}>
           <Plus className="size-4" />
@@ -1243,7 +1245,7 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
       {items.length === 0 ? (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">
           <Calendar className="size-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">No schedule items yet</p>
+          <p className="text-sm">No agenda items yet</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -1277,7 +1279,7 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Delete schedule item?</AlertDialogTitle>
+                      <AlertDialogTitle>Delete agenda item?</AlertDialogTitle>
                       <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -1295,7 +1297,7 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Schedule Item" : "Add Schedule Item"}</DialogTitle>
+            <DialogTitle>{editing ? "Edit agenda item" : "Add agenda item"}</DialogTitle>
           </DialogHeader>
           <form
             onSubmit={(e) => { e.preventDefault(); handleSave() }}
@@ -1419,14 +1421,14 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
   )
 }
 
-export function EventTabContent({ hackathonId, activeEtab, hackathonStatus, hackathonPhase }: EventTabContentProps) {
+export function EventTabContent({ hackathonId, hackathonName, startsAt, endsAt, activeEtab, hackathonStatus, hackathonPhase }: EventTabContentProps) {
   return (
     <TabsUrlSync paramKey="etab" value={activeEtab} className="space-y-6">
       <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
         <TabsList>
           <TabsTrigger value="challenge"><FileText className="size-4" /><span className="hidden sm:inline">Challenge</span></TabsTrigger>
           <TabsTrigger value="announcements"><Megaphone className="size-4" /><span className="hidden sm:inline">Announcements</span></TabsTrigger>
-          <TabsTrigger value="schedule"><Calendar className="size-4" /><span className="hidden sm:inline">Schedule</span></TabsTrigger>
+          <TabsTrigger value="schedule"><Calendar className="size-4" /><span className="hidden sm:inline">Agenda</span></TabsTrigger>
           <TabsTrigger value="mentors"><MessageCircle className="size-4" /><span className="hidden sm:inline">Mentors</span></TabsTrigger>
           <TabsTrigger value="social"><Share2 className="size-4" /><span className="hidden sm:inline">Social</span></TabsTrigger>
           <TabsTrigger value="email"><Mail className="size-4" /><span className="hidden sm:inline">Email</span></TabsTrigger>
@@ -1442,7 +1444,7 @@ export function EventTabContent({ hackathonId, activeEtab, hackathonStatus, hack
       </TabsContent>
 
       <TabsContent value="schedule" forceMount className="data-[state=inactive]:hidden">
-        <ScheduleSubTab hackathonId={hackathonId} />
+        <ScheduleSubTab hackathonId={hackathonId} hackathonName={hackathonName} startsAt={startsAt} endsAt={endsAt} />
       </TabsContent>
 
       <TabsContent value="mentors" forceMount className="data-[state=inactive]:hidden">
