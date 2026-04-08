@@ -1095,7 +1095,7 @@ function computeScheduleDefaults(items: ScheduleItemData[]): { startsAt: string;
   return { startsAt: toLocalDatetime(start), endsAt: toLocalDatetime(end) }
 }
 
-function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, endsAt: eventEndsAt, challengeReleasedAt }: { hackathonId: string; hackathonName: string; startsAt: string | null; endsAt: string | null; challengeReleasedAt: string | null }) {
+function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, endsAt: _eventEndsAt, challengeReleasedAt }: { hackathonId: string; hackathonName: string; startsAt: string | null; endsAt: string | null; challengeReleasedAt: string | null }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<ScheduleItemData[]>([])

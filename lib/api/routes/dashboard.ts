@@ -1163,14 +1163,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         })
       }
 
-      const datesFirstSet = currentHackathon &&
-        !currentHackathon.starts_at && !currentHackathon.ends_at &&
-        body.startsAt && body.endsAt
-      if (datesFirstSet) {
-        const { seedDefaultAgendaItems } = await import("@/lib/services/schedule-items")
-        await seedDefaultAgendaItems(params.id, body.startsAt!, body.endsAt!)
-      }
-
       if (hasStatusTransition) {
         const { executeTransition } = await import("@/lib/services/lifecycle")
         const triggeredBy = principal.kind === "user" ? principal.userId : principal.keyId

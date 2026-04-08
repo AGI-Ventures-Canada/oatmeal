@@ -129,9 +129,17 @@ export async function getSubmissionDeadline(hackathonId: string): Promise<string
   return data.starts_at
 }
 
-export function buildDefaultAgendaItems(startsAt: string, endsAt: string): CreateScheduleItemInput[] {
-  const start = new Date(startsAt)
-  const end = new Date(endsAt)
+export function buildDefaultAgendaItems(startsAt: string | null, endsAt: string | null): CreateScheduleItemInput[] {
+  const now = new Date()
+  const defaultStart = new Date(now)
+  defaultStart.setDate(defaultStart.getDate() + 14)
+  defaultStart.setHours(8, 30, 0, 0)
+  const defaultEnd = new Date(defaultStart)
+  defaultEnd.setDate(defaultEnd.getDate() + 1)
+  defaultEnd.setHours(17, 0, 0, 0)
+
+  const start = startsAt ? new Date(startsAt) : defaultStart
+  const end = endsAt ? new Date(endsAt) : defaultEnd
 
   function offset(base: Date, minutes: number): string {
     return new Date(base.getTime() + minutes * 60_000).toISOString()
@@ -145,13 +153,6 @@ export function buildDefaultAgendaItems(startsAt: string, endsAt: string): Creat
     { title: "Presentations", startsAt: offset(end, -30), endsAt: end.toISOString() },
     { title: "Awards Ceremony", startsAt: end.toISOString(), endsAt: offset(end, 30) },
   ]
-}
-
-export async function seedDefaultAgendaItems(hackathonId: string, startsAt: string, endsAt: string): Promise<void> {
-  const items = buildDefaultAgendaItems(startsAt, endsAt)
-  for (const item of items) {
-    await createScheduleItem(hackathonId, item)
-  }
 }
 
 export async function getTriggerItem(

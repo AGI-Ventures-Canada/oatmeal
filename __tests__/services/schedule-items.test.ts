@@ -222,4 +222,12 @@ describe("buildDefaultAgendaItems", () => {
     const nonTrigger = items.filter((i) => !i.triggerType)
     expect(nonTrigger).toHaveLength(4)
   })
+
+  it("returns 6 items with default times when dates are null", () => {
+    const items = buildDefaultAgendaItems(null, null)
+    expect(items).toHaveLength(6)
+    expect(items[0].title).toBe("Opening Kickoff")
+    expect(items[1].triggerType).toBe("challenge_release")
+    expect(items[3].triggerType).toBe("submission_deadline")
+  })
 })
