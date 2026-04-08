@@ -27,7 +27,6 @@ import { MarkdownContent } from "@/components/ui/markdown-content"
 import { TruncatableContent } from "./truncatable-content"
 import { NameEditForm } from "@/components/hackathon/edit-drawer/name-edit-form"
 import { AboutEditForm } from "@/components/hackathon/edit-drawer/about-edit-form"
-import { RulesEditForm } from "@/components/hackathon/edit-drawer/rules-edit-form"
 import { TimelineEditForm } from "@/components/hackathon/edit-drawer/timeline-edit-form"
 import { LocationEditForm } from "@/components/hackathon/edit-drawer/location-edit-form"
 import { SponsorsEditForm } from "@/components/hackathon/edit-drawer/sponsors-edit-form"
@@ -489,32 +488,6 @@ function HackathonPreviewContent({
               </EditableSection>
             )}
 
-            {isEditable && editMode && activeSection === "rules" ? (
-              <div data-edit-section="rules" className="scroll-mt-24">
-                <h2 className="text-xl font-bold mb-4">Rules</h2>
-                <RulesEditForm
-                  hackathonId={hackathon.id}
-                  initialData={{ rules: hackathon.rules }}
-                  onSaveAndNext={() => handleSaveAndNext("rules")}
-                  onSave={onFormSave ? (data) => onFormSave(data) : undefined}
-                />
-              </div>
-            ) : (
-              <EditableSection
-                section="rules"
-                isEmpty={!hackathon.rules}
-                emptyLabel="Click to add rules"
-              >
-                {hackathon.rules && (
-                  <div>
-                    <h2 className="text-xl font-bold mb-4">Rules</h2>
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <p className="whitespace-pre-wrap">{hackathon.rules}</p>
-                    </div>
-                  </div>
-                )}
-              </EditableSection>
-            )}
           </div>
         </div>
       </section>

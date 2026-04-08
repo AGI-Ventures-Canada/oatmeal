@@ -13,8 +13,7 @@ async function fetchClerkOrgName(clerkOrgId: string): Promise<string | undefined
   }
 }
 
-// Must match the fallback format on the insert below: `Org ${clerkOrgId.slice(0, 8)}`
-const FALLBACK_NAME_RE = /^Org org_/
+const FALLBACK_NAME_RE = /^Org org_|^Unnamed Organization$/
 
 export async function getOrCreateTenant(
   clerkOrgId: string,
@@ -52,7 +51,7 @@ export async function getOrCreateTenant(
     .from("tenants")
     .insert({
       clerk_org_id: clerkOrgId,
-      name: clerkOrgName ?? `Org ${clerkOrgId.slice(0, 8)}`,
+      name: clerkOrgName ?? "Unnamed Organization",
     })
     .select()
     .single()
@@ -86,7 +85,7 @@ export async function getOrCreatePersonalTenant(
     .from("tenants")
     .insert({
       clerk_user_id: clerkUserId,
-      name: userName ?? `Personal ${clerkUserId.slice(0, 8)}`,
+      name: userName ?? "Personal Account",
     })
     .select()
     .single()

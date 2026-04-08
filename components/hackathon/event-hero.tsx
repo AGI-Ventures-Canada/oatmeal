@@ -2,7 +2,7 @@ import { OptimizedImage } from "@/components/ui/optimized-image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Moon, Sun, Calendar, CalendarDays, Zap, MapPin, Video, Settings, Scale } from "lucide-react";
+import { Clock, Moon, Sun, Calendar, CalendarDays, Zap, MapPin, Video, Settings, Scale, Pencil } from "lucide-react";
 import type {
   HackathonStatus,
   TenantProfile,
@@ -286,7 +286,8 @@ export function EventHero({
                 <span className="text-muted-foreground/60">Add your hackathon name</span>
               )}
             </h1>
-            <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-end mb-2">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-end mb-2">
+              <Pencil className="size-3" />
               Edit
             </span>
           </div>
@@ -312,7 +313,8 @@ export function EventHero({
         >
           <div className="flex items-center gap-2">
             {datesContent}
-            <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+              <Pencil className="size-3" />
               Edit
             </span>
           </div>
@@ -339,7 +341,8 @@ export function EventHero({
               <div className="min-w-0 flex-1">
                 {locationContent}
               </div>
-              <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="flex items-center gap-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil className="size-3" />
                 Edit
               </span>
             </div>
@@ -395,7 +398,7 @@ export function EventHero({
 
           return (
             <span className="text-sm text-muted-foreground">
-              Hosted by{" "}
+              Organized by{" "}
               {orgNameWrapper ? orgNameWrapper(orgNameEl) : orgNameEl}
             </span>
           )
