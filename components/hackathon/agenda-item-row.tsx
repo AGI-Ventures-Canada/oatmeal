@@ -18,6 +18,7 @@ import { Pencil, Trash2, Clock, MapPin, Zap } from "lucide-react"
 type AgendaItem = {
   id: string
   title: string
+  description?: string | null
   starts_at: string
   ends_at: string | null
   location: string | null
@@ -85,6 +86,7 @@ export function AgendaItemRow({ item, status, actions, onEdit, onDelete }: Agend
             </span>
           )}
         </div>
+        {item.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{item.description}</p>}
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {actions}

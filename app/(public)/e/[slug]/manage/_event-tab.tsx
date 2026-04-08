@@ -1237,6 +1237,8 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
     }
   }
 
+  const [addingGhosts, setAddingGhosts] = useState(false)
+
   async function handleAddGhostItem(ghost: GhostItem) {
     const payload: Record<string, unknown> = {
       title: ghost.title,
@@ -1250,15 +1252,23 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
-    if (res.ok) {
-      const saved = await res.json()
-      setItems((prev) => [...prev, saved].sort((a: ScheduleItemData, b: ScheduleItemData) => a.starts_at.localeCompare(b.starts_at)))
+    if (!res.ok) {
+      setError("Failed to add agenda item")
+      return
     }
+    const saved = await res.json()
+    setItems((prev) => [...prev, saved].sort((a: ScheduleItemData, b: ScheduleItemData) => a.starts_at.localeCompare(b.starts_at)))
   }
 
   async function handleAddAllGhostItems(ghosts: GhostItem[]) {
-    for (const ghost of ghosts) {
-      await handleAddGhostItem(ghost)
+    setAddingGhosts(true)
+    setError(null)
+    try {
+      for (const ghost of ghosts) {
+        await handleAddGhostItem(ghost)
+      }
+    } finally {
+      setAddingGhosts(false)
     }
   }
 
@@ -1300,6 +1310,7 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: eventStartsAt, e
             endsAt={eventEndsAt}
             onAddItem={handleAddGhostItem}
             onAddAll={handleAddAllGhostItems}
+            disabled={addingGhosts}
           />
         ) : (
           <div className="rounded-lg border p-8 text-center text-muted-foreground">

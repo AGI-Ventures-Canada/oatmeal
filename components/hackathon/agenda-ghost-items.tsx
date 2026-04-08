@@ -70,18 +70,19 @@ interface AgendaGhostItemsProps {
   endsAt: string
   onAddItem: (item: GhostItem) => void
   onAddAll: (items: GhostItem[]) => void
+  disabled?: boolean
 }
 
-export function AgendaGhostItems({ startsAt, endsAt, onAddItem, onAddAll }: AgendaGhostItemsProps) {
+export function AgendaGhostItems({ startsAt, endsAt, onAddItem, onAddAll, disabled }: AgendaGhostItemsProps) {
   const items = buildGhostItems(startsAt, endsAt)
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">Suggested agenda</p>
-        <Button variant="outline" size="sm" onClick={() => onAddAll(items)}>
+        <Button variant="outline" size="sm" onClick={() => onAddAll(items)} disabled={disabled}>
           <Plus className="size-3.5" />
-          Add all
+          {disabled ? "Adding..." : "Add all"}
         </Button>
       </div>
       <div className="space-y-1">
@@ -104,6 +105,7 @@ export function AgendaGhostItems({ startsAt, endsAt, onAddItem, onAddAll }: Agen
               size="sm"
               className="shrink-0"
               onClick={() => onAddItem(item)}
+              disabled={disabled}
             >
               <Plus className="size-3.5" />
               Add
