@@ -1293,7 +1293,7 @@ function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Schedule Item" : "Add Schedule Item"}</DialogTitle>
           </DialogHeader>
