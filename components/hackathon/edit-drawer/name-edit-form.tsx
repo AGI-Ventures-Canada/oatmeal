@@ -123,11 +123,8 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
 
       <div className="space-y-3">
         <div className="flex gap-2">
-          <Button type="button" disabled={saving || !isDirty || !name.trim()} onClick={() => save()}>
-            {saving ? "Saving..." : "Save"}
-          </Button>
-          <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
-            Cancel
+          <Button type="button" disabled={saving} onClick={() => { if (isDirty && name.trim()) { save().then(() => closeDrawer()) } else { closeDrawer() } }}>
+            {saving ? "Saving..." : "Done"}
           </Button>
           {isDirty && (
             <Button type="button" variant="ghost" onClick={handleReset} disabled={saving}>

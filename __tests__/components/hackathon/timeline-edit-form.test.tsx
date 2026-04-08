@@ -80,15 +80,9 @@ describe("TimelineEditForm", () => {
     ).toBeTruthy()
   })
 
-  it("renders Save button disabled when no changes", () => {
+  it("renders Done button", () => {
     render(<TimelineEditForm initialData={baseData} />)
-    const saveButton = screen.getByText("Save")
-    expect(saveButton.closest("button")?.hasAttribute("disabled")).toBe(true)
-  })
-
-  it("renders Cancel button", () => {
-    render(<TimelineEditForm initialData={baseData} />)
-    expect(screen.getByText("Cancel")).toBeTruthy()
+    expect(screen.getByText("Done")).toBeTruthy()
   })
 
   it("does not show Reset button when pristine", () => {
@@ -108,10 +102,10 @@ describe("TimelineEditForm", () => {
     expect(screen.getByText(/Mar 25 at 9:00 AM/)).toBeTruthy()
   })
 
-  it("calls onCancel when Cancel is clicked", () => {
+  it("calls onCancel when Done is clicked with no changes", () => {
     const onCancel = mock(() => {})
     render(<TimelineEditForm initialData={baseData} onCancel={onCancel} />)
-    fireEvent.click(screen.getByText("Cancel"))
+    fireEvent.click(screen.getByText("Done"))
     expect(onCancel).toHaveBeenCalled()
   })
 

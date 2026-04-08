@@ -648,28 +648,10 @@ export function JudgesEditForm({
 
       <div className="space-y-3 pt-2">
         <div className="flex gap-2">
-          {hasChanges ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  handleUndoAll()
-                  closeDrawer()
-                }}
-              >
-                Discard
-              </Button>
-              <Button type="button" onClick={handleSave} disabled={saving}>
-                {saving && <Loader2 className="size-4 mr-2 animate-spin" />}
-                Save changes
-              </Button>
-            </>
-          ) : (
-            <Button type="button" variant="outline" onClick={closeDrawer}>
-              Done
-            </Button>
-          )}
+          <Button type="button" onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="size-4 mr-2 animate-spin" />}
+            Done
+          </Button>
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">

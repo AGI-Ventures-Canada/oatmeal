@@ -259,10 +259,9 @@ describe("SponsorsEditForm", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Linked")).toBeDefined();
-      expect(screen.getByText("Save changes")).toBeDefined();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
 
     await waitFor(() => {
       const patchCall = mockFetch.mock.calls.find(
