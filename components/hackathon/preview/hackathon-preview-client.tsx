@@ -365,17 +365,11 @@ function HackathonPreviewContent({
                   initialData={{
                     startsAt: hackathon.starts_at,
                     endsAt: hackathon.ends_at,
-                    registrationOpensAt: hackathon.registration_opens_at,
-                    registrationClosesAt: hackathon.registration_closes_at,
                   }}
-                  showRegistrationDates
-                  showHackathonDates
                   onSaveAndNext={() => handleSaveAndNext("timeline")}
                   onSave={onFormSave ? (data) => onFormSave({
                     startsAt: data.startsAt?.toISOString() ?? null,
                     endsAt: data.endsAt?.toISOString() ?? null,
-                    registrationOpensAt: data.registrationOpensAt?.toISOString() ?? null,
-                    registrationClosesAt: data.registrationClosesAt?.toISOString() ?? null,
                   }) : undefined}
                 />
               </div>
@@ -526,17 +520,11 @@ function HackathonPreviewContent({
           initialData={{
             startsAt: hackathon.starts_at,
             endsAt: hackathon.ends_at,
-            registrationOpensAt: hackathon.registration_opens_at,
-            registrationClosesAt: hackathon.registration_closes_at,
           }}
-          showRegistrationDates
-          showHackathonDates
           onSaveAndNext={() => handleSaveAndNext("dates")}
           onSave={onFormSave ? (data) => onFormSave({
             startsAt: data.startsAt?.toISOString() ?? null,
             endsAt: data.endsAt?.toISOString() ?? null,
-            registrationOpensAt: data.registrationOpensAt?.toISOString() ?? null,
-            registrationClosesAt: data.registrationClosesAt?.toISOString() ?? null,
           }) : undefined}
         />
       ) : undefined}

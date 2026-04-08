@@ -136,8 +136,6 @@ export function HackathonEditDrawer({ hackathon }: HackathonEditDrawerProps) {
               initialData={{
                 startsAt: hackathon.starts_at,
                 endsAt: hackathon.ends_at,
-                registrationOpensAt: hackathon.registration_opens_at,
-                registrationClosesAt: hackathon.registration_closes_at,
               }}
               onSaveAndNext={handleSaveAndNext}
             />
