@@ -124,7 +124,7 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
       <div className="space-y-3">
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
-            Cancel
+            Done
           </Button>
           {isDirty && (
             <Button type="button" variant="ghost" onClick={handleReset} disabled={saving}>
