@@ -1,8 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -15,7 +14,7 @@ import {
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { useEditOptional } from "@/components/hackathon/preview/edit-context"
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete"
-import { MapPin, Video, Undo2 } from "lucide-react"
+import { MapPin, Video } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { normalizeOptionalUrl, normalizeUrlFieldValue, urlInputProps } from "@/lib/utils/url"
 
@@ -49,6 +48,7 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
   const closeDrawer = onCancel ?? editContext?.closeDrawer ?? (() => {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showSaved, setShowSaved] = useState(false)
 
   const [locationType, setLocationType] = useState<LocationType>(initialData.locationType)
   const [locationName, setLocationName] = useState(initialData.locationName || "")
@@ -56,6 +56,23 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
   const [locationLatitude, setLocationLatitude] = useState<number | null>(initialData.locationLatitude ?? null)
   const [locationLongitude, setLocationLongitude] = useState<number | null>(initialData.locationLongitude ?? null)
   const [requireLocationVerification, setRequireLocationVerification] = useState(initialData.requireLocationVerification ?? false)
+
+  const stateRef = useRef({
+    locationType,
+    locationName,
+    locationUrl,
+    locationLatitude,
+    locationLongitude,
+    requireLocationVerification,
+  })
+  stateRef.current = {
+    locationType,
+    locationName,
+    locationUrl,
+    locationLatitude,
+    locationLongitude,
+    requireLocationVerification,
+  }
 
   const isDirty =
     locationType !== initialData.locationType ||
@@ -75,34 +92,35 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
     setError(null)
   }
 
-  async function save() {
+  const save = useCallback(async (overrides?: Partial<typeof stateRef.current>) => {
+    const state = { ...stateRef.current, ...overrides }
     setSaving(true)
     setError(null)
 
     try {
-      const normalizedLocationUrl = normalizeOptionalUrl(locationUrl) ?? null
+      const normalizedLocationUrl = normalizeOptionalUrl(state.locationUrl) ?? null
+      const payload = {
+        locationType: state.locationType,
+        locationName: state.locationName.trim() || null,
+        locationUrl: normalizedLocationUrl,
+        locationLatitude: state.locationLatitude,
+        locationLongitude: state.locationLongitude,
+        requireLocationVerification: state.requireLocationVerification,
+      }
+
       if (onSave) {
-        return await onSave({
-          locationType,
-          locationName: locationName.trim() || null,
-          locationUrl: normalizedLocationUrl,
-          locationLatitude,
-          locationLongitude,
-          requireLocationVerification,
-        })
+        const ok = await onSave(payload)
+        if (ok) {
+          setShowSaved(true)
+          setTimeout(() => setShowSaved(false), 2000)
+        }
+        return ok
       }
 
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          locationType,
-          locationName: locationName.trim() || null,
-          locationUrl: normalizedLocationUrl,
-          locationLatitude,
-          locationLongitude,
-          requireLocationVerification,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (!res.ok) {
@@ -111,6 +129,8 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
       }
 
       router.refresh()
+      setShowSaved(true)
+      setTimeout(() => setShowSaved(false), 2000)
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save")
@@ -118,13 +138,53 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
     } finally {
       setSaving(false)
     }
+  }, [hackathonId, onSave, router])
+
+  function selectType(type: LocationType) {
+    let newType: LocationType
+    if (locationType === type) {
+      newType = null
+      setLocationType(null)
+      setLocationName("")
+      setLocationUrl("")
+      setLocationLatitude(null)
+      setLocationLongitude(null)
+      setRequireLocationVerification(false)
+      save({
+        locationType: null,
+        locationName: "",
+        locationUrl: "",
+        locationLatitude: null,
+        locationLongitude: null,
+        requireLocationVerification: false,
+      })
+    } else {
+      newType = type
+      setLocationType(type)
+      setLocationName("")
+      setLocationUrl("")
+      setLocationLatitude(null)
+      setLocationLongitude(null)
+      if (type !== "in_person") setRequireLocationVerification(false)
+      save({
+        locationType: newType,
+        locationName: "",
+        locationUrl: "",
+        locationLatitude: null,
+        locationLongitude: null,
+        requireLocationVerification: type === "in_person" ? requireLocationVerification : false,
+      })
+    }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  function handleBlurSave() {
     if (!isDirty) return
-    const ok = await save()
-    if (ok) closeDrawer()
+    save()
+  }
+
+  function handleVerificationChange(checked: boolean) {
+    setRequireLocationVerification(checked)
+    save({ requireLocationVerification: checked })
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -144,26 +204,8 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
     }
   }
 
-  function selectType(type: LocationType) {
-    if (locationType === type) {
-      setLocationType(null)
-      setLocationName("")
-      setLocationUrl("")
-      setLocationLatitude(null)
-      setLocationLongitude(null)
-      setRequireLocationVerification(false)
-    } else {
-      setLocationType(type)
-      setLocationName("")
-      setLocationUrl("")
-      setLocationLatitude(null)
-      setLocationLongitude(null)
-      if (type !== "in_person") setRequireLocationVerification(false)
-    }
-  }
-
   return (
-    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6" autoComplete="off">
+    <div onKeyDown={handleKeyDown} className="space-y-4">
       <FieldGroup>
         <Field>
           <FieldLabel>Location Type</FieldLabel>
@@ -212,6 +254,11 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
                   setLocationName(result.displayName)
                   setLocationLatitude(result.latitude)
                   setLocationLongitude(result.longitude)
+                  save({
+                    locationName: result.displayName,
+                    locationLatitude: result.latitude,
+                    locationLongitude: result.longitude,
+                  })
                 }}
                 placeholder="e.g. Moscone Center, San Francisco"
                 autoFocus
@@ -233,7 +280,7 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
               <Switch
                 id="require-location"
                 checked={requireLocationVerification}
-                onCheckedChange={setRequireLocationVerification}
+                onCheckedChange={handleVerificationChange}
                 disabled={!locationLatitude}
               />
             </div>
@@ -255,7 +302,10 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
               placeholder="zoom.us/j/..."
               value={locationUrl}
               onChange={(e) => setLocationUrl(e.target.value)}
-              onBlur={() => setLocationUrl(normalizeUrlFieldValue(locationUrl))}
+              onBlur={() => {
+                setLocationUrl(normalizeUrlFieldValue(locationUrl))
+                handleBlurSave()
+              }}
               autoFocus
               autoComplete="off"
               data-1p-ignore
@@ -273,25 +323,8 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
         )}
       </FieldGroup>
 
-      <div className="space-y-3">
-        <div className="flex gap-2">
-          <Button type="submit" disabled={saving || !isDirty}>
-            {saving ? "Saving..." : "Save"}
-          </Button>
-          <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
-            Cancel
-          </Button>
-          {isDirty && (
-            <Button type="button" variant="ghost" onClick={handleReset} disabled={saving}>
-              <Undo2 className="size-4 mr-1" />
-              Reset
-            </Button>
-          )}
-        </div>
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <Kbd>↵</Kbd> save
-          </span>
           <span className="inline-flex items-center gap-1">
             <KbdGroup><Kbd>⌘</Kbd><Kbd>↵</Kbd></KbdGroup> save & next
           </span>
@@ -301,7 +334,13 @@ export function LocationEditForm({ hackathonId, initialData, onSaveAndNext, onSa
             </span>
           )}
         </div>
+        {saving && (
+          <p className="text-xs text-muted-foreground">Saving...</p>
+        )}
+        {showSaved && (
+          <p className="text-xs text-muted-foreground animate-in fade-in">Saved</p>
+        )}
       </div>
-    </form>
+    </div>
   )
 }

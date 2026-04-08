@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Field,
@@ -10,7 +9,6 @@ import {
   FieldGroup,
 } from "@/components/ui/field"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { Undo2 } from "lucide-react"
 import { useEditOptional } from "@/components/hackathon/preview/edit-context"
 
 interface NameEditFormProps {
@@ -27,6 +25,7 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
   const closeDrawer = onCancel ?? editContext?.closeDrawer ?? (() => {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showSaved, setShowSaved] = useState(false)
 
   const [name, setName] = useState(initialName)
   const isDirty = name !== initialName
@@ -42,7 +41,12 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
 
     try {
       if (onSave) {
-        return await onSave({ name })
+        const ok = await onSave({ name })
+        if (ok) {
+          setShowSaved(true)
+          setTimeout(() => setShowSaved(false), 2000)
+        }
+        return ok
       }
 
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/settings`, {
@@ -57,6 +61,8 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
       }
 
       router.refresh()
+      setShowSaved(true)
+      setTimeout(() => setShowSaved(false), 2000)
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save")
@@ -66,11 +72,9 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!isDirty) return
-    const ok = await save()
-    if (ok) closeDrawer()
+  async function handleBlurSave() {
+    if (!isDirty || !name.trim()) return
+    await save()
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -91,7 +95,7 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
   }
 
   return (
-    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6" autoComplete="off">
+    <div onKeyDown={handleKeyDown} className="space-y-4">
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="hackathon-name">Hackathon Name</FieldLabel>
@@ -101,6 +105,7 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onBlur={handleBlurSave}
             required
             autoComplete="off"
             data-1p-ignore
@@ -114,25 +119,8 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
         )}
       </FieldGroup>
 
-      <div className="space-y-3">
-        <div className="flex gap-2">
-          <Button type="submit" disabled={saving || !isDirty || !name.trim()}>
-            {saving ? "Saving..." : "Save"}
-          </Button>
-          <Button type="button" variant="outline" onClick={closeDrawer} disabled={saving}>
-            Cancel
-          </Button>
-          {isDirty && (
-            <Button type="button" variant="ghost" onClick={handleReset} disabled={saving}>
-              <Undo2 className="size-4 mr-1" />
-              Reset
-            </Button>
-          )}
-        </div>
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <Kbd>↵</Kbd> save
-          </span>
           <span className="inline-flex items-center gap-1">
             <KbdGroup><Kbd>⌘</Kbd><Kbd>↵</Kbd></KbdGroup> save & next
           </span>
@@ -142,7 +130,13 @@ export function NameEditForm({ hackathonId, initialName, onSaveAndNext, onSave, 
             </span>
           )}
         </div>
+        {saving && (
+          <p className="text-xs text-muted-foreground">Saving...</p>
+        )}
+        {showSaved && (
+          <p className="text-xs text-muted-foreground animate-in fade-in">Saved</p>
+        )}
       </div>
-    </form>
+    </div>
   )
 }
