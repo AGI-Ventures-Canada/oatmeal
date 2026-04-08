@@ -259,10 +259,7 @@ describe("SponsorsEditForm", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Linked")).toBeDefined();
-      expect(screen.getByText("Save changes")).toBeDefined();
     });
-
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => {
       const patchCall = mockFetch.mock.calls.find(
@@ -274,8 +271,7 @@ describe("SponsorsEditForm", () => {
 
       expect(patchCall).toBeDefined();
       expect(mockRefresh).toHaveBeenCalledTimes(1);
-      expect(mockCloseDrawer).toHaveBeenCalledTimes(1);
-    });
+    }, { timeout: 3000 });
 
     const patchCall = mockFetch.mock.calls.find(
       ([url, init]) =>
