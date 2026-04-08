@@ -10,6 +10,7 @@ export type ScheduleItem = {
   ends_at: string | null
   location: string | null
   sort_order: number
+  trigger_type: "challenge_release" | "submission_deadline" | null
   created_at: string
   updated_at: string
 }
@@ -21,6 +22,7 @@ export type CreateScheduleItemInput = {
   endsAt?: string
   location?: string
   sortOrder?: number
+  triggerType?: "challenge_release" | "submission_deadline" | null
 }
 
 export type UpdateScheduleItemInput = {
@@ -60,6 +62,7 @@ export async function createScheduleItem(hackathonId: string, input: CreateSched
       ends_at: input.endsAt ?? null,
       location: input.location ?? null,
       sort_order: input.sortOrder ?? 0,
+      trigger_type: input.triggerType ?? null,
     })
     .select()
     .single()
@@ -110,4 +113,35 @@ export async function deleteScheduleItem(itemId: string, hackathonId: string): P
     return false
   }
   return true
+}
+
+export async function getSubmissionDeadline(hackathonId: string): Promise<string | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data, error } = await client
+    .from("hackathon_schedule_items")
+    .select("starts_at")
+    .eq("hackathon_id", hackathonId)
+    .eq("trigger_type", "submission_deadline")
+    .single()
+
+  if (error || !data) return null
+  return data.starts_at
+}
+
+export async function getTriggerItem(
+  hackathonId: string,
+  triggerType: "challenge_release" | "submission_deadline"
+): Promise<ScheduleItem | null> {
+  const client = getSupabase() as unknown as SupabaseClient
+
+  const { data, error } = await client
+    .from("hackathon_schedule_items")
+    .select("*")
+    .eq("hackathon_id", hackathonId)
+    .eq("trigger_type", triggerType)
+    .single()
+
+  if (error || !data) return null
+  return data as ScheduleItem
 }
