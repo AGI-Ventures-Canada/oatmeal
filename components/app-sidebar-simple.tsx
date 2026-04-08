@@ -300,6 +300,16 @@ export function AppSidebarSimple() {
               <SidebarGroupLabel>Hackathons</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  <SidebarMenuItem>
+                    <CreateHackathonMenu
+                      trigger={
+                        <SidebarMenuButton className="h-10 bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground">
+                          <Plus />
+                          <span className="text-sm">Create Event</span>
+                        </SidebarMenuButton>
+                      }
+                    />
+                  </SidebarMenuItem>
                   {hackathonItems.map((item) => (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton asChild isActive={isActive(item)} className="h-10">
@@ -310,16 +320,6 @@ export function AppSidebarSimple() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
-                  <SidebarMenuItem>
-                    <CreateHackathonMenu
-                      trigger={
-                        <SidebarMenuButton className="h-10">
-                          <Plus />
-                          <span className="text-sm">Create Event</span>
-                        </SidebarMenuButton>
-                      }
-                    />
-                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
