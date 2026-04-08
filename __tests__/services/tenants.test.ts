@@ -161,6 +161,7 @@ describe("Tenants Service", () => {
 
       expect(result).not.toBeNull()
       expect(result?.name).toBe("Test Org")
+      expect(mockClerkClient).toHaveBeenCalled()
     })
 
     it("syncs name from Clerk when different", async () => {
