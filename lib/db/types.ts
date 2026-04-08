@@ -2798,7 +2798,7 @@ export type Database = {
         | "weekly"
         | "monthly"
         | "cron"
-      sponsor_tier: "title" | "gold" | "silver" | "bronze" | "partner" | "none"
+      sponsor_tier: "title" | "gold" | "silver" | "bronze" | "none"
       submission_status:
         | "draft"
         | "submitted"
@@ -3008,7 +3008,7 @@ export const Constants = {
         "monthly",
         "cron",
       ],
-      sponsor_tier: ["title", "gold", "silver", "bronze", "partner", "none"],
+      sponsor_tier: ["title", "gold", "silver", "bronze", "none"],
       submission_status: [
         "draft",
         "submitted",

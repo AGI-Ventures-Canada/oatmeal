@@ -68,7 +68,7 @@ describe("Sponsors Service", () => {
 
     it("uses default tier when not specified", async () => {
       const chain = createChainableMock({
-        data: { ...mockSponsor, tier: "partner" },
+        data: { ...mockSponsor, tier: "none" },
         error: null,
       })
       setMockFromImplementation(() => chain)
@@ -78,7 +78,7 @@ describe("Sponsors Service", () => {
         name: "Test Sponsor",
       })
 
-      expect(result?.tier).toBe("partner")
+      expect(result?.tier).toBe("none")
     })
   })
 

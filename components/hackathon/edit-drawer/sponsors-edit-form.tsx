@@ -13,6 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Field, FieldLabel, FieldGroup } from "@/components/ui/field";
 import { useEdit } from "@/components/hackathon/preview/edit-context";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +30,19 @@ import {
   ExternalLink,
   Sun,
   Moon,
+  Crown,
+  Trophy,
+  Medal,
+  Award,
+  Circle,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from "@/components/ui/hover-card";
 import { SponsorLogoUpload } from "./sponsor-logo-upload";
 import type {
   HackathonSponsor,
@@ -45,6 +62,131 @@ interface SponsorsEditFormProps {
   initialSponsors: SponsorWithTenant[];
   onSaveAndNext?: () => void;
   onSave?: (data: { sponsors: { name: string; tier: string | null }[] }) => Promise<boolean>;
+}
+
+const TIER_OPTIONS: {
+  key: SponsorTier;
+  label: string;
+  description: string;
+  icon: typeof Crown;
+  preview: { w: string; h: string };
+}[] = [
+  {
+    key: "title",
+    label: "Title",
+    description: "Primary event sponsor featured most prominently",
+    icon: Crown,
+    preview: { w: "w-20", h: "h-10" },
+  },
+  {
+    key: "gold",
+    label: "Gold",
+    description: "Major sponsor with large logo placement",
+    icon: Trophy,
+    preview: { w: "w-20", h: "h-10" },
+  },
+  {
+    key: "silver",
+    label: "Silver",
+    description: "Supporting sponsor with medium logo placement",
+    icon: Medal,
+    preview: { w: "w-16", h: "h-8" },
+  },
+  {
+    key: "bronze",
+    label: "Bronze",
+    description: "Contributing sponsor with standard logo placement",
+    icon: Award,
+    preview: { w: "w-12", h: "h-6" },
+  },
+  {
+    key: "none",
+    label: "No Tier",
+    description: "Listed among sponsors without tier distinction",
+    icon: Circle,
+    preview: { w: "w-16", h: "h-8" },
+  },
+];
+
+const TIER_LABEL: Record<SponsorTier, string> = {
+  title: "Title",
+  gold: "Gold",
+  silver: "Silver",
+  bronze: "Bronze",
+  none: "No Tier",
+};
+
+function TierPicker({
+  value,
+  onSelect,
+  showTitle,
+}: {
+  value: SponsorTier;
+  onSelect: (tier: SponsorTier) => void;
+  showTitle: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const options = showTitle
+    ? TIER_OPTIONS
+    : TIER_OPTIONS.filter((t) => t.key !== "title");
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-md border px-2.5 h-8 text-xs hover:bg-muted/50 transition-colors"
+        >
+          {TIER_LABEL[value]}
+          <ChevronsUpDown className="size-3 text-muted-foreground" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-auto p-1.5 gap-0">
+        {options.map((tier) => {
+          const Icon = tier.icon;
+          const isSelected = value === tier.key;
+          const isDisabledTitle = tier.key === "title" && showTitle;
+          return (
+            <HoverCard key={tier.key} openDelay={200} closeDelay={100}>
+              <HoverCardTrigger asChild>
+                <button
+                  type="button"
+                  disabled={isDisabledTitle}
+                  onClick={() => {
+                    if (!isDisabledTitle) {
+                      onSelect(tier.key);
+                      setOpen(false);
+                    }
+                  }}
+                  className="w-full flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-left text-xs hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="flex-1 font-medium">{tier.label}</span>
+                  {isSelected && <Check className="size-3.5 shrink-0" />}
+                </button>
+              </HoverCardTrigger>
+              <HoverCardContent side="left" align="center" sideOffset={12} className="w-56 p-3">
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <Icon className="size-4 text-muted-foreground" />
+                    <span className="text-xs font-medium">{tier.label}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-snug">{tier.description}</p>
+                  <div className="flex items-end justify-center pt-1 pb-0.5">
+                    <div className={`${tier.preview.w} ${tier.preview.h} rounded border border-dashed bg-muted/30 flex items-center justify-center`}>
+                      <span className="text-[8px] text-muted-foreground select-none">Logo</span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground text-center">Relative logo size on event page</p>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          );
+        })}
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 interface OrgSearchResult {
@@ -359,7 +501,15 @@ export function SponsorsEditForm({
       }
       router.refresh();
     } catch (err) {
-      setOptimisticUpdates((prev) => { const next = new Map(prev); next.delete(sponsorId); return next; });
+      setOptimisticUpdates((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(sponsorId);
+        if (existing) {
+          const { tier: _, ...rest } = existing;
+          if (Object.keys(rest).length > 0) { next.set(sponsorId, rest as Partial<SponsorWithTenant>); } else { next.delete(sponsorId); }
+        }
+        return next;
+      });
       setError(err instanceof Error ? err.message : "Failed to update tier");
     } finally {
       savingCount.current--;
@@ -402,7 +552,15 @@ export function SponsorsEditForm({
       }
       router.refresh();
     } catch (err) {
-      setOptimisticUpdates((prev) => { const next = new Map(prev); next.delete(sponsorId); return next; });
+      setOptimisticUpdates((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(sponsorId);
+        if (existing) {
+          const { sponsor_tenant_id: _, tenant: _t, website_url: _w, use_org_assets: _u, ...rest } = existing;
+          if (Object.keys(rest).length > 0) { next.set(sponsorId, rest as Partial<SponsorWithTenant>); } else { next.delete(sponsorId); }
+        }
+        return next;
+      });
       setError(err instanceof Error ? err.message : "Failed to link sponsor");
     } finally {
       savingCount.current--;
@@ -435,7 +593,15 @@ export function SponsorsEditForm({
       }
       router.refresh();
     } catch (err) {
-      setOptimisticUpdates((prev) => { const next = new Map(prev); next.delete(sponsorId); return next; });
+      setOptimisticUpdates((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(sponsorId);
+        if (existing) {
+          const { use_org_assets: _, ...rest } = existing;
+          if (Object.keys(rest).length > 0) { next.set(sponsorId, rest as Partial<SponsorWithTenant>); } else { next.delete(sponsorId); }
+        }
+        return next;
+      });
       setError(
         err instanceof Error ? err.message : "Failed to update asset source",
       );
@@ -780,26 +946,11 @@ export function SponsorsEditForm({
                         </SelectContent>
                       </Select>
                     )}
-                    <Select
+                    <TierPicker
                       value={sponsor.tier}
-                      onValueChange={(v) =>
-                        handleUpdateTier(sponsor.id, v as SponsorTier)
-                      }
-                    >
-                      <SelectTrigger className="w-24 h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="min-w-48">
-                        {sponsor.tier === "title" && (
-                          <SelectItem value="title" disabled>Title</SelectItem>
-                        )}
-                        <SelectItem value="gold" description="Major sponsor">Gold</SelectItem>
-                        <SelectItem value="silver" description="Supporting sponsor">Silver</SelectItem>
-                        <SelectItem value="bronze" description="Contributing sponsor">Bronze</SelectItem>
-                        <SelectItem value="partner" description="Non-financial supporter">Partner</SelectItem>
-                        <SelectItem value="none" description="Listed without a tier">No Tier</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      onSelect={(tier) => handleUpdateTier(sponsor.id, tier)}
+                      showTitle={sponsor.tier === "title"}
+                    />
                     <Button
                       type="button"
                       variant="ghost"
@@ -818,7 +969,7 @@ export function SponsorsEditForm({
       )}
 
       <div className="space-y-3 pt-2">
-        <Button type="button" variant="outline" onClick={closeDrawer}>
+        <Button type="button" variant="outline" onClick={() => { if (savingCount.current === 0) closeDrawer(); }}>
           Done
         </Button>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">

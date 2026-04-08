@@ -12,7 +12,7 @@ interface SponsorSectionProps {
   sponsors: SponsorWithTenant[]
 }
 
-const tierOrder: SponsorTier[] = ["gold", "silver", "bronze", "none", "title", "partner"]
+const tierOrder: SponsorTier[] = ["gold", "silver", "bronze", "none", "title"]
 
 const tierLabels: Record<SponsorTier, string> = {
   none: "Sponsors",
@@ -20,7 +20,6 @@ const tierLabels: Record<SponsorTier, string> = {
   silver: "Silver Sponsors",
   bronze: "Bronze Sponsors",
   title: "Title Sponsor",
-  partner: "Partners",
 }
 
 const tierSizes: Record<SponsorTier, "sm" | "md" | "lg"> = {
@@ -29,7 +28,6 @@ const tierSizes: Record<SponsorTier, "sm" | "md" | "lg"> = {
   silver: "md",
   bronze: "sm",
   title: "lg",
-  partner: "sm",
 }
 
 function groupSponsorsByTier(

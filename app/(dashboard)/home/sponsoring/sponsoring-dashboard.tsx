@@ -39,7 +39,6 @@ const TIER_LABELS: Record<SponsorTier, string> = {
   gold: "Gold",
   silver: "Silver",
   bronze: "Bronze",
-  partner: "Partner",
   none: "Sponsor",
 }
 

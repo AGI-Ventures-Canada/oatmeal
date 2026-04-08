@@ -133,6 +133,7 @@ const { SponsorsEditForm } = await import("@/components/hackathon/edit-drawer/sp
 
 beforeEach(() => {
   resetComponentMocks();
+  _selectOnValueChange = undefined;
   setRouter({ refresh: mockRefresh });
   mockRefresh.mockClear();
   mockCloseDrawer.mockClear();
@@ -208,7 +209,7 @@ describe("SponsorsEditForm", () => {
             logo_url: null,
             logo_url_dark: null,
             website_url: "https://linked.example.com",
-            tier: "partner",
+            tier: "gold",
             display_order: 0,
             created_at: "2026-03-19T00:00:00.000Z",
             tenant: {
@@ -222,7 +223,6 @@ describe("SponsorsEditForm", () => {
       />,
     );
 
-    expect(screen.getByText("Partner")).toBeDefined();
     expect(screen.getByText("Gold")).toBeDefined();
   });
 
@@ -313,6 +313,7 @@ describe("SponsorsEditForm", () => {
       />,
     );
 
+    fireEvent.click(screen.getByText("No Tier"));
     fireEvent.click(screen.getByText("Gold"));
 
     await waitFor(() => {

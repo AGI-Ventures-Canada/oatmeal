@@ -23,7 +23,6 @@ const tierLabels: Record<string, string> = {
   gold: "Gold",
   silver: "Silver",
   bronze: "Bronze",
-  partner: "Partner",
 }
 
 export default async function SponsorsPage({ params }: PageProps) {
