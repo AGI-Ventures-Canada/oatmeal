@@ -13,7 +13,7 @@ async function fetchClerkOrgName(clerkOrgId: string): Promise<string | undefined
   }
 }
 
-const FALLBACK_NAME_RE = /^Org org_|^Unnamed Organization$/
+const FALLBACK_NAME_RE = /^Org org_|^Unnamed Organization$|^Personal user_|^Personal Account$/
 
 export async function getOrCreateTenant(
   clerkOrgId: string,
@@ -79,7 +79,18 @@ export async function getOrCreatePersonalTenant(
     .eq("clerk_user_id", clerkUserId)
     .single()
 
-  if (existing) return existing as Tenant
+  if (existing) {
+    if (userName && existing.name !== userName && FALLBACK_NAME_RE.test(existing.name)) {
+      const { data: updated } = await getSupabase()
+        .from("tenants")
+        .update({ name: userName, updated_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .select()
+        .single()
+      return (updated as Tenant) ?? (existing as Tenant)
+    }
+    return existing as Tenant
+  }
 
   const { data: created, error } = await getSupabase()
     .from("tenants")
