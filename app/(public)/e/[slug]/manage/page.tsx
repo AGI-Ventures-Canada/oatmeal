@@ -88,8 +88,6 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     bannerUrl: hackathon.banner_url,
     startsAt: hackathon.starts_at,
     endsAt: hackathon.ends_at,
-    registrationOpensAt: hackathon.registration_opens_at,
-    registrationClosesAt: hackathon.registration_closes_at,
   })
 
   const activeTab = resolveTab(tab, VALID_TABS, DEFAULT_TAB)

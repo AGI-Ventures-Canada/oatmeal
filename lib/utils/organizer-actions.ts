@@ -30,8 +30,6 @@ type ActionItemsInput = {
   bannerUrl: string | null
   startsAt: string | null
   endsAt: string | null
-  registrationOpensAt: string | null
-  registrationClosesAt: string | null
 }
 
 export function getOrganizerActionItems(input: ActionItemsInput): ActionItem[] {
@@ -59,9 +57,6 @@ function addDraftActions(items: ActionItem[], input: ActionItemsInput) {
   }
   if (!input.startsAt || !input.endsAt) {
     items.push({ id: "no-dates", label: "Set event start and end dates", hint: "Required before you can publish", severity: "urgent", tab: "edit" })
-  }
-  if (!input.registrationOpensAt || !input.registrationClosesAt) {
-    items.push({ id: "no-reg-dates", label: "Set registration dates", hint: "Controls when signups open and close", severity: "urgent", tab: "edit" })
   }
   if (input.prizeCount === 0) {
     items.push({ id: "no-prizes", label: "Add prizes", hint: "Define what teams are competing for", severity: "info", tab: "judging" })

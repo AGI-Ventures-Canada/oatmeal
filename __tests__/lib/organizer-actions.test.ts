@@ -21,8 +21,6 @@ function makeInput(overrides: Partial<Parameters<typeof getOrganizerActionItems>
     bannerUrl: null,
     startsAt: null,
     endsAt: null,
-    registrationOpensAt: null,
-    registrationClosesAt: null,
     ...overrides,
   }
 }
@@ -35,7 +33,6 @@ describe("getOrganizerActionItems", () => {
 
       expect(ids).toContain("no-description")
       expect(ids).toContain("no-dates")
-      expect(ids).toContain("no-reg-dates")
       expect(ids).toContain("no-prizes")
       expect(ids).toContain("no-judges")
       expect(ids).toContain("no-banner")
@@ -47,8 +44,6 @@ describe("getOrganizerActionItems", () => {
         bannerUrl: "https://example.com/banner.png",
         startsAt: "2026-05-01T00:00:00Z",
         endsAt: "2026-05-02T00:00:00Z",
-        registrationOpensAt: "2026-04-01T00:00:00Z",
-        registrationClosesAt: "2026-04-30T00:00:00Z",
         prizeCount: 2,
         judgeDisplayCount: 5,
       }))
