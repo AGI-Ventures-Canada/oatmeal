@@ -124,6 +124,23 @@ mock.module("@/components/ui/select", () => ({
   ),
 }));
 
+let _dialogOpen = false;
+let _dialogOnOpenChange: ((open: boolean) => void) | undefined;
+mock.module("@/components/ui/dialog", () => ({
+  Dialog: ({ children, open, onOpenChange }: { children: React.ReactNode; open?: boolean; onOpenChange?: (open: boolean) => void }) => {
+    _dialogOpen = !!open;
+    _dialogOnOpenChange = onOpenChange;
+    return <div>{children}</div>;
+  },
+  DialogTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
+    <div onClick={() => _dialogOnOpenChange?.(!_dialogOpen)}>{children}</div>
+  ),
+  DialogContent: ({ children }: { children: React.ReactNode }) => _dialogOpen ? <div>{children}</div> : null,
+  DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={className}>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogClose: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 mock.module("@/components/ui/kbd", () => ({
   Kbd: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   KbdGroup: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,

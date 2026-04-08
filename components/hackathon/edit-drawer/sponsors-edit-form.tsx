@@ -13,11 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Field, FieldLabel, FieldGroup } from "@/components/ui/field";
 import { useEdit } from "@/components/hackathon/preview/edit-context";
 import { Badge } from "@/components/ui/badge";
@@ -39,10 +34,12 @@ import {
   Check,
 } from "lucide-react";
 import {
-  HoverCard,
-  HoverCardTrigger,
-  HoverCardContent,
-} from "@/components/ui/hover-card";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { SponsorLogoUpload } from "./sponsor-logo-upload";
 import type {
   HackathonSponsor,
@@ -116,6 +113,14 @@ const TIER_LABEL: Record<SponsorTier, string> = {
   none: "No Tier",
 };
 
+const TIER_COLORS: Record<SponsorTier, string> = {
+  title: "#ca8a04",
+  gold: "#eab308",
+  silver: "#94a3b8",
+  bronze: "#d97706",
+  none: "var(--color-muted-foreground)",
+};
+
 function TierPicker({
   value,
   onSelect,
@@ -126,14 +131,25 @@ function TierPicker({
   showTitle: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [previewing, setPreviewing] = useState<SponsorTier>(value);
 
   const options = showTitle
     ? TIER_OPTIONS
     : TIER_OPTIONS.filter((t) => t.key !== "title");
 
+  const previewTier =
+    TIER_OPTIONS.find((t) => t.key === previewing) || TIER_OPTIONS[0];
+  const PreviewIcon = previewTier.icon;
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (isOpen) setPreviewing(value);
+      }}
+    >
+      <DialogTrigger asChild>
         <button
           type="button"
           className="inline-flex items-center gap-1 rounded-md border px-2.5 h-8 text-xs hover:bg-muted/50 transition-colors"
@@ -141,51 +157,69 @@ function TierPicker({
           {TIER_LABEL[value]}
           <ChevronsUpDown className="size-3 text-muted-foreground" />
         </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-auto p-1.5 gap-0">
-        {options.map((tier) => {
-          const Icon = tier.icon;
-          const isSelected = value === tier.key;
-          const isDisabledTitle = tier.key === "title" && showTitle;
-          return (
-            <HoverCard key={tier.key} openDelay={200} closeDelay={100}>
-              <HoverCardTrigger asChild>
-                <button
-                  type="button"
-                  disabled={isDisabledTitle}
-                  onClick={() => {
-                    if (!isDisabledTitle) {
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+        <div className="flex min-h-[300px]">
+          <div className="w-44 border-r flex flex-col">
+            <DialogHeader className="px-4 pt-4 pb-3">
+              <DialogTitle>Sponsor Tier</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col">
+              {options.map((tier) => {
+                const isActive = previewing === tier.key;
+                const isCurrent = value === tier.key;
+                return (
+                  <button
+                    key={tier.key}
+                    type="button"
+                    onClick={() => {
+                      setPreviewing(tier.key);
                       onSelect(tier.key);
-                      setOpen(false);
-                    }
-                  }}
-                  className="w-full flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-left text-xs hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  <Icon className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="flex-1 font-medium">{tier.label}</span>
-                  {isSelected && <Check className="size-3.5 shrink-0" />}
-                </button>
-              </HoverCardTrigger>
-              <HoverCardContent side="left" align="center" sideOffset={12} className="w-56 p-3">
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <Icon className="size-4 text-muted-foreground" />
-                    <span className="text-xs font-medium">{tier.label}</span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-snug">{tier.description}</p>
-                  <div className="flex items-end justify-center pt-1 pb-0.5">
-                    <div className={`${tier.preview.w} ${tier.preview.h} rounded border border-dashed bg-muted/30 flex items-center justify-center`}>
-                      <span className="text-[8px] text-muted-foreground select-none">Logo</span>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground text-center">Relative logo size on event page</p>
-                </div>
-              </HoverCardContent>
-            </HoverCard>
-          );
-        })}
-      </PopoverContent>
-    </Popover>
+                    }}
+                    className={`text-left px-4 py-3 text-sm transition-colors border-l-2 ${
+                      isActive
+                        ? "bg-primary text-primary-foreground border-l-primary font-medium"
+                        : "border-l-transparent hover:bg-muted/50"
+                    }`}
+                  >
+                    <span className="flex items-center justify-between">
+                      {tier.label}
+                      {isCurrent && !isActive && (
+                        <Check className="size-3.5 text-muted-foreground" />
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+            <PreviewIcon
+              className="size-12 mb-4"
+              style={{ color: TIER_COLORS[previewTier.key] }}
+            />
+            <h3 className="text-base font-semibold mb-2">
+              {previewTier.label}
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {previewTier.description}
+            </p>
+            <div className="flex items-end justify-center mt-4">
+              <div
+                className={`${previewTier.preview.w} ${previewTier.preview.h} rounded border border-dashed bg-muted/30 flex items-center justify-center`}
+              >
+                <span className="text-[8px] text-muted-foreground select-none">
+                  Logo
+                </span>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5">
+              Relative logo size on event page
+            </p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -946,6 +980,7 @@ export function SponsorsEditForm({
                         </SelectContent>
                       </Select>
                     )}
+                    <span className="text-xs text-muted-foreground">Tier</span>
                     <TierPicker
                       value={sponsor.tier}
                       onSelect={(tier) => handleUpdateTier(sponsor.id, tier)}
