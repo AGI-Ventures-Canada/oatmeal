@@ -3,6 +3,19 @@ import { redirect } from "next/navigation"
 import { supabase as getSupabase } from "@/lib/db/client"
 import type { Tenant } from "@/lib/db/hackathon-types"
 
+async function fetchClerkOrgName(clerkOrgId: string): Promise<string | undefined> {
+  try {
+    const client = await clerkClient()
+    const org = await client.organizations.getOrganization({ organizationId: clerkOrgId })
+    return org.name
+  } catch {
+    return undefined
+  }
+}
+
+// Must match the fallback format on the insert below: `Org ${clerkOrgId.slice(0, 8)}`
+const FALLBACK_NAME_RE = /^Org org_/
+
 export async function getOrCreateTenant(
   clerkOrgId: string,
   clerkOrgName?: string
@@ -14,7 +27,10 @@ export async function getOrCreateTenant(
     .single()
 
   if (existing) {
-    // Sync name from Clerk if provided and different
+    // Resolve name from Clerk if not provided and existing name is a fallback
+    if (!clerkOrgName && FALLBACK_NAME_RE.test(existing.name)) {
+      clerkOrgName = await fetchClerkOrgName(clerkOrgId)
+    }
     if (clerkOrgName && existing.name !== clerkOrgName) {
       const { data: updated } = await getSupabase()
         .from("tenants")
@@ -25,6 +41,11 @@ export async function getOrCreateTenant(
       return (updated as Tenant) ?? (existing as Tenant)
     }
     return existing as Tenant
+  }
+
+  // Resolve name from Clerk if not provided
+  if (!clerkOrgName) {
+    clerkOrgName = await fetchClerkOrgName(clerkOrgId)
   }
 
   const { data: created, error } = await getSupabase()
@@ -93,15 +114,7 @@ export async function resolvePageTenant(): Promise<Tenant> {
   let tenant: Tenant | null
 
   if (orgId) {
-    // Fetch org name from Clerk to sync
-    let orgName: string | undefined
-    try {
-      const client = await clerkClient()
-      const org = await client.organizations.getOrganization({ organizationId: orgId })
-      orgName = org.name
-    } catch {
-      // Ignore errors fetching org name
-    }
+    const orgName = await fetchClerkOrgName(orgId)
     tenant = await getOrCreateTenant(orgId, orgName)
   } else {
     tenant = await getOrCreatePersonalTenant(userId)
