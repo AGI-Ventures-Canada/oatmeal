@@ -119,7 +119,7 @@ mock.module("@/components/ui/select", () => ({
   }) => <div className={className}>{children}</div>,
   SelectValue: () => null,
   SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SelectItem: ({ children, value }: { children: React.ReactNode; value: string; description?: string; disabled?: boolean }) => (
+  SelectItem: ({ children, value }: { children: React.ReactNode; value: string; disabled?: boolean }) => (
     <button onClick={() => _selectOnValueChange?.(value)}>{children}</button>
   ),
 }));
@@ -162,6 +162,7 @@ describe("SponsorsEditForm", () => {
             logo_url_dark: null,
             website_url: null,
             tier: "none",
+            custom_tier_label: null,
             display_order: 0,
             created_at: "2026-03-19T00:00:00.000Z",
             tenant: null,
@@ -177,6 +178,7 @@ describe("SponsorsEditForm", () => {
             logo_url_dark: null,
             website_url: "https://linked.example.com",
             tier: "gold",
+            custom_tier_label: null,
             display_order: 1,
             created_at: "2026-03-19T00:00:00.000Z",
             tenant: {
@@ -210,6 +212,7 @@ describe("SponsorsEditForm", () => {
             logo_url_dark: null,
             website_url: "https://linked.example.com",
             tier: "gold",
+            custom_tier_label: null,
             display_order: 0,
             created_at: "2026-03-19T00:00:00.000Z",
             tenant: {
@@ -242,6 +245,7 @@ describe("SponsorsEditForm", () => {
             logo_url_dark: null,
             website_url: null,
             tier: "none",
+            custom_tier_label: null,
             display_order: 0,
             created_at: "2026-03-19T00:00:00.000Z",
             tenant: null,
@@ -305,6 +309,7 @@ describe("SponsorsEditForm", () => {
             logo_url_dark: null,
             website_url: null,
             tier: "none",
+            custom_tier_label: null,
             display_order: 0,
             created_at: "2026-03-19T00:00:00.000Z",
             tenant: null,
@@ -354,6 +359,7 @@ describe("SponsorsEditForm", () => {
             logo_url_dark: null,
             website_url: null,
             tier: "none",
+            custom_tier_label: null,
             display_order: 0,
             created_at: "2026-03-19T00:00:00.000Z",
             tenant: null,

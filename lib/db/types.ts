@@ -663,6 +663,7 @@ export type Database = {
       hackathon_sponsors: {
         Row: {
           created_at: string
+          custom_tier_label: string | null
           display_order: number
           hackathon_id: string
           id: string
@@ -677,6 +678,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_tier_label?: string | null
           display_order?: number
           hackathon_id: string
           id?: string
@@ -691,6 +693,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_tier_label?: string | null
           display_order?: number
           hackathon_id?: string
           id?: string
@@ -2798,7 +2801,7 @@ export type Database = {
         | "weekly"
         | "monthly"
         | "cron"
-      sponsor_tier: "title" | "gold" | "silver" | "bronze" | "none"
+      sponsor_tier: "gold" | "silver" | "bronze" | "custom" | "none"
       submission_status:
         | "draft"
         | "submitted"
@@ -3008,7 +3011,7 @@ export const Constants = {
         "monthly",
         "cron",
       ],
-      sponsor_tier: ["title", "gold", "silver", "bronze", "none"],
+      sponsor_tier: ["gold", "silver", "bronze", "custom", "none"],
       submission_status: [
         "draft",
         "submitted",

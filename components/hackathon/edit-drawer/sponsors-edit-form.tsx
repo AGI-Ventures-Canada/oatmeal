@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import Link from "next/link";
@@ -68,12 +68,6 @@ const TIER_OPTIONS: {
   icon: typeof Crown;
 }[] = [
   {
-    key: "title",
-    label: "Title",
-    description: "Primary event sponsor featured most prominently",
-    icon: Crown,
-  },
-  {
     key: "gold",
     label: "Gold",
     description: "Major sponsor with large logo placement",
@@ -92,6 +86,12 @@ const TIER_OPTIONS: {
     icon: Award,
   },
   {
+    key: "custom",
+    label: "Custom",
+    description: "Define your own tier name for this sponsor",
+    icon: Crown,
+  },
+  {
     key: "none",
     label: "No Tier",
     description: "Listed among sponsors without tier distinction",
@@ -100,40 +100,42 @@ const TIER_OPTIONS: {
 ];
 
 const TIER_LABEL: Record<SponsorTier, string> = {
-  title: "Title",
   gold: "Gold",
   silver: "Silver",
   bronze: "Bronze",
+  custom: "Custom",
   none: "No Tier",
 };
 
 const TIER_COLORS: Record<SponsorTier, string> = {
-  title: "#ca8a04",
-  gold: "#eab308",
-  silver: "#94a3b8",
-  bronze: "#d97706",
+  gold: "var(--color-primary)",
+  silver: "var(--color-muted-foreground)",
+  bronze: "var(--color-primary)",
+  custom: "var(--color-primary)",
   none: "var(--color-muted-foreground)",
 };
 
 function TierPicker({
   value,
+  customLabel,
   onSelect,
-  showTitle,
+  onCustomLabelChange,
 }: {
   value: SponsorTier;
+  customLabel?: string | null;
   onSelect: (tier: SponsorTier) => void;
-  showTitle: boolean;
+  onCustomLabelChange?: (label: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [previewing, setPreviewing] = useState<SponsorTier>(value);
 
-  const options = showTitle
-    ? TIER_OPTIONS
-    : TIER_OPTIONS.filter((t) => t.key !== "title");
-
   const previewTier =
     TIER_OPTIONS.find((t) => t.key === previewing) || TIER_OPTIONS[0];
   const PreviewIcon = previewTier.icon;
+
+  const displayLabel = value === "custom" && customLabel
+    ? customLabel
+    : TIER_LABEL[value];
 
   return (
     <Dialog
@@ -148,18 +150,18 @@ function TierPicker({
           type="button"
           className="inline-flex items-center gap-1 rounded-md border px-2.5 h-8 text-xs hover:bg-muted/50 transition-colors"
         >
-          {TIER_LABEL[value]}
+          {displayLabel}
           <ChevronsUpDown className="size-3 text-muted-foreground" />
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+      <DialogContent>
         <div className="flex min-h-[300px]">
           <div className="w-44 border-r flex flex-col">
             <DialogHeader className="px-4 pt-4 pb-3">
               <DialogTitle>Sponsor Tier</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col">
-              {options.map((tier) => {
+              {TIER_OPTIONS.map((tier) => {
                 const isActive = previewing === tier.key;
                 const isCurrent = value === tier.key;
                 return (
@@ -169,6 +171,7 @@ function TierPicker({
                     onClick={() => {
                       setPreviewing(tier.key);
                       onSelect(tier.key);
+                      if (tier.key !== "custom") setOpen(false);
                     }}
                     className={`text-left px-4 py-3 text-sm transition-colors border-l-2 ${
                       isActive
@@ -198,6 +201,26 @@ function TierPicker({
             <p className="text-sm text-muted-foreground leading-relaxed">
               {previewTier.description}
             </p>
+            {previewTier.key === "custom" && (
+              <Input
+                placeholder="e.g. Platinum, Premier, Title..."
+                value={customLabel ?? ""}
+                onChange={(e) => onCustomLabelChange?.(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    setOpen(false);
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="mt-4 text-center text-sm"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+                autoFocus
+              />
+            )}
           </div>
         </div>
       </DialogContent>
@@ -301,11 +324,6 @@ export function SponsorsEditForm({
       });
   }, [isLocalMode, localSponsors, initialSponsors, hiddenIds, optimisticUpdates]);
 
-  const titleSponsorId = useMemo(
-    () => visibleSponsors.find((s) => s.tier === "title")?.id ?? null,
-    [visibleSponsors],
-  );
-
   const excludeIdsString = useMemo(
     () =>
       visibleSponsors
@@ -335,6 +353,7 @@ export function SponsorsEditForm({
     const sponsorsData = sponsors.map((s) => ({
       name: s.name,
       tier: s.tier === "none" ? null : s.tier,
+      customTierLabel: s.tier === "custom" ? s.custom_tier_label : null,
     }));
     onSave?.({ sponsors: sponsorsData });
   }
@@ -353,6 +372,7 @@ export function SponsorsEditForm({
         logo_url_dark: org.logoUrlDark,
         website_url: org.websiteUrl,
         tier: "none",
+        custom_tier_label: null,
         display_order: localSponsors.length,
         created_at: new Date().toISOString(),
         tenant: org.isSaved
@@ -420,6 +440,7 @@ export function SponsorsEditForm({
         logo_url_dark: null,
         website_url: null,
         tier: "none",
+        custom_tier_label: null,
         display_order: localSponsors.length,
         created_at: new Date().toISOString(),
       };
@@ -494,26 +515,28 @@ export function SponsorsEditForm({
     }
   }
 
-  async function handleUpdateTier(sponsorId: string, newTier: SponsorTier) {
+  async function handleUpdateTier(sponsorId: string, newTier: SponsorTier, customTierLabel?: string | null) {
     if (isLocalMode) {
       const updated = localSponsors.map((s) =>
-        s.id === sponsorId ? { ...s, tier: newTier } : s,
+        s.id === sponsorId ? { ...s, tier: newTier, custom_tier_label: customTierLabel ?? null } : s,
       );
       setLocalSponsors(updated);
       saveLocalSponsors(updated);
       return;
     }
 
-    setOptimisticUpdates((prev) => new Map(prev).set(sponsorId, { ...prev.get(sponsorId), tier: newTier }));
+    setOptimisticUpdates((prev) => new Map(prev).set(sponsorId, { ...prev.get(sponsorId), tier: newTier, custom_tier_label: customTierLabel ?? null }));
     setError(null);
     setSavingCount((c) => c + 1);
     try {
+      const body: Record<string, unknown> = { tier: newTier };
+      if (newTier === "custom") body.customTierLabel = customTierLabel || null;
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tier: newTier }),
+          body: JSON.stringify(body),
         },
       );
       if (!res.ok) {
@@ -526,7 +549,7 @@ export function SponsorsEditForm({
         const next = new Map(prev);
         const existing = next.get(sponsorId);
         if (existing) {
-          const { tier: _, ...rest } = existing;
+          const { tier: _, custom_tier_label: _cl, ...rest } = existing;
           if (Object.keys(rest).length > 0) { next.set(sponsorId, rest as Partial<SponsorWithTenant>); } else { next.delete(sponsorId); }
         }
         return next;
@@ -535,6 +558,61 @@ export function SponsorsEditForm({
     } finally {
       setSavingCount((c) => c - 1);
     }
+  }
+
+  const customLabelDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  const saveCustomLabelToServer = useCallback(async (sponsorId: string, label: string) => {
+    setError(null);
+    setSavingCount((c) => c + 1);
+    try {
+      const res = await fetch(
+        `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customTierLabel: label || null }),
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update custom tier label");
+      }
+      router.refresh();
+    } catch (err) {
+      setOptimisticUpdates((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(sponsorId);
+        if (existing) {
+          const { custom_tier_label: _, ...rest } = existing;
+          if (Object.keys(rest).length > 0) { next.set(sponsorId, rest as Partial<SponsorWithTenant>); } else { next.delete(sponsorId); }
+        }
+        return next;
+      });
+      setError(err instanceof Error ? err.message : "Failed to update tier label");
+    } finally {
+      setSavingCount((c) => c - 1);
+    }
+  }, [hackathonId, router]);
+
+  function handleUpdateCustomLabel(sponsorId: string, label: string) {
+    if (isLocalMode) {
+      const updated = localSponsors.map((s) =>
+        s.id === sponsorId ? { ...s, custom_tier_label: label || null } : s,
+      );
+      setLocalSponsors(updated);
+      saveLocalSponsors(updated);
+      return;
+    }
+
+    setOptimisticUpdates((prev) => new Map(prev).set(sponsorId, { ...prev.get(sponsorId), custom_tier_label: label || null }));
+
+    if (customLabelDebounceRef.current) {
+      clearTimeout(customLabelDebounceRef.current);
+    }
+    customLabelDebounceRef.current = setTimeout(() => {
+      saveCustomLabelToServer(sponsorId, label);
+    }, 500);
   }
 
   async function handleLinkOrg(sponsorId: string, org: OrgSearchResult) {
@@ -970,8 +1048,9 @@ export function SponsorsEditForm({
                     <span className="text-xs text-muted-foreground">Tier</span>
                     <TierPicker
                       value={sponsor.tier}
-                      onSelect={(tier) => handleUpdateTier(sponsor.id, tier)}
-                      showTitle={titleSponsorId === null || titleSponsorId === sponsor.id}
+                      customLabel={sponsor.custom_tier_label}
+                      onSelect={(tier) => handleUpdateTier(sponsor.id, tier, tier === "custom" ? sponsor.custom_tier_label : null)}
+                      onCustomLabelChange={(label) => handleUpdateCustomLabel(sponsor.id, label)}
                     />
                     <Button
                       type="button"

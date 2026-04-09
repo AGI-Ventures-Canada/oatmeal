@@ -13,7 +13,7 @@ import { dashboardSponsorFulfillmentRoutes } from "./dashboard-sponsor-fulfillme
 import { getEffectiveStatus } from "@/lib/utils/timeline"
 import type { Scope } from "@/lib/auth/types"
 import { ALL_SCOPES } from "@/lib/auth/types"
-import type { WebhookEvent } from "@/lib/db/hackathon-types"
+import type { WebhookEvent, SponsorTier } from "@/lib/db/hackathon-types"
 
 export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .derive(async ({ request }) => {
@@ -1541,7 +1541,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         name: body.name,
         logoUrl,
         websiteUrl,
-        tier: body.tier as "title" | "gold" | "silver" | "bronze" | undefined,
+        tier: body.tier as SponsorTier | undefined,
+        customTierLabel: body.customTierLabel,
         sponsorTenantId: body.sponsorTenantId,
         tenantSponsorId,
         useOrgAssets: body.useOrgAssets,
@@ -1580,6 +1581,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         logoUrl: t.Optional(t.Union([t.String(), t.Null()])),
         websiteUrl: t.Optional(t.Union([t.String(), t.Null()])),
         tier: t.Optional(t.String()),
+        customTierLabel: t.Optional(t.Union([t.String(), t.Null()])),
         sponsorTenantId: t.Optional(t.Union([t.String(), t.Null()])),
         useOrgAssets: t.Optional(t.Boolean()),
         displayOrder: t.Optional(t.Number()),
@@ -1614,7 +1616,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         name: body.name,
         logoUrl: sponsorLogoUrl,
         websiteUrl: sponsorWebsiteUrl,
-        tier: body.tier as "title" | "gold" | "silver" | "bronze" | undefined,
+        tier: body.tier as SponsorTier | undefined,
+        customTierLabel: body.customTierLabel,
         sponsorTenantId: body.sponsorTenantId,
         useOrgAssets: body.useOrgAssets,
         displayOrder: body.displayOrder,
@@ -1649,6 +1652,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         logoUrl: t.Optional(t.Union([t.String(), t.Null()])),
         websiteUrl: t.Optional(t.Union([t.String(), t.Null()])),
         tier: t.Optional(t.String()),
+        customTierLabel: t.Optional(t.Union([t.String(), t.Null()])),
         sponsorTenantId: t.Optional(t.Union([t.String(), t.Null()])),
         useOrgAssets: t.Optional(t.Boolean()),
         displayOrder: t.Optional(t.Number()),

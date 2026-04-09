@@ -21,6 +21,7 @@ const mockSponsor: HackathonSponsor = {
   logo_url_dark: "https://example.com/logo-dark.png",
   website_url: "https://example.com",
   tier: "gold" as SponsorTier,
+  custom_tier_label: null,
   display_order: 0,
   created_at: "2026-01-01T00:00:00Z",
 }

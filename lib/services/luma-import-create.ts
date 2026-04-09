@@ -56,7 +56,7 @@ export async function createHackathonFromImport(
   return { ...hackathon, banner_url: bannerResult?.url ?? null } as Hackathon
 }
 
-const VALID_TIERS = new Set<string>(["gold", "silver", "bronze", "title", "none"])
+const VALID_TIERS = new Set<string>(["gold", "silver", "bronze", "custom", "none"])
 
 export async function createSponsorsFromImport(
   hackathonId: string,

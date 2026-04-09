@@ -314,7 +314,7 @@ export interface OrgIntegration {
   updated_at: string
 }
 
-export type SponsorTier = "none" | "gold" | "silver" | "bronze" | "title"
+export type SponsorTier = "none" | "gold" | "silver" | "bronze" | "custom"
 
 export interface HackathonSponsor {
   id: string
@@ -327,6 +327,7 @@ export interface HackathonSponsor {
   logo_url_dark: string | null
   website_url: string | null
   tier: SponsorTier
+  custom_tier_label: string | null
   display_order: number
   created_at: string
 }

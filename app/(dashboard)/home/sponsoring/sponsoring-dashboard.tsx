@@ -35,7 +35,7 @@ type Props = {
 }
 
 const TIER_LABELS: Record<SponsorTier, string> = {
-  title: "Title",
+  custom: "Custom",
   gold: "Gold",
   silver: "Silver",
   bronze: "Bronze",
@@ -105,7 +105,7 @@ export function SponsoringDashboard({ hackathons, sponsorships }: Props) {
     return counts
   }, [sponsorMap])
 
-  const titleOrGold = (tierCounts.get("title") ?? 0) + (tierCounts.get("gold") ?? 0)
+  const titleOrGold = (tierCounts.get("custom") ?? 0) + (tierCounts.get("gold") ?? 0)
 
   if (hackathons.length === 0) {
     return (
