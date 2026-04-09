@@ -100,7 +100,10 @@ export async function updateSponsor(
   if (updates.logoUrl !== undefined) updateData.logo_url = updates.logoUrl
   if (updates.logoUrlDark !== undefined) updateData.logo_url_dark = updates.logoUrlDark
   if (updates.websiteUrl !== undefined) updateData.website_url = updates.websiteUrl
-  if (updates.tier !== undefined) updateData.tier = updates.tier
+  if (updates.tier !== undefined) {
+    updateData.tier = updates.tier
+    if (updates.tier !== "custom") updateData.custom_tier_label = null
+  }
   if (updates.customTierLabel !== undefined) updateData.custom_tier_label = updates.customTierLabel
   if (updates.sponsorTenantId !== undefined) updateData.sponsor_tenant_id = updates.sponsorTenantId
   if (updates.useOrgAssets !== undefined) updateData.use_org_assets = updates.useOrgAssets

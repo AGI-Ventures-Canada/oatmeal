@@ -28,9 +28,10 @@ const makeHackathon = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
-const makeSponsorship = (hackathonId: string, tier: SponsorTier = "gold") => ({
+const makeSponsorship = (hackathonId: string, tier: SponsorTier = "gold", customTierLabel: string | null = null) => ({
   hackathonId,
   tier,
+  customTierLabel,
   name: "Acme Corp",
 })
 
@@ -99,12 +100,12 @@ describe("SponsoringDashboard", () => {
       makeHackathon({ id: "h2", slug: "h2", name: "Hack 2" }),
     ]
     const sponsorships = {
-      h1: makeSponsorship("h1", "custom"),
+      h1: makeSponsorship("h1", "custom", "Platinum"),
       h2: makeSponsorship("h2", "bronze"),
     }
 
     render(<SponsoringDashboard hackathons={hackathons} sponsorships={sponsorships} />)
-    expect(screen.getByText("Custom")).toBeDefined()
+    expect(screen.getByText("Platinum")).toBeDefined()
     expect(screen.getByText("Bronze")).toBeDefined()
   })
 })
