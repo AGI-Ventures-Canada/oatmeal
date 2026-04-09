@@ -13,8 +13,7 @@ async function fetchClerkOrgName(clerkOrgId: string): Promise<string | undefined
   }
 }
 
-// Must match the fallback format on the insert below: `Org ${clerkOrgId.slice(0, 8)}`
-const FALLBACK_NAME_RE = /^Org org_/
+const FALLBACK_NAME_RE = /^Org org_|^Unnamed Organization$|^Personal user_|^Personal Account$/
 
 export async function getOrCreateTenant(
   clerkOrgId: string,
@@ -52,7 +51,7 @@ export async function getOrCreateTenant(
     .from("tenants")
     .insert({
       clerk_org_id: clerkOrgId,
-      name: clerkOrgName ?? `Org ${clerkOrgId.slice(0, 8)}`,
+      name: clerkOrgName ?? "Unnamed Organization",
     })
     .select()
     .single()
@@ -80,13 +79,24 @@ export async function getOrCreatePersonalTenant(
     .eq("clerk_user_id", clerkUserId)
     .single()
 
-  if (existing) return existing as Tenant
+  if (existing) {
+    if (userName && existing.name !== userName && FALLBACK_NAME_RE.test(existing.name)) {
+      const { data: updated } = await getSupabase()
+        .from("tenants")
+        .update({ name: userName, updated_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .select()
+        .single()
+      return (updated as Tenant) ?? (existing as Tenant)
+    }
+    return existing as Tenant
+  }
 
   const { data: created, error } = await getSupabase()
     .from("tenants")
     .insert({
       clerk_user_id: clerkUserId,
-      name: userName ?? `Personal ${clerkUserId.slice(0, 8)}`,
+      name: userName ?? "Personal Account",
     })
     .select()
     .single()

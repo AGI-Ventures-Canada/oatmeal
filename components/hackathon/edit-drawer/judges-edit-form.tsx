@@ -165,6 +165,8 @@ export function JudgesEditForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [emailEntries, setEmailEntries] = useState<EmailEntry[]>([])
+  const [optimisticAdds, setOptimisticAdds] = useState<HackathonJudgeDisplay[]>([])
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
   const tempIdCounter = useRef(0)
 
   const existingEmails = useMemo(() => {
@@ -181,14 +183,7 @@ export function JudgesEditForm({
     let judges = [...initialJudges]
 
     for (const change of pendingChanges) {
-      if (change.type === "add") {
-        const judge = change.headshotPreviewUrl
-          ? { ...change.judge, headshot_url: change.headshotPreviewUrl }
-          : change.judge
-        judges.push(judge)
-      } else if (change.type === "delete") {
-        judges = judges.filter((j) => j.id !== change.judgeId)
-      } else if (change.type === "update") {
+      if (change.type === "update") {
         judges = judges.map((j) =>
           j.id === change.judgeId ? { ...j, [change.field]: change.newValue } : j
         )
@@ -199,62 +194,101 @@ export function JudgesEditForm({
       }
     }
 
+    judges = [...judges, ...optimisticAdds]
+    judges = judges.filter((j) => !hiddenIds.has(j.id))
+
     return judges
-  }, [initialJudges, pendingChanges])
+  }, [initialJudges, pendingChanges, optimisticAdds, hiddenIds])
 
   const hasChanges = pendingChanges.length > 0
 
-  function handleAddFromChips() {
-    if (emailEntries.length === 0) return
+  async function handleAddFromChips() {
+    if (emailEntries.length === 0 || saving) return
 
-    const newChanges: PendingChange[] = emailEntries.map((entry) => {
-      const tempId = `temp-${++tempIdCounter.current}`
-      const name = entry.clerkUser
+    const entries = [...emailEntries]
+    setEmailEntries([])
+    setError(null)
+
+    function resolveName(entry: EmailEntry) {
+      return entry.clerkUser
         ? [entry.clerkUser.firstName, entry.clerkUser.lastName].filter(Boolean).join(" ") || entry.email.split("@")[0]
         : entry.email.split("@")[0]
-
-      const newJudge: HackathonJudgeDisplay = {
-        id: tempId,
-        hackathon_id: hackathonId,
-        name,
-        title: null,
-        organization: null,
-        headshot_url: entry.clerkUser?.imageUrl ?? null,
-        clerk_user_id: entry.clerkUser?.id ?? null,
-        participant_id: null,
-        display_order: currentJudges.length,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-
-      return {
-        type: "add" as const,
-        judge: newJudge,
-        tempId,
-        email: entry.email,
-        clerkUser: entry.clerkUser,
-      }
-    })
-
-    setPendingChanges([...pendingChanges, ...newChanges])
-    setEmailEntries([])
-  }
-
-  function handleDeleteJudge(judgeId: string) {
-    const addChange = pendingChanges.find(
-      (c) => c.type === "add" && c.tempId === judgeId
-    )
-
-    if (addChange) {
-      if (addChange.type === "add" && addChange.headshotPreviewUrl) {
-        URL.revokeObjectURL(addChange.headshotPreviewUrl)
-      }
-      setPendingChanges(pendingChanges.filter((c) => c !== addChange))
-      return
     }
 
-    const originalJudge = initialJudges.find((j) => j.id === judgeId)
-    if (!originalJudge) return
+    const tempJudges: HackathonJudgeDisplay[] = entries.map((entry) => ({
+      id: `temp-${++tempIdCounter.current}`,
+      hackathon_id: hackathonId,
+      name: resolveName(entry),
+      title: null,
+      organization: null,
+      headshot_url: entry.clerkUser?.imageUrl ?? null,
+      clerk_user_id: entry.clerkUser?.id ?? null,
+      participant_id: null,
+      display_order: currentJudges.length,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }))
+
+    setOptimisticAdds((prev) => [...prev, ...tempJudges])
+    setSaving(true)
+
+    try {
+      for (const entry of entries) {
+        const name = resolveName(entry)
+
+        const res = await fetch(
+          `/api/dashboard/hackathons/${hackathonId}/judges/display`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name,
+              displayOrder: currentJudges.length,
+              ...(entry.clerkUser ? { clerkUserId: entry.clerkUser.id } : {}),
+              ...(entry.clerkUser?.imageUrl ? { headshotUrl: entry.clerkUser.imageUrl } : {}),
+              ...(entry.email ? { email: entry.email } : {}),
+            }),
+          }
+        )
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || `Failed to add ${name}`)
+        }
+
+        if (entry.email) {
+          const judgeRes = await fetch(
+            `/api/dashboard/hackathons/${hackathonId}/judging/judges`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...(entry.clerkUser
+                  ? { clerkUserId: entry.clerkUser.id }
+                  : { email: entry.email }),
+              }),
+            }
+          )
+          if (!judgeRes.ok) {
+            const judgeData = await judgeRes.json()
+            const identifier = name || entry.email || "Unknown"
+            throw new Error(`${identifier}: ${judgeData.error || "Failed to assign judge role"}`)
+          }
+        }
+      }
+
+      setOptimisticAdds((prev) => prev.filter((j) => !tempJudges.some((t) => t.id === j.id)))
+      router.refresh()
+    } catch (err) {
+      setOptimisticAdds((prev) => prev.filter((j) => !tempJudges.some((t) => t.id === j.id)))
+      router.refresh()
+      setError(err instanceof Error ? err.message : "Failed to add judges")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDeleteJudge(judgeId: string) {
+    if (saving) return
 
     const relatedChanges = pendingChanges.filter(
       (c) =>
@@ -264,8 +298,27 @@ export function JudgesEditForm({
     for (const c of relatedChanges) {
       if (c.type === "headshot") URL.revokeObjectURL(c.previewUrl)
     }
-    const filtered = pendingChanges.filter((c) => !relatedChanges.includes(c))
-    setPendingChanges([...filtered, { type: "delete", judgeId, originalJudge }])
+    if (relatedChanges.length > 0) {
+      setPendingChanges(pendingChanges.filter((c) => !relatedChanges.includes(c)))
+    }
+
+    setHiddenIds((prev) => new Set(prev).add(judgeId))
+
+    try {
+      const res = await fetch(
+        `/api/dashboard/hackathons/${hackathonId}/judges/display/${judgeId}`,
+        { method: "DELETE" }
+      )
+      if (!res.ok) {
+        setHiddenIds((prev) => { const next = new Set(prev); next.delete(judgeId); return next })
+        const data = await res.json()
+        throw new Error(data.error || "Failed to remove judge")
+      }
+      router.refresh()
+    } catch (err) {
+      setHiddenIds((prev) => { const next = new Set(prev); next.delete(judgeId); return next })
+      setError(err instanceof Error ? err.message : "Failed to remove judge")
+    }
   }
 
   function handleFieldChange(judgeId: string, field: string, value: string) {

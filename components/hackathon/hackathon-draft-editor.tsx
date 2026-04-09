@@ -268,7 +268,6 @@ export function HackathonDraftEditor({
       if ("imageUrl" in data) next.imageUrl = data.imageUrl as string | null
       if ("sponsors" in data) next.sponsors = data.sponsors as DraftSponsor[]
       if ("prizes" in data) next.prizes = data.prizes as DraftPrize[]
-      if ("rules" in data) next.rules = data.rules as string | null
       return next
     })
     return true
