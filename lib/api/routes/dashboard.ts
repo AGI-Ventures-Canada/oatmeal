@@ -1186,7 +1186,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
           const { updateHackathonSettings: updateReg } = await import("@/lib/services/public-hackathons")
           await updateReg(params.id, principal.tenantId, {
             registrationOpensAt: new Date().toISOString(),
-            registrationClosesAt: hackathon.starts_at ?? new Date().toISOString(),
+            registrationClosesAt: body.startsAt ?? hackathon.starts_at ?? new Date().toISOString(),
           })
           const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
           const inviterName = await resolveAdderName(principal)
