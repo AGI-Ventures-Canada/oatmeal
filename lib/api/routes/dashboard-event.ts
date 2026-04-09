@@ -396,7 +396,7 @@ export const dashboardEventRoutes = new Elysia({ prefix: "/dashboard" })
     const authErr = await checkOrganizer(params.id, principal.tenantId, set)
     if (authErr) return authErr
     const ok = await releaseChallenge(params.id, principal.tenantId)
-    if (!ok) { set.status = 400; return { error: "Failed to release challenge. Ensure a title is set." } }
+    if (!ok) { set.status = 400; return { error: "Failed to release challenge. Ensure a challenge is created first." } }
     await logAudit({ principal, action: "challenge.released", resourceType: "challenge", resourceId: params.id, metadata: { hackathonId: params.id } })
     return { success: true }
   }, { detail: { summary: "Release challenge" } })
