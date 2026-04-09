@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { useState, useEffect } from "react"
 import { toLocalDatetime } from "@/lib/utils/datetime"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -1100,14 +1099,11 @@ function computeScheduleDefaults(items: ScheduleItemData[]): { startsAt: string;
 }
 
 function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, endsAt: _eventEndsAt, challengeReleasedAt, challengeExists }: { hackathonId: string; hackathonName: string; startsAt: string | null; endsAt: string | null; challengeReleasedAt: string | null; challengeExists: boolean }) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const goToChallenge = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("etab", "challenge")
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }, [router, pathname, searchParams])
+  function goToChallenge() {
+    const url = new URL(window.location.href)
+    url.searchParams.set("etab", "challenge")
+    window.location.href = url.toString()
+  }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<ScheduleItemData[]>([])
