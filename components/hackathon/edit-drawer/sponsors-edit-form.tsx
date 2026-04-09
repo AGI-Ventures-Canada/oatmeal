@@ -66,42 +66,36 @@ const TIER_OPTIONS: {
   label: string;
   description: string;
   icon: typeof Crown;
-  preview: { w: string; h: string };
 }[] = [
   {
     key: "title",
     label: "Title",
     description: "Primary event sponsor featured most prominently",
     icon: Crown,
-    preview: { w: "w-20", h: "h-10" },
   },
   {
     key: "gold",
     label: "Gold",
     description: "Major sponsor with large logo placement",
     icon: Trophy,
-    preview: { w: "w-20", h: "h-10" },
   },
   {
     key: "silver",
     label: "Silver",
     description: "Supporting sponsor with medium logo placement",
     icon: Medal,
-    preview: { w: "w-16", h: "h-8" },
   },
   {
     key: "bronze",
     label: "Bronze",
     description: "Contributing sponsor with standard logo placement",
     icon: Award,
-    preview: { w: "w-12", h: "h-6" },
   },
   {
     key: "none",
     label: "No Tier",
     description: "Listed among sponsors without tier distinction",
     icon: Circle,
-    preview: { w: "w-16", h: "h-8" },
   },
 ];
 
@@ -204,18 +198,6 @@ function TierPicker({
             <p className="text-sm text-muted-foreground leading-relaxed">
               {previewTier.description}
             </p>
-            <div className="flex items-end justify-center mt-4">
-              <div
-                className={`${previewTier.preview.w} ${previewTier.preview.h} rounded border border-dashed bg-muted/30 flex items-center justify-center`}
-              >
-                <span className="text-[8px] text-muted-foreground select-none">
-                  Logo
-                </span>
-              </div>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1.5">
-              Relative logo size on event page
-            </p>
           </div>
         </div>
       </DialogContent>
@@ -297,7 +279,7 @@ export function SponsorsEditForm({
   const [optimisticUpdates, setOptimisticUpdates] = useState<
     Map<string, Partial<SponsorWithTenant>>
   >(new Map());
-  const savingCount = useRef(0);
+  const [savingCount, setSavingCount] = useState(0);
   const tempIdCounter = useRef(0);
 
   const [localSponsors, setLocalSponsors] = useState<SponsorWithTenant[]>(
@@ -318,6 +300,11 @@ export function SponsorsEditForm({
         return override ? { ...s, ...override } : s;
       });
   }, [isLocalMode, localSponsors, initialSponsors, hiddenIds, optimisticUpdates]);
+
+  const titleSponsorId = useMemo(
+    () => visibleSponsors.find((s) => s.tier === "title")?.id ?? null,
+    [visibleSponsors],
+  );
 
   const excludeIdsString = useMemo(
     () =>
@@ -386,7 +373,7 @@ export function SponsorsEditForm({
 
     setAdding(true);
     setError(null);
-    savingCount.current++;
+    setSavingCount((c) => c + 1);
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/sponsors`,
@@ -413,7 +400,7 @@ export function SponsorsEditForm({
       setError(err instanceof Error ? err.message : "Failed to add sponsor");
     } finally {
       setAdding(false);
-      savingCount.current--;
+      setSavingCount((c) => c - 1);
     }
   }
 
@@ -445,7 +432,7 @@ export function SponsorsEditForm({
 
     setAdding(true);
     setError(null);
-    savingCount.current++;
+    setSavingCount((c) => c + 1);
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/sponsors`,
@@ -468,7 +455,7 @@ export function SponsorsEditForm({
       setError(err instanceof Error ? err.message : "Failed to add sponsor");
     } finally {
       setAdding(false);
-      savingCount.current--;
+      setSavingCount((c) => c - 1);
     }
   }
 
@@ -482,7 +469,7 @@ export function SponsorsEditForm({
 
     setHiddenIds((prev) => new Set(prev).add(sponsorId));
     setError(null);
-    savingCount.current++;
+    setSavingCount((c) => c + 1);
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
@@ -503,7 +490,7 @@ export function SponsorsEditForm({
         err instanceof Error ? err.message : "Failed to remove sponsor",
       );
     } finally {
-      savingCount.current--;
+      setSavingCount((c) => c - 1);
     }
   }
 
@@ -519,7 +506,7 @@ export function SponsorsEditForm({
 
     setOptimisticUpdates((prev) => new Map(prev).set(sponsorId, { ...prev.get(sponsorId), tier: newTier }));
     setError(null);
-    savingCount.current++;
+    setSavingCount((c) => c + 1);
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
@@ -546,7 +533,7 @@ export function SponsorsEditForm({
       });
       setError(err instanceof Error ? err.message : "Failed to update tier");
     } finally {
-      savingCount.current--;
+      setSavingCount((c) => c - 1);
     }
   }
 
@@ -565,7 +552,7 @@ export function SponsorsEditForm({
       }),
     );
     setError(null);
-    savingCount.current++;
+    setSavingCount((c) => c + 1);
 
     try {
       const res = await fetch(
@@ -597,7 +584,7 @@ export function SponsorsEditForm({
       });
       setError(err instanceof Error ? err.message : "Failed to link sponsor");
     } finally {
-      savingCount.current--;
+      setSavingCount((c) => c - 1);
     }
   }
 
@@ -611,7 +598,7 @@ export function SponsorsEditForm({
       new Map(prev).set(sponsorId, { ...prev.get(sponsorId), use_org_assets: nextUseOrgAssets }),
     );
     setError(null);
-    savingCount.current++;
+    setSavingCount((c) => c + 1);
     try {
       const res = await fetch(
         `/api/dashboard/hackathons/${hackathonId}/sponsors/${sponsorId}`,
@@ -640,7 +627,7 @@ export function SponsorsEditForm({
         err instanceof Error ? err.message : "Failed to update asset source",
       );
     } finally {
-      savingCount.current--;
+      setSavingCount((c) => c - 1);
     }
   }
 
@@ -651,7 +638,7 @@ export function SponsorsEditForm({
         handleAddManual();
       } else if (onSaveAndNext) {
         onSaveAndNext();
-      } else if (savingCount.current === 0) {
+      } else if (savingCount === 0) {
         closeDrawer();
       }
     }
@@ -984,7 +971,7 @@ export function SponsorsEditForm({
                     <TierPicker
                       value={sponsor.tier}
                       onSelect={(tier) => handleUpdateTier(sponsor.id, tier)}
-                      showTitle={sponsor.tier === "title"}
+                      showTitle={titleSponsorId === null || titleSponsorId === sponsor.id}
                     />
                     <Button
                       type="button"
@@ -1004,8 +991,9 @@ export function SponsorsEditForm({
       )}
 
       <div className="space-y-3 pt-2">
-        <Button type="button" variant="outline" onClick={() => { if (savingCount.current === 0) closeDrawer(); }}>
-          Done
+        <Button type="button" variant="outline" disabled={savingCount > 0} onClick={closeDrawer}>
+          {savingCount > 0 && <Loader2 className="size-4 animate-spin" />}
+          {savingCount > 0 ? "Saving…" : "Done"}
         </Button>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">

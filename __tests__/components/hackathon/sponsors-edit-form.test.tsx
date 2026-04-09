@@ -151,6 +151,8 @@ const { SponsorsEditForm } = await import("@/components/hackathon/edit-drawer/sp
 beforeEach(() => {
   resetComponentMocks();
   _selectOnValueChange = undefined;
+  _dialogOpen = false;
+  _dialogOnOpenChange = undefined;
   setRouter({ refresh: mockRefresh });
   mockRefresh.mockClear();
   mockCloseDrawer.mockClear();
