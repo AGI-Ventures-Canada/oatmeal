@@ -55,7 +55,7 @@ function groupSponsors(sponsors: SponsorWithTenant[]): SponsorGroup[] {
       for (const [label, subs] of byLabel) {
         groups.push({
           key: `custom-${label}`,
-          label: label.endsWith("Sponsor") || label.endsWith("Sponsors") ? label : `${label} Sponsors`,
+          label: /(?:Sponsors?|Partners?)$/i.test(label) ? label : `${label} Sponsors`,
           size: tierSizes.custom,
           sponsors: subs,
         })

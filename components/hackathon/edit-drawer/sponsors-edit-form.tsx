@@ -110,7 +110,7 @@ const TIER_LABEL: Record<SponsorTier, string> = {
 const TIER_COLORS: Record<SponsorTier, string> = {
   gold: "var(--color-primary)",
   silver: "var(--color-muted-foreground)",
-  bronze: "var(--color-primary)",
+  bronze: "var(--color-secondary-foreground)",
   custom: "var(--color-primary)",
   none: "var(--color-muted-foreground)",
 };
