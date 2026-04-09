@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { toLocalDatetime } from "@/lib/utils/datetime"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -1097,6 +1098,14 @@ function computeScheduleDefaults(items: ScheduleItemData[]): { startsAt: string;
 }
 
 function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, endsAt: _eventEndsAt, challengeReleasedAt }: { hackathonId: string; hackathonName: string; startsAt: string | null; endsAt: string | null; challengeReleasedAt: string | null }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const goToChallenge = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("etab", "challenge")
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }, [router, pathname, searchParams])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<ScheduleItemData[]>([])
@@ -1116,14 +1125,23 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
     setActiveDuration(minutes)
   }
 
+  const [challengeExists, setChallengeExists] = useState(false)
+
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule`)
-        if (!res.ok) throw new Error("Failed to load")
-        const data = await res.json()
-        if (!cancelled) setItems(data.scheduleItems)
+        const [schedRes, challengeRes] = await Promise.all([
+          fetch(`/api/dashboard/hackathons/${hackathonId}/schedule`),
+          fetch(`/api/dashboard/hackathons/${hackathonId}/challenge`),
+        ])
+        if (!schedRes.ok) throw new Error("Failed to load")
+        const schedData = await schedRes.json()
+        if (!cancelled) setItems(schedData.scheduleItems)
+        if (challengeRes.ok) {
+          const challengeData: ChallengeData = await challengeRes.json()
+          if (!cancelled) setChallengeExists(!!challengeData.title)
+        }
       } catch {
         if (!cancelled) setError("Failed to load schedule")
       } finally {
@@ -1284,14 +1302,24 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
               status={getTriggerStatus(item)}
               actions={
                 item.trigger_type === "challenge_release" && getTriggerStatus(item) === "scheduled" ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleReleaseChallenge}
-                    disabled={releasing}
-                  >
-                    {releasing ? "Releasing..." : "Release Now"}
-                  </Button>
+                  challengeExists ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleReleaseChallenge}
+                      disabled={releasing}
+                    >
+                      {releasing ? "Releasing..." : "Release Now"}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={goToChallenge}
+                    >
+                      Create Challenge
+                    </Button>
+                  )
                 ) : undefined
               }
               onEdit={() => openEdit(item)}
