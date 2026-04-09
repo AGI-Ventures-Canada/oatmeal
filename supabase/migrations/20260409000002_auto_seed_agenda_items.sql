@@ -30,6 +30,8 @@ $$ language plpgsql;
 comment on function seed_default_agenda_items() is
   'Auto-creates 6 default agenda items when a hackathon is inserted. Derives times from starts_at/ends_at with fallback defaults.';
 
+drop trigger if exists trg_hackathon_seed_agenda on hackathons;
+
 create trigger trg_hackathon_seed_agenda
   after insert on hackathons
   for each row execute function seed_default_agenda_items();
