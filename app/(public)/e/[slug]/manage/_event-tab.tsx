@@ -1126,6 +1126,7 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
   }
 
   const [challengeExists, setChallengeExists] = useState(false)
+  const activeEtab = searchParams.get("etab")
 
   useEffect(() => {
     let cancelled = false
@@ -1150,7 +1151,7 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
     }
     load()
     return () => { cancelled = true }
-  }, [hackathonId])
+  }, [hackathonId, activeEtab])
 
   function openCreate() {
     setEditing(null)
