@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google"
+import { auth } from "@clerk/nextjs/server"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemedClerkProvider } from "@/components/clerk-provider"
 import { PostHogProvider } from "@/components/posthog-provider"
@@ -27,11 +28,24 @@ export const metadata: Metadata = {
   description: "Hackathon platform",
 }
 
-export default function RootLayout({
+async function shouldShowDevTool(): Promise<boolean> {
+  if (process.env.NODE_ENV !== "production") return true
+  if (process.env.ADMIN_ENABLED !== "true") return false
+  const session = await auth()
+  if (!session.userId) return false
+  const metadata = (session.sessionClaims as Record<string, unknown>)?.metadata as
+    | Record<string, unknown>
+    | undefined
+  return metadata?.admin === true
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const showDevTool = await shouldShowDevTool()
+
   return (
     <html lang="en" className={jetbrainsMono.variable} suppressHydrationWarning>
       <body
@@ -41,7 +55,7 @@ export default function RootLayout({
           <ThemedClerkProvider>
             <PostHogProvider>{children}</PostHogProvider>
             <SearchCommand />
-            {(process.env.NODE_ENV !== "production" || process.env.ADMIN_ENABLED === "true") && <DevTool />}
+            {showDevTool && <DevTool />}
           </ThemedClerkProvider>
         </ThemeProvider>
       </body>
