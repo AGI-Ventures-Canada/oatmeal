@@ -1227,10 +1227,13 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
       const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/challenge/release`, {
         method: "POST",
       })
-      if (!res.ok) throw new Error("Failed to release")
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to release challenge")
+      }
       setChallengeReleased(true)
-    } catch {
-      setError("Failed to release challenge")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to release challenge")
     } finally {
       setReleasing(false)
     }
