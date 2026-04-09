@@ -1,6 +1,9 @@
 import { Elysia, t } from "elysia"
 import { HackathonStatusEnum } from "@/lib/api/validators"
 
+// Env-only check — NOT an auth check. Auth is enforced by the onBeforeHandle
+// hook on the parent devRoutes plugin. This is defence-in-depth to block
+// requests if the env vars are misconfigured.
 function devGuard(set: { status?: number | string }) {
   if (process.env.NODE_ENV !== "development" && process.env.ADMIN_ENABLED !== "true") {
     set.status = 403
