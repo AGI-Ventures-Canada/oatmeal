@@ -107,7 +107,7 @@ function formatDate(dateStr: string): string {
   })
 }
 
-function ChallengeSubTab({ hackathonId }: { hackathonId: string }) {
+function ChallengeSubTab({ hackathonId, onChallengeChange }: { hackathonId: string; onChallengeChange?: (exists: boolean) => void }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [releasing, setReleasing] = useState(false)
@@ -128,6 +128,7 @@ function ChallengeSubTab({ hackathonId }: { hackathonId: string }) {
         setTitle(data.title ?? "")
         setBody(data.body ?? "")
         setReleasedAt(data.releasedAt)
+        onChallengeChange?.(!!data.title)
       } catch {
         if (!cancelled) setError("Failed to load challenge")
       } finally {
@@ -136,7 +137,7 @@ function ChallengeSubTab({ hackathonId }: { hackathonId: string }) {
     }
     load()
     return () => { cancelled = true }
-  }, [hackathonId])
+  }, [hackathonId, onChallengeChange])
 
   async function handleSave() {
     setSaving(true)
@@ -153,6 +154,7 @@ function ChallengeSubTab({ hackathonId }: { hackathonId: string }) {
         throw new Error(data.error || "Failed to save challenge")
       }
       setSuccess(true)
+      onChallengeChange?.(!!title.trim())
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save challenge")
@@ -1097,7 +1099,7 @@ function computeScheduleDefaults(items: ScheduleItemData[]): { startsAt: string;
   return { startsAt: toLocalDatetime(start), endsAt: toLocalDatetime(end) }
 }
 
-function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, endsAt: _eventEndsAt, challengeReleasedAt }: { hackathonId: string; hackathonName: string; startsAt: string | null; endsAt: string | null; challengeReleasedAt: string | null }) {
+function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, endsAt: _eventEndsAt, challengeReleasedAt, challengeExists }: { hackathonId: string; hackathonName: string; startsAt: string | null; endsAt: string | null; challengeReleasedAt: string | null; challengeExists: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -1125,23 +1127,14 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
     setActiveDuration(minutes)
   }
 
-  const [challengeExists, setChallengeExists] = useState(false)
-
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const [schedRes, challengeRes] = await Promise.all([
-          fetch(`/api/dashboard/hackathons/${hackathonId}/schedule`),
-          fetch(`/api/dashboard/hackathons/${hackathonId}/challenge`),
-        ])
-        if (!schedRes.ok) throw new Error("Failed to load")
-        const schedData = await schedRes.json()
-        if (!cancelled) setItems(schedData.scheduleItems)
-        if (challengeRes.ok) {
-          const challengeData: ChallengeData = await challengeRes.json()
-          if (!cancelled) setChallengeExists(!!challengeData.title)
-        }
+        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule`)
+        if (!res.ok) throw new Error("Failed to load")
+        const data = await res.json()
+        if (!cancelled) setItems(data.scheduleItems)
       } catch {
         if (!cancelled) setError("Failed to load schedule")
       } finally {
@@ -1151,19 +1144,6 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
     load()
     return () => { cancelled = true }
   }, [hackathonId])
-
-  useEffect(() => {
-    if (challengeExists) return
-    async function check() {
-      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/challenge`)
-      if (res.ok) {
-        const data: ChallengeData = await res.json()
-        if (data.title) setChallengeExists(true)
-      }
-    }
-    const interval = setInterval(check, 3000)
-    return () => clearInterval(interval)
-  }, [hackathonId, challengeExists])
 
   function openCreate() {
     setEditing(null)
@@ -1459,6 +1439,8 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
 }
 
 export function EventTabContent({ hackathonId, hackathonName, startsAt, endsAt, challengeReleasedAt, activeEtab, hackathonStatus, hackathonPhase }: EventTabContentProps) {
+  const [challengeExists, setChallengeExists] = useState(false)
+
   return (
     <TabsUrlSync paramKey="etab" value={activeEtab} className="space-y-6">
       <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
@@ -1473,7 +1455,7 @@ export function EventTabContent({ hackathonId, hackathonName, startsAt, endsAt, 
       </div>
 
       <TabsContent value="challenge" forceMount className="data-[state=inactive]:hidden">
-        <ChallengeSubTab hackathonId={hackathonId} />
+        <ChallengeSubTab hackathonId={hackathonId} onChallengeChange={setChallengeExists} />
       </TabsContent>
 
       <TabsContent value="announcements" forceMount className="data-[state=inactive]:hidden">
@@ -1481,7 +1463,7 @@ export function EventTabContent({ hackathonId, hackathonName, startsAt, endsAt, 
       </TabsContent>
 
       <TabsContent value="schedule" forceMount className="data-[state=inactive]:hidden">
-        <ScheduleSubTab hackathonId={hackathonId} hackathonName={hackathonName} startsAt={startsAt} endsAt={endsAt} challengeReleasedAt={challengeReleasedAt} />
+        <ScheduleSubTab hackathonId={hackathonId} hackathonName={hackathonName} startsAt={startsAt} endsAt={endsAt} challengeReleasedAt={challengeReleasedAt} challengeExists={challengeExists} />
       </TabsContent>
 
       <TabsContent value="mentors" forceMount className="data-[state=inactive]:hidden">
