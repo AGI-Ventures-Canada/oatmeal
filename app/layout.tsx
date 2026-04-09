@@ -41,7 +41,7 @@ export default function RootLayout({
           <ThemedClerkProvider>
             <PostHogProvider>{children}</PostHogProvider>
             <SearchCommand />
-            {process.env.NODE_ENV !== "production" && <DevTool />}
+            {(process.env.NODE_ENV !== "production" || process.env.ADMIN_ENABLED === "true") && <DevTool />}
           </ThemedClerkProvider>
         </ThemeProvider>
       </body>

@@ -1,21 +1,41 @@
-import { describe, expect, it } from "bun:test"
-import { api } from "../../lib/api"
+import { describe, expect, it, afterEach } from "bun:test"
+import { Elysia } from "elysia"
 
 describe("dev routes guard", () => {
-  it("registers dev routes in development or when ADMIN_ENABLED", () => {
-    const hasDevRoute = api.routes.some((r) => r.path.startsWith("/api/dev"))
-    const shouldMount =
-      process.env.NODE_ENV === "development" ||
-      process.env.ADMIN_ENABLED === "true"
+  const originalNodeEnv = process.env.NODE_ENV
 
-    expect(hasDevRoute).toBe(shouldMount)
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv
   })
 
-  it("does not register dev routes in non-dev without ADMIN_ENABLED", () => {
-    if (process.env.NODE_ENV === "development" || process.env.ADMIN_ENABLED === "true") {
-      return
-    }
-    const hasDevRoute = api.routes.some((r) => r.path.startsWith("/api/dev"))
-    expect(hasDevRoute).toBe(false)
+  it("returns 403 for unauthenticated requests in non-dev environment", async () => {
+    process.env.NODE_ENV = "production"
+    process.env.ADMIN_ENABLED = "true"
+
+    const { devRoutes } = await import("@/lib/api/routes/dev")
+    const app = new Elysia({ prefix: "/api" }).use(devRoutes)
+
+    const res = await app.handle(
+      new Request("http://localhost/api/dev/config-status")
+    )
+
+    expect(res.status).toBe(403)
+    const body = await res.json()
+    expect(body.error).toBe("Forbidden")
+
+    process.env.NODE_ENV = originalNodeEnv
+  })
+
+  it("allows requests in development environment", async () => {
+    process.env.NODE_ENV = "development"
+
+    const { devRoutes } = await import("@/lib/api/routes/dev")
+    const app = new Elysia({ prefix: "/api" }).use(devRoutes)
+
+    const res = await app.handle(
+      new Request("http://localhost/api/dev/config-status")
+    )
+
+    expect(res.status).toBe(200)
   })
 })
