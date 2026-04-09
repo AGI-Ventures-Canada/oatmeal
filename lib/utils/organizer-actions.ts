@@ -10,6 +10,8 @@ export type ActionItem = {
   tab?: string
   subtab?: string
   subtabKey?: string
+  action?: string
+  dismissible?: boolean
 }
 
 type ActionItemsInput = {
@@ -24,6 +26,8 @@ type ActionItemsInput = {
   judgeDisplayCount: number
   mentorQueue: { open: number }
   challengeReleased: boolean
+  challengeExists: boolean
+  challengeReleaseTime: string | null
   resultsPublishedAt: string | null
   winnerEmailsSentAt: string | null
   description: string | null
@@ -51,6 +55,23 @@ export function getOrganizerActionItems(input: ActionItemsInput): ActionItem[] {
   return items
 }
 
+function addDefaultScheduleAction(items: ActionItem[]) {
+  items.push({ id: "default-schedule", label: "Default schedule set", hint: "Customize your agenda to match your event", severity: "info", action: "highlight-agenda", dismissible: true })
+}
+
+function addChallengeActions(items: ActionItem[], input: ActionItemsInput) {
+  if (input.challengeReleased) return
+  const isActive = input.status === "active"
+  if (!input.challengeExists) {
+    items.push({ id: "create-challenge", label: "Create your challenge", hint: "Participants need to know what to build", severity: isActive ? "urgent" : "info", action: "open-challenge-dialog" })
+  } else if (input.challengeReleaseTime) {
+    const time = new Date(input.challengeReleaseTime).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+    items.push({ id: "release-challenge", label: `Challenge releases at ${time}`, hint: "Click here to release now", severity: isActive ? "urgent" : "info", action: "release-challenge" })
+  } else {
+    items.push({ id: "release-challenge", label: "Release your challenge", hint: "Click here to release now", severity: isActive ? "urgent" : "info", action: "release-challenge" })
+  }
+}
+
 function addDraftActions(items: ActionItem[], input: ActionItemsInput) {
   if (!input.description) {
     items.push({ id: "no-description", label: "Add an event description", hint: "Helps participants know what to expect", severity: "warning", tab: "edit" })
@@ -58,6 +79,8 @@ function addDraftActions(items: ActionItem[], input: ActionItemsInput) {
   if (!input.startsAt || !input.endsAt) {
     items.push({ id: "no-dates", label: "Set event start and end dates", hint: "Required before you can publish", severity: "urgent", tab: "edit" })
   }
+  addDefaultScheduleAction(items)
+  addChallengeActions(items, input)
   if (input.prizeCount === 0) {
     items.push({ id: "no-prizes", label: "Add prizes", hint: "Define what teams are competing for", severity: "info", tab: "judging" })
   }
@@ -79,6 +102,7 @@ function addPublishedActions(items: ActionItem[], input: ActionItemsInput) {
   if (input.prizeCount === 0) {
     items.push({ id: "no-prizes", label: "No prizes defined", severity: "info", tab: "judging" })
   }
+  addChallengeActions(items, input)
   if (input.startsAt) {
     const hoursUntilStart = (new Date(input.startsAt).getTime() - Date.now()) / (1000 * 60 * 60)
     if (hoursUntilStart > 0 && hoursUntilStart <= 24) {
@@ -88,9 +112,7 @@ function addPublishedActions(items: ActionItem[], input: ActionItemsInput) {
 }
 
 function addActiveActions(items: ActionItem[], input: ActionItemsInput) {
-  if (!input.challengeReleased) {
-    items.push({ id: "challenge-not-released", label: "Challenge hasn't been released", hint: "Participants can't see what to build yet", severity: "urgent", tab: "event", subtab: "challenge", subtabKey: "etab" })
-  }
+  addChallengeActions(items, input)
   if (input.mentorQueue.open > 0) {
     items.push({ id: "mentor-requests", label: `${input.mentorQueue.open} mentor request${input.mentorQueue.open !== 1 ? "s" : ""} pending`, hint: "Review and respond to requests", severity: "warning", tab: "event", subtab: "mentors", subtabKey: "etab" })
   }

@@ -70,6 +70,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
   ])
 
   const submissionCount = submissions.length
+  const challengeReleaseItem = scheduleItems.find((s) => s.trigger_type === "challenge_release")
   const actionItems = getOrganizerActionItems({
     status: hackathon.status,
     phase: hackathon.phase,
@@ -82,6 +83,8 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     judgeDisplayCount,
     mentorQueue: overviewStats.mentorQueue,
     challengeReleased: overviewStats.challengeReleased,
+    challengeExists: !!hackathon.challenge_title,
+    challengeReleaseTime: challengeReleaseItem?.starts_at ?? null,
     resultsPublishedAt: hackathon.results_published_at,
     winnerEmailsSentAt: hackathon.winner_emails_sent_at,
     description: hackathon.description,
@@ -176,6 +179,8 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               actionItems={actionItems}
               announcements={announcements}
               scheduleItems={scheduleItems}
+              challengeReleasedAt={hackathon.challenge_released_at}
+              challengeExists={!!hackathon.challenge_title}
             />
           </div>
         </TabsContent>
@@ -227,7 +232,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
         </TabsContent>
 
         <TabsContent value="event" forceMount className="data-[state=inactive]:hidden">
-          <EventTabContent hackathonId={hackathon.id} hackathonName={hackathon.name} startsAt={hackathon.starts_at} endsAt={hackathon.ends_at} challengeReleasedAt={hackathon.challenge_released_at} activeEtab={activeEtab} hackathonStatus={hackathon.status} hackathonPhase={hackathon.phase} />
+          <EventTabContent hackathonId={hackathon.id} activeEtab={activeEtab} hackathonStatus={hackathon.status} hackathonPhase={hackathon.phase} />
         </TabsContent>
 
         <TabsContent value="activity" forceMount className="data-[state=inactive]:hidden">
