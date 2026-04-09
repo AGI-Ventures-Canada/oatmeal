@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google"
 import { auth } from "@clerk/nextjs/server"
+import { hasAdminMetadata } from "@/lib/auth/principal"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemedClerkProvider } from "@/components/clerk-provider"
 import { PostHogProvider } from "@/components/posthog-provider"
@@ -33,10 +34,7 @@ async function shouldShowDevTool(): Promise<boolean> {
   if (process.env.ADMIN_ENABLED !== "true") return false
   const session = await auth()
   if (!session.userId) return false
-  const metadata = (session.sessionClaims as Record<string, unknown>)?.metadata as
-    | Record<string, unknown>
-    | undefined
-  return metadata?.admin === true
+  return hasAdminMetadata(session.sessionClaims)
 }
 
 export default async function RootLayout({

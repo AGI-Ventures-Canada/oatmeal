@@ -64,4 +64,8 @@ Authorization: Bearer sk_live_your_api_key_here
   .use(adminRoutes)
   .use(process.env.NODE_ENV === "development" || process.env.ADMIN_ENABLED === "true" ? devRoutes : new Elysia())
 
+if (process.env.NODE_ENV === "production" && process.env.ADMIN_ENABLED === "true") {
+  console.warn("[api] ADMIN_ENABLED is set in production — dev routes are mounted with auth enforcement")
+}
+
 export type Api = typeof api
