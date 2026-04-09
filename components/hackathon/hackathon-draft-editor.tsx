@@ -29,8 +29,6 @@ export type DraftState = {
   description: string | null
   startsAt: string | null
   endsAt: string | null
-  registrationOpensAt: string | null
-  registrationClosesAt: string | null
   locationType: "in_person" | "virtual" | null
   locationName: string | null
   locationUrl: string | null
@@ -68,8 +66,8 @@ function stateToHackathon(state: DraftState): PublicHackathon {
     rules: state.rules,
     starts_at: state.startsAt,
     ends_at: state.endsAt,
-    registration_opens_at: state.registrationOpensAt,
-    registration_closes_at: state.registrationClosesAt,
+    registration_opens_at: null,
+    registration_closes_at: null,
     max_participants: null,
     min_team_size: 1,
     max_team_size: 5,
@@ -261,8 +259,6 @@ export function HackathonDraftEditor({
       if ("description" in data) next.description = data.description as string | null
       if ("startsAt" in data) next.startsAt = data.startsAt as string | null
       if ("endsAt" in data) next.endsAt = data.endsAt as string | null
-      if ("registrationOpensAt" in data) next.registrationOpensAt = data.registrationOpensAt as string | null
-      if ("registrationClosesAt" in data) next.registrationClosesAt = data.registrationClosesAt as string | null
       if ("locationType" in data) next.locationType = data.locationType as DraftState["locationType"]
       if ("locationName" in data) next.locationName = data.locationName as string | null
       if ("locationUrl" in data) next.locationUrl = data.locationUrl as string | null

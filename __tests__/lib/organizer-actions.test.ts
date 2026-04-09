@@ -15,14 +15,14 @@ function makeInput(overrides: Partial<Parameters<typeof getOrganizerActionItems>
     judgeDisplayCount: 0,
     mentorQueue: { open: 0 },
     challengeReleased: false,
+    challengeExists: false,
+    challengeReleaseTime: null,
     resultsPublishedAt: null,
     winnerEmailsSentAt: null,
     description: null,
     bannerUrl: null,
     startsAt: null,
     endsAt: null,
-    registrationOpensAt: null,
-    registrationClosesAt: null,
     ...overrides,
   }
 }
@@ -35,25 +35,31 @@ describe("getOrganizerActionItems", () => {
 
       expect(ids).toContain("no-description")
       expect(ids).toContain("no-dates")
-      expect(ids).toContain("no-reg-dates")
+      expect(ids).toContain("default-schedule")
+      expect(ids).toContain("create-challenge")
       expect(ids).toContain("no-prizes")
       expect(ids).toContain("no-judges")
       expect(ids).toContain("no-banner")
     })
 
-    it("omits items that are already set up", () => {
+    it("omits setup items that are already set up", () => {
       const items = getOrganizerActionItems(makeInput({
         description: "A hackathon",
         bannerUrl: "https://example.com/banner.png",
         startsAt: "2026-05-01T00:00:00Z",
         endsAt: "2026-05-02T00:00:00Z",
-        registrationOpensAt: "2026-04-01T00:00:00Z",
-        registrationClosesAt: "2026-04-30T00:00:00Z",
         prizeCount: 2,
         judgeDisplayCount: 5,
+        challengeExists: true,
+        challengeReleased: true,
       }))
+      const ids = items.map((i) => i.id)
 
-      expect(items).toHaveLength(0)
+      expect(ids).toContain("default-schedule")
+      expect(ids).not.toContain("no-description")
+      expect(ids).not.toContain("no-dates")
+      expect(ids).not.toContain("create-challenge")
+      expect(ids).not.toContain("release-challenge")
     })
 
     it("marks missing dates as urgent", () => {
@@ -128,14 +134,29 @@ describe("getOrganizerActionItems", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "active",
         challengeReleased: false,
+        challengeExists: false,
         judgeCount: 2,
       }))
 
-      const item = items.find((i) => i.id === "challenge-not-released")
+      const item = items.find((i) => i.id === "create-challenge")
       expect(item).toBeDefined()
       expect(item?.severity).toBe("urgent")
-      expect(item?.tab).toBe("event")
-      expect(item?.hint).toBe("Participants can't see what to build yet")
+      expect(item?.hint).toBe("Participants need to know what to build")
+    })
+
+    it("shows release action when challenge exists but not released", () => {
+      const items = getOrganizerActionItems(makeInput({
+        status: "active",
+        challengeReleased: false,
+        challengeExists: true,
+        challengeReleaseTime: "2026-05-01T09:00:00Z",
+        judgeCount: 2,
+      }))
+
+      const item = items.find((i) => i.id === "release-challenge")
+      expect(item).toBeDefined()
+      expect(item?.severity).toBe("urgent")
+      expect(item?.action).toBe("release-challenge")
     })
 
     it("shows pending mentor requests", () => {
@@ -155,6 +176,7 @@ describe("getOrganizerActionItems", () => {
       const items = getOrganizerActionItems(makeInput({
         status: "active",
         challengeReleased: true,
+        challengeExists: true,
         judgeCount: 5,
         mentorQueue: { open: 0 },
         submissionCount: 10,

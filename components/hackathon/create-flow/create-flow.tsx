@@ -36,8 +36,6 @@ function buildDefaultState(): DraftState {
     description: null,
     startsAt: start.toISOString(),
     endsAt: end.toISOString(),
-    registrationOpensAt: null,
-    registrationClosesAt: null,
     locationType: null,
     locationName: null,
     locationUrl: null,

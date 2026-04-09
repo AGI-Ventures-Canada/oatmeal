@@ -1,40 +1,51 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Calendar, ArrowRight, MapPin, Plus } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { toLocalDatetime } from "@/lib/utils/datetime"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { toLocalDatetime } from "@/lib/utils/datetime"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Calendar, MapPin, Plus, Pencil, Trash2, Zap, Loader2 } from "lucide-react"
 import type { ScheduleItem } from "@/lib/services/schedule-items"
 
-type Props = {
-  slug: string
-  hackathonId: string
-  scheduleItems: ScheduleItem[]
+type ScheduleItemData = {
+  id: string
+  title: string
+  description: string | null
+  starts_at: string
+  ends_at: string | null
+  location: string | null
+  sort_order: number
+  trigger_type: "challenge_release" | "submission_deadline" | null
 }
 
-function formatShortTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  })
-}
-
-function isCurrent(item: ScheduleItem, now: string): boolean {
-  if (!item.ends_at) return false
-  return item.starts_at <= now && item.ends_at > now
-}
+const DURATION_PRESETS = [
+  { label: "15m", minutes: 15 },
+  { label: "30m", minutes: 30 },
+  { label: "1h", minutes: 60 },
+  { label: "2h", minutes: 120 },
+] as const
 
 function roundUpTo15Min(date: Date): Date {
   const d = new Date(date)
@@ -44,7 +55,7 @@ function roundUpTo15Min(date: Date): Date {
   return d
 }
 
-function computeDefaults(items: ScheduleItem[]): { startsAt: string; endsAt: string } {
+function computeDefaults(items: ScheduleItemData[]): { startsAt: string; endsAt: string } {
   let start: Date
   if (items.length > 0) {
     const sorted = [...items].sort((a, b) => a.starts_at.localeCompare(b.starts_at))
@@ -58,87 +69,159 @@ function computeDefaults(items: ScheduleItem[]): { startsAt: string; endsAt: str
   return { startsAt: toLocalDatetime(start), endsAt: toLocalDatetime(end) }
 }
 
-const DURATION_PRESETS = [
-  { label: "15m", minutes: 15 },
-  { label: "30m", minutes: 30 },
-  { label: "1h", minutes: 60 },
-  { label: "2h", minutes: 120 },
-] as const
+function formatShortTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
 
-export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
+function isCurrent(item: ScheduleItemData, now: string): boolean {
+  if (!item.ends_at) return false
+  return item.starts_at <= now && item.ends_at > now
+}
+
+type Props = {
+  hackathonId: string
+  scheduleItems: ScheduleItem[]
+  challengeReleasedAt: string | null
+  challengeExists: boolean
+}
+
+export function OverviewSchedule({ hackathonId, scheduleItems: serverItems, challengeReleasedAt, challengeExists }: Props) {
   const router = useRouter()
+  const now = new Date().toISOString()
+
+  const [allItems, setAllItems] = useState<ScheduleItemData[]>(serverItems as ScheduleItemData[])
+  useEffect(() => { setAllItems(serverItems as ScheduleItemData[]) }, [serverItems])
+  const items = allItems.filter((i) => i.trigger_type !== "challenge_release" || challengeExists)
+  const [error, setError] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<ScheduleItemData | null>(null)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [startsAt, setStartsAt] = useState("")
-  const [endsAt, setEndsAt] = useState("")
+  const [startsAt, setStartsAt] = useState<Date | null>(null)
+  const [endsAt, setEndsAt] = useState<Date | null>(null)
   const [location, setLocation] = useState("")
-  const [activeDuration, setActiveDuration] = useState<number | null>(30)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const now = new Date().toISOString()
-  const upcoming = scheduleItems.filter((s) => s.starts_at > now || (s.ends_at && s.ends_at > now)).slice(0, 6)
-  const display = upcoming.length > 0 ? upcoming : scheduleItems.slice(0, 6)
-
-  function prefillDefaults() {
-    const defaults = computeDefaults(scheduleItems)
-    setStartsAt(defaults.startsAt)
-    setEndsAt(defaults.endsAt)
-    setActiveDuration(30)
-  }
-
-  function resetForm() {
-    setTitle("")
-    setDescription("")
-    setStartsAt("")
-    setEndsAt("")
-    setLocation("")
-    setActiveDuration(30)
-    setError(null)
-  }
+  const [activeDuration, setActiveDuration] = useState<number | null>(30)
+  const challengeReleased = !!challengeReleasedAt
 
   function applyDuration(minutes: number) {
     if (!startsAt) return
-    const end = new Date(new Date(startsAt).getTime() + minutes * 60_000)
-    setEndsAt(toLocalDatetime(end))
+    setEndsAt(new Date(startsAt.getTime() + minutes * 60_000))
     setActiveDuration(minutes)
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && title.trim() && startsAt && !saving) {
-      e.preventDefault()
-      handleAdd()
-    }
+  function openCreate() {
+    setEditing(null)
+    setTitle("")
+    setDescription("")
+    const defaults = computeDefaults(items)
+    setStartsAt(defaults.startsAt ? new Date(defaults.startsAt) : null)
+    setEndsAt(defaults.endsAt ? new Date(defaults.endsAt) : null)
+    setLocation("")
+    setActiveDuration(30)
+    setError(null)
+    setDialogOpen(true)
   }
 
-  async function handleAdd() {
+  function openEdit(item: ScheduleItemData) {
+    setEditing(item)
+    setTitle(item.title)
+    setDescription(item.description ?? "")
+    setStartsAt(new Date(item.starts_at))
+    setEndsAt(item.ends_at ? new Date(item.ends_at) : null)
+    setLocation(item.location ?? "")
+    if (item.starts_at && item.ends_at) {
+      const diffMin = Math.round((new Date(item.ends_at).getTime() - new Date(item.starts_at).getTime()) / 60_000)
+      const match = DURATION_PRESETS.find((p) => p.minutes === diffMin)
+      setActiveDuration(match ? match.minutes : null)
+    } else {
+      setActiveDuration(null)
+    }
+    setError(null)
+    setDialogOpen(true)
+  }
+
+  async function handleSave() {
     if (!title.trim() || !startsAt) return
     setSaving(true)
     setError(null)
     try {
       const payload: Record<string, unknown> = {
         title,
-        startsAt: new Date(startsAt).toISOString(),
+        startsAt: startsAt!.toISOString(),
       }
       if (description.trim()) payload.description = description
-      if (endsAt) payload.endsAt = new Date(endsAt).toISOString()
+      if (endsAt) payload.endsAt = endsAt.toISOString()
       if (location.trim()) payload.location = location
 
-      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule`, {
-        method: "POST",
+      const url = editing
+        ? `/api/dashboard/hackathons/${hackathonId}/schedule/${editing.id}`
+        : `/api/dashboard/hackathons/${hackathonId}/schedule`
+      const res = await fetch(url, {
+        method: editing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error("Failed to create")
+      if (!res.ok) throw new Error("Failed to save")
+      const saved = await res.json()
+      if (editing) {
+        setAllItems((prev) => prev.map((i) => (i.id === saved.id ? saved : i)).sort((a, b) => a.starts_at.localeCompare(b.starts_at) || (a.sort_order ?? 0) - (b.sort_order ?? 0)))
+      } else {
+        setAllItems((prev) => [...prev, saved].sort((a, b) => a.starts_at.localeCompare(b.starts_at) || (a.sort_order ?? 0) - (b.sort_order ?? 0)))
+      }
       setDialogOpen(false)
-      resetForm()
       router.refresh()
     } catch {
-      setError("Failed to add schedule item")
+      setError("Failed to save agenda item")
     } finally {
       setSaving(false)
     }
+  }
+
+  async function handleDelete(id: string) {
+    const prev = allItems
+    setAllItems((current) => current.filter((i) => i.id !== id))
+    try {
+      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete")
+      router.refresh()
+    } catch {
+      setAllItems(prev)
+      setError("Failed to delete agenda item")
+    }
+  }
+
+  function getTriggerStatus(item: ScheduleItemData): "scheduled" | "released" | "closed" | null {
+    if (!item.trigger_type) return null
+    if (item.trigger_type === "challenge_release") {
+      return challengeReleased || new Date(item.starts_at) <= new Date() ? "released" : "scheduled"
+    }
+    if (item.trigger_type === "submission_deadline") {
+      return new Date(item.starts_at) <= new Date() ? "closed" : "scheduled"
+    }
+    return null
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
+      e.preventDefault()
+      handleSave()
+    }
+  }
+
+  const statusVariant: Record<string, "default" | "secondary" | "outline"> = {
+    scheduled: "secondary",
+    released: "default",
+    closed: "outline",
+  }
+
+  const statusLabel: Record<string, string> = {
+    scheduled: "Scheduled",
+    released: "Released",
+    closed: "Closed",
   }
 
   return (
@@ -146,45 +229,59 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Calendar className="size-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Schedule</h3>
+          <h3 className="text-sm font-semibold">Agenda</h3>
         </div>
-        <Button variant="ghost" size="sm" asChild>
-          <Link href={`/e/${slug}/manage?tab=event&etab=schedule`}>
-            View all
-            <ArrowRight className="size-3" />
-          </Link>
+        <Button size="sm" onClick={openCreate}>
+          <Plus className="size-4" />
+          <span className="hidden sm:inline">Add Item</span>
         </Button>
       </div>
 
-      {display.length === 0 ? (
+      {error && <p className="text-destructive text-xs mb-3">{error}</p>}
+
+      {items.length === 0 ? (
         <div className="text-center py-6">
-          <p className="text-sm text-muted-foreground mb-2">No schedule items</p>
-          <Button variant="outline" size="sm" onClick={() => { prefillDefaults(); setDialogOpen(true) }}>
-            <Plus className="size-4 mr-1" />
-            Add item
-          </Button>
+          <Calendar className="size-8 mx-auto mb-2 opacity-50 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Set event dates to generate your agenda</p>
         </div>
       ) : (
         <div className="space-y-0">
-          {display.map((item, idx) => {
+          {items.map((item, idx) => {
             const current = isCurrent(item, now)
+            const isTrigger = !!item.trigger_type
+            const status = getTriggerStatus(item)
             return (
               <div
                 key={item.id}
-                className={current ? "rounded-md bg-primary/5 -mx-2 px-2 py-2" : "py-2"}
+                className={`group ${current ? "rounded-md bg-primary/5 -mx-2 px-2 py-2" : "py-2"}`}
               >
                 <div className="flex items-start gap-3">
                   <span className="text-xs tabular-nums text-muted-foreground shrink-0 w-16 pt-0.5 text-right">
                     {formatShortTime(item.starts_at)}
                   </span>
                   <div className="flex flex-col items-center shrink-0 pt-1.5">
-                    <div className={current ? "size-2.5 rounded-full bg-primary" : "size-2 rounded-full bg-muted-foreground/40"} />
-                    {idx < display.length - 1 && <div className="w-px flex-1 bg-border mt-1 min-h-3" />}
+                    {isTrigger ? (
+                      <Zap className="size-3 text-primary" />
+                    ) : (
+                      <div className={current ? "size-2.5 rounded-full bg-primary" : "size-2 rounded-full bg-muted-foreground/40"} />
+                    )}
+                    {idx < items.length - 1 && <div className="w-px flex-1 bg-border mt-1 min-h-3" />}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openEdit(item)}
+                    onKeyDown={(e) => { if (e.key === "Enter") openEdit(item) }}
+                  >
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium truncate">{item.title}</p>
                       {current && <Badge variant="secondary">Now</Badge>}
+                      {status && (
+                        <Badge variant={statusVariant[status] ?? "secondary"} className="text-xs">
+                          {statusLabel[status] ?? status}
+                        </Badge>
+                      )}
                     </div>
                     {item.location && (
                       <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
@@ -192,45 +289,81 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
                         {item.location}
                       </span>
                     )}
+                    {item.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{item.description}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openEdit(item)}
+                      className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    {!isTrigger && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete agenda item?</AlertDialogTitle>
+                            <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(item.id)}>Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
                 </div>
               </div>
             )
           })}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full mt-1 text-muted-foreground"
-            onClick={() => { prefillDefaults(); setDialogOpen(true) }}
-          >
-            <Plus className="size-3 mr-1" />
-            Add item
-          </Button>
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm() }}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle>Add Schedule Item</DialogTitle>
+            <DialogTitle>{editing ? "Edit agenda item" : "Add agenda item"}</DialogTitle>
           </DialogHeader>
-          <form autoComplete="off" onSubmit={(e) => { e.preventDefault(); handleAdd() }} onKeyDown={handleKeyDown} className="space-y-4">
-            <div>
-              <Label>Title</Label>
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSave() }}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="sched-title">Title</Label>
               <Input
+                id="sched-title"
+                name="sched-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., Opening Ceremony"
-                autoFocus
                 autoComplete="off"
                 data-1p-ignore
                 data-lpignore="true"
                 data-form-type="other"
+                autoFocus
               />
             </div>
-            <div>
-              <Label>Description (optional)</Label>
+            <div className="space-y-2">
+              <Label htmlFor="sched-desc">Description (optional)</Label>
               <Textarea
+                id="sched-desc"
+                name="sched-desc"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Brief description..."
@@ -241,25 +374,20 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
                 data-form-type="other"
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label>Starts at</Label>
-              <Input
-                type="datetime-local"
+              <DateTimePicker
                 value={startsAt}
-                onChange={(e) => {
-                  setStartsAt(e.target.value)
-                  if (activeDuration && e.target.value) {
-                    const end = new Date(new Date(e.target.value).getTime() + activeDuration * 60_000)
-                    setEndsAt(toLocalDatetime(end))
+                onChange={(d) => {
+                  setStartsAt(d)
+                  if (activeDuration && d) {
+                    setEndsAt(new Date(d.getTime() + activeDuration * 60_000))
                   }
                 }}
-                autoComplete="off"
-                data-1p-ignore
-                data-lpignore="true"
-                data-form-type="other"
+                placeholder="Select start date and time"
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label>Duration</Label>
               <div className="flex gap-1">
                 {DURATION_PRESETS.map((p) => (
@@ -284,26 +412,23 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
                 </Button>
               </div>
               {activeDuration === null && (
-                <Input
-                  type="datetime-local"
+                <DateTimePicker
                   value={endsAt}
-                  onChange={(e) => setEndsAt(e.target.value)}
-                  className="mt-2"
-                  autoComplete="off"
-                  data-1p-ignore
-                  data-lpignore="true"
-                  data-form-type="other"
+                  onChange={setEndsAt}
+                  placeholder="Select end date and time"
                 />
               )}
               {activeDuration !== null && endsAt && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Ends at {new Date(endsAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                <p className="text-xs text-muted-foreground">
+                  Ends at {endsAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                 </p>
               )}
             </div>
-            <div>
-              <Label>Location (optional)</Label>
+            <div className="space-y-2">
+              <Label htmlFor="sched-location">Location (optional)</Label>
               <Input
+                id="sched-location"
+                name="sched-location"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="e.g., Main Hall, Zoom link"
@@ -313,9 +438,9 @@ export function OverviewSchedule({ slug, hackathonId, scheduleItems }: Props) {
                 data-form-type="other"
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" disabled={!title.trim() || !startsAt || saving} className="w-full">
-              {saving ? "Adding..." : "Add"}
+            <Button type="submit" disabled={saving || !title.trim() || !startsAt} className="w-full">
+              {saving && <Loader2 className="animate-spin" />}
+              {editing ? "Update" : "Add"}
             </Button>
           </form>
         </DialogContent>

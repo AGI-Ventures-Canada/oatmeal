@@ -1071,8 +1071,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
     async ({ principal, params, body }) => {
       requirePrincipal(principal, ["user", "api_key"], ["hackathons:write"])
 
-      const hasDateUpdate = body.startsAt !== undefined || body.endsAt !== undefined ||
-        body.registrationOpensAt !== undefined || body.registrationClosesAt !== undefined
+      const hasDateUpdate = body.startsAt !== undefined || body.endsAt !== undefined
       const isStatusChange = body.status !== undefined
 
       let previousStatus: string | undefined
@@ -1099,8 +1098,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         if (hasDateUpdate && !isTransition) {
           const { validateTimelineDates } = await import("@/lib/utils/timeline")
           const dateError = validateTimelineDates({
-            registrationOpensAt: body.registrationOpensAt !== undefined ? body.registrationOpensAt : currentHackathon.registration_opens_at,
-            registrationClosesAt: body.registrationClosesAt !== undefined ? body.registrationClosesAt : currentHackathon.registration_closes_at,
             startsAt: body.startsAt !== undefined ? body.startsAt : currentHackathon.starts_at,
             endsAt: body.endsAt !== undefined ? body.endsAt : currentHackathon.ends_at,
           })
@@ -1117,7 +1114,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       const hasOtherFields = body.bannerUrl !== undefined || body.name !== undefined ||
         body.description !== undefined || body.rules !== undefined ||
         body.startsAt !== undefined || body.endsAt !== undefined ||
-        body.registrationOpensAt !== undefined || body.registrationClosesAt !== undefined ||
         body.anonymousJudging !== undefined || body.judgingMode !== undefined ||
         body.locationType !== undefined || body.locationName !== undefined ||
         body.locationUrl !== undefined || body.locationLatitude !== undefined ||
@@ -1137,8 +1133,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
           rules: body.rules,
           startsAt: body.startsAt,
           endsAt: body.endsAt,
-          registrationOpensAt: body.registrationOpensAt,
-          registrationClosesAt: body.registrationClosesAt,
           status: hasStatusTransition ? undefined : body.status as "draft" | "published" | "registration_open" | "active" | "judging" | "completed" | "archived" | undefined,
           anonymousJudging: body.anonymousJudging,
           judgingMode: body.judgingMode as "points" | "subjective" | "rubric" | undefined,
@@ -1162,6 +1156,13 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         })
       }
 
+      if (body.startsAt !== undefined && body.startsAt !== null) {
+        const { updateHackathonSettings: updateRegOnDate } = await import("@/lib/services/public-hackathons")
+        await updateRegOnDate(params.id, principal.tenantId, {
+          registrationClosesAt: body.startsAt,
+        })
+      }
+
       if (hasStatusTransition) {
         const { executeTransition } = await import("@/lib/services/lifecycle")
         const triggeredBy = principal.kind === "user" ? principal.userId : principal.keyId
@@ -1182,6 +1183,11 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         }
 
         if (previousStatus === "draft" && body.status !== "draft") {
+          const { updateHackathonSettings: updateReg } = await import("@/lib/services/public-hackathons")
+          await updateReg(params.id, principal.tenantId, {
+            registrationOpensAt: new Date().toISOString(),
+            registrationClosesAt: body.startsAt ?? hackathon.starts_at ?? new Date().toISOString(),
+          })
           const { resolveAdderName } = await import("@/lib/auth/resolve-adder-name")
           const inviterName = await resolveAdderName(principal)
           const { sendPendingJudgeInvitationEmails } = await import("@/lib/services/judge-invitations")
@@ -1301,8 +1307,6 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         rules: t.Optional(t.Union([t.String(), t.Null()])),
         startsAt: t.Optional(t.Union([t.String(), t.Null()])),
         endsAt: t.Optional(t.Union([t.String(), t.Null()])),
-        registrationOpensAt: t.Optional(t.Union([t.String(), t.Null()])),
-        registrationClosesAt: t.Optional(t.Union([t.String(), t.Null()])),
         status: t.Optional(t.Union([
           t.Literal("draft"),
           t.Literal("published"),

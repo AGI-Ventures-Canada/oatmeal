@@ -8,7 +8,7 @@ import { countJudges, getJudgingProgress, listPrizes } from "@/lib/services/judg
 import { countJudgeDisplayProfiles } from "@/lib/services/judge-display"
 import { getManageOverviewStats } from "@/lib/services/manage-overview"
 import { listAnnouncements } from "@/lib/services/announcements"
-import { listScheduleItems } from "@/lib/services/schedule-items"
+import { listScheduleItems, getSubmissionDeadline } from "@/lib/services/schedule-items"
 import { getOrganizerActionItems } from "@/lib/utils/organizer-actions"
 import { VALID_TABS, VALID_ETABS, DEFAULT_TAB, resolveTab } from "@/lib/utils/manage-tabs"
 import { HackathonPreviewClient } from "@/components/hackathon/preview/hackathon-preview-client"
@@ -56,6 +56,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     overviewStats,
     announcements,
     scheduleItems,
+    submissionDeadline,
   ] = await Promise.all([
     getHackathonSubmissions(hackathon.id),
     getJudgingProgress(hackathon.id),
@@ -65,9 +66,11 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     getManageOverviewStats(hackathon.id),
     listAnnouncements(hackathon.id),
     listScheduleItems(hackathon.id),
+    getSubmissionDeadline(hackathon.id),
   ])
 
   const submissionCount = submissions.length
+  const challengeReleaseItem = scheduleItems.find((s) => s.trigger_type === "challenge_release")
   const actionItems = getOrganizerActionItems({
     status: hackathon.status,
     phase: hackathon.phase,
@@ -80,14 +83,14 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
     judgeDisplayCount,
     mentorQueue: overviewStats.mentorQueue,
     challengeReleased: overviewStats.challengeReleased,
+    challengeExists: !!hackathon.challenge_title,
+    challengeReleaseTime: challengeReleaseItem?.starts_at ?? null,
     resultsPublishedAt: hackathon.results_published_at,
     winnerEmailsSentAt: hackathon.winner_emails_sent_at,
     description: hackathon.description,
     bannerUrl: hackathon.banner_url,
     startsAt: hackathon.starts_at,
     endsAt: hackathon.ends_at,
-    registrationOpensAt: hackathon.registration_opens_at,
-    registrationClosesAt: hackathon.registration_closes_at,
   })
 
   const activeTab = resolveTab(tab, VALID_TABS, DEFAULT_TAB)
@@ -161,6 +164,7 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               registrationClosesAt={hackathon.registration_closes_at}
               startsAt={hackathon.starts_at}
               endsAt={hackathon.ends_at}
+              submissionDeadline={submissionDeadline}
             />
             <OrganizerOverview
               slug={hackathon.slug}
@@ -175,6 +179,8 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
               actionItems={actionItems}
               announcements={announcements}
               scheduleItems={scheduleItems}
+              challengeReleasedAt={hackathon.challenge_released_at}
+              challengeExists={!!hackathon.challenge_title}
             />
           </div>
         </TabsContent>

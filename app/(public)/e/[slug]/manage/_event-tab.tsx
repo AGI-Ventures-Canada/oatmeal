@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { toLocalDatetime } from "@/lib/utils/datetime"
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TabsUrlSync } from "./_tabs-url-sync"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { MarkdownEditor } from "@/components/ui/markdown-editor"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -49,7 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Calendar, MapPin, Clock, Zap, FileText, MessageCircle, Share2, Mail } from "lucide-react"
+import { Loader2, CheckCircle2, Send, Eye, ThumbsUp, ThumbsDown, Plus, Pencil, Trash2, Megaphone, Zap, FileText, MessageCircle, Share2, Mail } from "lucide-react"
 import type { AnnouncementAudience } from "@/lib/services/announcements"
 import type { HackathonStatus, HackathonPhase } from "@/lib/db/hackathon-types"
 
@@ -223,18 +223,14 @@ function ChallengeSubTab({ hackathonId }: { hackathonId: string }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="challenge-body">Description</Label>
-            <Textarea
+            <MarkdownEditor
               id="challenge-body"
-              name="challenge-body"
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={setBody}
               placeholder="Describe the challenge in detail..."
               rows={8}
-              autoComplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-form-type="other"
             />
+            <p className="text-xs text-muted-foreground">Supports markdown: **bold**, _italic_, ## headings, lists, and [links](url)</p>
           </div>
           {error && <p className="text-destructive text-xs">{error}</p>}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1050,375 +1046,6 @@ function AnnouncementsSubTab({ hackathonId, hackathonStatus, hackathonPhase }: {
   )
 }
 
-type ScheduleItemData = {
-  id: string
-  title: string
-  description: string | null
-  starts_at: string
-  ends_at: string | null
-  location: string | null
-  sort_order: number
-}
-
-const SCHEDULE_DURATION_PRESETS = [
-  { label: "15m", minutes: 15 },
-  { label: "30m", minutes: 30 },
-  { label: "1h", minutes: 60 },
-  { label: "2h", minutes: 120 },
-] as const
-
-function roundUpTo15Min(date: Date): Date {
-  const d = new Date(date)
-  const remainder = d.getMinutes() % 15
-  if (remainder > 0) d.setMinutes(d.getMinutes() + (15 - remainder))
-  d.setSeconds(0, 0)
-  return d
-}
-
-function computeScheduleDefaults(items: ScheduleItemData[]): { startsAt: string; endsAt: string } {
-  let start: Date
-  if (items.length > 0) {
-    const sorted = [...items].sort((a, b) => a.starts_at.localeCompare(b.starts_at))
-    const last = sorted[sorted.length - 1]
-    start = last.ends_at ? new Date(last.ends_at) : new Date(new Date(last.starts_at).getTime() + 30 * 60_000)
-    if (start < new Date()) start = roundUpTo15Min(new Date())
-  } else {
-    start = roundUpTo15Min(new Date())
-  }
-  const end = new Date(start.getTime() + 30 * 60_000)
-  return { startsAt: toLocalDatetime(start), endsAt: toLocalDatetime(end) }
-}
-
-function ScheduleSubTab({ hackathonId }: { hackathonId: string }) {
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [items, setItems] = useState<ScheduleItemData[]>([])
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<ScheduleItemData | null>(null)
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [startsAt, setStartsAt] = useState("")
-  const [endsAt, setEndsAt] = useState("")
-  const [location, setLocation] = useState("")
-  const [saving, setSaving] = useState(false)
-  const [activeDuration, setActiveDuration] = useState<number | null>(30)
-
-  function applyDuration(minutes: number) {
-    if (!startsAt) return
-    const end = new Date(new Date(startsAt).getTime() + minutes * 60_000)
-    setEndsAt(toLocalDatetime(end))
-    setActiveDuration(minutes)
-  }
-
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule`)
-        if (!res.ok) throw new Error("Failed to load")
-        const data = await res.json()
-        if (!cancelled) setItems(data.scheduleItems)
-      } catch {
-        if (!cancelled) setError("Failed to load schedule")
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [hackathonId])
-
-  function openCreate() {
-    setEditing(null)
-    setTitle("")
-    setDescription("")
-    const defaults = computeScheduleDefaults(items)
-    setStartsAt(defaults.startsAt)
-    setEndsAt(defaults.endsAt)
-    setLocation("")
-    setActiveDuration(30)
-    setError(null)
-    setDialogOpen(true)
-  }
-
-  function openEdit(item: ScheduleItemData) {
-    setEditing(item)
-    setTitle(item.title)
-    setDescription(item.description ?? "")
-    setStartsAt(toLocalDatetime(new Date(item.starts_at)))
-    setEndsAt(item.ends_at ? toLocalDatetime(new Date(item.ends_at)) : "")
-    setLocation(item.location ?? "")
-    if (item.starts_at && item.ends_at) {
-      const diffMin = Math.round((new Date(item.ends_at).getTime() - new Date(item.starts_at).getTime()) / 60_000)
-      const match = SCHEDULE_DURATION_PRESETS.find((p) => p.minutes === diffMin)
-      setActiveDuration(match ? match.minutes : null)
-    } else {
-      setActiveDuration(null)
-    }
-    setError(null)
-    setDialogOpen(true)
-  }
-
-  async function handleSave() {
-    if (!title.trim() || !startsAt) return
-    setSaving(true)
-    setError(null)
-    try {
-      const payload: Record<string, unknown> = {
-        title,
-        startsAt: new Date(startsAt).toISOString(),
-      }
-      if (description.trim()) payload.description = description
-      if (endsAt) payload.endsAt = new Date(endsAt).toISOString()
-      if (location.trim()) payload.location = location
-
-      const url = editing
-        ? `/api/dashboard/hackathons/${hackathonId}/schedule/${editing.id}`
-        : `/api/dashboard/hackathons/${hackathonId}/schedule`
-      const res = await fetch(url, {
-        method: editing ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) throw new Error("Failed to save")
-      const saved = await res.json()
-      if (editing) {
-        setItems((prev) => prev.map((i) => (i.id === saved.id ? saved : i)).sort((a, b) => a.starts_at.localeCompare(b.starts_at) || (a.sort_order ?? 0) - (b.sort_order ?? 0)))
-      } else {
-        setItems((prev) => [...prev, saved].sort((a, b) => a.starts_at.localeCompare(b.starts_at) || (a.sort_order ?? 0) - (b.sort_order ?? 0)))
-      }
-      setDialogOpen(false)
-    } catch {
-      setError("Failed to save schedule item")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleDelete(id: string) {
-    try {
-      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/schedule/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Failed to delete")
-      setItems((prev) => prev.filter((i) => i.id !== id))
-    } catch {
-      setError("Failed to delete schedule item")
-    }
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !saving) {
-      e.preventDefault()
-      handleSave()
-    }
-  }
-
-  function formatTime(iso: string): string {
-    return new Date(iso).toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    })
-  }
-
-  if (loading) {
-    return <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" /></div>
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-medium">Schedule</h3>
-          <p className="text-xs text-muted-foreground">Manage the event agenda</p>
-        </div>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="size-4" />
-          <span className="hidden sm:inline">Add Item</span>
-        </Button>
-      </div>
-
-      {error && <p className="text-destructive text-xs">{error}</p>}
-
-      {items.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center text-muted-foreground">
-          <Calendar className="size-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">No schedule items yet</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {items.map((item) => (
-            <div key={item.id} className="flex items-start gap-3 rounded-lg border p-3">
-              <div className="shrink-0 pt-0.5 text-muted-foreground">
-                <Clock className="size-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{item.title}</p>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-0.5">
-                  <span>{formatTime(item.starts_at)}{item.ends_at ? ` – ${formatTime(item.ends_at)}` : ""}</span>
-                  {item.location && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="size-3" />
-                      {item.location}
-                    </span>
-                  )}
-                </div>
-                {item.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{item.description}</p>}
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <Button size="sm" variant="ghost" onClick={() => openEdit(item)}>
-                  <Pencil className="size-4" />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="ghost">
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete schedule item?</AlertDialogTitle>
-                      <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDelete(item.id)}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Schedule Item" : "Add Schedule Item"}</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={(e) => { e.preventDefault(); handleSave() }}
-            onKeyDown={handleKeyDown}
-            autoComplete="off"
-            className="space-y-4"
-          >
-            <div className="space-y-2">
-              <Label htmlFor="sched-title">Title</Label>
-              <Input
-                id="sched-title"
-                name="sched-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Opening Ceremony"
-                autoComplete="off"
-                data-1p-ignore
-                data-lpignore="true"
-                data-form-type="other"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sched-desc">Description (optional)</Label>
-              <Textarea
-                id="sched-desc"
-                name="sched-desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief description..."
-                rows={2}
-                autoComplete="off"
-                data-1p-ignore
-                data-lpignore="true"
-                data-form-type="other"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sched-start">Starts at</Label>
-              <Input
-                id="sched-start"
-                type="datetime-local"
-                value={startsAt}
-                onChange={(e) => {
-                  setStartsAt(e.target.value)
-                  if (activeDuration && e.target.value) {
-                    const end = new Date(new Date(e.target.value).getTime() + activeDuration * 60_000)
-                    setEndsAt(toLocalDatetime(end))
-                  }
-                }}
-                autoComplete="off"
-                data-1p-ignore
-                data-lpignore="true"
-                data-form-type="other"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Duration</Label>
-              <div className="flex gap-1">
-                {SCHEDULE_DURATION_PRESETS.map((p) => (
-                  <Button
-                    key={p.minutes}
-                    type="button"
-                    variant={activeDuration === p.minutes ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => applyDuration(p.minutes)}
-                    disabled={!startsAt}
-                  >
-                    {p.label}
-                  </Button>
-                ))}
-                <Button
-                  type="button"
-                  variant={activeDuration === null ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setActiveDuration(null)}
-                >
-                  Custom
-                </Button>
-              </div>
-              {activeDuration === null && (
-                <Input
-                  id="sched-end"
-                  type="datetime-local"
-                  value={endsAt}
-                  onChange={(e) => setEndsAt(e.target.value)}
-                  autoComplete="off"
-                  data-1p-ignore
-                  data-lpignore="true"
-                  data-form-type="other"
-                />
-              )}
-              {activeDuration !== null && endsAt && (
-                <p className="text-xs text-muted-foreground">
-                  Ends at {new Date(endsAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sched-location">Location (optional)</Label>
-              <Input
-                id="sched-location"
-                name="sched-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g., Main Hall, Zoom link"
-                autoComplete="off"
-                data-1p-ignore
-                data-lpignore="true"
-                data-form-type="other"
-              />
-            </div>
-            <Button type="submit" disabled={saving || !title.trim() || !startsAt} className="w-full">
-              {saving && <Loader2 className="animate-spin" />}
-              {editing ? "Update" : "Add"}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
 export function EventTabContent({ hackathonId, activeEtab, hackathonStatus, hackathonPhase }: EventTabContentProps) {
   return (
     <TabsUrlSync paramKey="etab" value={activeEtab} className="space-y-6">
@@ -1426,7 +1053,6 @@ export function EventTabContent({ hackathonId, activeEtab, hackathonStatus, hack
         <TabsList>
           <TabsTrigger value="challenge"><FileText className="size-4" /><span className="hidden sm:inline">Challenge</span></TabsTrigger>
           <TabsTrigger value="announcements"><Megaphone className="size-4" /><span className="hidden sm:inline">Announcements</span></TabsTrigger>
-          <TabsTrigger value="schedule"><Calendar className="size-4" /><span className="hidden sm:inline">Schedule</span></TabsTrigger>
           <TabsTrigger value="mentors"><MessageCircle className="size-4" /><span className="hidden sm:inline">Mentors</span></TabsTrigger>
           <TabsTrigger value="social"><Share2 className="size-4" /><span className="hidden sm:inline">Social</span></TabsTrigger>
           <TabsTrigger value="email"><Mail className="size-4" /><span className="hidden sm:inline">Email</span></TabsTrigger>
@@ -1439,10 +1065,6 @@ export function EventTabContent({ hackathonId, activeEtab, hackathonStatus, hack
 
       <TabsContent value="announcements" forceMount className="data-[state=inactive]:hidden">
         <AnnouncementsSubTab hackathonId={hackathonId} hackathonStatus={hackathonStatus} hackathonPhase={hackathonPhase} />
-      </TabsContent>
-
-      <TabsContent value="schedule" forceMount className="data-[state=inactive]:hidden">
-        <ScheduleSubTab hackathonId={hackathonId} />
       </TabsContent>
 
       <TabsContent value="mentors" forceMount className="data-[state=inactive]:hidden">

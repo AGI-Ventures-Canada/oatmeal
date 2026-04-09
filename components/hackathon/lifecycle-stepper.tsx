@@ -185,8 +185,8 @@ export function LifecycleStepper({
   judgingSetupStatus: _judgingSetupStatus,
   startsAt,
   endsAt,
-  registrationOpensAt,
-  registrationClosesAt,
+  registrationOpensAt: _registrationOpensAt,
+  registrationClosesAt: _registrationClosesAt,
   description,
   bannerUrl,
   locationType,
@@ -285,11 +285,6 @@ export function LifecycleStepper({
       const body: Record<string, unknown> = { status: dbStatus }
       if (newStatus === "judging") {
         if (!endsAt || new Date(endsAt) > new Date()) body.endsAt = now
-        if (
-          !registrationClosesAt ||
-          new Date(registrationClosesAt) > new Date()
-        )
-          body.registrationClosesAt = now
       }
 
       const res = await fetch(
@@ -399,8 +394,6 @@ export function LifecycleStepper({
     : null
 
   const missingDates = [
-    !registrationOpensAt && "Registration opens",
-    !registrationClosesAt && "Registration closes",
     !startsAt && "Event starts",
     !endsAt && "Event ends",
   ].filter(Boolean) as string[]

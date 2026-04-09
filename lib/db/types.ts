@@ -624,6 +624,7 @@ export type Database = {
           sort_order: number
           starts_at: string
           title: string
+          trigger_type: string | null
           updated_at: string
         }
         Insert: {
@@ -636,6 +637,7 @@ export type Database = {
           sort_order?: number
           starts_at: string
           title: string
+          trigger_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -648,6 +650,7 @@ export type Database = {
           sort_order?: number
           starts_at?: string
           title?: string
+          trigger_type?: string | null
           updated_at?: string
         }
         Relationships: [

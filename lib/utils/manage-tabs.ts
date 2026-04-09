@@ -1,5 +1,5 @@
 export const VALID_TABS = ["overview", "edit", "teams", "rooms", "submissions", "judging", "post-event", "event", "activity"] as const
-export const VALID_ETABS = ["challenge", "announcements", "schedule", "mentors", "social", "email"] as const
+export const VALID_ETABS = ["challenge", "announcements", "mentors", "social", "email"] as const
 
 export type ManageTab = (typeof VALID_TABS)[number]
 export type ManageEtab = (typeof VALID_ETABS)[number]
