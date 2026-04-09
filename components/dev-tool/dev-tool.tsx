@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { useSession } from "@clerk/nextjs"
+import { useAuth } from "@clerk/nextjs"
 import { FlaskConical } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DevToolPanel } from "./dev-tool-panel"
@@ -48,9 +48,10 @@ function defaultPosition() {
 const SESSION_KEY = "devtools-state"
 
 export function DevTool() {
-  const { session } = useSession()
+  const { sessionClaims } = useAuth()
   const isDev = process.env.NODE_ENV === "development"
-  const isAdmin = isDev || (session?.user?.publicMetadata as Record<string, unknown>)?.admin === true
+  const metadata = sessionClaims?.metadata as Record<string, unknown> | undefined
+  const isAdmin = isDev || metadata?.admin === true
 
   const [expanded, setExpanded] = useState(false)
   const [mounted, setMounted] = useState(false)
