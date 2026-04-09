@@ -30,6 +30,8 @@ export const metadata: Metadata = {
 }
 
 async function shouldShowDevTool(): Promise<boolean> {
+  // In local dev, always show — no auth check. Dev API routes still enforce
+  // auth independently, so this only controls UI visibility.
   if (process.env.NODE_ENV !== "production") return true
   if (process.env.ADMIN_ENABLED !== "true") return false
   const session = await auth()
