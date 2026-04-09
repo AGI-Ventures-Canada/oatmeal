@@ -1126,7 +1126,6 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
   }
 
   const [challengeExists, setChallengeExists] = useState(false)
-  const activeEtab = searchParams.get("etab")
 
   useEffect(() => {
     let cancelled = false
@@ -1151,7 +1150,20 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
     }
     load()
     return () => { cancelled = true }
-  }, [hackathonId, activeEtab])
+  }, [hackathonId])
+
+  useEffect(() => {
+    if (challengeExists) return
+    async function check() {
+      const res = await fetch(`/api/dashboard/hackathons/${hackathonId}/challenge`)
+      if (res.ok) {
+        const data: ChallengeData = await res.json()
+        if (data.title) setChallengeExists(true)
+      }
+    }
+    const interval = setInterval(check, 3000)
+    return () => clearInterval(interval)
+  }, [hackathonId, challengeExists])
 
   function openCreate() {
     setEditing(null)
