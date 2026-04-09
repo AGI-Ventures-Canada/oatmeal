@@ -1,0 +1,293 @@
+name: PR Screenshots
+
+on:
+  deployment_status:
+
+jobs:
+  screenshots:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Preview'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      deployments: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.deployment.ref }}
+
+      - name: Find PR and check for frontend changes
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOY_REF: ${{ github.event.deployment.ref }}
+          DEPLOY_SHA: ${{ github.event.deployment.sha }}
+        run: |
+          # Try branch name first, fall back to SHA-based PR lookup
+          PR_NUMBER=$(gh pr list --head "$DEPLOY_REF" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$PR_NUMBER" ]; then
+            SAFE_SHA=$(echo "$DEPLOY_SHA" | tr -cd 'a-fA-F0-9')
+            PR_NUMBER=$(gh pr list --state open --json number,headRefOid \
+              --jq ".[] | select(.headRefOid == \"${SAFE_SHA}\") | .number" | head -1)
+          fi
+          if [ -z "$PR_NUMBER" ]; then
+            echo "::debug::No open PR found for ref=${DEPLOY_REF} sha=${DEPLOY_SHA}"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+          CHANGES=$(git diff --name-only origin/staging...HEAD -- 'app/' 'components/' 'emails/' 2>/dev/null || true)
+          if [ -z "$CHANGES" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "changes<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Bun
+        if: steps.check.outputs.skip != 'true'
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install agent-browser
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          bun install -g agent-browser
+          agent-browser install
+
+      - name: Authenticate via Clerk sign-in token
+        id: auth
+        if: steps.check.outputs.skip != 'true'
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CLERK_TEST_USER_ID: ${{ secrets.CLERK_TEST_USER_ID }}
+          PREVIEW_URL: ${{ github.event.deployment_status.target_url }}
+          VERCEL_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          if [ -z "$CLERK_SECRET_KEY" ] || [ -z "$CLERK_TEST_USER_ID" ]; then
+            echo "CLERK_SECRET_KEY or CLERK_TEST_USER_ID not set — authenticated pages will be skipped"
+            echo "authenticated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Navigate to the preview URL to set bypass cookie and load Clerk.js
+          BYPASS_QS=""
+          if [ -n "$VERCEL_BYPASS" ]; then
+            BYPASS_QS="?x-vercel-protection-bypass=${VERCEL_BYPASS}&x-vercel-set-bypass-cookie=samesitenone"
+          fi
+          agent-browser --session pr-screenshots open "${PREVIEW_URL}${BYPASS_QS}" >/dev/null 2>&1
+          agent-browser --session pr-screenshots wait --load networkidle >/dev/null 2>&1 || true
+          agent-browser --session pr-screenshots wait 3000 >/dev/null 2>&1 || true
+
+          # Create a sign-in token via Clerk API
+          TOKEN=$(curl -sf -X POST "https://api.clerk.com/v1/sign_in_tokens" \
+            -H "Authorization: Bearer ${CLERK_SECRET_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg uid "$CLERK_TEST_USER_ID" '{user_id: $uid}')" \
+            | jq -r '.token // empty')
+
+          if [ -z "$TOKEN" ]; then
+            echo "Failed to create sign-in token — falling back to unauthenticated only"
+            echo "authenticated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Sign in using Clerk.js directly on the preview domain.
+          # This sets __session cookie on the preview domain so server-side
+          # middleware recognizes the user on subsequent navigations.
+          SIGN_IN_SCRIPT=$(cat <<'CLERKEOF'
+          (async () => {
+            const waitForClerk = () => new Promise((resolve, reject) => {
+              if (window.Clerk?.client) return resolve();
+              const interval = setInterval(() => {
+                if (window.Clerk?.client) { clearInterval(interval); resolve(); }
+              }, 200);
+              setTimeout(() => { clearInterval(interval); reject(new Error('Clerk did not load')); }, 15000);
+            });
+            try {
+              await waitForClerk();
+              const si = await window.Clerk.client.signIn.create({ strategy: 'ticket', ticket: 'TOKEN_PLACEHOLDER' });
+              await window.Clerk.setActive({ session: si.createdSessionId });
+              return 'ok';
+            } catch (e) {
+              return 'error: ' + e.message;
+            }
+          })()
+          CLERKEOF
+          )
+          SIGN_IN_SCRIPT="${SIGN_IN_SCRIPT//TOKEN_PLACEHOLDER/$TOKEN}"
+          SIGN_IN_RESULT=$(echo "$SIGN_IN_SCRIPT" | agent-browser --session pr-screenshots eval --stdin 2>&1) || true
+
+          if echo "$SIGN_IN_RESULT" | grep -q "^ok"; then
+            echo "Clerk sign-in succeeded on preview domain"
+            agent-browser --session pr-screenshots wait 3000 >/dev/null 2>&1 || true
+            echo "authenticated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Clerk sign-in failed: ${SIGN_IN_RESULT}"
+            echo "authenticated=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Determine screenshot targets
+        id: targets
+        if: steps.check.outputs.skip != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CHANGES: ${{ steps.check.outputs.changes }}
+          AUTHENTICATED: ${{ steps.auth.outputs.authenticated }}
+          PREVIEW_URL: ${{ github.event.deployment_status.target_url }}
+          VERCEL_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          ROUTES=$(find app -name "page.tsx" | sort)
+
+          # Discover an event slug from the preview API so the LLM can use it.
+          EVENT_SLUG="${PR_SCREENSHOT_SLUG:-}"
+          if [ -z "$EVENT_SLUG" ]; then
+            BYPASS_HEADER=()
+            if [ -n "$VERCEL_BYPASS" ]; then
+              BYPASS_HEADER=(-H "x-vercel-protection-bypass: ${VERCEL_BYPASS}")
+            fi
+            EVENT_SLUG=$(curl -sf --max-time 10 \
+              "${BYPASS_HEADER[@]}" \
+              "${PREVIEW_URL}/api/hackathons" 2>/dev/null \
+              | jq -r 'if type == "array" then .[0].slug elif .data then .data[0].slug else empty end // empty' 2>/dev/null \
+              | tr -cd 'a-zA-Z0-9_-') || true
+          fi
+
+          REQUEST_BODY=$(jq -n \
+            --arg changes "$CHANGES" \
+            --arg routes "$ROUTES" \
+            --arg slug "${EVENT_SLUG:-none}" \
+            --arg auth "$AUTHENTICATED" \
+            '{
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 1024,
+              messages: [{
+                role: "user",
+                content: "You are analyzing a Next.js App Router codebase to decide which pages to screenshot for a PR preview.\n\nChanged files:\n---\n\($changes)\n---\n\nAll page routes:\n---\n\($routes)\n---\n\nEvent slug available: \($slug)\nAuthenticated session available: \($auth)\n\nRules:\n- Return a JSON array of objects: [{\"path\": \"/relative/url\", \"name\": \"screenshot_name\"}]\n- Map route files to URL paths: app/(public)/e/[slug]/page.tsx -> /e/EVENT_SLUG, app/(dashboard)/home/page.tsx -> /home, app/page.tsx -> /\n- Route groups like (public), (dashboard), (admin), (auth) are NOT part of the URL\n- Dynamic segments like [slug] should use the event slug value when applicable\n- Consider INDIRECT effects: a change to a shared component (components/*, lib/*) affects all pages that use it. When unsure, include the page.\n- Only include routes that would show a VISIBLE difference from these changes\n- If event slug is \"none\", skip all /e/ routes\n- If authenticated is not \"true\", skip routes that require auth: /home/*, /settings/*, /admin/*, /e/[slug]/manage/*, /e/[slug]/dashboard\n- Keep the list focused — max 6 screenshots\n- Use short snake_case names (e.g., \"event_page\", \"home_dashboard\", \"browse\")\n- Return ONLY the JSON array, no explanation"
+              }]
+            }')
+
+          RESPONSE=$(curl -sf --max-time 30 "https://api.anthropic.com/v1/messages" \
+            -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d "$REQUEST_BODY" 2>/dev/null)
+
+          TARGETS=$(echo "$RESPONSE" | jq -r '.content[0].text // empty' 2>/dev/null)
+
+          # Strip markdown code fences if the LLM wrapped the JSON
+          TARGETS=$(echo "$TARGETS" | sed '/^```/d')
+
+          # Validate it's a JSON array; fall back to just the homepage
+          if ! echo "$TARGETS" | jq -e 'type == "array"' >/dev/null 2>&1; then
+            echo "::warning::LLM did not return valid JSON — falling back to homepage only"
+            echo "::debug::Raw LLM response: $(echo "$RESPONSE" | jq -c '.' 2>/dev/null || echo "$RESPONSE")"
+            TARGETS='[{"path": "/", "name": "index"}]'
+          fi
+
+          echo "targets<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$TARGETS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "Screenshot targets: $(echo "$TARGETS" | jq -c '.')"
+
+      - name: Capture screenshots
+        if: steps.check.outputs.skip != 'true'
+        env:
+          PREVIEW_URL: ${{ github.event.deployment_status.target_url }}
+          TARGETS: ${{ steps.targets.outputs.targets }}
+        run: |
+          DIR="/tmp/pr-screenshots"
+          mkdir -p "$DIR"
+
+          capture() {
+            local url="$1" name="$2"
+            agent-browser --session pr-screenshots open "$url" 2>/dev/null || return 1
+            agent-browser --session pr-screenshots wait --load networkidle 2>/dev/null || true
+            agent-browser --session pr-screenshots wait 2000 2>/dev/null || true
+            agent-browser --session pr-screenshots screenshot --full "$DIR/${name}.png" 2>/dev/null || return 1
+          }
+
+          echo "$TARGETS" | jq -r '.[] | "\(.path)\t\(.name)"' | while IFS=$'\t' read -r path name; do
+            # Sanitize name for use as filename
+            safe_name=$(echo "$name" | tr -cd 'a-zA-Z0-9_-')
+            echo "Capturing ${path} as ${safe_name}..."
+            capture "${PREVIEW_URL}${path}" "$safe_name" || echo "::warning::Failed to capture ${path}"
+          done
+
+      - name: Close browser
+        if: always()
+        run: agent-browser --session pr-screenshots close >/dev/null 2>&1 || true
+
+      - name: Upload and comment on PR
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.check.outputs.pr_number }}
+          DEPLOY_REF: ${{ github.event.deployment.ref }}
+        run: |
+          REPO="${{ github.repository }}"
+          TAG="pr-${PR_NUMBER}-screenshots"
+          DIR="/tmp/pr-screenshots"
+
+          shopt -s nullglob
+          IMAGES=("$DIR"/*.png "$DIR"/*.jpg)
+          shopt -u nullglob
+          [ ${#IMAGES[@]} -gt 0 ] || exit 0
+
+          # Create or clean the release (--prerelease so asset URLs resolve)
+          if ! gh release view "$TAG" &>/dev/null; then
+            gh release create "$TAG" \
+              --title "PR #${PR_NUMBER} Screenshots" \
+              --notes "Auto-captured screenshots for PR #${PR_NUMBER}" \
+              --prerelease
+          else
+            RELEASE_JSON=$(gh api "repos/${REPO}/releases/tags/${TAG}" 2>/dev/null || echo '{}')
+            echo "$RELEASE_JSON" | jq -r '.assets[]?.id // empty' 2>/dev/null | while read -r aid; do
+              [ -n "$aid" ] && gh api "repos/${REPO}/releases/assets/${aid}" -X DELETE 2>/dev/null || true
+            done
+          fi
+
+          # Upload assets and build comment via temp file
+          BODY_FILE="$DIR/comment.md"
+          cat > "$BODY_FILE" <<COMMENT_EOF
+          <!-- pr-screenshots -->
+          ## Screenshots
+
+          Auto-captured from Vercel preview for \`${DEPLOY_REF}\`.
+          COMMENT_EOF
+
+          for img in "${IMAGES[@]}"; do
+            filename=$(basename "$img")
+            name="${filename%.*}"
+            gh release upload "$TAG" "$img" --clobber || continue
+            URL="https://github.com/${REPO}/releases/download/${TAG}/${filename}"
+            cat >> "$BODY_FILE" <<IMG_EOF
+
+          ### ${name}
+          ![${name}](${URL})
+          IMG_EOF
+          done
+
+          # Strip leading whitespace from YAML indentation
+          BODY=$(sed 's/^[[:space:]]*//' "$BODY_FILE")
+
+          # Post or update PR comment (idempotent via HTML marker)
+          MARKER="<!-- pr-screenshots -->"
+          EXISTING_ID=$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+            --jq ".[] | select(.body | contains(\"${MARKER}\")) | .id" 2>/dev/null | head -1 || true)
+
+          BODY_JSON=$(jq -n --arg body "$BODY" '{"body": $body}')
+
+          if [ -n "$EXISTING_ID" ]; then
+            echo "$BODY_JSON" | gh api "repos/${REPO}/issues/comments/${EXISTING_ID}" \
+              -X PATCH --input - 2>/dev/null
+          else
+            echo "$BODY_JSON" | gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+              -X POST --input - 2>/dev/null
+          fi
