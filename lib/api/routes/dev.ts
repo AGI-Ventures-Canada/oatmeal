@@ -72,12 +72,12 @@ export const devRoutes = new Elysia({ prefix: "/dev" })
     const { resolvePrincipal, isAdminEnabled } = await import("@/lib/auth/principal")
     if (!isAdminEnabled()) {
       set.status = 403
-      return { error: "Forbidden" }
+      return { error: "Forbidden" as const }
     }
     const principal = await resolvePrincipal(request)
     if (principal.kind !== "admin") {
       set.status = 403
-      return { error: "Forbidden" }
+      return { error: "Forbidden" as const }
     }
   })
   .get(
