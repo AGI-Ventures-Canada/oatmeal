@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { toLocalDatetime } from "@/lib/utils/datetime"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TabsUrlSync } from "./_tabs-url-sync"
 import { Button } from "@/components/ui/button"
@@ -1103,16 +1104,15 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
   const [editing, setEditing] = useState<ScheduleItemData | null>(null)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [startsAt, setStartsAt] = useState("")
-  const [endsAt, setEndsAt] = useState("")
+  const [startsAt, setStartsAt] = useState<Date | null>(null)
+  const [endsAt, setEndsAt] = useState<Date | null>(null)
   const [location, setLocation] = useState("")
   const [saving, setSaving] = useState(false)
   const [activeDuration, setActiveDuration] = useState<number | null>(30)
 
   function applyDuration(minutes: number) {
     if (!startsAt) return
-    const end = new Date(new Date(startsAt).getTime() + minutes * 60_000)
-    setEndsAt(toLocalDatetime(end))
+    setEndsAt(new Date(startsAt.getTime() + minutes * 60_000))
     setActiveDuration(minutes)
   }
 
@@ -1139,8 +1139,8 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
     setTitle("")
     setDescription("")
     const defaults = computeScheduleDefaults(items)
-    setStartsAt(defaults.startsAt)
-    setEndsAt(defaults.endsAt)
+    setStartsAt(defaults.startsAt ? new Date(defaults.startsAt) : null)
+    setEndsAt(defaults.endsAt ? new Date(defaults.endsAt) : null)
     setLocation("")
     setActiveDuration(30)
     setError(null)
@@ -1151,8 +1151,8 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
     setEditing(item)
     setTitle(item.title)
     setDescription(item.description ?? "")
-    setStartsAt(toLocalDatetime(new Date(item.starts_at)))
-    setEndsAt(item.ends_at ? toLocalDatetime(new Date(item.ends_at)) : "")
+    setStartsAt(new Date(item.starts_at))
+    setEndsAt(item.ends_at ? new Date(item.ends_at) : null)
     setLocation(item.location ?? "")
     if (item.starts_at && item.ends_at) {
       const diffMin = Math.round((new Date(item.ends_at).getTime() - new Date(item.starts_at).getTime()) / 60_000)
@@ -1172,10 +1172,10 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
     try {
       const payload: Record<string, unknown> = {
         title,
-        startsAt: new Date(startsAt).toISOString(),
+        startsAt: startsAt!.toISOString(),
       }
       if (description.trim()) payload.description = description
-      if (endsAt) payload.endsAt = new Date(endsAt).toISOString()
+      if (endsAt) payload.endsAt = endsAt.toISOString()
       if (location.trim()) payload.location = location
 
       const url = editing
@@ -1340,22 +1340,16 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sched-start">Starts at</Label>
-              <Input
-                id="sched-start"
-                type="datetime-local"
+              <Label>Starts at</Label>
+              <DateTimePicker
                 value={startsAt}
-                onChange={(e) => {
-                  setStartsAt(e.target.value)
-                  if (activeDuration && e.target.value) {
-                    const end = new Date(new Date(e.target.value).getTime() + activeDuration * 60_000)
-                    setEndsAt(toLocalDatetime(end))
+                onChange={(d) => {
+                  setStartsAt(d)
+                  if (activeDuration && d) {
+                    setEndsAt(new Date(d.getTime() + activeDuration * 60_000))
                   }
                 }}
-                autoComplete="off"
-                data-1p-ignore
-                data-lpignore="true"
-                data-form-type="other"
+                placeholder="Select start date and time"
               />
             </div>
             <div className="space-y-2">
@@ -1383,20 +1377,15 @@ function ScheduleSubTab({ hackathonId, hackathonName, startsAt: _eventStartsAt, 
                 </Button>
               </div>
               {activeDuration === null && (
-                <Input
-                  id="sched-end"
-                  type="datetime-local"
+                <DateTimePicker
                   value={endsAt}
-                  onChange={(e) => setEndsAt(e.target.value)}
-                  autoComplete="off"
-                  data-1p-ignore
-                  data-lpignore="true"
-                  data-form-type="other"
+                  onChange={setEndsAt}
+                  placeholder="Select end date and time"
                 />
               )}
               {activeDuration !== null && endsAt && (
                 <p className="text-xs text-muted-foreground">
-                  Ends at {new Date(endsAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                  Ends at {endsAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                 </p>
               )}
             </div>
