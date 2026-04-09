@@ -108,6 +108,7 @@ function stateToHackathon(state: DraftState): PublicHackathon {
       logo_url_dark: null,
       website_url: null,
       tier: (s.tier ?? "none") as "none" | "gold" | "silver" | "bronze",
+      custom_tier_label: null,
       display_order: i,
       created_at: new Date().toISOString(),
     })),
