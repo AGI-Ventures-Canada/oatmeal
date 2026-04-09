@@ -110,6 +110,6 @@ Icons come from `lucide-react`. Add to the import at the top of `event-tools-tab
 
 - Never mount dev routes in production — `lib/api/index.ts` conditionally imports `devRoutes`
 - Never import heavyweight services at the top of `dev.ts` — use dynamic `import()` to avoid circular deps
-- Auth is enforced exclusively by the `onBeforeHandle` hook on `devRoutes` — it calls `resolvePrincipal()` and rejects non-admin callers. `devGuard()` is env-only defence-in-depth (checks `NODE_ENV` and `ADMIN_ENABLED` but not caller identity). Do not rely on `devGuard()` as an auth check
+- Auth is enforced exclusively by the `onBeforeHandle` hook on `devRoutes` — it calls `resolvePrincipal()` and rejects non-admin callers. `devGuard()` is env-only defence-in-depth (checks `NODE_ENV` and `ADMIN_ENABLED` but not caller identity). Do not rely on `devGuard()` as an auth check. If a handler is mounted outside the `devRoutes` plugin lifecycle, `devGuard()` alone will not verify caller identity
 - Seed cleanup must delete in dependency order (scores → assignments → criteria → room_teams → rooms → submissions → participants → teams) to respect foreign keys
 - All seed data uses `SEED_USERS` IDs so cleanup can target only seeded rows without affecting real organizer data

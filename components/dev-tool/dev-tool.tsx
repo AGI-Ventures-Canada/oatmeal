@@ -50,7 +50,7 @@ const SESSION_KEY = "devtools-state"
 export function DevTool() {
   const { sessionClaims } = useAuth()
   const isDev = process.env.NODE_ENV === "development"
-  const metadata = sessionClaims?.metadata as Record<string, unknown> | undefined
+  const metadata = (sessionClaims as Record<string, unknown> | undefined)?.metadata as Record<string, unknown> | undefined
   const isAdmin = isDev || metadata?.admin === true
 
   const [expanded, setExpanded] = useState(false)
