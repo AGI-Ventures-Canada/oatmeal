@@ -13,15 +13,18 @@ import { JudgeSection } from "@/components/hackathon/judge-section"
 import { PrizeSection } from "@/components/hackathon/prize-section"
 import { SubmissionGallery, type GallerySubmission } from "@/components/hackathon/submission-gallery"
 import { TeamInviteDialog } from "@/components/hackathon/team-invite-dialog"
+import { useTeamRename } from "@/hooks/use-team-rename"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { CheckCircle2, Crown, Clock, X, Lock, Scale, Mail, CalendarClock, MapPin } from "lucide-react"
+import { CheckCircle2, Crown, Clock, X, Lock, Scale, Mail, CalendarClock, MapPin, AlertTriangle } from "lucide-react"
 import { formatDateTimeDisplay } from "@/lib/utils/format"
 import type { PublicHackathon } from "@/lib/services/public-hackathons"
 import type { Submission } from "@/lib/db/hackathon-types"
 import type { ParticipantTeamInfo } from "@/lib/services/hackathons"
+import { getTeamSizeWarning } from "@/lib/utils/team-size"
 import { PublicResults } from "@/components/hackathon/results/public-results"
 import { MarkdownContent } from "@/components/ui/markdown-content"
 import { TruncatableContent } from "./truncatable-content"
@@ -80,6 +83,7 @@ function HackathonPreviewContent({
   const [isRegistered, setIsRegistered] = useState(initialIsRegistered)
   const [justRegistered, setJustRegistered] = useState(false)
   const [bannerUrl, setBannerUrl] = useState(hackathon.banner_url)
+  const rename = useTeamRename(hackathon.id, teamInfo?.team.id ?? "", teamInfo?.team.name ?? "")
 
   const handleRegistrationSuccess = () => {
     setIsRegistered(true)
@@ -146,7 +150,32 @@ function HackathonPreviewContent({
           {teamInfo && (
             <>
               <span className="text-muted-foreground">·</span>
-              <span className="text-sm text-muted-foreground truncate">{teamInfo.team.name}</span>
+              {teamInfo.isCaptain && teamInfo.team.status === "forming" && !rename.editing ? (
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground truncate hover:underline underline-offset-2 decoration-muted-foreground/40"
+                  onClick={rename.startEditing}
+                >
+                  {teamInfo.team.name}
+                </button>
+              ) : rename.editing ? (
+                <Input
+                  ref={rename.inputRef}
+                  value={rename.value}
+                  onChange={(e) => rename.setValue(e.target.value)}
+                  onBlur={rename.save}
+                  onKeyDown={rename.handleKeyDown}
+                  disabled={rename.saving}
+                  className="h-6 text-sm w-48 sm:w-64"
+                  maxLength={100}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
+                />
+              ) : (
+                <span className="text-sm text-muted-foreground truncate">{teamInfo.team.name}</span>
+              )}
               {teamInfo.team.status === "locked" && (
                 <Lock className="size-3 text-muted-foreground shrink-0" />
               )}
@@ -159,9 +188,18 @@ function HackathonPreviewContent({
             teamId={teamInfo.team.id}
             hackathonId={hackathon.id}
             teamName={teamInfo.team.name}
+            maxTeamSize={hackathon.max_team_size ?? 5}
           />
         )}
       </div>
+      {rename.error && (
+        <p className="text-xs text-destructive px-3">{rename.error}</p>
+      )}
+      {teamInfo?.isCaptain && (
+        <p className="text-xs text-muted-foreground px-1">
+          You&apos;re the team captain &mdash; you can invite members and rename your team.
+        </p>
+      )}
       {teamInfo && (
         <div className="space-y-1 pl-1">
           <div className="flex items-center gap-1.5">
@@ -169,6 +207,20 @@ function HackathonPreviewContent({
               {teamInfo.members.length + teamInfo.pendingInvitations.length} / {hackathon.max_team_size} members
             </span>
           </div>
+          {(() => {
+            const warning = getTeamSizeWarning({
+              memberCount: teamInfo.members.length,
+              minTeamSize: hackathon.min_team_size,
+              allowSolo: hackathon.allow_solo,
+            })
+            if (!warning) return null
+            return (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/20 bg-destructive/5 px-2.5 py-2">
+                <AlertTriangle className="size-3.5 text-destructive shrink-0 mt-0.5" />
+                <span className="text-xs text-destructive">{warning.message}</span>
+              </div>
+            )
+          })()}
           <div className="space-y-0.5">
             {teamInfo.members.map((member) => {
               const isCurrentUser = member.clerkUserId === currentUserId
@@ -551,6 +603,11 @@ function HackathonPreviewContent({
         requireLocationVerification: hackathon.require_location_verification,
         submission,
         onRegistrationSuccess: handleRegistrationSuccess,
+        teamSizeWarning: teamInfo ? (getTeamSizeWarning({
+          memberCount: teamInfo.members.length,
+          minTeamSize: hackathon.min_team_size,
+          allowSolo: hackathon.allow_solo,
+        })?.message ?? null) : (!hackathon.allow_solo ? `Solo participants are not allowed — this event requires teams of at least ${hackathon.min_team_size}.` : null),
       }}
     />
   )
