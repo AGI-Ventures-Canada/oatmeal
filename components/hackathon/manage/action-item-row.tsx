@@ -9,6 +9,12 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { useIsMobile } from "@/hooks/use-mobile"
 import type { ActionItem, ActionSeverity } from "@/lib/utils/organizer-actions"
 import { buildActionHref, useActionItems } from "./action-items-context"
 
@@ -25,7 +31,18 @@ type Props = {
 }
 
 function WithTooltip({ tooltip, children }: { tooltip?: string; children: React.ReactNode }) {
+  const isMobile = useIsMobile()
   if (!tooltip) return <>{children}</>
+  if (isMobile) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>{children}</PopoverTrigger>
+        <PopoverContent side="top" align="start" className="w-72 text-sm">
+          {tooltip}
+        </PopoverContent>
+      </Popover>
+    )
+  }
   return (
     <HoverCard openDelay={300} closeDelay={100}>
       <HoverCardTrigger asChild>{children}</HoverCardTrigger>

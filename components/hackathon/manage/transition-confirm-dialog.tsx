@@ -90,7 +90,22 @@ export const TransitionConfirmDialog = forwardRef<TransitionConfirmDialogHandle,
               closeDialog()
               return
             }
+            // Calculate succeeded but publish failed — complete the event but warn
+            const res = await fetch(
+              `/api/dashboard/hackathons/${hackathonId}/settings`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "completed" }),
+              },
+            )
+            if (!res.ok) throw new Error("Failed to complete event")
+            onTransitioned?.()
+            router.refresh()
+            setError("Event completed, but results could not be published automatically. Please publish them from the Judging tab.")
+            return
           }
+          // Calculate failed — just mark as completed
           const res = await fetch(
             `/api/dashboard/hackathons/${hackathonId}/settings`,
             {
