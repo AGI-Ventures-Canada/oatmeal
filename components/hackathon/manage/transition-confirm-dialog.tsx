@@ -182,7 +182,7 @@ export const TransitionConfirmDialog = forwardRef<TransitionConfirmDialogHandle,
           )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={updating} onClick={closeDialog}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={commitTransition} disabled={updating}>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); commitTransition() }} disabled={updating}>
               {updating && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
               Confirm
             </AlertDialogAction>
