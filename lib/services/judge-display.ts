@@ -40,11 +40,36 @@ export async function listJudgeDisplayProfiles(
   return data as unknown as HackathonJudgeDisplay[]
 }
 
+export type CreateJudgeDisplayResult =
+  | { status: "created"; judge: HackathonJudgeDisplay }
+  | { status: "duplicate"; matchedBy: "clerk_user" | "name" }
+  | { status: "error" }
+
 export async function createJudgeDisplayProfile(
   hackathonId: string,
   input: CreateJudgeDisplayInput
-): Promise<HackathonJudgeDisplay | null> {
+): Promise<CreateJudgeDisplayResult> {
   const client = getSupabase() as unknown as SupabaseClient
+
+  if (input.clerkUserId) {
+    const { data: existing } = await client
+      .from("hackathon_judges_display")
+      .select("id")
+      .eq("hackathon_id", hackathonId)
+      .eq("clerk_user_id", input.clerkUserId)
+      .maybeSingle()
+    if (existing) return { status: "duplicate", matchedBy: "clerk_user" }
+  } else {
+    const { data: existing } = await client
+      .from("hackathon_judges_display")
+      .select("id")
+      .eq("hackathon_id", hackathonId)
+      .eq("name", input.name)
+      .is("clerk_user_id", null)
+      .maybeSingle()
+    if (existing) return { status: "duplicate", matchedBy: "name" }
+  }
+
   const { data, error } = await client
     .from("hackathon_judges_display")
     .insert({
@@ -62,10 +87,10 @@ export async function createJudgeDisplayProfile(
 
   if (error) {
     console.error("Failed to create judge display profile:", error)
-    return null
+    return { status: "error" }
   }
 
-  return data as unknown as HackathonJudgeDisplay
+  return { status: "created", judge: data as unknown as HackathonJudgeDisplay }
 }
 
 export async function updateJudgeDisplayProfile(
@@ -104,20 +129,60 @@ export async function updateJudgeDisplayProfile(
 export async function deleteJudgeDisplayProfile(
   id: string,
   hackathonId: string
-): Promise<boolean> {
+): Promise<{ deleted: boolean; cascadeError?: string }> {
   const client = getSupabase() as unknown as SupabaseClient
-  const { error } = await client
+
+  const { data: profile, error } = await client
     .from("hackathon_judges_display")
     .delete()
     .eq("id", id)
     .eq("hackathon_id", hackathonId)
+    .select("participant_id, clerk_user_id")
+    .maybeSingle()
 
   if (error) {
     console.error("Failed to delete judge display profile:", error)
-    return false
+    return { deleted: false }
   }
 
-  return true
+  let participantId = profile?.participant_id
+  if (!participantId && profile?.clerk_user_id) {
+    const { data: participant } = await client
+      .from("hackathon_participants")
+      .select("id")
+      .eq("hackathon_id", hackathonId)
+      .eq("clerk_user_id", profile.clerk_user_id)
+      .eq("role", "judge")
+      .maybeSingle()
+    participantId = participant?.id
+  }
+
+  if (participantId) {
+    const { error: assignmentError } = await client
+      .from("judge_assignments")
+      .delete()
+      .eq("hackathon_id", hackathonId)
+      .eq("judge_participant_id", participantId)
+
+    if (assignmentError) {
+      console.error("Failed to cascade-delete judge assignments:", assignmentError)
+      return { deleted: true, cascadeError: "Failed to remove judge assignments" }
+    }
+
+    const { error: participantError } = await client
+      .from("hackathon_participants")
+      .delete()
+      .eq("id", participantId)
+      .eq("hackathon_id", hackathonId)
+      .eq("role", "judge")
+
+    if (participantError) {
+      console.error("Failed to cascade-delete judge participant:", participantError)
+      return { deleted: true, cascadeError: "Failed to remove judge participant record" }
+    }
+  }
+
+  return { deleted: true }
 }
 
 export async function reorderJudgeDisplayProfiles(
