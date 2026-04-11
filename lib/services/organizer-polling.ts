@@ -24,7 +24,7 @@ export async function buildOrganizerPollPayload(hackathonId: string): Promise<Or
   ] = await Promise.all([
     client
       .from("hackathons")
-      .select("status, phase, description, banner_url, challenge_title, challenge_released_at, results_published_at, winner_emails_sent_at, starts_at, ends_at, location_type, feedback_survey_url, feedback_survey_sent_at")
+      .select("status, phase, description, banner_url, challenge_title, challenge_released_at, results_published_at, starts_at, ends_at, location_type, feedback_survey_url, feedback_survey_sent_at")
       .eq("id", hackathonId)
       .single(),
     client

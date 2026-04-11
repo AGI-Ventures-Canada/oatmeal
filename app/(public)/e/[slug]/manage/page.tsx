@@ -132,15 +132,15 @@ export default async function ManagePage({ params, searchParams }: PageProps) {
       >
         <TabsUrlSync paramKey="tab" value={activeTab}>
           <ActionItemsLayout>
-          <div className="flex items-center gap-1">
-            <h1 className="text-lg font-semibold">{hackathon.name}</h1>
-            <HackathonPageActions
-              slug={hackathon.slug}
-              hackathonName={hackathon.name}
-              isOrganizer={true}
-            />
-          </div>
-          <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
+            <div className="flex items-center gap-1">
+              <h1 className="text-lg font-semibold">{hackathon.name}</h1>
+              <HackathonPageActions
+                slug={hackathon.slug}
+                hackathonName={hackathon.name}
+                isOrganizer={true}
+              />
+            </div>
+            <div className="overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
             <TabsList variant="line">
               <TabsTrigger value="action-items">Action Items<ActionItemsTabBadge /></TabsTrigger>
               <TabsTrigger value="overview">Overview</TabsTrigger>

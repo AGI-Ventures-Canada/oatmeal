@@ -83,14 +83,18 @@ export function ActionItemsProvider({
 
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set()
-    const stored = localStorage.getItem(`completed-actions-${hackathonId}`)
-    return stored ? new Set(JSON.parse(stored)) : new Set()
+    try {
+      const stored = localStorage.getItem(`completed-actions-${hackathonId}`)
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch { return new Set() }
   })
 
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set()
-    const stored = localStorage.getItem(`dismissed-actions-${hackathonId}`)
-    return stored ? new Set(JSON.parse(stored)) : new Set()
+    try {
+      const stored = localStorage.getItem(`dismissed-actions-${hackathonId}`)
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch { return new Set() }
   })
 
   const [panelOpen, setPanelOpenState] = useState(true)
@@ -103,36 +107,32 @@ export function ActionItemsProvider({
   const actionItemIds = useMemo(() => new Set(actionItems.map((i) => i.id)), [actionItems])
 
   const effectiveCompletedIds = useMemo(() => {
-    let changed = false
     const filtered = new Set<string>()
     for (const id of completedIds) {
-      if (actionItemIds.has(id)) {
-        filtered.add(id)
-      } else {
-        changed = true
-      }
+      if (actionItemIds.has(id)) filtered.add(id)
     }
-    if (changed && typeof window !== "undefined") {
-      localStorage.setItem(`completed-actions-${hackathonId}`, JSON.stringify([...filtered]))
+    return filtered.size !== completedIds.size ? filtered : completedIds
+  }, [completedIds, actionItemIds])
+
+  useEffect(() => {
+    if (effectiveCompletedIds !== completedIds) {
+      localStorage.setItem(`completed-actions-${hackathonId}`, JSON.stringify([...effectiveCompletedIds]))
     }
-    return changed ? filtered : completedIds
-  }, [completedIds, actionItemIds, hackathonId])
+  }, [effectiveCompletedIds, completedIds, hackathonId])
 
   const effectiveDismissedIds = useMemo(() => {
-    let changed = false
     const filtered = new Set<string>()
     for (const id of dismissedIds) {
-      if (actionItemIds.has(id)) {
-        filtered.add(id)
-      } else {
-        changed = true
-      }
+      if (actionItemIds.has(id)) filtered.add(id)
     }
-    if (changed && typeof window !== "undefined") {
-      localStorage.setItem(`dismissed-actions-${hackathonId}`, JSON.stringify([...filtered]))
+    return filtered.size !== dismissedIds.size ? filtered : dismissedIds
+  }, [dismissedIds, actionItemIds])
+
+  useEffect(() => {
+    if (effectiveDismissedIds !== dismissedIds) {
+      localStorage.setItem(`dismissed-actions-${hackathonId}`, JSON.stringify([...effectiveDismissedIds]))
     }
-    return changed ? filtered : dismissedIds
-  }, [dismissedIds, actionItemIds, hackathonId])
+  }, [effectiveDismissedIds, dismissedIds, hackathonId])
 
   const toggleComplete = useCallback((id: string) => {
     setCompletedIds((prev) => {
